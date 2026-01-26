@@ -1,35 +1,148 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// 1. Config & Enums
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-// Simple User Model for MVP
-model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  role      String   @default("LANDLORD") // LANDLORD, TENANT, ADMIN
-  createdAt DateTime @default(now())
-  
-  // Relations (Placeholder for future)
-  properties Property[]
+// Enums make code safer and prevent typos
+enum UserRole {
+  ADMIN       // You (The SaaS Owner)
+  LANDLORD    // Your Customer (Property Owner)
+  MANAGER     // Staff hired by Landlord
 }
 
+enum PropertyType {
+  RESIDENTIAL // Apartments, Villas
+  COMMERCIAL  // Offices, Shops
+  HOTEL       // Hotel Buildings
+}
+
+enum ReservationStatus {
+  PENDING     // Request made, not approved
+  CONFIRMED   // Approved (Deposit paid?)
+  CHECKED_IN  // Currently living there
+  COMPLETED   // Moved out / Stay finished
+  CANCELLED   // Reservation dropped
+}
+
+enum PaymentFrequency {
+  DAILY       // Hotel
+  MONTHLY     // Standard Rental
+  YEARLY      // Commercial
+  ONE_TIME
+}
+
+// --------------------------------------
+// 2. SaaS Users (The Landlords/Managers)
+// --------------------------------------
+model User {
+  id          String    @id @default(uuid())
+  email       String    @unique
+  firstName   String?
+  lastName    String?
+  phone       String?   // Useful for WhatsApp integration later
+  role        UserRole  @default(LANDLORD)
+  createdAt   DateTime  @default(now())
+  
+  // Relations
+  properties  Property[] // One Landlord has many Properties
+}
+
+// --------------------------------------
+// 3. Properties (Buildings/Hotels)
+// --------------------------------------
 model Property {
-  id        String   @id @default(uuid())
-  name      String
-  address   String
-  ownerId   String
-  owner     User     @relation(fields: [ownerId], references: [id])
+  id          String       @id @default(uuid())
+  name        String       // e.g. "Salalah Beach Resort" or "Al Hafa Building"
+  type        PropertyType @default(RESIDENTIAL)
+  
+  // Location (Oman Context)
+  address     String?
+  city        String       @default("Salalah")
+  governorate String       @default("Dhofar") 
+  
+  // Owner Link
+  ownerId     String
+  owner       User         @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  
+  // Relations
+  units       Unit[]
+  createdAt   DateTime     @default(now())
+}
+
+// --------------------------------------
+// 4. Units (The Rentable Item)
+// --------------------------------------
+model Unit {
+  id          String   @id @default(uuid())
+  name        String   // e.g. "Apt 101", "Room 305", "Villa A"
+  floor       Int?     // Good for sorting
+  
+  // Details
+  bedrooms    Int      @default(1)
+  bathrooms   Int      @default(1)
+  sizeSqM     Float?   // "120 sqm"
+  
+  // Pricing (Base Price)
+  basePrice   Decimal  @db.Decimal(10, 2) // OMR 150.000
+  
+  // Relations
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  reservations Reservation[]
+}
+
+// --------------------------------------
+// 5. Tenants (The Guests/Residents)
+// --------------------------------------
+model Tenant {
+  id            String   @id @default(uuid())
+  firstName     String
+  lastName      String
+  email         String?  
+  phone         String   // Critical for SMS notifications
+  
+  // Omani Context
+  nationalId    String?  // Civil ID for Omanis
+  passportNo    String?  // For Tourists/Expats
+  nationality   String?
+  
+  // Relations
+  reservations  Reservation[]
+  createdAt     DateTime @default(now())
+}
+
+// --------------------------------------
+// 6. Reservations (The Core Logic)
+// --------------------------------------
+model Reservation {
+  id          String            @id @default(uuid())
+  
+  // Dates
+  startDate   DateTime          // Check-in / Lease Start
+  endDate     DateTime          // Check-out / Lease End
+  
+  // Status logic you mentioned
+  status      ReservationStatus @default(PENDING)
+  
+  // Financials Snapshot (Prices change, so we save the deal price here)
+  amount      Decimal           @db.Decimal(10, 2) // Total or Monthly amount
+  currency    String            @default("OMR")
+  frequency   PaymentFrequency  @default(MONTHLY)
+  
+  // Relations
+  unitId      String
+  unit        Unit     @relation(fields: [unitId], references: [id])
+  
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

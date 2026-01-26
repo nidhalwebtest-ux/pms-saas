@@ -8,25 +8,32 @@ import { revalidatePath } from "next/cache";
 const prisma = new PrismaClient();
 
 export async function createProperty(formData: FormData) {
-  // 1. Get the current logged-in user (The Landlord)
   const supabase = await createClient();
   const {
     data: { user },
-    error,
   } = await supabase.auth.getUser();
 
-  if (error || !user) {
-    redirect("/login");
+  if (!user) redirect("/login");
+
+  // 1. Get the User's Organization ID
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { organizationId: true },
+  });
+
+  if (!dbUser?.organizationId) {
+    // Should not happen if middleware is working, but safe to handle
+    redirect("/onboarding");
   }
 
-  // 2. Extract data from the form
+  // 2. Extract Data
   const name = formData.get("name") as string;
-  const type = formData.get("type") as any; // "RESIDENTIAL" | "HOTEL"
+  const type = formData.get("type") as any;
   const address = formData.get("address") as string;
   const city = formData.get("city") as string;
   const governorate = formData.get("governorate") as string;
 
-  // 3. Insert into Database using Prisma
+  // 3. Create Property linked to ORGANIZATION
   await prisma.property.create({
     data: {
       name,
@@ -34,11 +41,10 @@ export async function createProperty(formData: FormData) {
       address,
       city,
       governorate,
-      ownerId: user.id, // This links the property to YOU
+      organizationId: dbUser.organizationId,
     },
   });
 
-  // 4. Refresh the properties page and redirect
-  revalidatePath("/dashboard");
-  redirect("/dashboard");
+  revalidatePath("/dashboard/properties");
+  redirect("/dashboard/properties");
 }

@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import Header from "@/components/dashboard/Header";
 import Navigation from "@/components/dashboard/Navigation";
+import { PrismaClient } from "@prisma/client";
 
+const prisma = new PrismaClient();
 export default async function DashboardLayout({
   children,
 }: {
@@ -17,6 +19,16 @@ export default async function DashboardLayout({
 
   if (error || !user) {
     redirect("/login");
+  }
+
+  // CHECK: Does this user have an Organization?
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { organizationId: true },
+  });
+  // If no Org, force them to Onboarding
+  if (!dbUser?.organizationId) {
+    redirect("/onboarding");
   }
 
   return (

@@ -55,10 +55,16 @@ export default async function PropertyDetailsPage({
             {property.address}, {property.city} • {property.type}
           </p>
         </div>
-        <div className="mt-3 flex sm:ml-4 sm:mt-0">
+        <div className="mt-3 flex gap-3 sm:ml-4 sm:mt-0">
+          <Link
+            href={`/dashboard/properties/${id}/edit`}
+            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          >
+            Edit Property
+          </Link>
           <Link
             href={`/dashboard/properties/${id}/units/new`}
-            className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+            className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white..."
           >
             Add Unit
           </Link>
@@ -138,12 +144,12 @@ export default async function PropertyDetailsPage({
                           {Number(unit.basePrice).toFixed(3)} OMR
                         </td>
                         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                          <a
-                            href="#"
+                          <Link
+                            href={`/dashboard/properties/${id}/units/${unit.id}/edit`}
                             className="text-blue-600 hover:text-blue-900"
                           >
                             Edit<span className="sr-only">, {unit.name}</span>
-                          </a>
+                          </Link>
                         </td>
                       </tr>
                     ))

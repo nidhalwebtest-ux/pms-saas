@@ -1,4 +1,4 @@
-import { createProperty } from "../actions";
+import { updateProperty } from "../../actions";
 import {
   PageHeader,
   FormCard,
@@ -6,23 +6,55 @@ import {
   FormSelect,
   FormActions,
 } from "@/components/ui/FormComponents";
+import { PrismaClient } from "@prisma/client";
+import { notFound, redirect } from "next/navigation";
+import { createClient } from "@/utils/supabase/server";
 
-export default function NewPropertyPage() {
+const prisma = new PrismaClient();
+
+export default async function EditPropertyPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  // 1. Fetch Existing Data
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const property = await prisma.property.findUnique({
+    where: { id },
+  });
+
+  // 2. Security Check
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { organizationId: true },
+  });
+  if (!property || property.organizationId !== dbUser?.organizationId) {
+    return notFound();
+  }
+
   return (
     <div className="max-w-2xl mx-auto py-8">
       <PageHeader
-        title="Add New Property"
-        description="Enter the details of the building, hotel, or compound."
+        title={`Edit ${property.name}`}
+        description="Update property details and location."
       />
 
-      <form action={createProperty}>
+      <form action={updateProperty}>
+        <input type="hidden" name="id" value={property.id} />
+
         <FormCard>
-          {/* 1. Basic Info */}
           <FormInput
             name="name"
             id="name"
             label="Property Name"
-            placeholder="e.g. Salalah Gardens Resort"
+            defaultValue={property.name}
             required
             colSpan="sm:col-span-4"
           />
@@ -31,6 +63,7 @@ export default function NewPropertyPage() {
             name="type"
             id="type"
             label="Property Type"
+            defaultValue={property.type}
             colSpan="sm:col-span-3"
             options={[
               {
@@ -42,7 +75,6 @@ export default function NewPropertyPage() {
             ]}
           />
 
-          {/* 2. Location (Grouped visually) */}
           <div className="col-span-full border-t border-gray-100 pt-6 mt-2">
             <h3 className="text-sm font-medium text-gray-500 mb-4">
               Location Details
@@ -52,7 +84,7 @@ export default function NewPropertyPage() {
                 name="address"
                 id="address"
                 label="Street Address"
-                placeholder="Building No, Street Name..."
+                defaultValue={property.address || ""}
                 colSpan="col-span-full"
               />
 
@@ -60,7 +92,7 @@ export default function NewPropertyPage() {
                 name="city"
                 id="city"
                 label="City / Wilayat"
-                defaultValue="Salalah"
+                defaultValue={property.city}
                 colSpan="sm:col-span-3"
               />
 
@@ -68,14 +100,14 @@ export default function NewPropertyPage() {
                 name="governorate"
                 id="governorate"
                 label="Governorate"
-                defaultValue="Dhofar"
+                defaultValue={property.governorate}
                 colSpan="sm:col-span-3"
               />
             </div>
           </div>
         </FormCard>
 
-        <FormActions cancelHref="/dashboard/properties" />
+        <FormActions cancelHref={`/dashboard/properties/${id}`} />
       </form>
     </div>
   );

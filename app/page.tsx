@@ -10,7 +10,7 @@ export default function LandingPage() {
           aria-label="Global"
         >
           <div className="flex lg:flex-1">
-            <span className="text-2xl font-bold text-blue-600">PropMaster</span>
+            <span className="text-2xl font-bold text-blue-600">OmRent</span>
           </div>
           <div className="flex flex-1 justify-end gap-x-6">
             <Link

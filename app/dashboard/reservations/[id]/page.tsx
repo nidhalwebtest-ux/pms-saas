@@ -38,6 +38,7 @@ export default async function ReservationDetailsPage({
     include: {
       tenant: true,
       unit: { include: { property: true } },
+      payments: { orderBy: { date: "desc" } },
     },
   });
 
@@ -54,6 +55,11 @@ export default async function ReservationDetailsPage({
     (new Date(reservation.endDate).getTime() -
       new Date(reservation.startDate).getTime()) /
       (1000 * 3600 * 24),
+  );
+
+  const totalPaid = reservation.payments.reduce(
+    (sum, p) => sum + Number(p.amount),
+    0,
   );
 
   return (
@@ -156,6 +162,63 @@ export default async function ReservationDetailsPage({
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="mt-8 overflow-hidden bg-white shadow sm:rounded-lg">
+        <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold leading-6 text-gray-900">
+              Payment History
+            </h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Total Collected:{" "}
+              <span className="font-bold text-green-600">
+                {totalPaid.toFixed(3)} OMR
+              </span>
+            </p>
+          </div>
+          <Link
+            href={`/dashboard/reservations/${id}/payments/new`}
+            className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          >
+            + Add Payment
+          </Link>
+        </div>
+
+        <ul role="list" className="divide-y divide-gray-200">
+          {reservation.payments.length === 0 ? (
+            <li className="px-4 py-8 text-center text-sm text-gray-500">
+              No payments recorded yet.
+            </li>
+          ) : (
+            reservation.payments.map((payment) => (
+              <li
+                key={payment.id}
+                className="px-4 py-4 sm:px-6 hover:bg-gray-50"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {Number(payment.amount).toFixed(3)} OMR
+                      <span className="ml-2 inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                        {payment.method.replace("_", " ")}
+                      </span>
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {new Date(payment.date).toLocaleDateString()}
+                      {payment.reference && ` • Ref: ${payment.reference}`}
+                    </p>
+                  </div>
+                  {payment.notes && (
+                    <p className="text-sm text-gray-500 italic max-w-xs truncate hidden sm:block">
+                      "{payment.notes}"
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))
+          )}
+        </ul>
       </div>
 
       {/* --- Action Buttons (Status Management) --- */}

@@ -25,8 +25,7 @@ export default function Header({
           <span className="text-white font-bold text-lg">P</span>
         </div>
         <span className="text-lg font-semibold tracking-tight text-gray-900">
-          PropMaster{" "}
-          <span className="text-xs text-gray-500 font-normal">v1.0</span>
+          OmRent <span className="text-xs text-gray-500 font-normal">v1.0</span>
         </span>
       </div>
 

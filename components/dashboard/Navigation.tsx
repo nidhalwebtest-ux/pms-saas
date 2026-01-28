@@ -7,8 +7,7 @@ const navigation = [
   { name: "Overview", href: "/dashboard" },
   { name: "Properties", href: "/dashboard/properties" },
   { name: "Tenants", href: "/dashboard/tenants" },
-  { name: "Leases", href: "/dashboard/leases" },
-  { name: "Maintenance", href: "/dashboard/maintenance" },
+  { name: "Reservations", href: "/dashboard/reservations" },
   { name: "Financials", href: "/dashboard/financials" },
 ];
 

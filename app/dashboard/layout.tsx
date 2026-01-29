@@ -7,8 +7,10 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 export default async function DashboardLayout({
   children,
+  modal,
 }: {
   children: React.ReactNode;
+  modal: React.ReactNode;
 }) {
   // 1. Verify User is Authenticated on the Server
   const supabase = await createClient();
@@ -33,18 +35,17 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* We separate Header and Navigation to keep code clean.
-        This creates that "NetSuite" style stacked top section.
-      */}
       <div className="bg-white shadow-sm ring-1 ring-gray-900/5 z-10 relative">
         <Header userEmail={user.email} />
         <Navigation />
       </div>
 
       {/* Main Content Area - Full Width */}
-      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        {children}
+      <main className="py-10">
+        <div className="px-4 sm:px-6 lg:px-8">{children}</div>
       </main>
+      {/* Render the modal slot */}
+      {modal}
     </div>
   );
 }

@@ -109,3 +109,44 @@ export async function updateReservationStatus(formData: FormData) {
   revalidatePath(`/dashboard/reservations/${id}`);
   redirect(`/dashboard/reservations/${id}`);
 }
+
+export async function createQuickTenant(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Unauthorized" };
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { organizationId: true },
+  });
+
+  const firstName = formData.get("firstName") as string;
+  const lastName = formData.get("lastName") as string;
+  const phone = formData.get("phone") as string;
+  const email = formData.get("email") as string;
+  const nationalId = formData.get("nationalId") as string;
+  const nationality = formData.get("nationality") as string;
+
+  try {
+    const newTenant = await prisma.tenant.create({
+      data: {
+        firstName,
+        lastName,
+        phone,
+        email,
+        nationalId,
+        nationality,
+        organizationId: dbUser?.organizationId!,
+      },
+    });
+
+    revalidatePath("/dashboard/reservations/new");
+    return { success: true, tenant: newTenant };
+  } catch (error) {
+    console.error("Error creating tenant:", error);
+    return { error: "Failed to create tenant" };
+  }
+}

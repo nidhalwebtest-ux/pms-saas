@@ -19,3 +19,31 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* app/globals.css */
+.rdp {
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: #2563eb; /* Blue-600 */
+  --rdp-background-color: #eff6ff; /* Blue-50 */
+  margin: 0;
+}
+.rdp-day_selected:not([disabled]),
+.rdp-day_selected:focus:not([disabled]),
+.rdp-day_selected:active:not([disabled]),
+.rdp-day_selected:hover:not([disabled]) {
+  background-color: var(--rdp-accent-color);
+  color: white;
+}
+.rdp-day_range_middle {
+  background-color: var(--rdp-background-color) !important;
+  color: #1e40af !important;
+}
+.rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: #f3f4f6;
+}
+
+.rdp-weekday,
+.rdp-month_caption {
+  color: black !important;
+  font-weight: bold !important;
+}

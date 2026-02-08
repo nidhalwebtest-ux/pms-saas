@@ -159,8 +159,9 @@ model Reservation {
   startDate   DateTime
   endDate     DateTime
   status      ReservationStatus @default(PENDING)
-  amount      Decimal          @db.Decimal(10, 2)
   frequency   PaymentFrequency @default(MONTHLY)
+  amount      Decimal          @db.Decimal(10, 2)
+  totalPrice Float   @default(0)
   
   // Relations
   unitId      String

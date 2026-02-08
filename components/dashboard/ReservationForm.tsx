@@ -66,29 +66,31 @@ export default function ReservationForm({
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // --- Derived Data ---
+
+  const [frequency, setFrequency] = useState<"MONTHLY" | "DAILY" | "YEARLY">(
+    "MONTHLY",
+  );
+  const [amount, setAmount] = useState<string>("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+
   // Find the full property object to get its units
   const activeProperty = properties.find((p) => p.id === selectedProperty?.id);
-
   const unitOptions =
     activeProperty?.units.map((u) => ({
       id: u.id,
       name: `${u.name} (Default: ${Number(u.basePrice).toFixed(2)} OMR)`,
     })) || [];
 
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const [frequency, setFrequency] = useState<"MONTHLY" | "DAILY" | "YEARLY">(
-    "MONTHLY",
-  );
-  const [amount, setAmount] = useState<string>("");
   // --- REAL-TIME CALCULATION ---
   const calculation = useMemo(() => {
     if (!dateRange?.from || !dateRange?.to) return null;
 
-    // 1. Calculate Duration
+    // Pass the selected frequency so math knows if it's Nights or Months
     const period = calculatePeriod(dateRange.from, dateRange.to, frequency);
 
-    // 2. Calculate Total Estimate
     const rate = parseFloat(amount) || 0;
+    // If Monthly: 1 Month * 130 = 130.
+    // If Daily: 28 Days * 5 = 140.
     const total = rate * period.quantity;
 
     return { period, total };
@@ -113,7 +115,7 @@ export default function ReservationForm({
     <>
       <form action={createReservation}>
         <FormCard>
-          {/* 1. Tenant Selection (Searchable + Add Button) */}
+          {/* 1. Tenant */}
           <div className="sm:col-span-4">
             <SearchableSelect
               label="Select Tenant"
@@ -121,9 +123,7 @@ export default function ReservationForm({
               value={selectedTenant}
               onChange={setSelectedTenant}
               onAdd={() => setIsModalOpen(true)}
-              placeholder="Search or add new tenant..."
             />
-            {/* Hidden Input for Server Action */}
             <input
               type="hidden"
               name="tenantId"
@@ -133,48 +133,86 @@ export default function ReservationForm({
 
           <div className="col-span-full border-t border-gray-100 my-4"></div>
 
-          {/* 2. Property Selection (Searchable) */}
+          {/* 2. Property Selection */}
           <div className="sm:col-span-3">
             <SearchableSelect
               label="Filter Property"
               options={propertyOptions}
               value={selectedProperty}
-              onChange={handlePropertyChange}
-              placeholder="Search property..."
+              onChange={(val) => {
+                setSelectedProperty(val);
+                setSelectedUnit(null);
+              }}
             />
           </div>
-
-          {/* 3. Unit Selection (Searchable) */}
           <div className="sm:col-span-3">
             <SearchableSelect
               label="Select Unit / Room"
               options={unitOptions}
               value={selectedUnit}
               onChange={setSelectedUnit}
-              placeholder={
-                activeProperty ? "Select a unit..." : "Select a property first"
-              }
             />
-            {/* Hidden Input for Server Action */}
             <input type="hidden" name="unitId" value={selectedUnit?.id || ""} />
           </div>
 
-          {/* 4. Dates & Financials */}
+          {/* 3. Contract Details */}
           <div className="col-span-full border-t border-gray-100 pt-6 mt-2">
             <h3 className="text-sm font-medium text-gray-500 mb-4">
-              Contract Details
+              Lease Terms
             </h3>
+
             <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
+              {/* FIX: MOVED FREQUENCY TO TOP */}
+              <div className="sm:col-span-3">
+                <label className="block text-sm font-medium leading-6 text-gray-900 mb-1">
+                  Lease Frequency
+                </label>
+                <select
+                  name="frequency"
+                  value={frequency}
+                  onChange={(e) => setFrequency(e.target.value as any)}
+                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                >
+                  <option value="MONTHLY">Monthly (Long Term)</option>
+                  <option value="DAILY">Daily (Short Stay)</option>
+                  <option value="YEARLY">Yearly</option>
+                </select>
+              </div>
+
+              {/* Amount Input */}
+              <div className="sm:col-span-3">
+                <label className="block text-sm font-medium leading-6 text-gray-900 mb-1">
+                  Agreed Rate (
+                  {frequency === "DAILY" ? "Per Night" : "Per Month"})
+                </label>
+                <div className="relative mt-2 rounded-md shadow-sm">
+                  <input
+                    type="number"
+                    name="amount"
+                    step="0.01"
+                    required
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="block w-full rounded-md border-0 py-1.5 pl-3 pr-12 text-gray-900 ring-1 ring-inset ring-gray-300"
+                    placeholder={
+                      frequency === "DAILY" ? "e.g. 25.000" : "e.g. 150.000"
+                    }
+                  />
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                    <span className="text-gray-500 sm:text-sm">OMR</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Date Picker (Now Below Frequency) */}
               <div className="sm:col-span-4">
                 <label className="block text-sm font-medium leading-6 text-gray-900 mb-1">
-                  Lease Duration
+                  Duration
                 </label>
                 <ReservationDatePicker
                   date={dateRange}
                   setDate={setDateRange}
                 />
-
-                {/* Hidden Inputs to pass data to Server Action */}
                 <input
                   type="hidden"
                   name="startDate"
@@ -187,56 +225,24 @@ export default function ReservationForm({
                 />
               </div>
 
-              <FormInput
-                label="Agreed Price (OMR)"
-                name="amount"
-                type="number"
-                step="0.01"
-                required
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="e.g. 150.000"
-                className="block w-full rounded-md border-0 py-1.5 pl-3 pr-12 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                colSpan="sm:col-span-3"
-              />
-
-              <FormSelect
-                label="Payment Frequency"
-                name="frequency"
-                colSpan="sm:col-span-3"
-                options={[
-                  { label: "Monthly", value: "MONTHLY" },
-                  { label: "Daily (Hotel)", value: "DAILY" },
-                  { label: "Yearly", value: "YEARLY" },
-                ]}
-              />
-
               {/* --- CALCULATION SUMMARY BOX --- */}
               {calculation && (
                 <div className="col-span-full bg-blue-50 border border-blue-100 rounded-md p-4 mt-2">
-                  <h4 className="text-sm font-semibold text-blue-900">
-                    Period Summary
-                  </h4>
-                  <div className="mt-2 flex flex-col sm:flex-row justify-between gap-4 text-sm text-blue-800">
-                    {/* Duration Breakdown */}
+                  <div className="flex flex-col sm:flex-row justify-between gap-4 text-sm text-blue-800">
                     <div>
                       <span className="font-medium">Duration: </span>
-
                       {"exactDuration" in calculation.period ? (
-                        // Daily Logic
                         <span>{calculation.period.exactDuration} Nights</span>
                       ) : (
                         <span>
-                          {/* Use optional chaining (?.) and fallback to 0 to satisfy TS */}
-                          {calculation.period.months ?? 0} Months
-                          {/* Only show days if they exist and are > 0 */}
-                          {(calculation.period.extraDays ?? 0) > 0 &&
+                          {calculation.period.months} Months
+                          {calculation.period.extraDays &&
+                            calculation.period.extraDays > 0 &&
                             ` + ${calculation.period.extraDays} Days`}
                         </span>
                       )}
                     </div>
 
-                    {/* Total Price Estimate */}
                     <div className="text-right">
                       <span className="font-medium">
                         Total Contract Value:{" "}
@@ -254,15 +260,17 @@ export default function ReservationForm({
             </div>
           </div>
         </FormCard>
-
         <FormActions cancelHref="/dashboard/reservations" />
       </form>
 
-      {/* Create Tenant Modal */}
       <CreateTenantModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onSuccess={handleTenantCreated}
+        onSuccess={(t) => {
+          const newOpt = { id: t.id, name: `${t.firstName} ${t.lastName}` };
+          setTenantOptions((prev) => [...prev, newOpt]);
+          setSelectedTenant(newOpt);
+        }}
       />
     </>
   );

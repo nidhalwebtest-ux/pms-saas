@@ -1,84 +1,76 @@
-// utils/date-math.ts
 import {
   differenceInCalendarDays,
   differenceInMonths,
   addMonths,
   setHours,
   setMinutes,
-  startOfDay,
-  isSameDay,
+  startOfDay, // <--- We need this
 } from "date-fns";
 
-// -----------------------------------------
-// 1. CONFIGURATION
-// -----------------------------------------
-// In a real app, fetch these from the Property Settings DB
-const DEFAULT_CHECK_IN_HOUR = 14; // 2:00 PM
-const DEFAULT_CHECK_OUT_HOUR = 12; // 12:00 PM
+// ... (Keep DEFAULT_CHECK_IN_HOUR constants) ...
+const DEFAULT_CHECK_IN_HOUR = 14;
+const DEFAULT_CHECK_OUT_HOUR = 12;
 
-// -----------------------------------------
-// 2. NORMALIZATION (The Fixer)
-// -----------------------------------------
-/**
- * Takes raw dates from the DatePicker (which might be midnight)
- * and forces the correct Check-in/Check-out times.
- */
 export function normalizeReservationDates(start: Date, end: Date) {
-  // Force Start Date to 2:00 PM
   const checkIn = setMinutes(setHours(start, DEFAULT_CHECK_IN_HOUR), 0);
-
-  // Force End Date to 12:00 PM
   const checkOut = setMinutes(setHours(end, DEFAULT_CHECK_OUT_HOUR), 0);
-
   return { checkIn, checkOut };
 }
 
-// -----------------------------------------
-// 3. CALCULATION ENGINE
-// -----------------------------------------
 export function calculatePeriod(
   start: Date,
   end: Date,
   type: "DAILY" | "MONTHLY" | "YEARLY",
 ) {
-  const { checkIn, checkOut } = normalizeReservationDates(start, end);
+  // FIX: For Calculation, we strictly use Midnight to Midnight
+  // This ensures Feb 8 to Mar 8 is exactly 1 Month, ignoring the 2-hour checkout gap.
+  const calcStart = startOfDay(start);
+  const calcEnd = startOfDay(end);
 
-  // Validation: End must be after Start
-  if (checkOut <= checkIn) {
+  if (calcEnd <= calcStart) {
     return {
-      error: "Check-out must be after Check-in",
       quantity: 0,
       unit: type,
+      exactDuration: 0,
+      months: 0,
+      extraDays: 0,
     };
   }
 
-  // A. DAILY LOGIC (Hotels)
+  // A. DAILY (Nights)
   if (type === "DAILY") {
-    // "Nights" is simply the difference in calendar days
-    // Feb 1 (2 PM) to Feb 2 (12 PM) = 1 Day difference
-    const nights = differenceInCalendarDays(checkOut, checkIn);
+    const nights = differenceInCalendarDays(calcEnd, calcStart);
     return { quantity: nights, unit: "Nights", exactDuration: nights };
   }
 
-  // B. MONTHLY LOGIC (Leases)
+  // B. MONTHLY (Leases)
   if (type === "MONTHLY") {
-    // Calculate full months
-    let months = differenceInMonths(checkOut, checkIn);
+    let months = differenceInMonths(calcEnd, calcStart);
 
-    // Check if there are extra days remaining
-    // Example: Jan 1 to Feb 5 = 1 Month + 4 Days
-    const dateAfterMonths = addMonths(checkIn, months);
-    const extraDays = differenceInCalendarDays(checkOut, dateAfterMonths);
+    // Calculate remaining days after removing full months
+    const dateAfterMonths = addMonths(calcStart, months);
+    const extraDays = differenceInCalendarDays(calcEnd, dateAfterMonths);
 
-    // Rounding Logic:
-    // If extra days > 15, usually counts as full month or 0.5 depending on policy.
-    // For now, let's return exact breakdown.
+    // FIX: If user picks "Feb 8 to Mar 8", differenceInMonths might be unstable if we didn't use startOfDay.
+    // Now it is stable.
+
+    // Rounding logic: If the math returns 0.999 months, we want 1.
+    // But since we use startOfDay, it should be exact.
+
     return {
-      quantity: months + extraDays / 30, // Approximate decimal for pricing
+      // If it's exactly 1 month (0 extra days), quantity is 1.
+      // If 1 month + 15 days, quantity is 1.5
+      quantity: months + extraDays / 30,
       months,
       extraDays,
       unit: "Months",
     };
+  }
+
+  // Yearly Logic (Simple version)
+  if (type === "YEARLY") {
+    const years = differenceInMonths(calcEnd, calcStart) / 12;
+    return { quantity: years, unit: "Years" };
   }
 
   return { quantity: 0, unit: type };

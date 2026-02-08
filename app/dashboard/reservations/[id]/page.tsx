@@ -1,16 +1,20 @@
-import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { PrismaClient } from "@prisma/client";
-import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import {
-  CalendarDaysIcon,
   MapPinIcon,
   UserIcon,
+  CalendarDaysIcon,
   BanknotesIcon,
   CheckCircleIcon,
   XCircleIcon,
+  ClockIcon,
+  DocumentTextIcon,
+  CreditCardIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { updateReservationStatus } from "../actions";
+import { confirmReservation, updateReservationStatus } from "../actions";
 
 const prisma = new PrismaClient();
 
@@ -39,6 +43,8 @@ export default async function ReservationDetailsPage({
       tenant: true,
       unit: { include: { property: true } },
       payments: { orderBy: { date: "desc" } },
+      // Fetch Invoices sorted by Date
+      invoices: { orderBy: { dueDate: "asc" } },
     },
   });
 
@@ -50,26 +56,29 @@ export default async function ReservationDetailsPage({
     return notFound();
   }
 
-  // Helper to calculate duration
+  // 3. Helper Calculations
+  const startDate = new Date(reservation.startDate);
+  const endDate = new Date(reservation.endDate);
   const days = Math.ceil(
-    (new Date(reservation.endDate).getTime() -
-      new Date(reservation.startDate).getTime()) /
-      (1000 * 3600 * 24),
+    (endDate.getTime() - startDate.getTime()) / (1000 * 3600 * 24),
   );
 
+  const totalContractValue = Number(reservation.totalPrice);
   const totalPaid = reservation.payments.reduce(
     (sum, p) => sum + Number(p.amount),
     0,
   );
+  const remainingBalance = totalContractValue - totalPaid;
+  const progressPercent = Math.min((totalPaid / totalContractValue) * 100, 100);
 
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      {/* Header */}
+    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+      {/* --- HEADER --- */}
       <div className="md:flex md:items-center md:justify-between mb-8">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold text-gray-900">
-              Reservation #{reservation.id.slice(0, 6)}
+              Reservation #{reservation.id.slice(0, 8).toUpperCase()}
             </h2>
             <span
               className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-sm font-medium border ${
@@ -77,7 +86,9 @@ export default async function ReservationDetailsPage({
                   ? "bg-green-50 text-green-700 border-green-200"
                   : reservation.status === "CANCELLED"
                     ? "bg-red-50 text-red-700 border-red-200"
-                    : "bg-blue-50 text-blue-700 border-blue-200"
+                    : reservation.status === "CHECKED_IN"
+                      ? "bg-blue-50 text-blue-700 border-blue-200"
+                      : "bg-gray-100 text-gray-800 border-gray-200"
               }`}
             >
               {reservation.status}
@@ -87,190 +98,368 @@ export default async function ReservationDetailsPage({
             Created on {new Date(reservation.createdAt).toLocaleDateString()}
           </p>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Card 1: The Unit & Tenant (The "Who & Where") */}
-        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
-          <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4 border-b pb-2">
-            Property Details
-          </h3>
+        {/* Management Actions */}
 
-          <div className="space-y-4">
-            <div className="flex items-start gap-3">
-              <MapPinIcon className="h-5 w-5 text-gray-400 mt-1" />
-              <div>
-                <p className="font-medium text-gray-900">
-                  {reservation.unit.property.name}
-                </p>
-                <p className="text-sm text-gray-500">
-                  {reservation.unit.name} • {reservation.unit.property.city}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3 pt-4">
-              <UserIcon className="h-5 w-5 text-gray-400 mt-1" />
-              <div>
-                <p className="font-medium text-gray-900">
-                  <Link
-                    href={`/dashboard/tenants/${reservation.tenantId}`}
-                    className="hover:underline text-blue-600"
-                  >
-                    {reservation.tenant.firstName} {reservation.tenant.lastName}
-                  </Link>
-                </p>
-                <p className="text-sm text-gray-500">
-                  {reservation.tenant.phone}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: The Contract (The "When & How Much") */}
-        <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
-          <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4 border-b pb-2">
-            Lease Terms
-          </h3>
-
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
-              <div className="text-sm text-gray-700">
-                <span className="font-medium">
-                  {new Date(reservation.startDate).toLocaleDateString()}
-                </span>
-                <span className="mx-2">to</span>
-                <span className="font-medium">
-                  {new Date(reservation.endDate).toLocaleDateString()}
-                </span>
-                <span className="ml-2 text-gray-500">({days} Days)</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 pt-4">
-              <BanknotesIcon className="h-5 w-5 text-gray-400" />
-              <div>
-                <p className="font-medium text-gray-900">
-                  {Number(reservation.amount).toFixed(3)} OMR
-                </p>
-                <p className="text-xs text-gray-500 uppercase">
-                  {reservation.frequency}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-8 overflow-hidden bg-white shadow sm:rounded-lg">
-        <div className="px-4 py-5 sm:px-6 border-b border-gray-200 flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-semibold leading-6 text-gray-900">
-              Payment History
-            </h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Total Collected:{" "}
-              <span className="font-bold text-green-600">
-                {totalPaid.toFixed(3)} OMR
-              </span>
-            </p>
-          </div>
-          <Link
-            href={`/dashboard/reservations/${id}/payments/new`}
-            className="rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
-          >
-            + Add Payment
-          </Link>
-        </div>
-
-        <ul role="list" className="divide-y divide-gray-200">
-          {reservation.payments.length === 0 ? (
-            <li className="px-4 py-8 text-center text-sm text-gray-500">
-              No payments recorded yet.
-            </li>
-          ) : (
-            reservation.payments.map((payment) => (
-              <li
-                key={payment.id}
-                className="px-4 py-4 sm:px-6 hover:bg-gray-50"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {Number(payment.amount).toFixed(3)} OMR
-                      <span className="ml-2 inline-flex items-center rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
-                        {payment.method.replace("_", " ")}
-                      </span>
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {new Date(payment.date).toLocaleDateString()}
-                      {payment.reference && ` • Ref: ${payment.reference}`}
-                    </p>
-                  </div>
-                  {payment.notes && (
-                    <p className="text-sm text-gray-500 italic max-w-xs truncate hidden sm:block">
-                      "{payment.notes}"
-                    </p>
-                  )}
-                </div>
-              </li>
-            ))
-          )}
-        </ul>
-      </div>
-
-      {/* --- Action Buttons (Status Management) --- */}
-      <div className="mt-8 border-t border-gray-200 pt-6">
-        <h3 className="text-sm font-medium text-gray-900 mb-4">
-          Management Actions
-        </h3>
-
-        <div className="flex gap-4">
-          {/* 1. Check In / Complete Button */}
+        <div className="mt-4 flex gap-3 md:ml-4 md:mt-0">
           {reservation.status === "CONFIRMED" && (
             <form action={updateReservationStatus}>
               <input type="hidden" name="id" value={reservation.id} />
               <input type="hidden" name="status" value="CHECKED_IN" />
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+                className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 shadow-sm"
               >
-                <CheckCircleIcon className="h-4 w-4" />
-                Check In Guest
+                <CheckCircleIcon className="h-4 w-4" /> Check In
               </button>
             </form>
           )}
-
-          {reservation.status === "CHECKED_IN" && (
-            <form action={updateReservationStatus}>
-              <input type="hidden" name="id" value={reservation.id} />
-              <input type="hidden" name="status" value="COMPLETED" />
-              <button
-                type="submit"
-                className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500"
-              >
-                <CheckCircleIcon className="h-4 w-4" />
-                Mark Completed (Check Out)
-              </button>
-            </form>
-          )}
-
-          {/* 2. Cancel Button (Only if not already cancelled or completed) */}
+          {/* Cancel Button */}
           {["CONFIRMED", "PENDING"].includes(reservation.status) && (
             <form action={updateReservationStatus}>
               <input type="hidden" name="id" value={reservation.id} />
               <input type="hidden" name="status" value="CANCELLED" />
               <button
                 type="submit"
-                className="inline-flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-red-600 shadow-sm ring-1 ring-inset ring-red-300 hover:bg-red-50"
+                className="inline-flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-red-600 ring-1 ring-inset ring-red-300 hover:bg-red-50 shadow-sm"
               >
-                <XCircleIcon className="h-4 w-4" />
-                Cancel Reservation
+                <XCircleIcon className="h-4 w-4" /> Cancel
               </button>
             </form>
           )}
+        </div>
+      </div>
+      {reservation.status === "PENDING" && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8">
+          <div className="flex justify-between items-center">
+            <div className="flex gap-3">
+              <ExclamationTriangleIcon className="h-6 w-6 text-yellow-500" />
+              <div>
+                <h3 className="text-sm font-bold text-yellow-800">
+                  Reservation is Pending
+                </h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                  This reservation is holding the dates but has no financial
+                  contract yet. Confirm it to generate the{" "}
+                  <strong>
+                    {reservation.frequency === "MONTHLY" ? "Monthly" : "Daily"}{" "}
+                    Invoices
+                  </strong>
+                  .
+                </p>
+              </div>
+            </div>
+
+            <form action={confirmReservation}>
+              <input
+                type="hidden"
+                name="reservationId"
+                value={reservation.id}
+              />
+              <button
+                type="submit"
+                className="bg-yellow-600 text-white px-4 py-2 rounded-md font-semibold text-sm hover:bg-yellow-700 shadow-sm whitespace-nowrap"
+              >
+                Confirm & Generate Contract
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* --- LEFT COLUMN (2/3 Width) --- */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* 1. Property & Tenant Details */}
+          <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Property */}
+            <div>
+              <h3 className="text-xs font-semibold uppercase text-gray-500 mb-3 tracking-wider">
+                Property Information
+              </h3>
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <MapPinIcon className="h-6 w-6 text-blue-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">
+                    {reservation.unit.property.name}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {reservation.unit.name}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {reservation.unit.property.city}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Tenant */}
+            <div>
+              <h3 className="text-xs font-semibold uppercase text-gray-500 mb-3 tracking-wider">
+                Tenant Information
+              </h3>
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-purple-50 rounded-lg">
+                  <UserIcon className="h-6 w-6 text-purple-600" />
+                </div>
+                <div>
+                  <Link
+                    href={`/dashboard/tenants/${reservation.tenantId}`}
+                    className="font-semibold text-blue-600 hover:underline"
+                  >
+                    {reservation.tenant.firstName} {reservation.tenant.lastName}
+                  </Link>
+                  <p className="text-sm text-gray-500">
+                    {reservation.tenant.phone}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {reservation.tenant.email || "No email provided"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Contract Terms */}
+          <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+            <h3 className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">
+              Lease Terms
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div>
+                <p className="text-sm text-gray-500">Duration</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
+                  <span className="font-medium text-gray-900">{days} Days</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {startDate.toLocaleDateString()} -{" "}
+                  {endDate.toLocaleDateString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Payment Frequency</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <ClockIcon className="h-5 w-5 text-gray-400" />
+                  <span className="font-medium text-gray-900 capitalize">
+                    {reservation.frequency.toLowerCase()}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Rate</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <BanknotesIcon className="h-5 w-5 text-gray-400" />
+                  <span className="font-medium text-gray-900">
+                    {Number(reservation.amount).toFixed(3)} OMR
+                  </span>
+                  <span className="text-xs text-gray-500">/ Period</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. PAYMENT SCHEDULE (Invoices) - The Big Feature */}
+          <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <div className="flex items-center gap-2">
+                <DocumentTextIcon className="h-5 w-5 text-gray-500" />
+                <h3 className="text-base font-semibold text-gray-900">
+                  Payment Schedule
+                </h3>
+              </div>
+              <span className="text-xs font-medium bg-white border border-gray-200 text-gray-600 px-2.5 py-1 rounded-full shadow-sm">
+                {reservation.invoices.length} Installments
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Due Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {reservation.invoices.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={5}
+                        className="px-6 py-8 text-center text-sm text-gray-500"
+                      >
+                        No invoices generated for this reservation.
+                      </td>
+                    </tr>
+                  ) : (
+                    reservation.invoices.map((inv) => {
+                      // Smart Status Logic: Check if Overdue visually
+                      const isOverdue =
+                        inv.status === "PENDING" &&
+                        new Date(inv.dueDate) < new Date();
+                      const displayStatus = isOverdue ? "OVERDUE" : inv.status;
+
+                      return (
+                        <tr
+                          key={inv.id}
+                          className={isOverdue ? "bg-red-50/30" : ""}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {new Date(inv.dueDate).toLocaleDateString()}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">
+                            {inv.description || "Installment"}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {Number(inv.amount).toFixed(3)} OMR
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
+                                displayStatus === "PAID"
+                                  ? "bg-green-50 text-green-700 ring-green-600/20"
+                                  : displayStatus === "OVERDUE" ||
+                                      displayStatus === "DUE"
+                                    ? "bg-red-50 text-red-700 ring-red-600/20"
+                                    : displayStatus === "VOID"
+                                      ? "bg-gray-50 text-gray-600 ring-gray-500/10"
+                                      : "bg-yellow-50 text-yellow-800 ring-yellow-600/20"
+                              }`}
+                            >
+                              {displayStatus}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            {inv.status === "PENDING" ||
+                            inv.status === "DUE" ? (
+                              <Link
+                                href={`/dashboard/reservations/${id}/payments/new?invoiceId=${inv.id}`}
+                                className="text-blue-600 hover:text-blue-900 hover:underline"
+                              >
+                                Pay Now
+                              </Link>
+                            ) : (
+                              <span className="text-gray-400 text-xs">
+                                Closed
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* --- RIGHT COLUMN (Financial Summary) --- */}
+        <div className="space-y-6">
+          {/* Financial Card */}
+          <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+            <h3 className="text-base font-semibold text-gray-900 mb-6 flex items-center gap-2">
+              <CreditCardIcon className="h-5 w-5 text-gray-500" />
+              Financial Overview
+            </h3>
+
+            <div className="space-y-4">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Total Contract Value</span>
+                <span className="font-medium text-gray-900">
+                  {totalContractValue.toFixed(3)} OMR
+                </span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Total Collected</span>
+                <span className="font-medium text-green-600">
+                  {totalPaid > 0 ? "+" : ""}
+                  {totalPaid.toFixed(3)} OMR
+                </span>
+              </div>
+
+              <div className="pt-4 border-t border-gray-100 flex justify-between items-center">
+                <span className="font-medium text-gray-900">Balance Due</span>
+                <span className="text-2xl font-bold text-gray-900">
+                  {remainingBalance.toFixed(3)}{" "}
+                  <span className="text-sm font-normal text-gray-500">OMR</span>
+                </span>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="relative pt-2">
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-gray-500">Payment Progress</span>
+                  <span className="font-medium text-gray-700">
+                    {progressPercent.toFixed(0)}%
+                  </span>
+                </div>
+                <div className="overflow-hidden h-2 text-xs flex rounded-full bg-gray-100">
+                  <div
+                    style={{ width: `${progressPercent}%` }}
+                    className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center transition-all duration-500 ${
+                      progressPercent === 100 ? "bg-green-500" : "bg-blue-600"
+                    }`}
+                  ></div>
+                </div>
+              </div>
+
+              <Link
+                href={`/dashboard/reservations/${id}/payments/new`}
+                className="block w-full text-center rounded-md bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors mt-4"
+              >
+                Record General Payment
+              </Link>
+            </div>
+          </div>
+
+          {/* Payment History (Mini List) */}
+          <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+            <h3 className="text-sm font-semibold text-gray-900 mb-4 border-b border-gray-100 pb-2">
+              Recent Transactions
+            </h3>
+            <ul className="space-y-4">
+              {reservation.payments.length === 0 ? (
+                <p className="text-sm text-gray-500 italic py-2 text-center">
+                  No transactions recorded yet.
+                </p>
+              ) : (
+                reservation.payments.slice(0, 5).map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex justify-between items-center text-sm"
+                  >
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        +{Number(p.amount).toFixed(3)} OMR
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(p.date).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2 py-1 rounded capitalize">
+                      {p.method.toLowerCase().replace("_", " ")}
+                    </span>
+                  </li>
+                ))
+              )}
+            </ul>
+          </div>
         </div>
       </div>
     </div>

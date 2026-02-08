@@ -23,9 +23,11 @@ export async function createReservation(formData: FormData) {
   // Raw dates from form (usually midnight)
   const rawStartDate = new Date(formData.get("startDate") as string);
   const rawEndDate = new Date(formData.get("endDate") as string);
-
   const unitPrice = parseFloat(formData.get("amount") as string);
   const frequency = formData.get("frequency") as "DAILY" | "MONTHLY" | "YEARLY";
+
+  const duration = calculatePeriod(rawStartDate, rawEndDate, frequency);
+  const totalPrice = duration.quantity * unitPrice;
 
   // 2. NORMALIZE DATES (The Magic Fix)
   // This transforms "Feb 1" to "Feb 1, 2:00 PM" and "Feb 3" to "Feb 3, 12:00 PM"
@@ -38,16 +40,6 @@ export async function createReservation(formData: FormData) {
   if (checkOut <= checkIn) {
     throw new Error("End date must be after start date");
   }
-
-  // 4. Calculate Total Price (Server Side Security)
-  const duration = calculatePeriod(rawStartDate, rawEndDate, frequency);
-  const installments = generateInstallments(
-    checkIn,
-    checkOut,
-    unitPrice,
-    frequency,
-  );
-  const totalPrice = installments.reduce((sum, inv) => sum + inv.amount, 0);
 
   // 5. CRITICAL: Availability Check using NORMALIZED dates
   const overlapping = await prisma.reservation.findFirst({
@@ -66,6 +58,14 @@ export async function createReservation(formData: FormData) {
     );
   }
 
+  //   const installments = generateInstallments(
+  //   checkIn,
+  //   checkOut,
+  //   unitPrice,
+  //   frequency,
+  // );
+  // const totalPrice = installments.reduce((sum, inv) => sum + inv.amount, 0);
+
   // 6. Create Reservation
   await prisma.reservation.create({
     data: {
@@ -76,21 +76,66 @@ export async function createReservation(formData: FormData) {
       amount: unitPrice, // The rate (per night/month)
       totalPrice: totalPrice, // The full contract value
       frequency,
-      status: "CONFIRMED",
-      invoices: {
-        create: installments.map((inst, index) => ({
-          invoiceNumber: `INV-${Date.now()}-${index + 1}`, // Simple ID generation
-          dueDate: inst.dueDate,
-          amount: inst.amount,
-          description: inst.description,
-          status: "PENDING",
-        })),
-      },
+      status: "PENDING",
+      // invoices: {
+      //   create: installments.map((inst, index) => ({
+      //     invoiceNumber: `INV-${Date.now()}-${index + 1}`, // Simple ID generation
+      //     dueDate: inst.dueDate,
+      //     amount: inst.amount,
+      //     description: inst.description,
+      //     status: "PENDING",
+      //   })),
+      // },
     },
   });
 
   revalidatePath("/dashboard");
   redirect("/dashboard/reservations");
+}
+
+export async function confirmReservation(formData: FormData) {
+  const reservationId = formData.get("reservationId") as string;
+
+  // 1. Fetch the Reservation
+  const reservation = await prisma.reservation.findUnique({
+    where: { id: reservationId },
+    include: { unit: true }, // Need unit info?
+  });
+
+  if (!reservation) throw new Error("Reservation not found");
+  if (reservation.status !== "PENDING")
+    throw new Error("Reservation is already processed");
+
+  // 2. Generate Installments (The Logic we removed from Create)
+  const installments = generateInstallments(
+    reservation.startDate,
+    reservation.endDate,
+    Number(reservation.amount),
+    reservation.frequency,
+  );
+
+  // 3. Transaction: Update Status + Create Invoices
+  await prisma.$transaction([
+    // A. Create the Invoices
+    prisma.invoice.createMany({
+      data: installments.map((inst, index) => ({
+        reservationId: reservation.id,
+        invoiceNumber: `INV-${reservation.id.slice(0, 4)}-${index + 1}`,
+        dueDate: inst.dueDate,
+        amount: inst.amount,
+        description: inst.description,
+        status: "PENDING",
+      })),
+    }),
+
+    // B. Update Reservation Status
+    prisma.reservation.update({
+      where: { id: reservationId },
+      data: { status: "CONFIRMED" },
+    }),
+  ]);
+
+  revalidatePath(`/dashboard/reservations/${reservationId}`);
 }
 
 export async function updateReservationStatus(formData: FormData) {

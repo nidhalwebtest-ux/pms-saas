@@ -43,10 +43,10 @@ export default function Navigation() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex overflow-x-visible border-b border-gray-200 bg-gray-50 px-4 sm:px-6 lg:px-8 z-50 relative">
-      <div className="flex space-x-8">
+    <nav className="flex overflow-x-auto border-b border-gray-200 bg-gray-50 px-4 sm:px-6 lg:px-8 z-50 relative w-full scrollbar-hide">
+      {/* FIX 3: Added 'min-w-max' to force items to stay in a row */}
+      <div className="flex space-x-8 min-w-max">
         {navigationConfig.map((item) => {
-          // Check if this item (or its children) is active
           const isActive =
             pathname === item.href ||
             (item.children && pathname.startsWith(item.href));
@@ -57,7 +57,6 @@ export default function Navigation() {
               key={item.name}
               className="relative group flex items-center h-full"
             >
-              {/* Main Tab Link/Button */}
               <Link
                 href={item.href}
                 className={classNames(
@@ -80,10 +79,10 @@ export default function Navigation() {
                 )}
               </Link>
 
-              {/* Dropdown Menu (Only renders if children exist) */}
               {hasDropdown && (
+                // Note: Dropdowns might get clipped by overflow-x-auto on mobile.
+                // It is recommended to use a different mobile menu pattern if dropdowns are critical.
                 <div className="absolute left-0 top-full hidden pt-1 w-56 group-hover:block z-50">
-                  {/* The actual white card */}
                   <div className="rounded-md bg-white py-2 shadow-lg ring-1 ring-black ring-opacity-5">
                     {item.children!.map((child) => (
                       <Link

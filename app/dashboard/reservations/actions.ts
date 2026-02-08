@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { normalizeReservationDates, calculatePeriod } from "@/utils/date-math";
 
 const prisma = new PrismaClient();
 
@@ -17,38 +18,37 @@ export async function createReservation(formData: FormData) {
   // 1. Extract Data
   const tenantId = formData.get("tenantId") as string;
   const unitId = formData.get("unitId") as string;
-  const startDate = new Date(formData.get("startDate") as string);
-  const endDate = new Date(formData.get("endDate") as string);
-  const amount = formData.get("amount") as string; // Financial snapshot
-  const frequency = formData.get("frequency") as any; // MONTHLY, DAILY
 
-  // 2. Validation: End date must be after start date
-  if (endDate <= startDate) {
-    // In a real app, we would return an error object.
-    // For MVP, we throw (which shows a generic error) or redirect with error param.
+  // Raw dates from form (usually midnight)
+  const rawStartDate = new Date(formData.get("startDate") as string);
+  const rawEndDate = new Date(formData.get("endDate") as string);
+
+  const unitPrice = parseFloat(formData.get("amount") as string);
+  const frequency = formData.get("frequency") as "DAILY" | "MONTHLY" | "YEARLY";
+
+  // 2. NORMALIZE DATES (The Magic Fix)
+  // This transforms "Feb 1" to "Feb 1, 2:00 PM" and "Feb 3" to "Feb 3, 12:00 PM"
+  const { checkIn, checkOut } = normalizeReservationDates(
+    rawStartDate,
+    rawEndDate,
+  );
+
+  // 3. Validation
+  if (checkOut <= checkIn) {
     throw new Error("End date must be after start date");
   }
 
-  // 3. CRITICAL: Availability Check (Prevent Double Booking)
-  // We look for any existing reservation for this UNIT that OVERLAPS with requested dates
+  // 4. Calculate Total Price (Server Side Security)
+  const duration = calculatePeriod(rawStartDate, rawEndDate, frequency);
+  const totalPrice = unitPrice * duration.quantity;
+
+  // 5. CRITICAL: Availability Check using NORMALIZED dates
   const overlapping = await prisma.reservation.findFirst({
     where: {
       unitId: unitId,
-      status: { not: "CANCELLED" }, // Cancelled bookings don't count
+      status: { not: "CANCELLED" },
       OR: [
-        {
-          // Existing start is inside new range
-          startDate: { gte: startDate, lte: endDate },
-        },
-        {
-          // Existing end is inside new range
-          endDate: { gte: startDate, lte: endDate },
-        },
-        {
-          // Existing range fully covers new range
-          startDate: { lte: startDate },
-          endDate: { gte: endDate },
-        },
+        { startDate: { lt: checkOut }, endDate: { gt: checkIn } }, // Optimized overlap logic
       ],
     },
   });
@@ -59,20 +59,21 @@ export async function createReservation(formData: FormData) {
     );
   }
 
-  // 4. Create Reservation
+  // 6. Create Reservation
   await prisma.reservation.create({
     data: {
       tenantId,
       unitId,
-      startDate,
-      endDate,
-      amount,
+      startDate: checkIn, // Save the normalized 2 PM date
+      endDate: checkOut, // Save the normalized 12 PM date
+      amount: unitPrice, // The rate (per night/month)
+      totalPrice: totalPrice, // The full contract value
       frequency,
       status: "CONFIRMED",
     },
   });
 
-  revalidatePath("/dashboard"); // Refresh everything
+  revalidatePath("/dashboard");
   redirect("/dashboard/reservations");
 }
 

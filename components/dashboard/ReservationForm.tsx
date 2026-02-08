@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import SearchableSelect, {
   SelectOption,
 } from "@/components/ui/SearchableSelect";
@@ -14,6 +14,7 @@ import {
 import { createReservation } from "@/app/dashboard/reservations/actions"; // Ensure this path is correct
 import ReservationDatePicker from "@/components/ui/ReservationDatePicker";
 import { DateRange } from "react-day-picker";
+import { calculatePeriod } from "@/utils/date-math";
 
 type PropertyWithUnits = {
   id: string;
@@ -75,6 +76,23 @@ export default function ReservationForm({
     })) || [];
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [frequency, setFrequency] = useState<"MONTHLY" | "DAILY" | "YEARLY">(
+    "MONTHLY",
+  );
+  const [amount, setAmount] = useState<string>("");
+  // --- REAL-TIME CALCULATION ---
+  const calculation = useMemo(() => {
+    if (!dateRange?.from || !dateRange?.to) return null;
+
+    // 1. Calculate Duration
+    const period = calculatePeriod(dateRange.from, dateRange.to, frequency);
+
+    // 2. Calculate Total Estimate
+    const rate = parseFloat(amount) || 0;
+    const total = rate * period.quantity;
+
+    return { period, total };
+  }, [dateRange, frequency, amount]);
 
   // --- Handlers ---
   const handleTenantCreated = (newTenant: any) => {
@@ -175,7 +193,10 @@ export default function ReservationForm({
                 type="number"
                 step="0.01"
                 required
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
                 placeholder="e.g. 150.000"
+                className="block w-full rounded-md border-0 py-1.5 pl-3 pr-12 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                 colSpan="sm:col-span-3"
               />
 
@@ -189,6 +210,47 @@ export default function ReservationForm({
                   { label: "Yearly", value: "YEARLY" },
                 ]}
               />
+
+              {/* --- CALCULATION SUMMARY BOX --- */}
+              {calculation && (
+                <div className="col-span-full bg-blue-50 border border-blue-100 rounded-md p-4 mt-2">
+                  <h4 className="text-sm font-semibold text-blue-900">
+                    Period Summary
+                  </h4>
+                  <div className="mt-2 flex flex-col sm:flex-row justify-between gap-4 text-sm text-blue-800">
+                    {/* Duration Breakdown */}
+                    <div>
+                      <span className="font-medium">Duration: </span>
+
+                      {"exactDuration" in calculation.period ? (
+                        // Daily Logic
+                        <span>{calculation.period.exactDuration} Nights</span>
+                      ) : (
+                        <span>
+                          {/* Use optional chaining (?.) and fallback to 0 to satisfy TS */}
+                          {calculation.period.months ?? 0} Months
+                          {/* Only show days if they exist and are > 0 */}
+                          {(calculation.period.extraDays ?? 0) > 0 &&
+                            ` + ${calculation.period.extraDays} Days`}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Total Price Estimate */}
+                    <div className="text-right">
+                      <span className="font-medium">
+                        Total Contract Value:{" "}
+                      </span>
+                      <span className="text-lg font-bold">
+                        {calculation.total.toLocaleString("en-OM", {
+                          style: "currency",
+                          currency: "OMR",
+                        })}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </FormCard>

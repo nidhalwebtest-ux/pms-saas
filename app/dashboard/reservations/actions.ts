@@ -5,6 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { normalizeReservationDates, calculatePeriod } from "@/utils/date-math";
+import { generateInstallments } from "@/utils/billing-engine";
 
 const prisma = new PrismaClient();
 
@@ -40,7 +41,13 @@ export async function createReservation(formData: FormData) {
 
   // 4. Calculate Total Price (Server Side Security)
   const duration = calculatePeriod(rawStartDate, rawEndDate, frequency);
-  const totalPrice = unitPrice * duration.quantity;
+  const installments = generateInstallments(
+    checkIn,
+    checkOut,
+    unitPrice,
+    frequency,
+  );
+  const totalPrice = installments.reduce((sum, inv) => sum + inv.amount, 0);
 
   // 5. CRITICAL: Availability Check using NORMALIZED dates
   const overlapping = await prisma.reservation.findFirst({
@@ -70,6 +77,15 @@ export async function createReservation(formData: FormData) {
       totalPrice: totalPrice, // The full contract value
       frequency,
       status: "CONFIRMED",
+      invoices: {
+        create: installments.map((inst, index) => ({
+          invoiceNumber: `INV-${Date.now()}-${index + 1}`, // Simple ID generation
+          dueDate: inst.dueDate,
+          amount: inst.amount,
+          description: inst.description,
+          status: "PENDING",
+        })),
+      },
     },
   });
 

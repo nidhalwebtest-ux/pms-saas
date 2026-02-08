@@ -171,9 +171,34 @@ model Reservation {
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
 
   payments    Payment[]
+  invoices    Invoice[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+enum InvoiceStatus {
+  PENDING   // Future date
+  DUE       // Date passed, not paid
+  PAID      // Money collected
+  VOID      // Cancelled (Contract terminated)
+}
+model Invoice {
+  id             String   @id @default(uuid())
+  invoiceNumber  String   // e.g. "INV-2026-001"
+  
+  dueDate        DateTime 
+  amount         Decimal  @db.Decimal(10, 2)
+  status         InvoiceStatus @default(PENDING)
+  description    String?  // e.g. "Rent for March 2026"
+
+  // Relations
+  reservationId  String
+  reservation    Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  
+  payments       Payment[] // One invoice can be paid in partial payments
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 enum PaymentMethod {
@@ -194,6 +219,9 @@ model Payment {
   
   reservationId String
   reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  invoiceId     String?
+  invoice       Invoice? @relation(fields: [invoiceId], references: [id])
   
   createdAt     DateTime @default(now())
 }

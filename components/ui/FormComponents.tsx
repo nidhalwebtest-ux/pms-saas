@@ -105,7 +105,13 @@ export function FormSelect({
 }
 
 // 5. Action Buttons (Save/Cancel)
-export function FormActions({ cancelHref }: { cancelHref: string }) {
+export function FormActions({
+  cancelHref,
+  isPending = false,
+}: {
+  cancelHref: string;
+  isPending: boolean;
+}) {
   // Use a standard link for cancel to avoid form submission
   const Link = require("next/link").default;
 
@@ -119,9 +125,10 @@ export function FormActions({ cancelHref }: { cancelHref: string }) {
       </Link>
       <button
         type="submit"
+        disabled={isPending}
         className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-colors"
       >
-        Save Changes
+        {isPending ? "Saving..." : "Save Changes"}
       </button>
     </div>
   );

@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import SearchableSelect, {
   SelectOption,
 } from "@/components/ui/SearchableSelect";
@@ -41,6 +43,8 @@ export default function ReservationForm({
   properties,
   tenants: initialTenants,
 }: Props) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   // --- State for Searchable Selects ---
   // 1. Tenants (Dynamic, can add new ones)
   const [tenantOptions, setTenantOptions] = useState<SelectOption[]>(
@@ -111,9 +115,48 @@ export default function ReservationForm({
     setSelectedUnit(null); // Reset unit when property changes
   };
 
+  // New Submit Handler
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); // Stop default browser reload
+
+    // Create FormData from the form inputs
+    const formData = new FormData(e.currentTarget);
+
+    // Manually ensure our "Hidden Inputs" for React State (SearchableSelects) are valid
+    if (!selectedTenant?.id) {
+      toast.error("Please select a tenant.");
+      return;
+    }
+    if (!selectedUnit?.id) {
+      toast.error("Please select a unit.");
+      return;
+    }
+    if (!dateRange?.from || !dateRange?.to) {
+      toast.error("Please select a duration.");
+      return;
+    }
+
+    startTransition(async () => {
+      // Call the server action
+      // Note: We pass 'null' as the first argument because we defined the action
+      // to be compatible with useFormState (prevState), but here we call it directly.
+      const result = await createReservation(null, formData);
+
+      if (result?.error) {
+        toast.error(result.error); // Display the error!
+      } else {
+        // Success is handled by the redirect in the action
+        toast.success("Reservation created successfully! Redirecting...");
+        setTimeout(() => {
+          router.push("/dashboard/reservations");
+        }, 3000);
+      }
+    });
+  };
+
   return (
     <>
-      <form action={createReservation}>
+      <form onSubmit={handleSubmit}>
         <FormCard>
           {/* 1. Tenant */}
           <div className="sm:col-span-4">
@@ -260,7 +303,10 @@ export default function ReservationForm({
             </div>
           </div>
         </FormCard>
-        <FormActions cancelHref="/dashboard/reservations" />
+        <FormActions
+          isPending={isPending}
+          cancelHref="/dashboard/reservations"
+        />
       </form>
 
       <CreateTenantModal

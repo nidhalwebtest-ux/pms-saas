@@ -1,9 +1,10 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useState, useRef, useTransition } from "react";
 import { Dialog, Transition } from "@headlessui/react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { createQuickTenant } from "@/app/dashboard/reservations/actions"; // Import the server action
+import { toast } from "sonner";
 
 interface CreateTenantModalProps {
   isOpen: boolean;
@@ -16,20 +17,25 @@ export default function CreateTenantModal({
   onClose,
   onSuccess,
 }: CreateTenantModalProps) {
+  const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(false);
 
-  async function handleSubmit(formData: FormData) {
-    setIsLoading(true);
-    const result = await createQuickTenant(formData);
-    setIsLoading(false);
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
 
-    if (result.success && result.tenant) {
-      onSuccess(result.tenant);
-      onClose();
-    } else {
-      alert("Failed to create tenant");
-    }
-  }
+    startTransition(async () => {
+      const result = await createQuickTenant(formData);
+
+      if (result.error) {
+        toast.error(result.error);
+      } else if (result.success && result.data) {
+        toast.success("Tenant created successfully!");
+        onSuccess(result.data); // Pass new tenant back to parent
+        onClose(); // Close modal
+      }
+    });
+  };
 
   return (
     <Transition.Root show={isOpen} as={Fragment}>
@@ -55,7 +61,7 @@ export default function CreateTenantModal({
                 >
                   Quick Add Tenant
                 </Dialog.Title>
-                <form action={handleSubmit} className="mt-4 space-y-4">
+                <form onSubmit={handleSubmit} className="mt-4 space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <input
                       name="firstName"
@@ -86,10 +92,10 @@ export default function CreateTenantModal({
                   <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
                     <button
                       type="submit"
-                      disabled={isLoading}
+                      disabled={isPending}
                       className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ml-3 sm:w-auto disabled:opacity-50"
                     >
-                      {isLoading ? "Saving..." : "Save Tenant"}
+                      {isPending ? "Saving..." : "Create Tenant"}
                     </button>
                     <button
                       type="button"

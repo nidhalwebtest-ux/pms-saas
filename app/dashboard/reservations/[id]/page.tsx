@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/utils/supabase/server"; // Now this is allowed!
 import { PrismaClient } from "@prisma/client";
 import Link from "next/link";
 import {
@@ -7,14 +7,14 @@ import {
   UserIcon,
   CalendarDaysIcon,
   BanknotesIcon,
-  CheckCircleIcon,
-  XCircleIcon,
   ClockIcon,
   DocumentTextIcon,
   CreditCardIcon,
-  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { confirmReservation, updateReservationStatus } from "../actions";
+
+// Import Client Components
+import StatusActions from "@/components/reservations/StatusActions";
+import ConfirmReservationCard from "@/components/reservations/ConfirmReservationCard";
 
 const prisma = new PrismaClient();
 
@@ -25,7 +25,7 @@ export default async function ReservationDetailsPage({
 }) {
   const { id } = await params;
 
-  // 1. Fetch Data
+  // 1. Fetch Data (Server Side)
   const supabase = await createClient();
   const {
     data: { user },
@@ -43,7 +43,6 @@ export default async function ReservationDetailsPage({
       tenant: true,
       unit: { include: { property: true } },
       payments: { orderBy: { date: "desc" } },
-      // Fetch Invoices sorted by Date
       invoices: { orderBy: { dueDate: "asc" } },
     },
   });
@@ -99,80 +98,28 @@ export default async function ReservationDetailsPage({
           </p>
         </div>
 
-        {/* Management Actions */}
-
-        <div className="mt-4 flex gap-3 md:ml-4 md:mt-0">
-          {reservation.status === "CONFIRMED" && (
-            <form action={updateReservationStatus}>
-              <input type="hidden" name="id" value={reservation.id} />
-              <input type="hidden" name="status" value="CHECKED_IN" />
-              <button
-                type="submit"
-                className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 shadow-sm"
-              >
-                <CheckCircleIcon className="h-4 w-4" /> Check In
-              </button>
-            </form>
-          )}
-          {/* Cancel Button */}
-          {["CONFIRMED", "PENDING"].includes(reservation.status) && (
-            <form action={updateReservationStatus}>
-              <input type="hidden" name="id" value={reservation.id} />
-              <input type="hidden" name="status" value="CANCELLED" />
-              <button
-                type="submit"
-                className="inline-flex items-center gap-2 rounded-md bg-white px-4 py-2 text-sm font-semibold text-red-600 ring-1 ring-inset ring-red-300 hover:bg-red-50 shadow-sm"
-              >
-                <XCircleIcon className="h-4 w-4" /> Cancel
-              </button>
-            </form>
-          )}
-        </div>
+        {/* Management Actions (Client Component) */}
+        <StatusActions id={reservation.id} status={reservation.status} />
       </div>
-      {reservation.status === "PENDING" && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8">
-          <div className="flex justify-between items-center">
-            <div className="flex gap-3">
-              <ExclamationTriangleIcon className="h-6 w-6 text-yellow-500" />
-              <div>
-                <h3 className="text-sm font-bold text-yellow-800">
-                  Reservation is Pending
-                </h3>
-                <p className="text-sm text-yellow-700 mt-1">
-                  This reservation is holding the dates but has no financial
-                  contract yet. Confirm it to generate the{" "}
-                  <strong>
-                    {reservation.frequency === "MONTHLY" ? "Monthly" : "Daily"}{" "}
-                    Invoices
-                  </strong>
-                  .
-                </p>
-              </div>
-            </div>
 
-            <form action={confirmReservation}>
-              <input
-                type="hidden"
-                name="reservationId"
-                value={reservation.id}
-              />
-              <button
-                type="submit"
-                className="bg-yellow-600 text-white px-4 py-2 rounded-md font-semibold text-sm hover:bg-yellow-700 shadow-sm whitespace-nowrap"
-              >
-                Confirm & Generate Contract
-              </button>
-            </form>
-          </div>
-        </div>
+      {/* Confirmation Banner (Client Component) */}
+      {reservation.status === "PENDING" && (
+        <ConfirmReservationCard
+          reservationId={reservation.id}
+          frequency={reservation.frequency}
+        />
       )}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* ... (Rest of the JSX remains exactly the same as before) ... */}
+
         {/* --- LEFT COLUMN (2/3 Width) --- */}
         <div className="lg:col-span-2 space-y-6">
           {/* 1. Property & Tenant Details */}
           <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {/* Property */}
+            {/* ... */}
+            {/* Note: Ensure imports like MapPinIcon are present in this file */}
+            {/* ... */}
             <div>
               <h3 className="text-xs font-semibold uppercase text-gray-500 mb-3 tracking-wider">
                 Property Information
@@ -224,6 +171,7 @@ export default async function ReservationDetailsPage({
 
           {/* 2. Contract Terms */}
           <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+            {/* ... (Keep existing JSX) ... */}
             <h3 className="text-base font-semibold text-gray-900 mb-4 pb-2 border-b border-gray-100">
               Lease Terms
             </h3>
@@ -261,8 +209,9 @@ export default async function ReservationDetailsPage({
             </div>
           </div>
 
-          {/* 3. PAYMENT SCHEDULE (Invoices) - The Big Feature */}
+          {/* 3. PAYMENT SCHEDULE (Invoices) */}
           <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden">
+            {/* ... (Keep existing JSX) ... */}
             <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
               <div className="flex items-center gap-2">
                 <DocumentTextIcon className="h-5 w-5 text-gray-500" />
@@ -371,7 +320,7 @@ export default async function ReservationDetailsPage({
 
         {/* --- RIGHT COLUMN (Financial Summary) --- */}
         <div className="space-y-6">
-          {/* Financial Card */}
+          {/* ... (Keep existing Financial Card) ... */}
           <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
             <h3 className="text-base font-semibold text-gray-900 mb-6 flex items-center gap-2">
               <CreditCardIcon className="h-5 w-5 text-gray-500" />
@@ -428,8 +377,9 @@ export default async function ReservationDetailsPage({
             </div>
           </div>
 
-          {/* Payment History (Mini List) */}
+          {/* Payment History */}
           <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
+            {/* ... (Keep existing JSX) ... */}
             <h3 className="text-sm font-semibold text-gray-900 mb-4 border-b border-gray-100 pb-2">
               Recent Transactions
             </h3>

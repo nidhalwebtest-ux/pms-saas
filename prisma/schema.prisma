@@ -140,6 +140,7 @@ model Tenant {
   organization   Organization @relation(fields: [organizationId], references: [id])
   
   reservations   Reservation[]
+  payments    Payment[]
   
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -216,12 +217,15 @@ model Payment {
   method        PaymentMethod @default(CASH)
   reference     String?  // e.g. "Receipt #123" or "Transaction ID"
   notes         String?
+
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
   
-  reservationId String
-  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  reservationId String?
+  reservation   Reservation? @relation(fields: [reservationId], references: [id])
 
   invoiceId     String?
-  invoice       Invoice? @relation(fields: [invoiceId], references: [id])
+  invoice       Invoice? @relation(fields: [invoiceId], references: [id]) 
   
   createdAt     DateTime @default(now())
 }

@@ -104,14 +104,17 @@ export function FormSelect({
   );
 }
 
+interface FormActionsProps {
+  cancelHref: string;
+  isPending?: boolean; // <--- ADD THE '?' HERE
+  submitLabel?: string;
+}
 // 5. Action Buttons (Save/Cancel)
 export function FormActions({
   cancelHref,
-  isPending = false,
-}: {
-  cancelHref: string;
-  isPending: boolean;
-}) {
+  isPending = false, // <--- ADD DEFAULT VALUE
+  submitLabel = "Save",
+}: FormActionsProps) {
   // Use a standard link for cancel to avoid form submission
   const Link = require("next/link").default;
 

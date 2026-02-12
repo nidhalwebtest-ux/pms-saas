@@ -29,6 +29,10 @@ const navigationConfig = [
     href: "/dashboard/payments",
   },
   {
+    name: "Expenses",
+    href: "/dashboard/expenses",
+  },
+  {
     name: "Settings",
     href: "/dashboard/settings", // Parent path for highlighting
     children: [

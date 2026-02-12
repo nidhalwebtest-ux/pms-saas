@@ -97,6 +97,7 @@ model Property {
   // Relations
   units          Unit[]
   assignments    PropertyAssignment[] // Who works here?
+  expenses       Expense[]
   
   createdAt      DateTime @default(now())
 }
@@ -179,6 +180,7 @@ model Reservation {
 }
 enum InvoiceStatus {
   PENDING   // Future date
+  PARTIAL   // Future date
   DUE       // Date passed, not paid
   PAID      // Money collected
   VOID      // Cancelled (Contract terminated)
@@ -228,4 +230,32 @@ model Payment {
   invoice       Invoice? @relation(fields: [invoiceId], references: [id]) 
   
   createdAt     DateTime @default(now())
+}
+
+model Expense {
+  id             String   @id @default(uuid())
+  title          String   // e.g. "Fix AC in Room 101"
+  amount         Decimal  @db.Decimal(10, 2)
+  date           DateTime @default(now())
+  
+  category       ExpenseCategory @default(MAINTENANCE)
+  
+  // Link to Property (Expenses are usually per property)
+  propertyId     String
+  property       Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  // Optional: Link to a specific Unit if needed
+  unitId         String? 
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+enum ExpenseCategory {
+  UTILITIES      // Water, Electricity, Internet
+  MAINTENANCE    // Spare parts, labor
+  SALARY         // Staff cost
+  MARKETING      // Ads
+  SUPPLIES       // Cleaning stuff
+  OTHER
 }

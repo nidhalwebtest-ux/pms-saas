@@ -116,6 +116,10 @@ export default async function PaymentsListPage() {
                 >
                   Reference
                 </th>
+                <th
+                  scope="col"
+                  className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                ></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
@@ -175,6 +179,14 @@ export default async function PaymentsListPage() {
                     </td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                       {payment.reference || "-"}
+                    </td>
+                    <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                      <Link
+                        href={`/dashboard/payments/${payment.id}`}
+                        className="text-blue-600 hover:text-blue-900"
+                      >
+                        View Details
+                      </Link>
                     </td>
                   </tr>
                 ))

@@ -3,13 +3,11 @@ import { PrismaClient } from "@prisma/client";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import {
-  PhoneIcon,
-  EnvelopeIcon,
-  IdentificationIcon,
-  PencilSquareIcon,
   UserIcon,
-  HomeIcon,
+  PencilSquareIcon,
   BanknotesIcon,
+  PhoneIcon,
+  IdentificationIcon,
   DocumentTextIcon,
   CalendarDaysIcon,
 } from "@heroicons/react/24/outline";
@@ -43,7 +41,7 @@ export default async function TenantDetailsPage({
         include: {
           unit: { include: { property: true } },
           // Fetch invoices to calc balance
-          invoices: true,
+          invoices: { include: { payments: true } },
         },
         orderBy: { startDate: "desc" },
       },
@@ -61,26 +59,21 @@ export default async function TenantDetailsPage({
 
   // 3. CALCULATE FINANCIALS (Real-time)
 
-  // A. Total Paid (Lifetime Value)
-  const totalPaid = tenant.payments.reduce(
-    (sum, p) => sum + Number(p.amount),
-    0,
-  );
-
-  // B. Current Balance (Unpaid Invoices)
-  // We loop through all reservations -> all invoices -> sum those that are PENDING or DUE
   let openBalance = 0;
   tenant.reservations.forEach((res) => {
     res.invoices.forEach((inv) => {
       if (inv.status === "PENDING" || inv.status === "DUE") {
-        // Note: If you support partial payments, this logic needs to check (inv.amount - inv.paidAmount).
-        // For now, assuming Full Payment logic or that you'll add 'paidAmount' to Invoice model later.
-        // Logic based on our current 'partial payment' action:
-        // We create a payment linked to invoice but don't update invoice amount.
-        // So to get TRUE balance, we should do: Invoice Total - Sum of Payments linked to that invoice.
+        const invoiceTotal = Number(inv.amount);
+        // Sum all payments made towards THIS specific invoice
+        const paidTowardsInvoice = inv.payments.reduce(
+          (sum, p) => sum + Number(p.amount),
+          0,
+        );
 
-        // Simplified for MVP display (Total of Unpaid Invoices):
-        openBalance += Number(inv.amount);
+        const remaining = invoiceTotal - paidTowardsInvoice;
+        if (remaining > 0) {
+          openBalance += remaining;
+        }
       }
     });
   });
@@ -176,29 +169,6 @@ export default async function TenantDetailsPage({
           </div>
         </div>
 
-        {/* Total Spent */}
-        <div className="bg-white overflow-hidden shadow rounded-lg border-l-4 border-green-500">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <BanknotesIcon className="h-6 w-6 text-green-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">
-                    Lifetime Value
-                  </dt>
-                  <dd className="flex items-baseline">
-                    <div className="text-xl font-bold text-gray-900">
-                      {totalPaid.toLocaleString()} OMR
-                    </div>
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Open Balance */}
         <div
           className={`bg-white overflow-hidden shadow rounded-lg border-l-4 ${openBalance > 0 ? "border-red-500" : "border-gray-200"}`}
@@ -219,7 +189,7 @@ export default async function TenantDetailsPage({
                     <div
                       className={`text-xl font-bold ${openBalance > 0 ? "text-red-600" : "text-gray-900"}`}
                     >
-                      {openBalance.toLocaleString()} OMR
+                      {openBalance.toFixed(3)} OMR
                     </div>
                   </dd>
                 </dl>

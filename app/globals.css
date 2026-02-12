@@ -55,3 +55,17 @@ body {
   color: black !important;
   font-weight: bold !important;
 }
+
+@media print {
+  body {
+    background-color: white !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  /* Forces the blue header to print in color */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

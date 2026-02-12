@@ -123,7 +123,9 @@ export default function CustomerPaymentForm({ tenants }: { tenants: any[] }) {
       } else {
         toast.success("Payment recorded successfully!");
         // Reset form or redirect
-        router.push("/dashboard/reservations"); // or payments list
+        setTimeout(() => {
+          router.push("/dashboard/payments");
+        }, 3000);
       }
     });
   };

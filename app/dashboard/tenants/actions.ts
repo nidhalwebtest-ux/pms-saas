@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // --- CREATE ---
 export async function createTenant(formData: FormData) {
@@ -73,7 +73,7 @@ export async function updateTenant(formData: FormData) {
   });
 
   if (existingTenant?.organizationId !== dbUser?.organizationId) {
-    throw new Error("Unauthorized");
+    return { error: "Unauthorized" };
   }
 
   // Update
@@ -83,5 +83,5 @@ export async function updateTenant(formData: FormData) {
   });
 
   revalidatePath("/dashboard/tenants");
-  redirect("/dashboard/tenants");
+  return { success: true };
 }

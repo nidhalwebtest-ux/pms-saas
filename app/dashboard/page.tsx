@@ -10,7 +10,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { redirect } from "next/navigation";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function DashboardOverview() {
   const supabase = await createClient();

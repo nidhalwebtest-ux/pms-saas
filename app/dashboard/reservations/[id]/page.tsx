@@ -16,7 +16,7 @@ import {
 import StatusActions from "@/components/reservations/StatusActions";
 import ConfirmReservationCard from "@/components/reservations/ConfirmReservationCard";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function ReservationDetailsPage({
   params,

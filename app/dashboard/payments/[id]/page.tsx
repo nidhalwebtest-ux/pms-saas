@@ -11,7 +11,7 @@ import {
 } from "@heroicons/react/24/outline";
 import PrintButton from "@/components/ui/PrintButton";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function PaymentDetailsPage({
   params,

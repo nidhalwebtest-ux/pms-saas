@@ -2,21 +2,20 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { PrismaClient, Prisma } from "@prisma/client";
-import { CalendarDaysIcon } from "@heroicons/react/24/outline";
+import { HomeModernIcon } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
 
-import ReservationFilters from "./ReservationFilters";
 import ListActionBar from "@/components/ui/list/ListActionBar";
 import SortableHeader from "@/components/ui/list/SortableHeader";
+import UnitFilters from "./UnitFilters";
 
-export default async function ReservationsListPage({
+export default async function UnitsPage({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
   const params = await searchParams;
   const q = params.q || "";
-  const statusFilter = params.status || "";
   const propertyFilter = params.property || "";
   const sortParam = params.sort || "newest";
 
@@ -40,39 +39,30 @@ export default async function ReservationsListPage({
   });
 
   // 2. Build Prisma Where Clause
-  const whereClause: Prisma.ReservationWhereInput = {
-    // Restrict to this Organization's properties
-    unit: { property: { organizationId: dbUser?.organizationId! } },
-    ...(q && {
-      OR: [
-        { tenant: { firstName: { contains: q, mode: "insensitive" } } },
-        { tenant: { lastName: { contains: q, mode: "insensitive" } } },
-        { unit: { name: { contains: q, mode: "insensitive" } } },
-      ],
-    }),
-    ...(statusFilter && { status: statusFilter as any }),
-    ...(propertyFilter && { unit: { propertyId: propertyFilter } }),
+  const whereClause: Prisma.UnitWhereInput = {
+    // Ensure we only show units from properties belonging to this Org
+    property: { organizationId: dbUser?.organizationId! },
+    ...(q && { name: { contains: q, mode: "insensitive" } }),
+    ...(propertyFilter && { propertyId: propertyFilter }),
   };
 
   // 3. Build OrderBy
-  // We use type 'any' here briefly because nested relation sorting types in Prisma can be strict
-  let orderByClause: any = { createdAt: "desc" };
+  let orderByClause: Prisma.UnitOrderByWithRelationInput = {
+    createdAt: "desc",
+  };
   if (sortParam === "oldest") orderByClause = { createdAt: "asc" };
-  if (sortParam === "tenant_asc")
-    orderByClause = { tenant: { firstName: "asc" } };
-  if (sortParam === "tenant_desc")
-    orderByClause = { tenant: { firstName: "desc" } };
-  if (sortParam === "start_asc") orderByClause = { startDate: "asc" };
-  if (sortParam === "start_desc") orderByClause = { startDate: "desc" };
-  if (sortParam === "status_asc") orderByClause = { status: "asc" };
-  if (sortParam === "status_desc") orderByClause = { status: "desc" };
+  if (sortParam === "name_asc") orderByClause = { name: "asc" };
+  if (sortParam === "name_desc") orderByClause = { name: "desc" };
+  if (sortParam === "price_asc") orderByClause = { basePrice: "asc" };
+  if (sortParam === "price_desc") orderByClause = { basePrice: "desc" };
+  if (sortParam === "floor_asc") orderByClause = { floor: "asc" };
+  if (sortParam === "floor_desc") orderByClause = { floor: "desc" };
 
   // 4. Fetch Data
-  const reservations = await prisma.reservation.findMany({
+  const units = await prisma.unit.findMany({
     where: whereClause,
     include: {
-      tenant: true,
-      unit: { include: { property: true } },
+      property: { select: { name: true } }, // Fetch parent property name
     },
     orderBy: orderByClause,
   });
@@ -83,37 +73,34 @@ export default async function ReservationsListPage({
       <div className="mb-6">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-100 rounded-md">
-            <CalendarDaysIcon className="h-6 w-6 text-blue-700" />
+            <HomeModernIcon className="h-6 w-6 text-blue-700" />
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 leading-tight">
-              Reservations & Leases
+              Units & Rooms List
             </h1>
           </div>
         </div>
         <div className="mt-3">
+          {/* Note: You may need to update your new Unit page to be a top-level route /dashboard/units/new */}
           <Link
-            href="/dashboard/reservations/new"
+            href="/dashboard/units/new"
             className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
           >
-            New Booking
+            New Unit
           </Link>
         </div>
       </div>
 
       {/* 2. Filter Section */}
-      <ReservationFilters
+      <UnitFilters
         currentSearch={q}
-        currentStatus={statusFilter}
         currentProperty={propertyFilter}
         properties={properties}
       />
 
       {/* 3. Action Bar */}
-      <ListActionBar
-        totalResults={reservations.length}
-        currentSort={sortParam}
-      />
+      <ListActionBar totalResults={units.length} currentSort={sortParam} />
 
       {/* 4. Data Table */}
       <div className="mt-4 flow-root">
@@ -133,95 +120,73 @@ export default async function ReservationsListPage({
                       scope="col"
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-24"
                     >
-                      Action
+                      Edit | View
                     </th>
 
-                    <SortableHeader label="Tenant" sortKey="tenant" />
+                    <SortableHeader label="Unit Name" sortKey="name" />
+                    <SortableHeader label="Property" sortKey="property" />
+                    <SortableHeader label="Floor" sortKey="floor" />
                     <th
                       scope="col"
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
                     >
-                      Unit & Property
+                      Specs
                     </th>
-                    <SortableHeader label="Start Date" sortKey="start" />
-                    <SortableHeader label="Status" sortKey="status" />
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 pr-6"
-                    >
-                      Total Value
-                    </th>
+                    <SortableHeader label="Base Price (OMR)" sortKey="price" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
-                  {reservations.length === 0 ? (
+                  {units.length === 0 ? (
                     <tr>
                       <td
                         colSpan={7}
                         className="py-10 text-center text-sm text-gray-500"
                       >
-                        No reservations found matching your criteria.
+                        No units found matching your criteria.
                       </td>
                     </tr>
                   ) : (
-                    reservations.map((res) => (
+                    units.map((unit) => (
                       <tr
-                        key={res.id}
+                        key={unit.id}
                         className="bg-white even:bg-gray-50 hover:bg-blue-50 transition-colors"
                       >
                         <td className="whitespace-nowrap py-3 pl-4 pr-3 text-sm font-mono text-gray-500 sm:pl-6">
-                          {res.id.slice(0, 8).toUpperCase()}
+                          {unit.id.slice(0, 8).toUpperCase()}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-sm font-medium">
                           <Link
-                            href={`/dashboard/reservations/${res.id}`}
-                            className="text-blue-600 hover:text-blue-900 font-semibold"
+                            href={`/dashboard/units/${unit.id}/edit`}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            Edit
+                          </Link>
+                          <span className="text-gray-300 mx-2">|</span>
+                          <Link
+                            href={`/dashboard/units/${unit.id}`}
+                            className="text-gray-600 hover:text-gray-900"
                           >
                             View
                           </Link>
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-900 font-medium">
+                          {unit.name}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-sm text-blue-600 hover:underline">
                           <Link
-                            href={`/dashboard/tenants/${res.tenantId}`}
-                            className="hover:underline"
+                            href={`/dashboard/properties/${unit.propertyId}`}
                           >
-                            {res.tenant.firstName} {res.tenant.lastName}
+                            {unit.property.name}
                           </Link>
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
-                          <div className="font-medium text-gray-900">
-                            {res.unit.name}
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            {res.unit.property.name}
-                          </div>
+                          {unit.floor || "-"}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
-                          <div>
-                            {new Date(res.startDate).toLocaleDateString()}
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            to {new Date(res.endDate).toLocaleDateString()}
-                          </div>
+                          {unit.bedrooms} Bed / {unit.bathrooms} Bath
                         </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-sm">
-                          <span
-                            className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${
-                              res.status === "CONFIRMED" ||
-                              res.status === "CHECKED_IN"
-                                ? "bg-green-50 text-green-700 ring-green-600/20"
-                                : res.status === "CANCELLED"
-                                  ? "bg-red-50 text-red-700 ring-red-600/20"
-                                  : res.status === "COMPLETED"
-                                    ? "bg-gray-50 text-gray-600 ring-gray-500/10"
-                                    : "bg-yellow-50 text-yellow-800 ring-yellow-600/20"
-                            }`}
-                          >
-                            {res.status.replace("_", " ")}
-                          </span>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-900 font-bold text-right pr-6">
-                          {Number(res.totalPrice).toFixed(3)}
+                        <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-900 font-bold">
+                          {Number(unit.basePrice).toFixed(3)}
                         </td>
                       </tr>
                     ))

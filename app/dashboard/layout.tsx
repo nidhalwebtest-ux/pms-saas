@@ -4,7 +4,7 @@ import Header from "@/components/dashboard/Header";
 import Navigation from "@/components/dashboard/Navigation";
 import { PrismaClient } from "@prisma/client";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 export default async function DashboardLayout({
   children,
   modal,

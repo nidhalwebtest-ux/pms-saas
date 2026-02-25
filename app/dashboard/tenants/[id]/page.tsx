@@ -12,7 +12,7 @@ import {
   CalendarDaysIcon,
 } from "@heroicons/react/24/outline";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function TenantDetailsPage({
   params,

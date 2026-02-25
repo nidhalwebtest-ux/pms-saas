@@ -5,7 +5,7 @@ import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 // 1. FETCH OPEN TRANSACTIONS
 export async function getTenantFinancials(tenantId: string) {

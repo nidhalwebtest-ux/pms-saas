@@ -10,7 +10,7 @@ import { PrismaClient } from "@prisma/client";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function EditPropertyPage({
   params,

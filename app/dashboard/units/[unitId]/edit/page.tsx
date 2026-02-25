@@ -1,36 +1,67 @@
-import { createUnit } from "../../actions";
+import { updateUnit } from "../../../actions"; // Adjust path to point to your actions file
 import {
   PageHeader,
   FormCard,
   FormInput,
   FormActions,
 } from "@/components/ui/FormComponents";
+import { PrismaClient } from "@prisma/client";
+import { notFound, redirect } from "next/navigation";
+import { createClient } from "@/utils/supabase/server";
 
-export default async function NewUnitPage({
+import { prisma } from "@/lib/prisma";
+
+export default async function EditUnitPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string; unitId: string }>;
 }) {
-  const { id } = await params;
+  const { id, unitId } = await params;
+
+  // 1. Fetch Data
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const unit = await prisma.unit.findUnique({
+    where: { id: unitId },
+    include: { property: true },
+  });
+
+  // 2. Security Check
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { organizationId: true },
+  });
+
+  // Ensure unit exists, belongs to property in URL, AND belongs to user's Org
+  if (
+    !unit ||
+    unit.propertyId !== id ||
+    unit.property.organizationId !== dbUser?.organizationId
+  ) {
+    return notFound();
+  }
 
   return (
     <div className="max-w-2xl mx-auto py-8">
       <PageHeader
-        title="Add New Unit / Room"
-        description="Add a rentable unit to this property."
+        title={`Edit ${unit.name}`}
+        description={`Update details for unit in ${unit.property.name}`}
       />
 
-      <form action={createUnit}>
-        {/* Hidden Field must be inside the form */}
-        <input type="hidden" name="propertyId" value={id} />
+      <form action={updateUnit}>
+        <input type="hidden" name="unitId" value={unit.id} />
+        <input type="hidden" name="propertyId" value={unit.propertyId} />
 
         <FormCard>
-          {/* 1. Main Info */}
           <FormInput
             name="name"
             id="name"
             label="Unit Name / Number"
-            placeholder="e.g. Room 101, Apt 4B"
+            defaultValue={unit.name}
             required
             colSpan="sm:col-span-3"
           />
@@ -41,12 +72,11 @@ export default async function NewUnitPage({
             label="Base Price (OMR)"
             type="number"
             step="0.01"
-            placeholder="0.00"
+            defaultValue={Number(unit.basePrice)}
             required
             colSpan="sm:col-span-3"
           />
 
-          {/* 2. Details Row (Grouped visually by 3 columns) */}
           <div className="col-span-full border-t border-gray-100 pt-6 mt-2">
             <h3 className="text-sm font-medium text-gray-500 mb-4">Specs</h3>
             <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
@@ -55,7 +85,7 @@ export default async function NewUnitPage({
                 id="floor"
                 label="Floor"
                 type="number"
-                defaultValue="1"
+                defaultValue={unit.floor}
                 colSpan="sm:col-span-2"
               />
 
@@ -64,7 +94,7 @@ export default async function NewUnitPage({
                 id="bedrooms"
                 label="Bedrooms"
                 type="number"
-                defaultValue="1"
+                defaultValue={unit.bedrooms}
                 colSpan="sm:col-span-2"
               />
 
@@ -73,7 +103,7 @@ export default async function NewUnitPage({
                 id="bathrooms"
                 label="Bathrooms"
                 type="number"
-                defaultValue="1"
+                defaultValue={unit.bathrooms}
                 colSpan="sm:col-span-2"
               />
             </div>

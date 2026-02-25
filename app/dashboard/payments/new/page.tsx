@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { redirect } from "next/navigation";
 import CustomerPaymentForm from "@/components/dashboard/CustomerPaymentForm";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function NewPaymentPage() {
   const supabase = await createClient();

@@ -1,132 +1,189 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
-import {
-  BuildingOfficeIcon,
-  HomeIcon,
-  MapPinIcon,
-} from "@heroicons/react/24/outline";
-import {
-  ListHeader,
-  ListTable,
-  ListTh,
-  ListTd,
-  ListEmptyState,
-} from "@/components/ui/ListComponents";
+import { PrismaClient, Prisma } from "@prisma/client";
+import { BuildingOfficeIcon } from "@heroicons/react/24/outline";
+import { prisma } from "@/lib/prisma";
 
-const prisma = new PrismaClient();
+// New Client Components we will create below
+import PropertyFilters from "./PropertyFilters";
+import ListActionBar from "@/components/ui/list/ListActionBar";
+import SortableHeader from "@/components/ui/list/SortableHeader";
 
-export default async function PropertiesPage() {
-  // 1. Fetch Data
+export default async function PropertiesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | undefined }>;
+}) {
+  // 1. Resolve Search Params (Next.js 15 requirement)
+  const params = await searchParams;
+  const q = params.q || "";
+  const typeFilter = params.type || "";
+  const sortParam = params.sort || "newest";
+  const showInactive = params.inactive === "true";
+
+  // 2. Auth & User context
   const supabase = await createClient();
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
+  if (error || !user) redirect("/login");
 
-  if (error || !user) {
-    redirect("/login");
-  }
-
-  // Get the Org ID first
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
     select: { organizationId: true },
   });
 
-  // Fetch Properties for this Organization
+  // 3. Build Prisma Where Clause dynamically based on filters
+  const whereClause: Prisma.PropertyWhereInput = {
+    organizationId: dbUser?.organizationId!,
+    ...(q && {
+      OR: [
+        { name: { contains: q, mode: "insensitive" } },
+        { city: { contains: q, mode: "insensitive" } },
+      ],
+    }),
+    ...(typeFilter && { type: typeFilter as any }),
+    // In the future, if you add an 'isActive' boolean to Property, handle it here:
+    // isActive: showInactive ? undefined : true,
+  };
+
+  // 4. Build OrderBy
+  let orderByClause: Prisma.PropertyOrderByWithRelationInput = {
+    createdAt: "desc",
+  };
+  if (sortParam === "oldest") orderByClause = { createdAt: "asc" };
+  if (sortParam === "name_asc") orderByClause = { name: "asc" };
+  if (sortParam === "name_desc") orderByClause = { name: "desc" };
+  if (sortParam === "type_asc") orderByClause = { type: "asc" };
+  if (sortParam === "type_desc") orderByClause = { type: "desc" };
+  if (sortParam === "city_asc") orderByClause = { city: "asc" };
+  if (sortParam === "city_desc") orderByClause = { city: "desc" };
+
+  // 5. Fetch Data
   const properties = await prisma.property.findMany({
-    where: {
-      organizationId: dbUser?.organizationId!,
-    },
-    include: {
-      _count: {
-        select: { units: true }, // Get the number of units/rooms automatically
-      },
-    },
-    orderBy: { createdAt: "desc" },
+    where: whereClause,
+    include: { _count: { select: { units: true } } },
+    orderBy: orderByClause,
   });
 
-  if (properties.length === 0) {
-    return (
-      <ListEmptyState
-        title="No properties found"
-        description="Get started by creating your first property."
-        actionLabel="New Property"
-        actionHref="/dashboard/properties/new"
-      />
-    );
-  }
-
   return (
-    <div>
-      <ListHeader
-        title="Properties"
-        description="Manage your buildings, hotels, and compounds."
-        searchPlaceholder="Search properties..."
-        primaryAction={{
-          label: "New Property",
-          href: "/dashboard/properties/new",
-        }}
-      />
+    <div className="mx-auto max-w-full px-4 sm:px-6 lg:px-8 py-4">
+      {/* 1. Page Title & Primary Action */}
+      <div className="mb-6">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-100 rounded-md">
+            <BuildingOfficeIcon className="h-6 w-6 text-blue-700" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 leading-tight">
+              Properties List
+            </h1>
+          </div>
+        </div>
+        <div className="mt-3">
+          <Link
+            href="/dashboard/properties/new"
+            className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+          >
+            New Property
+          </Link>
+        </div>
+      </div>
 
-      <ListTable>
-        <thead className="bg-gray-50">
-          <tr>
-            <ListTh>Property Name</ListTh>
-            <ListTh>Type</ListTh>
-            <ListTh>Location</ListTh>
-            <ListTh>Units</ListTh>
-            <ListTh className="relative">
-              <span className="sr-only">Actions</span>
-            </ListTh>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-200 bg-white">
-          {properties.map((property) => (
-            <tr
-              key={property.id}
-              className="hover:bg-gray-50 transition-colors"
-            >
-              <ListTd>
-                <Link
-                  href={`/dashboard/properties/${property.id}`}
-                  className="text-blue-600 hover:underline"
-                >
-                  {property.name}
-                </Link>
-              </ListTd>
-              <ListTd>
-                <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
-                  {property.type}
-                </span>
-              </ListTd>
-              <ListTd className="text-gray-500">
-                {property.city}, {property.governorate}
-              </ListTd>
-              <ListTd className="text-gray-500">
-                {property._count.units} units
-              </ListTd>
-              <ListTd className="text-right">
-                <Link
-                  href={`/dashboard/properties/${property.id}`}
-                  className="text-blue-600 hover:text-blue-900 text-xs font-semibold"
-                >
-                  View
-                </Link>
-                <span className="text-gray-300 mx-2">|</span>
-                <Link
-                  href={`/dashboard/properties/${property.id}/edit`}
-                  className="text-gray-600 hover:text-gray-900 text-xs"
-                >
-                  Edit
-                </Link>
-              </ListTd>
-            </tr>
-          ))}
-        </tbody>
-      </ListTable>
+      {/* 2. Filter Section (Client Component) */}
+      <PropertyFilters currentSearch={q} currentType={typeFilter} />
+
+      {/* 3. Action Bar (Export, Sort, Totals) */}
+      <ListActionBar totalResults={properties.length} currentSort={sortParam} />
+
+      {/* 4. The Standardized Data Table */}
+      <div className="mt-4 flow-root">
+        <div className="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
+          <div className="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
+            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
+              <table className="min-w-full divide-y divide-gray-300">
+                <thead className="bg-gray-200">
+                  <tr>
+                    <th
+                      scope="col"
+                      className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 w-32"
+                    >
+                      Internal ID
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-24"
+                    >
+                      Edit | View
+                    </th>
+                    <SortableHeader label="Property Name" sortKey="name" />
+                    <SortableHeader label="Type" sortKey="type" />
+                    <SortableHeader label="Location (City)" sortKey="city" />
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                    >
+                      Units
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {properties.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="py-10 text-center text-sm text-gray-500"
+                      >
+                        No properties found matching your criteria.
+                      </td>
+                    </tr>
+                  ) : (
+                    properties.map((property) => (
+                      <tr
+                        key={property.id}
+                        className="bg-white even:bg-gray-50 hover:bg-blue-50 transition-colors"
+                      >
+                        <td className="whitespace-nowrap py-3 pl-4 pr-3 text-sm font-mono text-gray-500 sm:pl-6">
+                          {property.id.slice(0, 8).toUpperCase()}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-sm font-medium">
+                          <Link
+                            href={`/dashboard/properties/${property.id}/edit`}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            Edit
+                          </Link>
+                          <span className="text-gray-300 mx-2">|</span>
+                          <Link
+                            href={`/dashboard/properties/${property.id}`}
+                            className="text-gray-600 hover:text-gray-900"
+                          >
+                            View
+                          </Link>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-900 font-medium">
+                          {property.name}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
+                          {property.type}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
+                          {property.city}, {property.governorate}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
+                          {property._count.units} units
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

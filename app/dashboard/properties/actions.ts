@@ -5,7 +5,7 @@ import { createClient } from "@/utils/supabase/server";
 import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function createProperty(formData: FormData) {
   const supabase = await createClient();

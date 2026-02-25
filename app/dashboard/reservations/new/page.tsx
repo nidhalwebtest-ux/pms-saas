@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/ui/FormComponents";
 import ReservationForm from "@/components/dashboard/ReservationForm";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function NewReservationPage() {
   const supabase = await createClient();

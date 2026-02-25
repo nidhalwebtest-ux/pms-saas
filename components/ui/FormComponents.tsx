@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
-import clsx from "clsx"; // You might need to install clsx: npm install clsx
+import clsx from "clsx";
+import Link from "next/link";
 
 // 1. The White Card Wrapper
 export function FormCard({ children }: { children: ReactNode }) {
@@ -23,7 +24,7 @@ export function PageHeader({
   description: string;
 }) {
   return (
-    <div className="md:flex md:items-center md:justify-between mb-8">
+    <div className="mb-8">
       <div className="min-w-0 flex-1">
         <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
           {title}
@@ -34,16 +35,18 @@ export function PageHeader({
   );
 }
 
-// 3. Standard Text Input
+// 3. Standard Text Input (Now with Icon Support)
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   colSpan?: string; // e.g., "sm:col-span-3"
+  icon?: ReactNode; // <--- NEW: Support for icons
 }
 
 export function FormInput({
   label,
   colSpan = "col-span-full",
   className,
+  icon,
   ...props
 }: InputProps) {
   return (
@@ -54,11 +57,17 @@ export function FormInput({
       >
         {label}
       </label>
-      <div className="mt-2">
+      <div className="mt-2 relative rounded-md shadow-sm">
+        {icon && (
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            {icon}
+          </div>
+        )}
         <input
           {...props}
           className={clsx(
             "block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 transition-all duration-200",
+            icon ? "pl-10" : "pl-3", // Add padding if icon exists
             className,
           )}
         />
@@ -104,20 +113,18 @@ export function FormSelect({
   );
 }
 
+// 5. Action Buttons (Save/Cancel)
 interface FormActionsProps {
   cancelHref: string;
-  isPending?: boolean; // <--- ADD THE '?' HERE
+  isPending?: boolean;
   submitLabel?: string;
 }
-// 5. Action Buttons (Save/Cancel)
+
 export function FormActions({
   cancelHref,
-  isPending = false, // <--- ADD DEFAULT VALUE
-  submitLabel = "Save",
+  isPending = false,
+  submitLabel = "Save Changes",
 }: FormActionsProps) {
-  // Use a standard link for cancel to avoid form submission
-  const Link = require("next/link").default;
-
   return (
     <div className="flex items-center justify-end gap-x-6 border-t border-gray-900/10 px-4 py-4 sm:px-8 bg-gray-50/50 sm:rounded-b-xl">
       <Link
@@ -129,9 +136,9 @@ export function FormActions({
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-colors"
+        className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {isPending ? "Saving..." : "Save Changes"}
+        {isPending ? "Saving..." : submitLabel}
       </button>
     </div>
   );

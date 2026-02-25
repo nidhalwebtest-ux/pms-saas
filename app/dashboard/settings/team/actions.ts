@@ -6,7 +6,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export async function addTeamMember(formData: FormData) {
   // 1. Verify the current user (The Manager)

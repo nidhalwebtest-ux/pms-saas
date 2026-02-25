@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 import { normalizeReservationDates, calculatePeriod } from "@/utils/date-math";
 import { generateInstallments } from "@/utils/billing-engine";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export type ActionResponse = {
   error?: string;

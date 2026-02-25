@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/FormComponents";
 import { addTeamMember } from "./actions";
 
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/prisma";
 
 export default async function TeamPage() {
   const supabase = await createClient();

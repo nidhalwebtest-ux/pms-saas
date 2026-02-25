@@ -5,7 +5,6 @@ import {
   FormInput,
   FormActions,
 } from "@/components/ui/FormComponents";
-import { PrismaClient } from "@prisma/client";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 

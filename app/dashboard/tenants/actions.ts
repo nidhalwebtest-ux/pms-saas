@@ -2,7 +2,6 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
@@ -73,7 +72,7 @@ export async function updateTenant(formData: FormData) {
   });
 
   if (existingTenant?.organizationId !== dbUser?.organizationId) {
-    return { error: "Unauthorized" };
+    throw new Error("Unauthorized"); // CHANGED: Throw error instead of returning object
   }
 
   // Update
@@ -83,5 +82,5 @@ export async function updateTenant(formData: FormData) {
   });
 
   revalidatePath("/dashboard/tenants");
-  return { success: true };
+  redirect("/dashboard/tenants"); // CHANGED: Redirect back to the list on success
 }

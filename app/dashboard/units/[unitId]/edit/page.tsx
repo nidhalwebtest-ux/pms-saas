@@ -1,4 +1,3 @@
-import { updateUnit } from "../../../actions"; // Adjust path to point to your actions file
 import {
   PageHeader,
   FormCard,
@@ -10,6 +9,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 
 import { prisma } from "@/lib/prisma";
+import { updateUnit } from "@/app/dashboard/properties/[id]/actions";
 
 export default async function EditUnitPage({
   params,

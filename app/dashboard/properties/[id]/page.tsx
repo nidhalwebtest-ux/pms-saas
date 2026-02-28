@@ -1,12 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
 import { notFound, redirect } from "next/navigation";
-import {
-  HomeIcon,
-  CurrencyDollarIcon,
-  UserGroupIcon,
-} from "@heroicons/react/24/outline";
+import { HomeIcon } from "@heroicons/react/24/outline";
 
 import { prisma } from "@/lib/prisma";
 
@@ -62,9 +57,11 @@ export default async function PropertyDetailsPage({
           >
             Edit Property
           </Link>
+
+          {/* UPDATED: Points to global units route with propertyId parameter */}
           <Link
-            href={`/dashboard/properties/${id}/units/new`}
-            className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white..."
+            href={`/dashboard/units/new?propertyId=${id}`}
+            className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
           >
             Add Unit
           </Link>
@@ -144,8 +141,9 @@ export default async function PropertyDetailsPage({
                           {Number(unit.basePrice).toFixed(3)} OMR
                         </td>
                         <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                          {/* UPDATED: Points to global edit unit route */}
                           <Link
-                            href={`/dashboard/properties/${id}/units/${unit.id}/edit`}
+                            href={`/dashboard/units/${unit.id}/edit`}
                             className="text-blue-600 hover:text-blue-900"
                           >
                             Edit<span className="sr-only">, {unit.name}</span>

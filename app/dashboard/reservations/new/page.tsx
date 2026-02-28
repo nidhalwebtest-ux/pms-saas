@@ -32,7 +32,16 @@ export default async function NewReservationPage() {
       id: true,
       name: true,
       units: {
-        select: { id: true, name: true, basePrice: true },
+        select: {
+          id: true,
+          name: true,
+          basePrice: true,
+          // FETCH RESERVATIONS FOR AVAILABILITY CHECK
+          reservations: {
+            select: { startDate: true, endDate: true, status: true },
+            where: { status: { not: "CANCELLED" } }, // Don't block cancelled dates
+          },
+        },
       },
     },
   });
@@ -70,16 +79,17 @@ export default async function NewReservationPage() {
     units: p.units.map((u) => ({
       ...u,
       basePrice: Number(u.basePrice),
+      reservations: u.reservations, // pass reservations down
     })),
   }));
 
   return (
-    <div className="max-w-2xl mx-auto py-8">
+    <div className="max-w-4xl mx-auto py-8 px-4">
       <PageHeader
         title="New Reservation"
         description="Create a lease or check-in a guest."
+        listHref="/dashboard/reservations" // <-- Top right button
       />
-
       <ReservationForm properties={serializedProperties} tenants={tenants} />
     </div>
   );

@@ -35,6 +35,7 @@ export default function SearchableSelect({
   placeholder = "Select...",
 }: SearchableSelectProps) {
   const [query, setQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
 
   const filteredOptions =
     query === ""
@@ -111,13 +112,20 @@ export default function SearchableSelect({
           </Combobox>
         </div>
         {onAdd && (
-          <button
-            type="button"
-            onClick={onAdd}
-            className="mt-1 inline-flex items-center rounded-md bg-blue-50 px-3 py-2 text-blue-600 shadow-sm ring-1 ring-inset ring-blue-300 hover:bg-blue-100"
+          <li
+            className="relative cursor-default select-none py-2 pl-3 pr-9 text-gray-900 hover:bg-blue-600 hover:text-white"
+            onClick={() => {
+              onAdd();
+              setIsOpen(false);
+            }}
           >
-            <PlusIcon className="h-5 w-5" aria-hidden="true" />
-          </button>
+            <div className="flex items-center">
+              <PlusIcon
+                className="mr-2 h-5 w-5 text-gray-400 group-hover:text-white"
+                aria-hidden="true"
+              />
+            </div>
+          </li>
         )}
       </div>
     </div>

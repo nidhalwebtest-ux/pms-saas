@@ -6,37 +6,30 @@ import { useRouter } from "next/navigation";
 import SearchableSelect, {
   SelectOption,
 } from "@/components/ui/SearchableSelect";
-import CreateTenantModal from "@/app/dashboard/@modal/CreateTenantModal";
 import {
   FormCard,
   FormInput,
   FormSelect,
   FormActions,
 } from "@/components/ui/FormComponents";
-import { createReservation } from "@/app/dashboard/reservations/actions"; // Ensure this path is correct
-import ReservationDatePicker from "@/components/ui/ReservationDatePicker";
-import { DateRange } from "react-day-picker";
+import { createReservation } from "@/app/dashboard/reservations/actions";
 import { calculatePeriod } from "@/utils/date-math";
+import BookingEngineModal from "./BookingEngineModal";
+import { DateRange } from "react-day-picker";
+import {
+  UserIcon,
+  DocumentTextIcon,
+  CalendarDaysIcon,
+  HomeIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+import TenantForm from "./TenantForm";
 
-type PropertyWithUnits = {
-  id: string;
-  name: string;
-  units: {
-    id: string;
-    name: string;
-    basePrice: number;
-  }[];
-};
-
-type Tenant = {
-  id: string;
-  firstName: string;
-  lastName: string;
-};
+// ... keep your existing PropertyWithUnits and Tenant types ...
 
 interface Props {
-  properties: PropertyWithUnits[];
-  tenants: Tenant[];
+  properties: any[];
+  tenants: any[];
 }
 
 export default function ReservationForm({
@@ -45,8 +38,8 @@ export default function ReservationForm({
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  // --- State for Searchable Selects ---
-  // 1. Tenants (Dynamic, can add new ones)
+
+  // State
   const [tenantOptions, setTenantOptions] = useState<SelectOption[]>(
     initialTenants.map((t) => ({
       id: t.id,
@@ -56,100 +49,58 @@ export default function ReservationForm({
   const [selectedTenant, setSelectedTenant] = useState<SelectOption | null>(
     null,
   );
-
-  // 2. Properties (Static list from server)
-  const propertyOptions = properties.map((p) => ({ id: p.id, name: p.name }));
-  const [selectedProperty, setSelectedProperty] = useState<SelectOption | null>(
-    null,
-  );
-
-  // 3. Units (Derived from selected property)
-  const [selectedUnit, setSelectedUnit] = useState<SelectOption | null>(null);
-
-  // --- Modal State ---
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // --- Derived Data ---
-
+  const [isTenantModalOpen, setIsTenantModalOpen] = useState(false);
   const [frequency, setFrequency] = useState<"MONTHLY" | "DAILY" | "YEARLY">(
     "MONTHLY",
   );
   const [amount, setAmount] = useState<string>("");
+
+  // Booking Engine State
+  const [isBookingEngineOpen, setIsBookingEngineOpen] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [selectedUnitId, setSelectedUnitId] = useState<string | undefined>();
 
-  // Find the full property object to get its units
-  const activeProperty = properties.find((p) => p.id === selectedProperty?.id);
-  const unitOptions =
-    activeProperty?.units.map((u) => ({
-      id: u.id,
-      name: `${u.name} (Default: ${Number(u.basePrice).toFixed(2)} OMR)`,
-    })) || [];
+  // Helpers to display selected data
+  const selectedUnit = useMemo(() => {
+    for (const p of properties) {
+      const u = p.units.find((u: any) => u.id === selectedUnitId);
+      if (u) return { ...u, propertyName: p.name };
+    }
+    return null;
+  }, [selectedUnitId, properties]);
 
-  // --- REAL-TIME CALCULATION ---
   const calculation = useMemo(() => {
     if (!dateRange?.from || !dateRange?.to) return null;
-
-    // Pass the selected frequency so math knows if it's Nights or Months
     const period = calculatePeriod(dateRange.from, dateRange.to, frequency);
-
     const rate = parseFloat(amount) || 0;
-    // If Monthly: 1 Month * 130 = 130.
-    // If Daily: 28 Days * 5 = 140.
     const total = rate * period.quantity;
-
     return { period, total };
   }, [dateRange, frequency, amount]);
 
-  // --- Handlers ---
-  const handleTenantCreated = (newTenant: any) => {
-    const newOption = {
-      id: newTenant.id,
-      name: `${newTenant.firstName} ${newTenant.lastName}`,
-    };
-    setTenantOptions((prev) => [...prev, newOption]);
-    setSelectedTenant(newOption); // Auto-select the new tenant
-  };
-
-  const handlePropertyChange = (option: SelectOption | null) => {
-    setSelectedProperty(option);
-    setSelectedUnit(null); // Reset unit when property changes
-  };
-
-  // New Submit Handler
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // Stop default browser reload
-
-    // Create FormData from the form inputs
+    e.preventDefault();
     const formData = new FormData(e.currentTarget);
 
-    // Manually ensure our "Hidden Inputs" for React State (SearchableSelects) are valid
-    if (!selectedTenant?.id) {
-      toast.error("Please select a tenant.");
-      return;
-    }
-    if (!selectedUnit?.id) {
-      toast.error("Please select a unit.");
-      return;
-    }
-    if (!dateRange?.from || !dateRange?.to) {
-      toast.error("Please select a duration.");
-      return;
-    }
+    if (!selectedTenant?.id) return toast.error("Please select a tenant.");
+    if (!selectedUnitId) return toast.error("Please select a unit.");
+    if (!dateRange?.from || !dateRange?.to)
+      return toast.error("Please select a duration.");
+
+    formData.append("unitId", selectedUnitId);
+    formData.append("startDate", dateRange.from.toISOString());
+    formData.append("endDate", dateRange.to.toISOString());
 
     startTransition(async () => {
-      // Call the server action
-      // Note: We pass 'null' as the first argument because we defined the action
-      // to be compatible with useFormState (prevState), but here we call it directly.
       const result = await createReservation(null, formData);
 
       if (result?.error) {
-        toast.error(result.error); // Display the error!
+        toast.error(result.error);
       } else {
-        // Success is handled by the redirect in the action
-        toast.success("Reservation created successfully! Redirecting...");
+        toast.success("Reservation created successfully!");
         setTimeout(() => {
-          router.push("/dashboard/reservations");
-        }, 3000);
+          // REDIRECT TO VIEW PAGE
+          router.push(`/dashboard/reservations/${result?.id}`);
+        }, 1000);
       }
     });
   };
@@ -158,14 +109,23 @@ export default function ReservationForm({
     <>
       <form onSubmit={handleSubmit}>
         <FormCard>
-          {/* 1. Tenant */}
-          <div className="sm:col-span-4">
+          {/* Row 1: Tenant & Terms (3 Columns) */}
+          <div className="col-span-full mb-2 border-b border-gray-100 pb-2">
+            <h3 className="text-sm font-medium text-gray-500 flex items-center gap-2">
+              <UserIcon className="h-4 w-4" /> Client & Terms
+            </h3>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium leading-6 text-gray-900 mb-2">
+              Select Tenant
+            </label>
             <SearchableSelect
-              label="Select Tenant"
+              label=""
               options={tenantOptions}
               value={selectedTenant}
               onChange={setSelectedTenant}
-              onAdd={() => setIsModalOpen(true)}
+              onAdd={() => setIsTenantModalOpen(true)}
             />
             <input
               type="hidden"
@@ -174,150 +134,196 @@ export default function ReservationForm({
             />
           </div>
 
-          <div className="col-span-full border-t border-gray-100 my-4"></div>
+          <FormSelect
+            name="frequency"
+            label="Lease Frequency"
+            colSpan="sm:col-span-2"
+            value={frequency}
+            onChange={(e) => setFrequency(e.target.value as any)}
+            options={[
+              { label: "Monthly (Long Term)", value: "MONTHLY" },
+              { label: "Daily (Short Stay)", value: "DAILY" },
+              { label: "Yearly", value: "YEARLY" },
+            ]}
+          />
 
-          {/* 2. Property Selection */}
-          <div className="sm:col-span-3">
-            <SearchableSelect
-              label="Filter Property"
-              options={propertyOptions}
-              value={selectedProperty}
-              onChange={(val) => {
-                setSelectedProperty(val);
-                setSelectedUnit(null);
-              }}
-            />
-          </div>
-          <div className="sm:col-span-3">
-            <SearchableSelect
-              label="Select Unit / Room"
-              options={unitOptions}
-              value={selectedUnit}
-              onChange={setSelectedUnit}
-            />
-            <input type="hidden" name="unitId" value={selectedUnit?.id || ""} />
-          </div>
+          <FormInput
+            label={`Agreed Rate (${frequency === "DAILY" ? "Per Night" : "Per Month"})`}
+            name="amount"
+            type="number"
+            step="0.001"
+            required
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            colSpan="sm:col-span-2"
+            icon={
+              <span className="text-gray-500 sm:text-sm font-bold">OMR</span>
+            }
+          />
 
-          {/* 3. Contract Details */}
-          <div className="col-span-full border-t border-gray-100 pt-6 mt-2">
-            <h3 className="text-sm font-medium text-gray-500 mb-4">
-              Lease Terms
+          {/* Row 2: Inventory Engine (Take over full width) */}
+          <div className="col-span-full pt-4 mt-2 border-t border-gray-100">
+            <h3 className="text-sm font-medium text-gray-500 mb-4 flex items-center gap-2">
+              <CalendarDaysIcon className="h-4 w-4" /> Dates & Inventory
             </h3>
 
-            <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-              {/* FIX: MOVED FREQUENCY TO TOP */}
-              <div className="sm:col-span-3">
-                <label className="block text-sm font-medium leading-6 text-gray-900 mb-1">
-                  Lease Frequency
-                </label>
-                <select
-                  name="frequency"
-                  value={frequency}
-                  onChange={(e) => setFrequency(e.target.value as any)}
-                  className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-                >
-                  <option value="MONTHLY">Monthly (Long Term)</option>
-                  <option value="DAILY">Daily (Short Stay)</option>
-                  <option value="YEARLY">Yearly</option>
-                </select>
-              </div>
-
-              {/* Amount Input */}
-              <div className="sm:col-span-3">
-                <label className="block text-sm font-medium leading-6 text-gray-900 mb-1">
-                  Agreed Rate (
-                  {frequency === "DAILY" ? "Per Night" : "Per Month"})
-                </label>
-                <div className="relative mt-2 rounded-md shadow-sm">
-                  <input
-                    type="number"
-                    name="amount"
-                    step="0.01"
-                    required
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="block w-full rounded-md border-0 py-1.5 pl-3 pr-12 text-gray-900 ring-1 ring-inset ring-gray-300"
-                    placeholder={
-                      frequency === "DAILY" ? "e.g. 25.000" : "e.g. 150.000"
-                    }
-                  />
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                    <span className="text-gray-500 sm:text-sm">OMR</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Date Picker (Now Below Frequency) */}
-              <div className="sm:col-span-4">
-                <label className="block text-sm font-medium leading-6 text-gray-900 mb-1">
-                  Duration
-                </label>
-                <ReservationDatePicker
-                  date={dateRange}
-                  setDate={setDateRange}
-                />
-                <input
-                  type="hidden"
-                  name="startDate"
-                  value={dateRange?.from ? dateRange.from.toISOString() : ""}
-                />
-                <input
-                  type="hidden"
-                  name="endDate"
-                  value={dateRange?.to ? dateRange.to.toISOString() : ""}
-                />
-              </div>
-
-              {/* --- CALCULATION SUMMARY BOX --- */}
-              {calculation && (
-                <div className="col-span-full bg-blue-50 border border-blue-100 rounded-md p-4 mt-2">
-                  <div className="flex flex-col sm:flex-row justify-between gap-4 text-sm text-blue-800">
-                    <div>
-                      <span className="font-medium">Duration: </span>
-                      {"exactDuration" in calculation.period ? (
-                        <span>{calculation.period.exactDuration} Nights</span>
-                      ) : (
-                        <span>
-                          {calculation.period.months} Months
-                          {calculation.period.extraDays &&
-                            calculation.period.extraDays > 0 &&
-                            ` + ${calculation.period.extraDays} Days`}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="text-right">
-                      <span className="font-medium">
-                        Total Contract Value:{" "}
-                      </span>
-                      <span className="text-lg font-bold">
-                        {calculation.total.toLocaleString("en-OM", {
-                          style: "currency",
-                          currency: "OMR",
-                        })}
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-6 text-center">
+              {dateRange && selectedUnit ? (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="text-left">
+                    <div className="font-semibold text-gray-900 text-lg flex items-center gap-2">
+                      <HomeIcon className="h-5 w-5 text-gray-400" />
+                      {selectedUnit.name}{" "}
+                      <span className="text-sm font-normal text-gray-500">
+                        in {selectedUnit.propertyName}
                       </span>
                     </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      {dateRange.from?.toLocaleDateString()} &rarr;{" "}
+                      {dateRange.to?.toLocaleDateString()}
+                    </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsBookingEngineOpen(true)}
+                    className="px-4 py-2 bg-white border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm"
+                  >
+                    Change Selection
+                  </button>
                 </div>
+              ) : (
+                <>
+                  <CalendarDaysIcon className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+                  <p className="text-sm text-gray-500 mb-4">
+                    No dates or unit selected yet.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setIsBookingEngineOpen(true)}
+                    className="px-6 py-2 bg-gray-900 text-white rounded-md text-sm font-medium hover:bg-gray-800 shadow-sm"
+                  >
+                    Open Booking Engine
+                  </button>
+                </>
               )}
             </div>
+
+            {/* Live Calculation Output */}
+            {calculation && selectedUnit && (
+              <div className="mt-4 bg-blue-50 border border-blue-100 rounded-md p-4">
+                <div className="flex justify-between items-center text-sm text-blue-800">
+                  <span>
+                    <strong className="font-semibold">Duration: </strong>
+                    {"exactDuration" in calculation.period
+                      ? `${calculation.period.exactDuration} Nights`
+                      : `${calculation.period.months} Months`}
+                  </span>
+                  <span className="text-lg font-bold">
+                    {calculation.total.toLocaleString("en-OM", {
+                      style: "currency",
+                      currency: "OMR",
+                    })}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Row 3: Extra Info (3 Columns) */}
+          <div className="col-span-full pt-4 mt-2 border-t border-gray-100">
+            <h3 className="text-sm font-medium text-gray-500 mb-4 flex items-center gap-2">
+              <DocumentTextIcon className="h-4 w-4" /> Additional Details
+            </h3>
+          </div>
+
+          <FormInput
+            name="guests"
+            label="Number of Guests"
+            type="number"
+            defaultValue="1"
+            colSpan="sm:col-span-2"
+          />
+
+          <FormInput
+            name="checkInTime"
+            label="Expected Check-In Time"
+            type="time"
+            defaultValue="14:00"
+            colSpan="sm:col-span-2"
+          />
+
+          <div className="sm:col-span-full">
+            <label className="block text-sm font-medium leading-6 text-gray-900 mb-2">
+              Internal Notes
+            </label>
+            <textarea
+              name="notes"
+              rows={3}
+              className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+              placeholder="Any special requests or details..."
+            />
           </div>
         </FormCard>
+
         <FormActions
           isPending={isPending}
           cancelHref="/dashboard/reservations"
+          submitLabel="Create Reservation"
         />
       </form>
 
-      <CreateTenantModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={(t) => {
-          const newOpt = { id: t.id, name: `${t.firstName} ${t.lastName}` };
-          setTenantOptions((prev) => [...prev, newOpt]);
-          setSelectedTenant(newOpt);
+      {/* The Booking Engine Modal */}
+      <BookingEngineModal
+        isOpen={isBookingEngineOpen}
+        onClose={() => setIsBookingEngineOpen(false)}
+        properties={properties}
+        currentDateRange={dateRange}
+        currentUnitId={selectedUnitId}
+        onConfirm={(dates, unitId) => {
+          setDateRange(dates);
+          setSelectedUnitId(unitId);
+          // Auto-fill amount based on unit basePrice if amount is currently empty
+          const p = properties.find((prop) =>
+            prop.units.some((u: any) => u.id === unitId),
+          );
+          const u = p?.units.find((u: any) => u.id === unitId);
+          if (u && !amount) {
+            setAmount(u.basePrice.toString());
+          }
         }}
       />
+      {isTenantModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative animate-in zoom-in duration-200">
+            <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center z-10">
+              <h2 className="text-lg font-bold text-gray-900">
+                Add Quick Tenant
+              </h2>
+              <button
+                onClick={() => setIsTenantModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {/* Pass the onSuccess callback to handle the modal close and auto-select */}
+              <TenantForm
+                onSuccess={(newTenant) => {
+                  const newOption = {
+                    id: newTenant.id,
+                    name: `${newTenant.firstName} ${newTenant.lastName}`,
+                  };
+                  setTenantOptions((prev) => [...prev, newOption]); // Add to dropdown
+                  setSelectedTenant(newOption); // Auto-select it
+                  setIsTenantModalOpen(false); // Close the modal
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

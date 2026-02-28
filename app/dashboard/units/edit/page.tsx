@@ -2,14 +2,14 @@ import { PageHeader } from "@/components/ui/FormComponents";
 import UnitForm from "@/components/dashboard/UnitForm";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/utils/supabase/server";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
-export default async function NewUnitPage({
-  searchParams,
+export default async function EditUnitPage({
+  params,
 }: {
-  searchParams: Promise<{ propertyId?: string }>;
+  params: Promise<{ id: string }>;
 }) {
-  const { propertyId } = await searchParams;
+  const { id } = await params;
 
   const supabase = await createClient();
   const {
@@ -28,14 +28,23 @@ export default async function NewUnitPage({
     orderBy: { name: "asc" },
   });
 
+  const unit = await prisma.unit.findUnique({
+    where: { id },
+    include: { property: true },
+  });
+
+  if (!unit || unit.property.organizationId !== dbUser?.organizationId) {
+    notFound();
+  }
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <PageHeader
-        title="Add New Unit / Room"
-        description="Add a rentable unit to your inventory."
+        title="Edit Unit"
+        description="Update pricing and specifications."
         listHref="/dashboard/units"
       />
-      <UnitForm properties={properties} defaultPropertyId={propertyId} />
+      <UnitForm properties={properties} initialData={unit} />
     </div>
   );
 }

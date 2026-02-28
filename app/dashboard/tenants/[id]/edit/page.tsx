@@ -1,13 +1,7 @@
-import { updateTenant } from "../../actions";
-import {
-  PageHeader,
-  FormCard,
-  FormInput,
-  FormActions,
-} from "@/components/ui/FormComponents";
+import { PageHeader } from "@/components/ui/FormComponents";
+import TenantForm from "@/components/dashboard/TenantForm";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-
 import { prisma } from "@/lib/prisma";
 
 export default async function EditTenantPage({
@@ -17,87 +11,31 @@ export default async function EditTenantPage({
 }) {
   const { id } = await params;
 
-  // Fetch
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const tenant = await prisma.tenant.findUnique({ where: { id } });
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
     select: { organizationId: true },
   });
 
-  // Verify
+  const tenant = await prisma.tenant.findUnique({ where: { id } });
+
   if (!tenant || tenant.organizationId !== dbUser?.organizationId) {
     return notFound();
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-8">
+    <div className="max-w-4xl mx-auto py-8 px-4">
       <PageHeader
         title="Edit Tenant"
         description="Update contact or identity information."
+        listHref="/dashboard/tenants"
       />
-
-      <form action={updateTenant}>
-        <input type="hidden" name="id" value={tenant.id} />
-
-        <FormCard>
-          <FormInput
-            name="firstName"
-            label="First Name"
-            defaultValue={tenant.firstName}
-            required
-            colSpan="sm:col-span-3"
-          />
-          <FormInput
-            name="lastName"
-            label="Last Name"
-            defaultValue={tenant.lastName}
-            required
-            colSpan="sm:col-span-3"
-          />
-
-          <FormInput
-            name="phone"
-            label="Phone Number"
-            defaultValue={tenant.phone}
-            required
-            colSpan="sm:col-span-3"
-          />
-          <FormInput
-            name="email"
-            label="Email Address"
-            defaultValue={tenant.email || ""}
-            colSpan="sm:col-span-3"
-          />
-
-          <div className="col-span-full border-t border-gray-100 pt-6 mt-2">
-            <h3 className="text-sm font-medium text-gray-500 mb-4">
-              Identity Verification
-            </h3>
-            <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6">
-              <FormInput
-                name="nationalId"
-                label="Civil ID / Passport No"
-                defaultValue={tenant.nationalId || ""}
-                colSpan="sm:col-span-3"
-              />
-              <FormInput
-                name="nationality"
-                label="Nationality"
-                defaultValue={tenant.nationality || ""}
-                colSpan="sm:col-span-3"
-              />
-            </div>
-          </div>
-        </FormCard>
-
-        <FormActions cancelHref="/dashboard/tenants" />
-      </form>
+      <TenantForm initialData={tenant} />
     </div>
   );
 }

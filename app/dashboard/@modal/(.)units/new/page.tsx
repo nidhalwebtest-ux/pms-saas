@@ -1,10 +1,10 @@
-import { PageHeader } from "@/components/ui/FormComponents";
+import SlideOver from "@/components/ui/SlideOver";
 import UnitForm from "@/components/dashboard/UnitForm";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 
-export default async function NewUnitPage({
+export default async function InterceptedNewUnitPage({
   searchParams,
 }: {
   searchParams: Promise<{ propertyId?: string }>;
@@ -29,13 +29,10 @@ export default async function NewUnitPage({
   });
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      <PageHeader
-        title="Add New Unit / Room"
-        description="Add a rentable unit to your inventory."
-        listHref="/dashboard/units"
-      />
-      <UnitForm properties={properties} defaultPropertyId={propertyId} />
-    </div>
+    <SlideOver title="Add New Unit">
+      <div className="pb-10 px-2 sm:px-4">
+        <UnitForm properties={properties} defaultPropertyId={propertyId} />
+      </div>
+    </SlideOver>
   );
 }

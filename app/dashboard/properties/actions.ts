@@ -1,89 +1,103 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-
 import { prisma } from "@/lib/prisma";
 
-export async function createProperty(formData: FormData) {
+export type ActionResponse = {
+  error?: string;
+  success?: boolean;
+  id?: string;
+};
+
+// --- CREATE ---
+export async function createProperty(
+  formData: FormData,
+): Promise<ActionResponse> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  if (!user) return { error: "Unauthorized" };
 
-  // 1. Get the User's Organization ID
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
     select: { organizationId: true },
   });
 
-  if (!dbUser?.organizationId) {
-    // Should not happen if middleware is working, but safe to handle
-    redirect("/onboarding");
-  }
+  if (!dbUser?.organizationId) return { error: "Organization not found" };
 
-  // 2. Extract Data
   const name = formData.get("name") as string;
   const type = formData.get("type") as any;
   const address = formData.get("address") as string;
   const city = formData.get("city") as string;
   const governorate = formData.get("governorate") as string;
 
-  // 3. Create Property linked to ORGANIZATION
-  await prisma.property.create({
-    data: {
-      name,
-      type,
-      address,
-      city,
-      governorate,
-      organizationId: dbUser.organizationId,
-    },
-  });
+  if (!name || !type) return { error: "Name and Type are required fields." };
 
-  revalidatePath("/dashboard/properties");
-  redirect("/dashboard/properties");
+  try {
+    const newProperty = await prisma.property.create({
+      data: {
+        name,
+        type,
+        address,
+        city,
+        governorate,
+        organizationId: dbUser.organizationId,
+      },
+    });
+
+    revalidatePath("/dashboard/properties");
+    return { success: true, id: newProperty.id };
+  } catch (error) {
+    console.error(error);
+    return { error: "Failed to create property. Please try again." };
+  }
 }
 
-export async function updateProperty(formData: FormData) {
+// --- UPDATE ---
+export async function updateProperty(
+  formData: FormData,
+): Promise<ActionResponse> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) return { error: "Unauthorized" };
 
-  const id = formData.get("id") as string; // We need the ID to know what to update
+  const id = formData.get("id") as string;
   const name = formData.get("name") as string;
   const type = formData.get("type") as any;
   const address = formData.get("address") as string;
   const city = formData.get("city") as string;
   const governorate = formData.get("governorate") as string;
 
-  // Security Check: Verify ownership before update
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
     select: { organizationId: true },
   });
+
   const existingProperty = await prisma.property.findUnique({
     where: { id },
     select: { organizationId: true },
   });
 
   if (existingProperty?.organizationId !== dbUser?.organizationId) {
-    throw new Error("Unauthorized");
+    return { error: "Unauthorized access to this property" };
   }
 
-  // Update
-  await prisma.property.update({
-    where: { id },
-    data: { name, type, address, city, governorate },
-  });
+  try {
+    await prisma.property.update({
+      where: { id },
+      data: { name, type, address, city, governorate },
+    });
 
-  revalidatePath("/dashboard/properties");
-  revalidatePath(`/dashboard/properties/${id}`);
-  redirect(`/dashboard/properties/${id}`);
+    revalidatePath("/dashboard/properties");
+    revalidatePath(`/dashboard/properties/${id}`);
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: "Failed to update property." };
+  }
 }

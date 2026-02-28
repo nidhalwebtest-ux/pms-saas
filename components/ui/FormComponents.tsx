@@ -1,6 +1,7 @@
 import { ReactNode } from "react";
 import clsx from "clsx";
 import Link from "next/link";
+import { ListBulletIcon } from "@heroicons/react/24/outline";
 
 // 1. The White Card Wrapper
 export function FormCard({ children }: { children: ReactNode }) {
@@ -19,18 +20,31 @@ export function FormCard({ children }: { children: ReactNode }) {
 export function PageHeader({
   title,
   description,
+  listHref,
 }: {
   title: string;
   description: string;
+  listHref?: string;
 }) {
   return (
-    <div className="mb-8">
+    <div className="md:flex md:items-center md:justify-between mb-8">
       <div className="min-w-0 flex-1">
         <h2 className="text-2xl font-bold leading-7 text-gray-900 sm:truncate sm:text-3xl sm:tracking-tight">
           {title}
         </h2>
         <p className="mt-1 text-sm text-gray-500">{description}</p>
       </div>
+      {listHref && (
+        <div className="mt-4 flex md:ml-4 md:mt-0">
+          <Link
+            href={listHref}
+            className="inline-flex items-center gap-1 text-sm font-semibold leading-6 text-blue-600 hover:text-blue-500 bg-blue-50 px-3 py-1.5 rounded-md transition-colors"
+          >
+            <ListBulletIcon className="h-4 w-4" />
+            List
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

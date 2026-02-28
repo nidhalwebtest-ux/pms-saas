@@ -13,6 +13,7 @@ export type ActionResponse = {
   error?: string;
   success?: boolean;
   data?: any;
+  id?: string;
 };
 // ---------------------------------------------------------
 // 1. Create RESERVATION
@@ -77,8 +78,9 @@ export async function createReservation(
   // const totalPrice = installments.reduce((sum, inv) => sum + inv.amount, 0);
 
   // 6. Create Reservation
+  let newReservation;
   try {
-    await prisma.reservation.create({
+    newReservation = await prisma.reservation.create({
       data: {
         tenantId,
         unitId,
@@ -106,7 +108,7 @@ export async function createReservation(
 
   revalidatePath("/dashboard");
   // redirect("/dashboard/reservations");
-  return { success: true };
+  return { success: true, id: newReservation.id };
 }
 
 // ---------------------------------------------------------

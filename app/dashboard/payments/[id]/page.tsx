@@ -47,10 +47,7 @@ export default async function PaymentDetailsPage({
   });
 
   // 2. Security Check (Ensure payment belongs to the user's organization)
-  if (
-    !payment ||
-    payment.reservation?.unit.property.organizationId !== dbUser?.organizationId
-  ) {
+  if (!payment || payment.tenant.organizationId !== dbUser?.organizationId) {
     return notFound();
   }
 

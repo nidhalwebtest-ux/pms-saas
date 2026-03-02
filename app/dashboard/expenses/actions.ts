@@ -1,58 +1,127 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-
 import { prisma } from "@/lib/prisma";
 
-export async function createExpense(formData: FormData) {
+export type ActionResponse = {
+  error?: string;
+  success?: boolean;
+  id?: string;
+};
+
+// --- CREATE ---
+export async function createExpense(
+  formData: FormData,
+): Promise<ActionResponse> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  if (!user) return { error: "Unauthorized" };
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { organizationId: true },
+  });
 
   const title = formData.get("title") as string;
   const amount = parseFloat(formData.get("amount") as string);
   const date = new Date(formData.get("date") as string);
   const category = formData.get("category") as any;
   const propertyId = formData.get("propertyId") as string;
-  const description = formData.get("description") as string; // Optional detail
+  const description = formData.get("description") as string;
+
+  if (!title || !propertyId || isNaN(amount)) {
+    return { error: "Description, Property, and Amount are required." };
+  }
 
   // Security Check
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { organizationId: true },
-  });
-
   const property = await prisma.property.findUnique({
     where: { id: propertyId },
   });
 
   if (property?.organizationId !== dbUser?.organizationId) {
-    return { error: "Unauthorized" };
+    return { error: "Unauthorized access to this property" };
   }
 
-  await prisma.expense.create({
-    data: {
-      title,
-      amount,
-      date,
-      category,
-      propertyId,
-      // description: description // Add this to schema if you want long text
-    },
-  });
+  try {
+    const newExpense = await prisma.expense.create({
+      data: {
+        title,
+        amount,
+        date,
+        category,
+        propertyId,
+        // description: description // Uncomment if you add this to schema later
+      },
+    });
 
-  revalidatePath("/dashboard/expenses");
-  return { success: true };
+    revalidatePath("/dashboard/expenses");
+    return { success: true, id: newExpense.id };
+  } catch (error) {
+    console.error(error);
+    return { error: "Failed to record expense." };
+  }
 }
 
+// --- UPDATE ---
+export async function updateExpense(
+  formData: FormData,
+): Promise<ActionResponse> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: "Unauthorized" };
+
+  const id = formData.get("id") as string;
+  const title = formData.get("title") as string;
+  const amount = parseFloat(formData.get("amount") as string);
+  const date = new Date(formData.get("date") as string);
+  const category = formData.get("category") as any;
+  const propertyId = formData.get("propertyId") as string;
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { organizationId: true },
+  });
+
+  // Verify ownership of the expense AND the new property
+  const existingExpense = await prisma.expense.findUnique({
+    where: { id },
+    include: { property: true },
+  });
+  const newProperty = await prisma.property.findUnique({
+    where: { id: propertyId },
+  });
+
+  if (
+    existingExpense?.property.organizationId !== dbUser?.organizationId ||
+    newProperty?.organizationId !== dbUser?.organizationId
+  ) {
+    return { error: "Unauthorized access." };
+  }
+
+  try {
+    await prisma.expense.update({
+      where: { id },
+      data: { title, amount, date, category, propertyId },
+    });
+
+    revalidatePath("/dashboard/expenses");
+    revalidatePath(`/dashboard/expenses/${id}`);
+    return { success: true, id };
+  } catch (error) {
+    console.error(error);
+    return { error: "Failed to update expense." };
+  }
+}
+
+// --- DELETE ---
 export async function deleteExpense(formData: FormData) {
   const id = formData.get("id") as string;
   await prisma.expense.delete({ where: { id } });
   revalidatePath("/dashboard/expenses");
-  redirect("/dashboard/expenses");
+  // Redirect happens on the client or via a separate transition
 }

@@ -1,194 +1,171 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import Link from "next/link";
-import SearchableSelect, {
-  SelectOption,
-} from "@/components/ui/SearchableSelect"; // Reusing your component
-import {
-  BanknotesIcon,
-  CalendarDaysIcon,
-  TagIcon,
-} from "@heroicons/react/24/outline";
-import { createExpense } from "@/app/dashboard/expenses/actions";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import SearchableSelect, {
+  SelectOption,
+} from "@/components/ui/SearchableSelect";
+import {
+  FormCard,
+  FormInput,
+  FormSelect,
+  FormActions,
+} from "@/components/ui/FormComponents";
+import { createExpense, updateExpense } from "@/app/dashboard/expenses/actions";
+import {
+  BuildingOfficeIcon,
+  DocumentTextIcon,
+} from "@heroicons/react/24/outline";
 
 interface Props {
   properties: { id: string; name: string }[];
+  initialData?: {
+    id: string;
+    title: string;
+    amount: any;
+    date: Date;
+    category: string;
+    propertyId: string;
+  } | null;
 }
 
-export default function ExpenseForm({ properties }: Props) {
+export default function ExpenseForm({ properties, initialData }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  // Convert properties to SelectOption format
+
+  const isEditMode = !!initialData;
+
+  // Searchable Select State
   const propertyOptions: SelectOption[] = properties.map((p) => ({
     id: p.id,
     name: p.name,
   }));
+  const initialPropertyOption = isEditMode
+    ? propertyOptions.find((p) => p.id === initialData.propertyId) || null
+    : null;
 
   const [selectedProperty, setSelectedProperty] = useState<SelectOption | null>(
-    null,
+    initialPropertyOption,
   );
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedProperty) return toast.error("Select a Property");
+    if (!selectedProperty?.id) return toast.error("Please select a Property.");
 
     const formData = new FormData(e.currentTarget);
     formData.append("propertyId", String(selectedProperty.id));
 
     startTransition(async () => {
-      const result = await createExpense(formData);
+      const result = isEditMode
+        ? await updateExpense(formData)
+        : await createExpense(formData);
+
       if (result?.error) {
         toast.error(result.error);
       } else {
-        toast.success("Expense recorded successfully!");
-        // Reset form or redirect
+        toast.success(
+          isEditMode
+            ? "Expense updated successfully!"
+            : "Expense recorded successfully!",
+        );
         setTimeout(() => {
-          router.push("/dashboard/expenses");
-        }, 3000);
+          // Redirect to view page
+          router.push(`/dashboard/expenses/${result?.id || initialData?.id}`);
+        }, 1000);
       }
     });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {/* 1. Property Selection */}
-      <div>
-        <SearchableSelect
-          label="Select Property"
-          options={propertyOptions}
-          value={selectedProperty}
-          onChange={setSelectedProperty}
-          placeholder="Search property..."
-        />
-        {/* Hidden Input to send ID to Server Action */}
-        <input
-          type="hidden"
-          name="propertyId"
-          value={selectedProperty?.id || ""}
-        />
-      </div>
+    <form onSubmit={handleSubmit}>
+      {isEditMode && <input type="hidden" name="id" value={initialData.id} />}
 
-      <div className="border-t border-gray-100 pt-6"></div>
+      <FormCard>
+        {/* Row 1: Classification (3 Columns) */}
+        <div className="col-span-full mb-2 border-b border-gray-100 pb-2">
+          <h3 className="text-sm font-medium text-gray-500 flex items-center gap-2">
+            <BuildingOfficeIcon className="h-4 w-4" /> Classification
+          </h3>
+        </div>
 
-      {/* 2. Expense Details */}
-      <div>
-        <label
-          htmlFor="title"
-          className="block text-sm font-medium leading-6 text-gray-900"
-        >
-          Description
-        </label>
-        <div className="mt-2 relative rounded-md shadow-sm">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <TagIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
-          </div>
-          <input
-            type="text"
-            name="title"
-            id="title"
-            required
-            placeholder="e.g. August Electricity Bill"
-            className="block w-full rounded-md border-0 py-1.5 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+        <div className="sm:col-span-2">
+          <label className="block text-sm font-medium leading-6 text-gray-900 mb-2">
+            Select Property
+          </label>
+          <SearchableSelect
+            label=""
+            options={propertyOptions}
+            value={selectedProperty}
+            onChange={setSelectedProperty}
+            placeholder="Search property..."
           />
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2">
-        {/* Category */}
-        <div>
-          <label
-            htmlFor="category"
-            className="block text-sm font-medium leading-6 text-gray-900"
-          >
-            Category
-          </label>
-          <div className="mt-2">
-            <select
-              id="category"
-              name="category"
-              className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-            >
-              <option value="UTILITIES">Utilities</option>
-              <option value="MAINTENANCE">Maintenance</option>
-              <option value="SALARY">Salary & Wages</option>
-              <option value="MARKETING">Marketing</option>
-              <option value="SUPPLIES">Supplies</option>
-              <option value="OTHER">Other</option>
-            </select>
-          </div>
+        <FormSelect
+          name="category"
+          label="Expense Category"
+          colSpan="sm:col-span-2"
+          defaultValue={initialData?.category || "MAINTENANCE"}
+          options={[
+            { label: "Utilities", value: "UTILITIES" },
+            { label: "Maintenance", value: "MAINTENANCE" },
+            { label: "Salary & Wages", value: "SALARY" },
+            { label: "Marketing", value: "MARKETING" },
+            { label: "Supplies", value: "SUPPLIES" },
+            { label: "Other", value: "OTHER" },
+          ]}
+        />
+
+        <FormInput
+          name="date"
+          label="Date Incurred"
+          type="date"
+          required
+          defaultValue={
+            initialData
+              ? new Date(initialData.date).toISOString().split("T")[0]
+              : new Date().toISOString().split("T")[0]
+          }
+          colSpan="sm:col-span-2"
+        />
+
+        {/* Row 2: Details (2 Columns spanning the 6-col grid) */}
+        <div className="col-span-full pt-4 mt-2 border-t border-gray-100">
+          <h3 className="text-sm font-medium text-gray-500 mb-4 flex items-center gap-2">
+            <DocumentTextIcon className="h-4 w-4" /> Expense Details
+          </h3>
         </div>
 
-        {/* Date */}
-        <div>
-          <label
-            htmlFor="date"
-            className="block text-sm font-medium leading-6 text-gray-900"
-          >
-            Date
-          </label>
-          <div className="mt-2 relative rounded-md shadow-sm">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-              <CalendarDaysIcon
-                className="h-5 w-5 text-gray-400"
-                aria-hidden="true"
-              />
-            </div>
-            <input
-              type="date"
-              name="date"
-              id="date"
-              required
-              defaultValue={new Date().toISOString().split("T")[0]}
-              className="block w-full rounded-md border-0 py-1.5 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-            />
-          </div>
-        </div>
-      </div>
+        <FormInput
+          name="title"
+          id="title"
+          label="Description / Title"
+          placeholder="e.g. August Electricity Bill"
+          required
+          defaultValue={initialData?.title}
+          colSpan="sm:col-span-4" // Takes up 2/3 of the row
+        />
 
-      {/* Amount (Big Input) */}
-      <div>
-        <label
-          htmlFor="amount"
-          className="block text-sm font-medium leading-6 text-gray-900"
-        >
-          Amount
-        </label>
-        <div className="mt-2 relative rounded-md shadow-sm">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <span className="text-gray-500 sm:text-sm">OMR</span>
-          </div>
-          <input
-            type="number"
-            name="amount"
-            id="amount"
-            step="0.001"
-            required
-            placeholder="0.000"
-            className="block w-full rounded-md border-0 py-3 pl-12 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 text-lg font-semibold"
-          />
-        </div>
-      </div>
+        <FormInput
+          name="amount"
+          id="amount"
+          label="Amount"
+          type="number"
+          step="0.001"
+          required
+          placeholder="0.000"
+          defaultValue={initialData ? Number(initialData.amount) : ""}
+          colSpan="sm:col-span-2" // Takes up 1/3 of the row
+          icon={<span className="text-gray-500 sm:text-sm font-bold">OMR</span>}
+        />
+      </FormCard>
 
-      {/* Actions */}
-      <div className="pt-6 flex items-center justify-end gap-x-6 border-t border-gray-100">
-        <Link
-          href="/dashboard/expenses"
-          className="text-sm font-semibold leading-6 text-gray-900 hover:text-gray-700"
-        >
-          Cancel
-        </Link>
-        <button
-          type="submit"
-          disabled={isPending}
-          className="rounded-md bg-blue-600 px-8 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {isPending ? "Saving..." : "Save Expense"}
-        </button>
-      </div>
+      <FormActions
+        cancelHref="/dashboard/expenses"
+        submitLabel={isEditMode ? "Save Changes" : "Record Expense"}
+        isPending={isPending}
+      />
     </form>
   );
 }

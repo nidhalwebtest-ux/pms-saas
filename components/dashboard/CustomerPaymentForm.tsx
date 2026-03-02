@@ -1,408 +1,356 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import SearchableSelect, {
   SelectOption,
 } from "@/components/ui/SearchableSelect";
-import CreateTenantModal from "@/app/dashboard/@modal/CreateTenantModal";
 import {
-  getTenantFinancials,
+  FormCard,
+  FormInput,
+  FormSelect,
+  FormActions,
+} from "@/components/ui/FormComponents";
+import {
   createCustomerPayment,
+  updateCustomerPayment,
+  getTenantFinancials,
 } from "@/app/dashboard/payments/actions";
-import { DocumentTextIcon, CalculatorIcon } from "@heroicons/react/24/outline";
+import {
+  BanknotesIcon,
+  DocumentTextIcon,
+  CalendarDaysIcon,
+  UserIcon,
+} from "@heroicons/react/24/outline";
+import TenantForm from "@/components/dashboard/TenantForm";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 
-export default function CustomerPaymentForm({ tenants }: { tenants: any[] }) {
+interface Props {
+  tenants: { id: string; firstName: string; lastName: string }[];
+  initialData?: {
+    id: string;
+    tenantId: string;
+    amount: any;
+    method: string;
+    date: Date;
+    reference: string | null;
+    notes: string | null;
+    tenant: { firstName: string; lastName: string };
+  } | null;
+}
+
+export default function CustomerPaymentForm({ tenants, initialData }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  // --- State ---
+  const isEditMode = !!initialData;
+
+  // State
   const [tenantOptions, setTenantOptions] = useState<SelectOption[]>(
     tenants.map((t) => ({ id: t.id, name: `${t.firstName} ${t.lastName}` })),
   );
-  const [selectedTenant, setSelectedTenant] = useState<SelectOption | null>(
-    null,
-  );
 
-  // Financials
-  const [invoices, setInvoices] = useState<any[]>([]);
-  const [tenantBalance, setTenantBalance] = useState(0);
-  const [loadingFinancials, setLoadingFinancials] = useState(false);
-
-  // Payment Form
-  const [paymentAmount, setPaymentAmount] = useState<number>(0);
-  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<Set<string>>(
-    new Set(),
-  );
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // --- Effects ---
-  // When Tenant changes, fetch their debt
-  useEffect(() => {
-    if (selectedTenant?.id) {
-      setLoadingFinancials(true);
-      getTenantFinancials(String(selectedTenant.id))
-        .then((data) => {
-          setInvoices(data.invoices);
-          setTenantBalance(data.balance);
-        })
-        .finally(() => setLoadingFinancials(false));
-    } else {
-      setInvoices([]);
-      setTenantBalance(0);
-    }
-  }, [selectedTenant]);
-
-  // --- Handlers ---
-
-  // Logic: When an invoice is checked, add to total. When unchecked, subtract.
-  const toggleInvoice = (invoiceId: string, amount: number) => {
-    const newSet = new Set(selectedInvoiceIds);
-    let newAmount = paymentAmount;
-
-    if (newSet.has(invoiceId)) {
-      newSet.delete(invoiceId);
-      // Optional: Auto-subtract amount? Usually users prefer manual control or auto-add.
-      // Let's Auto-Subtract for better UX
-      newAmount -= amount;
-    } else {
-      newSet.add(invoiceId);
-      // Auto-Add amount
-      newAmount += amount;
-    }
-
-    setSelectedInvoiceIds(newSet);
-    setPaymentAmount(parseFloat(newAmount.toFixed(3)));
-  };
-
-  const handleAutoApply = () => {
-    // NetSuite Logic: Apply payment amount to oldest invoices first
-    let remaining = paymentAmount;
-    const newSet = new Set<string>();
-
-    // Sort invoices by date (already sorted from server, but ensure)
-    const sorted = [...invoices].sort(
-      (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
-    );
-
-    for (const inv of sorted) {
-      if (remaining <= 0) break;
-      // Select this invoice (even if partial)
-      newSet.add(inv.id);
-      const invAmount = Number(inv.amount);
-      if (remaining >= invAmount) {
-        // We can fully pay this invoice
-        remaining -= invAmount;
-      } else {
-        // We are partially paying this invoice (e.g. paying 20 of 120)
-        // We consume all our remaining money
-        remaining = 0;
+  const initialTenantOption = isEditMode
+    ? {
+        id: initialData.tenantId,
+        name: `${initialData.tenant.firstName} ${initialData.tenant.lastName}`,
       }
+    : null;
+
+  const [selectedTenant, setSelectedTenant] = useState<SelectOption | null>(
+    initialTenantOption,
+  );
+  const [openInvoices, setOpenInvoices] = useState<any[]>([]);
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
+  const [amount, setAmount] = useState<string>(
+    isEditMode ? Number(initialData.amount).toString() : "",
+  );
+
+  // NEW: State for Tenant Modal
+  const [isTenantModalOpen, setIsTenantModalOpen] = useState(false);
+
+  // Fetch invoices when tenant changes (Only in Create mode)
+  useEffect(() => {
+    if (isEditMode) return; // Don't fetch invoices if editing a locked payment
+    if (!selectedTenant?.id) {
+      setOpenInvoices([]);
+      return;
     }
-    setSelectedInvoiceIds(newSet);
-    toast.info(`Auto-applied to ${newSet.size} invoices.`);
+
+    setIsLoadingInvoices(true);
+    getTenantFinancials(String(selectedTenant.id)).then((res) => {
+      setOpenInvoices(res.invoices);
+      setIsLoadingInvoices(false);
+    });
+  }, [selectedTenant, isEditMode]);
+
+  const toggleInvoice = (id: string, invoiceAmount: number) => {
+    setSelectedInvoiceIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((i) => i !== id);
+      } else {
+        // Optional UX trick: Auto-fill the payment amount to match the selected invoice
+        if (!amount || parseFloat(amount) === 0) {
+          setAmount(invoiceAmount.toString());
+        }
+        return [...prev, id];
+      }
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedTenant) return toast.error("Select a tenant");
-
     const formData = new FormData(e.currentTarget);
-    formData.append("tenantId", String(selectedTenant.id));
-    // Pass selected IDs as string
-    formData.append(
-      "selectedInvoices",
-      Array.from(selectedInvoiceIds).join(","),
-    );
+
+    if (!isEditMode) {
+      if (!selectedTenant?.id) return toast.error("Please select a tenant.");
+      formData.append("tenantId", String(selectedTenant.id));
+      formData.append("selectedInvoices", selectedInvoiceIds.join(","));
+    }
 
     startTransition(async () => {
-      const result = await createCustomerPayment(null, formData);
+      const result = isEditMode
+        ? await updateCustomerPayment(formData)
+        : await createCustomerPayment(formData);
+
       if (result?.error) {
         toast.error(result.error);
       } else {
-        toast.success("Payment recorded successfully!");
-        // Reset form or redirect
+        toast.success(
+          isEditMode
+            ? "Payment record updated!"
+            : "Payment successfully recorded!",
+        );
         setTimeout(() => {
-          router.push("/dashboard/payments");
-        }, 3000);
+          router.push(`/dashboard/payments/${result?.id || initialData?.id}`);
+        }, 1000);
       }
     });
   };
 
   return (
     <>
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* 1. Primary Information */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <SearchableSelect
-              label="Customer (Tenant)"
-              options={tenantOptions}
-              value={selectedTenant}
-              onChange={setSelectedTenant}
-              onAdd={() => setIsModalOpen(true)}
-              placeholder="Select or add tenant..."
-            />
+      <form onSubmit={handleSubmit}>
+        {isEditMode && <input type="hidden" name="id" value={initialData.id} />}
 
-            {/* Balance Badge */}
-            {selectedTenant && (
-              <div className="mt-3 p-3 bg-gray-50 rounded-md border border-gray-200 flex justify-between items-center">
-                <span className="text-sm text-gray-600">Current Balance:</span>
-                <span
-                  className={`text-lg font-bold ${tenantBalance > 0 ? "text-red-600" : "text-green-600"}`}
-                >
-                  {loadingFinancials
-                    ? "..."
-                    : `${tenantBalance.toFixed(3)} OMR`}
-                </span>
+        <FormCard>
+          {/* Row 1: Primary Info (3 Columns) */}
+          <div className="col-span-full mb-2 border-b border-gray-100 pb-2">
+            <h3 className="text-sm font-medium text-gray-500 flex items-center gap-2">
+              <UserIcon className="h-4 w-4" /> Payment Details
+            </h3>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium leading-6 text-gray-900 mb-2">
+              Customer / Tenant
+            </label>
+            {isEditMode ? (
+              <div className="block w-full rounded-md border-0 py-1.5 px-3 bg-gray-50 text-gray-500 ring-1 ring-inset ring-gray-300 sm:text-sm sm:leading-6">
+                {initialTenantOption?.name}
               </div>
+            ) : (
+              <SearchableSelect
+                label=""
+                options={tenantOptions}
+                value={selectedTenant}
+                onChange={setSelectedTenant}
+                onAdd={() => setIsTenantModalOpen(true)} // <-- 1. ADD THIS PROP
+              />
             )}
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-900">
-                Date
-              </label>
-              <input
-                type="date"
-                name="date"
-                defaultValue={new Date().toISOString().split("T")[0]}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border"
-              />
-            </div>
+          <FormInput
+            name="amount"
+            id="amount"
+            label="Payment Amount"
+            type="number"
+            step="0.001"
+            required
+            disabled={isEditMode} // Locked in edit mode
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            colSpan="sm:col-span-2"
+            icon={
+              <span className="text-gray-500 sm:text-sm font-bold">OMR</span>
+            }
+          />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-900">
-                Payment Amount (OMR)
-              </label>
-              <div className="relative mt-1">
-                <input
-                  type="number"
-                  name="amount"
-                  step="0.001"
-                  value={paymentAmount}
-                  onChange={(e) =>
-                    setPaymentAmount(parseFloat(e.target.value) || 0)
-                  }
-                  className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border"
-                />
-                <button
-                  type="button"
-                  onClick={handleAutoApply}
-                  className="absolute right-2 top-1.5 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
-                >
-                  Auto Apply
-                </button>
-              </div>
-            </div>
+          <FormSelect
+            name="method"
+            label="Payment Method"
+            colSpan="sm:col-span-2"
+            disabled={isEditMode} // Locked in edit mode
+            defaultValue={initialData?.method || "BANK_TRANSFER"}
+            options={[
+              { label: "Bank Transfer", value: "BANK_TRANSFER" },
+              { label: "Cash", value: "CASH" },
+              { label: "Credit Card / POS", value: "CARD" },
+              { label: "Cheque", value: "CHEQUE" },
+            ]}
+          />
+
+          {/* Row 2: Metadata (3 Columns) */}
+          <div className="col-span-full pt-4 mt-2 border-t border-gray-100">
+            <h3 className="text-sm font-medium text-gray-500 mb-4 flex items-center gap-2">
+              <DocumentTextIcon className="h-4 w-4" /> Reference & Dates
+            </h3>
           </div>
-        </div>
 
-        <div className="border-t border-gray-200 pt-6"></div>
+          <FormInput
+            name="date"
+            label="Payment Date"
+            type="date"
+            required
+            defaultValue={
+              initialData
+                ? new Date(initialData.date).toISOString().split("T")[0]
+                : new Date().toISOString().split("T")[0]
+            }
+            colSpan="sm:col-span-2"
+          />
 
-        {/* 2. Invoices List (The NetSuite Part) */}
-        <div>
-          <h3 className="text-sm font-medium text-gray-900 mb-4 flex items-center gap-2">
-            <DocumentTextIcon className="h-5 w-5 text-gray-500" />
-            Apply to Invoices
-          </h3>
+          <FormInput
+            name="reference"
+            label="Reference / Cheque No."
+            placeholder="e.g. TRN-998123"
+            defaultValue={initialData?.reference || ""}
+            colSpan="sm:col-span-2"
+          />
 
-          {invoices.length === 0 ? (
-            <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-              <p className="text-sm text-gray-500">
-                {selectedTenant
-                  ? "No open invoices found for this tenant."
-                  : "Select a tenant to view open invoices."}
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-              <table className="min-w-full divide-y divide-gray-300">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 sm:pl-6"
-                    >
-                      Pay
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                    >
-                      Date
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                    >
-                      Description
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
-                    >
-                      Unit
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900"
-                    >
-                      Orig. Amt.
-                    </th>
-                    <th
-                      scope="col"
-                      className="px-3 py-3.5 text-right text-sm font-semibold text-gray-900 pr-6"
-                    >
-                      Due
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200 bg-white">
-                  {invoices.map((inv) => (
-                    <tr
-                      key={inv.id}
-                      className={
-                        selectedInvoiceIds.has(inv.id) ? "bg-blue-50" : ""
-                      }
-                    >
-                      <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm sm:pl-6">
-                        <input
-                          type="checkbox"
-                          checked={selectedInvoiceIds.has(inv.id)}
-                          onChange={() =>
-                            toggleInvoice(inv.id, Number(inv.amount))
-                          }
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
-                        />
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {new Date(inv.dueDate).toLocaleDateString()}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                        {inv.description}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                        {inv.reservation?.unit?.name || "-"}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-right">
-                        {Number(inv.amount).toFixed(3)}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-4 text-sm font-bold text-gray-900 text-right pr-6">
-                        {Number(inv.amount).toFixed(3)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot className="bg-gray-50">
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="py-3 px-6 text-right font-medium text-gray-900"
-                    >
-                      Total Applied:
-                    </td>
-                    <td className="py-3 px-6 text-right font-bold text-blue-600">
-                      {Array.from(selectedInvoiceIds)
-                        .reduce((sum, id) => {
-                          const inv = invoices.find((i) => i.id === id);
-                          return sum + (inv ? Number(inv.amount) : 0);
-                        }, 0)
-                        .toFixed(3)}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td
-                      colSpan={5}
-                      className="py-3 px-6 text-right font-medium text-gray-500"
-                    >
-                      Unapplied (Credit):
-                    </td>
-                    <td className="py-3 px-6 text-right font-bold text-gray-500">
-                      {(
-                        paymentAmount -
-                        Array.from(selectedInvoiceIds).reduce((sum, id) => {
-                          const inv = invoices.find((i) => i.id === id);
-                          return sum + (inv ? Number(inv.amount) : 0);
-                        }, 0)
-                      ).toFixed(3)}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* 3. Method & Reference */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-900">
-              Payment Method
-            </label>
-            <select
-              name="method"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 border"
-            >
-              <option value="CASH">Cash</option>
-              <option value="BANK_TRANSFER">Bank Transfer</option>
-              <option value="CARD">Card / POS</option>
-              <option value="CHEQUE">Cheque</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-900">
-              Reference / Check #
+          <div className="sm:col-span-2">
+            <label className="block text-sm font-medium leading-6 text-gray-900 mb-2">
+              Memo / Notes
             </label>
             <input
               type="text"
-              name="reference"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border"
+              name="notes"
+              defaultValue={initialData?.notes || ""}
+              className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+              placeholder="Optional notes..."
             />
           </div>
-          <div className="col-span-full">
-            <label className="block text-sm font-medium text-gray-900">
-              Notes
-            </label>
-            <textarea
-              name="notes"
-              rows={2}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm py-2 px-3 border"
-            ></textarea>
+
+          {/* Dynamic Invoices Table (Only in Create Mode) */}
+          {!isEditMode && selectedTenant && (
+            <div className="col-span-full pt-6 mt-4 border-t border-gray-100">
+              <h3 className="text-sm font-medium text-gray-500 mb-4 flex items-center gap-2">
+                <BanknotesIcon className="h-4 w-4" /> Open Invoices to Apply
+                Against
+              </h3>
+
+              <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                {isLoadingInvoices ? (
+                  <div className="p-8 text-center text-sm text-gray-500 animate-pulse">
+                    Checking ledgers...
+                  </div>
+                ) : openInvoices.length === 0 ? (
+                  <div className="p-8 text-center text-sm text-gray-500">
+                    No open invoices found. This will be recorded as an
+                    unapplied credit.
+                  </div>
+                ) : (
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-left text-xs font-semibold text-gray-900 w-12"
+                        >
+                          Apply
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-left text-xs font-semibold text-gray-900"
+                        >
+                          Invoice No.
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-left text-xs font-semibold text-gray-900"
+                        >
+                          Due Date
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-right text-xs font-semibold text-gray-900"
+                        >
+                          Amount Due
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-100">
+                      {openInvoices.map((inv) => (
+                        <tr
+                          key={inv.id}
+                          className="hover:bg-blue-50/50 transition-colors"
+                        >
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedInvoiceIds.includes(inv.id)}
+                              onChange={() => toggleInvoice(inv.id, inv.amount)}
+                              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
+                            />
+                          </td>
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                            {inv.invoiceNumber || `INV-${inv.id.slice(0, 6)}`}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-500">
+                            {new Date(inv.dueDate).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3 text-sm font-bold text-gray-900 text-right">
+                            {inv.amount.toFixed(3)} OMR
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+        </FormCard>
+
+        <FormActions
+          cancelHref="/dashboard/payments"
+          submitLabel={isEditMode ? "Update Payment Record" : "Record Payment"}
+          isPending={isPending}
+        />
+      </form>
+      {isTenantModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative animate-in zoom-in duration-200">
+            <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center z-10">
+              <h2 className="text-lg font-bold text-gray-900">
+                Add Quick Tenant
+              </h2>
+              <button
+                onClick={() => setIsTenantModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              <TenantForm
+                onSuccess={(newTenant) => {
+                  const newOption = {
+                    id: newTenant.id,
+                    name: `${newTenant.firstName} ${newTenant.lastName}`,
+                  };
+                  setTenantOptions((prev) => [...prev, newOption]); // Add to dropdown list
+                  setSelectedTenant(newOption); // Auto-select it
+                  setIsTenantModalOpen(false); // Close the modal
+                }}
+              />
+            </div>
           </div>
         </div>
-
-        <div className="flex justify-end gap-3 pt-4">
-          <button
-            type="button"
-            onClick={() => router.back()}
-            className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isPending}
-            className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
-          >
-            {isPending ? "Processing..." : "Save Payment"}
-          </button>
-        </div>
-      </form>
-
-      <CreateTenantModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={(t) => {
-          setTenantOptions((prev) => [
-            ...prev,
-            { id: t.id, name: `${t.firstName} ${t.lastName}` },
-          ]);
-          setSelectedTenant({ id: t.id, name: `${t.firstName} ${t.lastName}` });
-        }}
-      />
+      )}
     </>
   );
 }

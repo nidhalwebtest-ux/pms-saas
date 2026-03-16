@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { XMarkIcon, HomeModernIcon } from "@heroicons/react/24/outline";
 import { DayPicker, DateRange } from "react-day-picker";
 import "react-day-picker/dist/style.css"; // Ensure styles are loaded
+import { addDays, addMonths, addYears, differenceInDays } from "date-fns";
 
 type PropertyWithUnits = {
   id: string;
@@ -64,6 +65,23 @@ export default function BookingEngineModal({
     });
   }, [dateRange, properties]);
 
+  const duration = useMemo(() => {
+    if (dateRange?.from && dateRange?.to) {
+      return differenceInDays(dateRange.to, dateRange.from);
+    }
+    return 0;
+  }, [dateRange]);
+
+  const handleQuickSelect = (days: number, months: number, years: number) => {
+    const from = dateRange?.from || new Date();
+    let to = from;
+    if (days) to = addDays(from, days);
+    if (months) to = addMonths(from, months);
+    if (years) to = addYears(from, years);
+    setDateRange({ from, to });
+    setSelectedUnit(undefined);
+  };
+
   if (!isOpen) return null;
 
   const handleConfirm = () => {
@@ -75,7 +93,7 @@ export default function BookingEngineModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/70 backdrop-blur-sm p-4 sm:p-6">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-8xl h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
           <div>
@@ -97,9 +115,14 @@ export default function BookingEngineModal({
         {/* Body: Two Columns */}
         <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
           {/* Left Column: VERTICAL Calendar */}
-          <div className="w-full lg:w-1/2 p-6 border-r border-gray-100 overflow-y-auto flex flex-col items-center bg-white">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6 w-full text-center">
+          <div className="w-full lg:w-1/2 p-4 border-r border-gray-100 overflow-y-auto flex flex-col items-center bg-white">
+            <h3 className="text-base font-semibold text-gray-900 mb-3 w-full text-center flex items-center justify-center gap-2">
               1. Select Duration
+              {duration > 0 && (
+                <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                  {duration} Night{duration > 1 ? "s" : ""}
+                </span>
+              )}
             </h3>
 
             {/* The Vertical react-day-picker */}
@@ -117,22 +140,22 @@ export default function BookingEngineModal({
               disabled={{ before: new Date() }}
               className="mx-auto" // Center it
               classNames={{
-                months: "flex flex-col space-y-8", // strictly vertical
-                month: "space-y-4",
+                months: "flex flex-col space-y-2", // strictly vertical
+                month: "space-y-2",
                 caption:
-                  "flex justify-center pt-1 relative items-center text-gray-900 font-bold text-lg",
+                  "flex justify-center pt-0 relative items-center text-gray-900 font-bold text-sm",
                 nav: "space-x-1 flex items-center",
                 nav_button:
-                  "h-8 w-8 bg-gray-100 p-0 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors",
+                  "h-7 w-7 bg-gray-100 p-0 text-gray-600 hover:text-gray-900 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors",
                 nav_button_previous: "absolute left-2",
                 nav_button_next: "absolute right-2",
-                table: "w-full border-collapse space-y-1",
-                head_row: "flex justify-between w-full mb-2",
+                table: "w-full border-collapse",
+                head_row: "flex mb-1 justify-center",
                 head_cell:
-                  "text-gray-500 rounded-md w-10 font-semibold text-[0.85rem] uppercase tracking-wider text-center",
-                row: "flex w-full mt-2 justify-between",
-                cell: "text-center text-sm p-0 relative [&:has([aria-selected])]:bg-blue-50 first:[&:has([aria-selected])]:rounded-l-full last:[&:has([aria-selected])]:rounded-r-full focus-within:relative focus-within:z-20",
-                day: "h-10 w-10 p-0 font-medium text-gray-900 hover:bg-gray-100 rounded-full flex items-center justify-center transition-colors",
+                  "text-gray-500 rounded-md w-8 font-semibold text-[0.75rem] uppercase tracking-wider text-center",
+                row: "flex w-full mt-1 justify-center",
+                cell: "text-center text-xs p-0 relative [&:has([aria-selected])]:bg-blue-50 first:[&:has([aria-selected])]:rounded-l-full last:[&:has([aria-selected])]:rounded-r-full focus-within:relative focus-within:z-20",
+                day: "h-8 w-8 p-0 font-medium text-gray-900 hover:bg-gray-100 rounded-full transition-colors text-xs",
                 day_selected:
                   "!bg-blue-600 !text-white font-bold hover:!bg-blue-700 shadow-md",
                 day_today: "bg-gray-50 text-blue-600 font-bold",
@@ -141,13 +164,57 @@ export default function BookingEngineModal({
                 day_range_middle:
                   "aria-selected:!bg-blue-50 aria-selected:!text-blue-900 aria-selected:!rounded-none",
                 day_hidden: "invisible",
+                vhidden: "sr-only",
               }}
             />
+
+            <div className="mt-4 w-full max-w-md px-2">
+              <p className="text-[0.65rem] font-medium text-gray-400 uppercase tracking-wider mb-2 text-center">
+                Quick Select
+              </p>
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => handleQuickSelect(1, 0, 0)}
+                  className="px-1 py-1.5 text-[0.7rem] font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 hover:text-blue-600 hover:border-blue-300 transition-colors shadow-sm"
+                >
+                  +1 Day
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickSelect(7, 0, 0)}
+                  className="px-1 py-1.5 text-[0.7rem] font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 hover:text-blue-600 hover:border-blue-300 transition-colors shadow-sm"
+                >
+                  +7 Days
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickSelect(0, 1, 0)}
+                  className="px-1 py-1.5 text-[0.7rem] font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 hover:text-blue-600 hover:border-blue-300 transition-colors shadow-sm"
+                >
+                  +1 Month
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickSelect(0, 6, 0)}
+                  className="px-1 py-1.5 text-[0.7rem] font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 hover:text-blue-600 hover:border-blue-300 transition-colors shadow-sm"
+                >
+                  +6 Months
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickSelect(0, 0, 1)}
+                  className="px-1 py-1.5 text-[0.7rem] font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 hover:text-blue-600 hover:border-blue-300 transition-colors shadow-sm"
+                >
+                  +1 Year
+                </button>
+              </div>
+            </div>
           </div>
 
           {/* Right Column: AVAILABLE Units List */}
-          <div className="w-full lg:w-1/2 p-6 bg-gray-50/50 overflow-y-auto">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          <div className="w-full lg:w-1/2 p-4 bg-gray-50/50 overflow-y-auto">
+            <h3 className="text-base font-semibold text-gray-900 mb-3">
               2. Select Available Unit
             </h3>
 
@@ -158,7 +225,7 @@ export default function BookingEngineModal({
                 to view available units.
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 {availableProperties.map((property) => (
                   <div
                     key={property.id}
@@ -179,7 +246,7 @@ export default function BookingEngineModal({
                       {property.units.map((unit) => (
                         <label
                           key={unit.id}
-                          className={`flex items-center justify-between p-4 cursor-pointer hover:bg-blue-50 transition-all ${selectedUnit === unit.id ? "bg-blue-50 ring-2 ring-inset ring-blue-600" : ""}`}
+                          className={`flex items-center justify-between p-3 cursor-pointer hover:bg-blue-50 transition-all ${selectedUnit === unit.id ? "bg-blue-50 ring-2 ring-inset ring-blue-600" : ""}`}
                         >
                           <div className="flex items-center gap-4">
                             <input
@@ -191,14 +258,14 @@ export default function BookingEngineModal({
                               className="h-5 w-5 border-gray-300 text-blue-600 focus:ring-blue-600"
                             />
                             <div>
-                              <div className="font-semibold text-gray-900 flex items-center gap-2 text-base">
+                              <div className="font-semibold text-gray-900 flex items-center gap-2 text-sm">
                                 <HomeModernIcon className="h-5 w-5 text-gray-400" />
                                 {unit.name}
                               </div>
                             </div>
                           </div>
                           <div className="text-right">
-                            <div className="text-lg font-bold text-gray-900">
+                            <div className="text-base font-bold text-gray-900">
                               {Number(unit.basePrice).toFixed(3)}
                             </div>
                             <div className="text-xs text-gray-500 font-medium">

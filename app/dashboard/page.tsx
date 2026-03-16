@@ -18,8 +18,8 @@ import {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function formatOMR(amount: number | string | null | undefined) {
-  return `${Number(amount || 0).toFixed(3)} OMR`;
+function formatOMR(amount: unknown) {
+  return `${Number(amount ?? 0).toFixed(3)} OMR`;
 }
 
 const STATUS_STYLES: Record<string, string> = {

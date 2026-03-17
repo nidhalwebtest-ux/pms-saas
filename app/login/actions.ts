@@ -7,15 +7,25 @@ import { createClient } from "@/utils/supabase/server";
 export async function login(formData: FormData) {
   const supabase = await createClient();
 
-  const data = {
-    email: formData.get("email") as string,
-    password: formData.get("password") as string,
-  };
+  const email = (formData.get("email") as string | null)?.trim() ?? "";
+  const password = (formData.get("password") as string | null) ?? "";
 
-  const { error } = await supabase.auth.signInWithPassword(data);
+  if (!email || !password) {
+    redirect("/login?error=invalid_credentials");
+  }
+
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
-    redirect("/login?error=Could not authenticate user");
+    if (
+      error.message.toLowerCase().includes("invalid") ||
+      error.message.toLowerCase().includes("credentials") ||
+      error.message.toLowerCase().includes("password") ||
+      error.status === 400
+    ) {
+      redirect("/login?error=invalid_credentials");
+    }
+    redirect("/login?error=server_error");
   }
 
   revalidatePath("/", "layout");
@@ -25,15 +35,20 @@ export async function login(formData: FormData) {
 export async function signup(formData: FormData) {
   const supabase = await createClient();
 
-  const data = {
-    email: formData.get("email") as string,
-    password: formData.get("password") as string,
-  };
+  const email = (formData.get("email") as string | null)?.trim() ?? "";
+  const password = (formData.get("password") as string | null) ?? "";
 
-  const { error } = await supabase.auth.signUp(data);
+  if (!email || !password) {
+    redirect("/login?error=invalid_credentials");
+  }
+
+  const { error } = await supabase.auth.signUp({ email, password });
 
   if (error) {
-    redirect("/login?error=Could not create user");
+    if (error.message.toLowerCase().includes("already registered") || error.status === 422) {
+      redirect("/login?error=Could+not+create+user");
+    }
+    redirect("/login?error=server_error");
   }
 
   revalidatePath("/", "layout");

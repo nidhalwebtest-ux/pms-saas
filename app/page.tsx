@@ -19,6 +19,7 @@ import {
   ShieldCheckIcon,
   BoltIcon,
   KeyIcon,
+  ChevronUpIcon,
 } from "@heroicons/react/24/outline";
 import { CheckCircleIcon, StarIcon } from "@heroicons/react/24/solid";
 
@@ -575,6 +576,29 @@ const T = {
   },
 };
 
+// ─── Scroll To Top ────────────────────────────────────────────────────────────
+
+function ScrollToTop({ lang }: { lang: Lang }) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 420);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  return (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      aria-label="Scroll to top"
+      className={`fixed bottom-8 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/40 ring-1 ring-blue-500/30 transition-all duration-300 hover:bg-blue-500 hover:shadow-blue-500/60 hover:-translate-y-1 focus:outline-none ${
+        lang === "ar" ? "left-8" : "right-8"
+      } ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4 pointer-events-none"}`}
+    >
+      <ChevronUpIcon className="h-5 w-5 stroke-2" />
+    </button>
+  );
+}
+
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 
 function Navbar({
@@ -687,6 +711,7 @@ function Navbar({
 
 function Hero({ lang }: { lang: Lang }) {
   const t = T[lang].hero;
+  const e = "cubic-bezier(.4,0,.2,1)";
   return (
     <section className="relative min-h-screen bg-slate-950 overflow-hidden flex items-center pt-16">
       <div className="absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl" />
@@ -695,22 +720,38 @@ function Hero({ lang }: { lang: Lang }) {
 
       <div className="relative mx-auto max-w-7xl px-6 py-20 lg:px-8">
         <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
+
+          {/* Left: copy — each element staggers in */}
           <div>
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5">
+            <div
+              className="mb-6 inline-flex items-center gap-2 rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5"
+              style={{ animation: `heroFadeUp 0.7s ${e} 0.1s both` }}
+            >
               <BoltIcon className="h-4 w-4 text-blue-400" />
               <span className="text-sm font-medium text-blue-300">{t.badge}</span>
             </div>
 
-            <h1 className="text-5xl font-bold leading-tight tracking-tight text-white lg:text-6xl">
+            <h1
+              className="text-5xl font-bold leading-tight tracking-tight text-white lg:text-6xl"
+              style={{ animation: `heroFadeUp 0.7s ${e} 0.22s both` }}
+            >
               {t.h1a}{" "}
               <span className="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
                 {t.h1b}
               </span>
             </h1>
 
-            <p className="mt-6 text-lg leading-relaxed text-slate-400 max-w-lg">{t.desc}</p>
+            <p
+              className="mt-6 text-lg leading-relaxed text-slate-400 max-w-lg"
+              style={{ animation: `heroFadeUp 0.7s ${e} 0.38s both` }}
+            >
+              {t.desc}
+            </p>
 
-            <div className="mt-10 flex flex-wrap items-center gap-4">
+            <div
+              className="mt-10 flex flex-wrap items-center gap-4"
+              style={{ animation: `heroFadeUp 0.7s ${e} 0.52s both` }}
+            >
               <Link
                 href="/login"
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/25 hover:bg-blue-500 transition-all hover:shadow-blue-500/40 hover:-translate-y-0.5"
@@ -726,7 +767,10 @@ function Hero({ lang }: { lang: Lang }) {
               </a>
             </div>
 
-            <div className="mt-10 flex flex-wrap items-center gap-6">
+            <div
+              className="mt-10 flex flex-wrap items-center gap-6"
+              style={{ animation: `heroFadeUp 0.7s ${e} 0.65s both` }}
+            >
               {[
                 { icon: ShieldCheckIcon, text: t.noCreditCard },
                 { icon: BoltIcon, text: t.liveIn },
@@ -739,9 +783,13 @@ function Hero({ lang }: { lang: Lang }) {
             </div>
           </div>
 
-          {/* Dashboard mockup */}
+          {/* Right: mockup + floating badges */}
           <div className="relative hidden lg:block">
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10">
+            {/* Dashboard card slides in from right */}
+            <div
+              className="relative rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10"
+              style={{ animation: `heroFadeInRight 0.9s ${e} 0.4s both` }}
+            >
               <div className="bg-slate-800 px-4 py-3 flex items-center gap-3">
                 <div className="flex gap-1.5">
                   <div className="h-3 w-3 rounded-full bg-red-500/70" />
@@ -838,26 +886,42 @@ function Hero({ lang }: { lang: Lang }) {
               </div>
             </div>
 
-            <div className="absolute -left-8 top-1/3 rounded-xl bg-white px-3 py-2 shadow-xl">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-green-100 flex items-center justify-center">
-                  <BanknotesIcon className="h-4 w-4 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-900">Payment received</p>
-                  <p className="text-xs text-gray-500">250.000 OMR · Cash</p>
+            {/* "Payment received" badge — slides in from left then floats */}
+            <div
+              className="absolute -left-8 top-1/3"
+              style={{ animation: `heroSlideLeft 0.6s ${e} 1.1s both` }}
+            >
+              <div style={{ animation: "float 3.2s ease-in-out 1.8s infinite" }}>
+                <div className="rounded-xl bg-white px-3 py-2 shadow-xl ring-1 ring-black/5">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-green-100 flex items-center justify-center">
+                      <BanknotesIcon className="h-4 w-4 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-900">Payment received</p>
+                      <p className="text-xs text-gray-500">250.000 OMR · Cash</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="absolute -right-6 bottom-1/3 rounded-xl bg-white px-3 py-2 shadow-xl">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <KeyIcon className="h-4 w-4 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-900">New check-in</p>
-                  <p className="text-xs text-gray-500">Room 205 · Suite</p>
+            {/* "New check-in" badge — slides in from right then floats (offset phase) */}
+            <div
+              className="absolute -right-6 bottom-1/3"
+              style={{ animation: `heroSlideRight 0.6s ${e} 1.35s both` }}
+            >
+              <div style={{ animation: "float 3.2s ease-in-out 2.1s infinite reverse" }}>
+                <div className="rounded-xl bg-white px-3 py-2 shadow-xl ring-1 ring-black/5">
+                  <div className="flex items-center gap-2">
+                    <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <KeyIcon className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-900">New check-in</p>
+                      <p className="text-xs text-gray-500">Room 205 · Suite</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1342,7 +1406,10 @@ function Footer({ lang }: { lang: Lang }) {
 export default function LandingPage() {
   const [lang, setLang] = useState<Lang>("en");
   return (
-    <div className="scroll-smooth bg-white" dir={lang === "ar" ? "rtl" : "ltr"}>
+    <div
+      className={`scroll-smooth bg-white ${lang === "ar" ? "font-cairo" : ""}`}
+      dir={lang === "ar" ? "rtl" : "ltr"}
+    >
       <Navbar lang={lang} setLang={setLang} />
       <Hero lang={lang} />
       <Stats lang={lang} />
@@ -1353,6 +1420,7 @@ export default function LandingPage() {
       <CtaBanner lang={lang} />
       <Contact lang={lang} />
       <Footer lang={lang} />
+      <ScrollToTop lang={lang} />
     </div>
   );
 }

@@ -56,6 +56,33 @@ body {
   font-weight: bold !important;
 }
 
+/* ── Arabic font ─────────────────────────────────────────────────────────── */
+.font-cairo {
+  font-family: var(--font-cairo), "Cairo", system-ui, sans-serif;
+}
+
+/* ── Hero entrance & float animations ───────────────────────────────────── */
+@keyframes heroFadeUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+@keyframes heroFadeInRight {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+@keyframes heroSlideLeft {
+  from { opacity: 0; transform: translateX(-28px); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+@keyframes heroSlideRight {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px);  }
+  50%       { transform: translateY(-9px); }
+}
+
 @media print {
   body {
     background-color: white !important;

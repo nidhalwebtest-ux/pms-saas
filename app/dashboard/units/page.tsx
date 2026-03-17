@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient, Prisma } from "@prisma/client";
-import { HomeModernIcon } from "@heroicons/react/24/outline";
+import { Prisma } from "@prisma/client";
+import {
+  HomeModernIcon,
+  CheckCircleIcon,
+  WrenchScrewdriverIcon,
+} from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
 
 import ListActionBar from "@/components/ui/list/ListActionBar";
@@ -18,6 +22,7 @@ export default async function UnitsPage({
   const q = params.q || "";
   const propertyFilter = params.property || "";
   const sortParam = params.sort || "newest";
+  const showInactive = params.inactive === "true";
 
   const supabase = await createClient();
   const {
@@ -44,6 +49,8 @@ export default async function UnitsPage({
     property: { organizationId: dbUser?.organizationId! },
     ...(q && { name: { contains: q, mode: "insensitive" } }),
     ...(propertyFilter && { propertyId: propertyFilter }),
+    // When "Show Inactives" is OFF → only AVAILABLE units
+    ...(!showInactive && { status: "AVAILABLE" as const }),
   };
 
   // 3. Build OrderBy
@@ -133,13 +140,19 @@ export default async function UnitsPage({
                       Specs
                     </th>
                     <SortableHeader label="Base Price (OMR)" sortKey="price" />
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                    >
+                      Status
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white">
                   {units.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={8}
                         className="py-10 text-center text-sm text-gray-500"
                       >
                         No units found matching your criteria.
@@ -186,7 +199,19 @@ export default async function UnitsPage({
                           {unit.bedrooms} Bed / {unit.bathrooms} Bath
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-900 font-bold">
-                          {Number(unit.basePrice).toFixed(3)}
+                          {Number(unit.basePrice).toFixed(3)}{" "}
+                          <span className="text-xs font-normal text-gray-500">OMR</span>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-sm">
+                          {unit.status === "AVAILABLE" ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+                              <CheckCircleIcon className="h-3 w-3" /> Available
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                              <WrenchScrewdriverIcon className="h-3 w-3" /> Maintenance
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))

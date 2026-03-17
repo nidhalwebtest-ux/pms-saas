@@ -22,6 +22,11 @@ enum PropertyType {
   HOTEL
 }
 
+enum UnitStatus {
+  AVAILABLE
+  MAINTENANCE
+}
+
 enum ReservationStatus {
   PENDING
   CONFIRMED
@@ -85,11 +90,15 @@ model Property {
   name           String
   type           PropertyType @default(RESIDENTIAL)
   
+  // Status & Media
+  isActive       Boolean      @default(true)
+  photos         String[]     @default([])
+
   // Location
   address        String?
   city           String       @default("Salalah")
   governorate    String       @default("Dhofar")
-  
+
   // Link to Org
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -112,13 +121,15 @@ model Unit {
   bedrooms    Int      @default(1)
   bathrooms   Int      @default(1)
   
-  basePrice   Decimal  @db.Decimal(10, 2)
-  
+  basePrice   Decimal    @db.Decimal(10, 3)
+  status      UnitStatus @default(AVAILABLE)
+  photos      String[]   @default([])
+
   propertyId  String
   property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  
+
   reservations Reservation[]
-  
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

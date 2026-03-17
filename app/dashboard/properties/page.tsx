@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient, Prisma } from "@prisma/client";
-import { BuildingOfficeIcon } from "@heroicons/react/24/outline";
+import { Prisma } from "@prisma/client";
+import {
+  BuildingOfficeIcon,
+  CheckCircleIcon,
+  WrenchScrewdriverIcon,
+} from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
 
 // New Client Components we will create below
@@ -45,8 +49,8 @@ export default async function PropertiesPage({
       ],
     }),
     ...(typeFilter && { type: typeFilter as any }),
-    // In the future, if you add an 'isActive' boolean to Property, handle it here:
-    // isActive: showInactive ? undefined : true,
+    // When "Show Inactives" is OFF → only show active properties
+    ...(!showInactive && { isActive: true }),
   };
 
   // 4. Build OrderBy
@@ -125,6 +129,12 @@ export default async function PropertiesPage({
                       scope="col"
                       className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
                     >
+                      Status
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900"
+                    >
                       Units
                     </th>
                   </tr>
@@ -133,7 +143,7 @@ export default async function PropertiesPage({
                   {properties.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="py-10 text-center text-sm text-gray-500"
                       >
                         No properties found matching your criteria.
@@ -171,6 +181,17 @@ export default async function PropertiesPage({
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
                           {property.city}, {property.governorate}
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-3 text-sm">
+                          {property.isActive ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+                              <CheckCircleIcon className="h-3 w-3" /> Active
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                              <WrenchScrewdriverIcon className="h-3 w-3" /> Inactive
+                            </span>
+                          )}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
                           {property._count.units} units

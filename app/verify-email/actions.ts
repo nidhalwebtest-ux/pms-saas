@@ -1,6 +1,14 @@
 "use server";
 
+import { headers } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
+
+async function getOrigin(): Promise<string> {
+  const h = await headers();
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  const host  = h.get("host") ?? "localhost:3000";
+  return `${proto}://${host}`;
+}
 
 export async function resendVerificationEmail(
   email: string,
@@ -8,19 +16,15 @@ export async function resendVerificationEmail(
   if (!email?.trim()) return { error: "Email address is required." };
 
   const supabase = await createClient();
+  const origin   = await getOrigin();
 
   const { error } = await supabase.auth.resend({
     type: "signup",
     email: email.trim(),
-    options: {
-      emailRedirectTo: `${
-        process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"
-      }/auth/callback`,
-    },
+    options: { emailRedirectTo: `${origin}/auth/callback` },
   });
 
   if (error) {
-    // Supabase rate-limits resend requests
     if (error.message.toLowerCase().includes("rate")) {
       return { error: "Too many requests. Please wait a minute and try again." };
     }

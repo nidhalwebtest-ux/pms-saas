@@ -262,6 +262,15 @@ model Expense {
   updatedAt      DateTime @updatedAt
 }
 
+// Tracks failed login attempts for rate-limiting (5 / 15 min lockout)
+model LoginAttempt {
+  id        String   @id @default(uuid())
+  email     String
+  createdAt DateTime @default(now())
+
+  @@index([email, createdAt])
+}
+
 enum ExpenseCategory {
   UTILITIES      // Water, Electricity, Internet
   MAINTENANCE    // Spare parts, labor

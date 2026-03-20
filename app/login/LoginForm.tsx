@@ -14,20 +14,20 @@ import {
   CheckCircleIcon,
   CheckIcon,
   XMarkIcon,
+  ClockIcon,
+  ShieldExclamationIcon,
 } from "@heroicons/react/24/outline";
 
 // ─── Error messages ────────────────────────────────────────────────────────────
 
 const SERVER_ERRORS: Record<string, string> = {
-  invalid_credentials: "Incorrect email or password. Please try again.",
-  email_exists: "An account with this email already exists. Try signing in instead.",
-  email_not_confirmed: "Please verify your email before signing in.",
-  oauth_error: "Google sign-in failed. Please try again.",
-  auth_error: "Authentication link is invalid or expired. Please try again.",
-  server_error: "Something went wrong on our end. Please try again later.",
-  // Legacy keys kept for backwards compatibility
-  "Could not authenticate user": "Incorrect email or password.",
-  "Could not create user": "This email may already be registered.",
+  invalid_credentials:  "Incorrect email or password.",
+  email_exists:         "An account with this email already exists. Try signing in instead.",
+  email_not_confirmed:  "Please verify your email before signing in.",
+  oauth_error:          "Google sign-in failed. Please try again.",
+  auth_error:           "Authentication link is invalid or expired. Please try again.",
+  server_error:         "Something went wrong on our end. Please try again later.",
+  too_many_attempts:    "", // handled separately with countdown
 };
 
 // ─── Password strength ─────────────────────────────────────────────────────────
@@ -45,6 +45,42 @@ function getStrength(password: string) {
   const bar = ["", "bg-red-500", "bg-orange-400", "bg-yellow-400", "bg-green-500"];
   const text = ["", "text-red-600", "text-orange-600", "text-yellow-600", "text-green-600"];
   return { score, label: labels[score], barColor: bar[score], textColor: text[score] };
+}
+
+// ─── Lockout countdown banner ─────────────────────────────────────────────────
+
+function LockoutBanner({ until }: { until: number }) {
+  const [timeLeft, setTimeLeft] = useState("");
+
+  useEffect(() => {
+    const tick = () => {
+      const diff = until - Date.now();
+      if (diff <= 0) { setTimeLeft("now"); return; }
+      const m = Math.floor(diff / 60_000);
+      const s = Math.floor((diff % 60_000) / 1000);
+      setTimeLeft(`${m}:${s.toString().padStart(2, "0")}`);
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [until]);
+
+  return (
+    <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3.5">
+      <ShieldExclamationIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
+      <div>
+        <p className="text-sm font-semibold text-red-700">Account temporarily locked</p>
+        <p className="mt-0.5 text-sm text-red-600">
+          Too many failed attempts. Try again{" "}
+          {timeLeft === "now" ? (
+            <span className="font-semibold">now</span>
+          ) : timeLeft ? (
+            <>in <span className="font-mono font-semibold">{timeLeft}</span></>
+          ) : null}.
+        </p>
+      </div>
+    </div>
+  );
 }
 
 // ─── Google Icon ───────────────────────────────────────────────────────────────
@@ -65,9 +101,13 @@ function GoogleIcon() {
 export default function LoginForm({
   initialError,
   initialSuccess,
+  lockoutUntil,
+  remainingAttempts,
 }: {
   initialError?: string;
   initialSuccess?: string;
+  lockoutUntil?: number;   // Unix ms — when the lockout expires
+  remainingAttempts?: number; // how many attempts before lockout
 }) {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [showPassword, setShowPassword] = useState(false);
@@ -78,7 +118,10 @@ export default function LoginForm({
   const [isPending, startTransition] = useTransition();
   const [googlePending, setGooglePending] = useState(false);
 
-  const serverError = initialError ? (SERVER_ERRORS[initialError] ?? initialError) : null;
+  const isLockedOut = initialError === "too_many_attempts" && !!lockoutUntil;
+  const serverError = (initialError && !isLockedOut)
+    ? (SERVER_ERRORS[initialError] ?? initialError)
+    : null;
   const serverSuccess = initialSuccess ?? null;
   const strength = getStrength(password);
 
@@ -188,17 +231,32 @@ export default function LoginForm({
           ))}
         </div>
 
+        {/* Lockout countdown */}
+        {isLockedOut && lockoutUntil && <LockoutBanner until={lockoutUntil} />}
+
         {/* Server error */}
         {serverError && (
-          <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <ExclamationCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
-            <span>{serverError}</span>
+            <div>
+              <span>{serverError}</span>
+              {typeof remainingAttempts === "number" && remainingAttempts > 0 && (
+                <p className="mt-0.5 text-xs text-red-500">
+                  {remainingAttempts} attempt{remainingAttempts !== 1 ? "s" : ""} left before 15-minute lockout.
+                </p>
+              )}
+              {typeof remainingAttempts === "number" && remainingAttempts === 0 && (
+                <p className="mt-0.5 text-xs text-red-500 font-medium">
+                  Next failure will lock your account for 15 minutes.
+                </p>
+              )}
+            </div>
           </div>
         )}
 
         {/* Server success */}
         {serverSuccess && (
-          <div className="mb-5 flex items-start gap-2.5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+          <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
             <CheckCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
             <span>{serverSuccess}</span>
           </div>
@@ -410,10 +468,26 @@ export default function LoginForm({
             </div>
           )}
 
+          {/* Remember Me — signin only */}
+          {mode === "signin" && (
+            <div className="flex items-center justify-between">
+              <label className="flex cursor-pointer items-center gap-2 select-none">
+                <input
+                  type="checkbox"
+                  name="rememberMe"
+                  value="on"
+                  disabled={isLoading || isLockedOut}
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                />
+                <span className="text-sm text-slate-600">Remember me for 30 days</span>
+              </label>
+            </div>
+          )}
+
           {/* Submit */}
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || isLockedOut}
             className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:bg-blue-500 hover:shadow-blue-500/40 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
           >
             {isPending ? (

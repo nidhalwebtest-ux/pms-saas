@@ -2,10 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { sendVerificationEmail } from "@/lib/email";
+import { prisma } from "@/lib/prisma";
+
+// ─── Rate-limit constants ──────────────────────────────────────────────────────
+const WINDOW_MS    = 15 * 60 * 1000; // 15 minutes
+const MAX_ATTEMPTS = 5;
 
 /**
  * Derive the absolute origin from the incoming request headers.
@@ -23,24 +28,78 @@ async function getOrigin(): Promise<string> {
 // ─── Sign In ──────────────────────────────────────────────────────────────────
 
 export async function login(formData: FormData) {
-  const supabase = await createClient();
+  const supabase    = await createClient();
+  const cookieStore = await cookies();
 
-  const email    = (formData.get("email")    as string | null)?.trim() ?? "";
-  const password = (formData.get("password") as string | null) ?? "";
+  const email      = (formData.get("email")      as string | null)?.trim().toLowerCase() ?? "";
+  const password   = (formData.get("password")   as string | null) ?? "";
+  const rememberMe = formData.get("rememberMe") === "on";
 
   if (!email || !password) redirect("/login?error=invalid_credentials");
 
+  // ── Rate limiting ────────────────────────────────────────────────────────────
+  const windowStart = new Date(Date.now() - WINDOW_MS);
+
+  // Purge stale attempts (keep the table small)
+  await prisma.loginAttempt.deleteMany({
+    where: { createdAt: { lt: windowStart } },
+  }).catch(() => {});
+
+  // Fetch the most recent MAX_ATTEMPTS failures for this email
+  const recentAttempts = await prisma.loginAttempt.findMany({
+    where: { email, createdAt: { gte: windowStart } },
+    orderBy: { createdAt: "desc" },
+    take: MAX_ATTEMPTS,
+  });
+
+  if (recentAttempts.length >= MAX_ATTEMPTS) {
+    // Lockout ends 15 min after the 5th (oldest) attempt in the window
+    const fifthAttempt  = recentAttempts[MAX_ATTEMPTS - 1];
+    const lockoutUntil  = fifthAttempt.createdAt.getTime() + WINDOW_MS;
+    redirect(`/login?error=too_many_attempts&until=${lockoutUntil}`);
+  }
+
+  // ── Attempt login ────────────────────────────────────────────────────────────
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    // Record the failure
+    await prisma.loginAttempt.create({ data: { email } }).catch(() => {});
+
+    const remaining = MAX_ATTEMPTS - (recentAttempts.length + 1);
     const msg = error.message.toLowerCase();
+
     if (msg.includes("email not confirmed") || msg.includes("not confirmed")) {
       redirect(`/verify-email?email=${encodeURIComponent(email)}`);
     }
     if (msg.includes("invalid") || msg.includes("credentials") || error.status === 400) {
-      redirect("/login?error=invalid_credentials");
+      // Pass remaining attempts so the UI can warn the user
+      redirect(`/login?error=invalid_credentials&remaining=${Math.max(0, remaining)}`);
     }
     redirect("/login?error=server_error");
+  }
+
+  // ── Success — clear attempts ──────────────────────────────────────────────────
+  await prisma.loginAttempt.deleteMany({ where: { email } }).catch(() => {});
+
+  // ── Remember Me ───────────────────────────────────────────────────────────────
+  // Supabase SSR sets sb-* cookies with maxAge = access-token lifetime (~1 h).
+  // The middleware refreshes them, so the session stays alive while the user
+  // is active. With "Remember Me" we extend those cookies to 30 days so the
+  // session survives browser restarts for a full month.
+  const maxAge = rememberMe ? 30 * 24 * 60 * 60 : undefined; // 30 days | session
+
+  for (const cookie of cookieStore.getAll()) {
+    if (!cookie.name.startsWith("sb-")) continue;
+    cookieStore.set({
+      name:     cookie.name,
+      value:    cookie.value,
+      httpOnly: true,
+      secure:   process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path:     "/",
+      ...(maxAge !== undefined ? { maxAge } : {}),
+    });
   }
 
   revalidatePath("/", "layout");

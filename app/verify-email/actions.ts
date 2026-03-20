@@ -1,7 +1,8 @@
 "use server";
 
 import { headers } from "next/headers";
-import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
+import { sendVerificationEmail } from "@/lib/email";
 
 async function getOrigin(): Promise<string> {
   const h = await headers();
@@ -15,21 +16,31 @@ export async function resendVerificationEmail(
 ): Promise<{ error?: string; success?: boolean }> {
   if (!email?.trim()) return { error: "Email address is required." };
 
-  const supabase = await createClient();
-  const origin   = await getOrigin();
+  const adminClient = createAdminClient();
+  const origin      = await getOrigin();
 
-  const { error } = await supabase.auth.resend({
-    type: "signup",
+  // Generate a fresh verification link via admin API — no SMTP, no Supabase email.
+  // We use type "magiclink" because we don't have the user's password here.
+  // Clicking the link confirms the email AND starts the session — same end result.
+  const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
+    type: "magiclink",
     email: email.trim(),
-    options: { emailRedirectTo: `${origin}/auth/callback` },
+    options: { redirectTo: `${origin}/auth/callback` },
   });
 
-  if (error) {
-    if (error.message.toLowerCase().includes("rate")) {
-      return { error: "Too many requests. Please wait a minute and try again." };
-    }
-    return { error: "Could not resend the verification email. Please try again." };
+  if (linkError || !linkData?.properties?.action_link) {
+    console.error("[resend] generateLink failed:", linkError?.message);
+    return {
+      error: "Could not generate a verification link. Make sure you signed up with this email address.",
+    };
   }
 
-  return { success: true };
+  // Send via Resend REST API directly — no SMTP.
+  try {
+    await sendVerificationEmail(email.trim(), linkData.properties.action_link);
+    return { success: true };
+  } catch (err) {
+    console.error("[resend] Resend send failed:", err);
+    return { error: "Failed to send the email. Please try again in a moment." };
+  }
 }

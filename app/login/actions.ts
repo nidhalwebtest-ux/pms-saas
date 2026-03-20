@@ -50,7 +50,6 @@ export async function login(formData: FormData) {
 // ─── Sign Up ─────────────────────────────────────────────────────────────────
 
 export async function signup(formData: FormData) {
-  const supabase    = await createClient();
   const adminClient = createAdminClient();
   const origin      = await getOrigin();
 
@@ -59,24 +58,10 @@ export async function signup(formData: FormData) {
 
   if (!email || !password) redirect("/login?error=invalid_credentials");
 
-  // 1. Create the user (unconfirmed). Supabase will NOT send an email
-  //    because we've removed the SMTP config — we handle sending ourselves.
-  const { error: signUpError } = await supabase.auth.signUp({
-    email,
-    password,
-    options: { emailRedirectTo: `${origin}/auth/callback` },
-  });
-
-  if (signUpError) {
-    const msg = signUpError.message.toLowerCase();
-    if (msg.includes("already registered") || msg.includes("already exists") || signUpError.status === 422) {
-      redirect("/login?error=email_exists");
-    }
-    redirect("/login?error=server_error");
-  }
-
-  // 2. Use admin API to generate the real Supabase verification link.
-  //    This bypasses SMTP entirely — we get the raw URL to email ourselves.
+  // Use admin generateLink — this creates the user AND returns the verification
+  // URL in ONE call, without triggering Supabase's own email sending.
+  // (calling signUp() first then generateLink() creates two tokens and the
+  //  first one —sent by Supabase— immediately expires when the second is made)
   const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
     type: "signup",
     email,
@@ -84,16 +69,29 @@ export async function signup(formData: FormData) {
     options: { redirectTo: `${origin}/auth/callback` },
   });
 
-  if (!linkError && linkData?.properties?.action_link) {
-    // 3. Send via Resend's REST API directly — no SMTP involved.
-    try {
-      await sendVerificationEmail(email, linkData.properties.action_link);
-    } catch (err) {
-      console.error("[signup] Resend send failed:", err);
-      // Non-fatal: user lands on verify-email page and can resend manually.
+  if (linkError) {
+    const msg = linkError.message.toLowerCase();
+    if (
+      msg.includes("already registered") ||
+      msg.includes("already exists") ||
+      msg.includes("already been registered")
+    ) {
+      redirect("/login?error=email_exists");
     }
-  } else {
-    console.error("[signup] generateLink failed:", linkError?.message);
+    console.error("[signup] generateLink error:", linkError.message);
+    redirect("/login?error=server_error");
+  }
+
+  if (!linkData?.properties?.action_link) {
+    redirect("/login?error=server_error");
+  }
+
+  // Send the single, valid verification link via Resend REST API — no SMTP.
+  try {
+    await sendVerificationEmail(email, linkData.properties.action_link);
+  } catch (err) {
+    console.error("[signup] Resend send failed:", err);
+    // Non-fatal: user can resend from the verify-email page.
   }
 
   redirect(`/verify-email?email=${encodeURIComponent(email)}`);

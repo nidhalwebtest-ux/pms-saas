@@ -32,8 +32,11 @@ export default async function ExpensesPage({
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { organizationId: true },
+    select: { organizationId: true, role: true },
   });
+
+  // Receptionist (STAFF) cannot access expenses
+  if (dbUser?.role === "STAFF") redirect("/dashboard");
 
   // 1. Fetch properties for the filter dropdown
   const properties = await prisma.property.findMany({

@@ -26,8 +26,8 @@ export const NAV_ACCESS: Record<string, Role[]> = {
   properties:   ["OWNER", "MANAGER", "STAFF"],
   tenants:      ["OWNER", "MANAGER", "STAFF"],
   reservations: ["OWNER", "MANAGER", "STAFF"],
-  payments:     ["OWNER", "MANAGER", "ACCOUNTANT"],
-  expenses:     ["OWNER", "MANAGER", "ACCOUNTANT"],
+  payments:     ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],  // Receptionist can record payments
+  expenses:     ["OWNER", "MANAGER", "ACCOUNTANT"],           // Receptionist cannot see expenses
   settings:     ["OWNER", "MANAGER"],
 };
 
@@ -38,7 +38,7 @@ export const ACTION_ACCESS: Record<string, Role[]> = {
   manageTeam:         ["OWNER", "MANAGER"],
   removeTeamMember:   ["OWNER"],
   changeRoles:        ["OWNER"],
-  recordPayments:     ["OWNER", "MANAGER", "ACCOUNTANT"],
+  recordPayments:     ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],
   manageExpenses:     ["OWNER", "MANAGER", "ACCOUNTANT"],
   manageTenants:      ["OWNER", "MANAGER", "STAFF"],
   manageReservations: ["OWNER", "MANAGER", "STAFF"],

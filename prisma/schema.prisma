@@ -11,9 +11,10 @@ datasource db {
 
 // 2. Enums
 enum UserRole {
-  OWNER       // Pays the bills, full access
-  MANAGER     // Can see all properties, but can't change billing
-  STAFF       // Restricted to assigned properties only (Receptionist)
+  OWNER        // Org creator — full access, cannot be removed
+  MANAGER      // Admin — full operational access, can manage team
+  STAFF        // Receptionist — tenants & reservations only
+  ACCOUNTANT   // Accountant — payments & expenses only
 }
 
 enum PropertyType {

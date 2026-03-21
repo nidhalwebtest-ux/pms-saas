@@ -3,68 +3,51 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDownIcon } from "@heroicons/react/20/solid";
+import { NAV_ACCESS, type Role } from "@/lib/permissions";
 
-// --- 1. Configuration: Define your menu here ---
+// ── Nav config ────────────────────────────────────────────────────────────────
+// `key` must match the keys in NAV_ACCESS (permissions.ts)
+
 const navigationConfig = [
+  { key: "dashboard",    name: "Dashboard",    href: "/dashboard" },
+  { key: "properties",   name: "Properties",   href: "/dashboard/properties" },
+  { key: "tenants",      name: "Tenants",      href: "/dashboard/tenants" },
+  { key: "reservations", name: "Reservations", href: "/dashboard/reservations" },
+  { key: "payments",     name: "Payments",     href: "/dashboard/payments" },
+  { key: "expenses",     name: "Expenses",     href: "/dashboard/expenses" },
   {
-    name: "Dashboard",
-    href: "/dashboard",
-  },
-  {
-    name: "Properties",
-    href: "/dashboard/properties",
-    // Example: You could add 'Add Property' here if you wanted
-    // children: [ { name: 'All Properties', href: '/dashboard/properties' }, ... ]
-  },
-  {
-    name: "Tenants",
-    href: "/dashboard/tenants",
-  },
-  {
-    name: "Reservations",
-    href: "/dashboard/reservations",
-  },
-  {
-    name: "Payments",
-    href: "/dashboard/payments",
-  },
-  {
-    name: "Expenses",
-    href: "/dashboard/expenses",
-  },
-  {
-    name: "Settings",
-    href: "/dashboard/settings", // Parent path for highlighting
+    key:      "settings",
+    name:     "Settings",
+    href:     "/dashboard/settings",
     children: [
       { name: "Team Management", href: "/dashboard/settings/team" },
-      { name: "My Profile", href: "/dashboard/settings/profile" },
-      // Add more settings here effortlessly
+      { name: "My Profile",      href: "/dashboard/settings/profile" },
     ],
   },
-];
+] as const;
 
 function classNames(...classes: string[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-export default function Navigation() {
+export default function Navigation({ role }: { role: Role }) {
   const pathname = usePathname();
+
+  const visible = navigationConfig.filter(
+    (item) => (NAV_ACCESS[item.key] ?? []).includes(role),
+  );
 
   return (
     <nav className="flex overflow-x-auto border-b border-gray-200 bg-gray-50 px-4 sm:px-6 lg:px-8 z-50 relative w-full scrollbar-hide">
-      {/* FIX 3: Added 'min-w-max' to force items to stay in a row */}
       <div className="flex space-x-8 min-w-max">
-        {navigationConfig.map((item) => {
+        {visible.map((item) => {
           const isActive =
             pathname === item.href ||
-            (item.children && pathname.startsWith(item.href));
-          const hasDropdown = item.children && item.children.length > 0;
+            ("children" in item && item.children && pathname.startsWith(item.href));
+          const hasDropdown = "children" in item && item.children && item.children.length > 0;
 
           return (
-            <div
-              key={item.name}
-              className="relative group flex items-center h-full"
-            >
+            <div key={item.name} className="relative group flex items-center h-full">
               <Link
                 href={item.href}
                 className={classNames(
@@ -78,9 +61,7 @@ export default function Navigation() {
                 {hasDropdown && (
                   <ChevronDownIcon
                     className={classNames(
-                      isActive
-                        ? "text-blue-600"
-                        : "text-gray-400 group-hover:text-gray-700",
+                      isActive ? "text-blue-600" : "text-gray-400 group-hover:text-gray-700",
                       "ml-2 h-4 w-4 transition-transform duration-200 group-hover:rotate-180",
                     )}
                   />
@@ -88,11 +69,9 @@ export default function Navigation() {
               </Link>
 
               {hasDropdown && (
-                // Note: Dropdowns might get clipped by overflow-x-auto on mobile.
-                // It is recommended to use a different mobile menu pattern if dropdowns are critical.
                 <div className="absolute left-0 top-full hidden pt-1 w-56 group-hover:block z-50">
                   <div className="rounded-md bg-white py-2 shadow-lg ring-1 ring-black ring-opacity-5">
-                    {item.children!.map((child) => (
+                    {"children" in item && item.children!.map((child) => (
                       <Link
                         key={child.name}
                         href={child.href}

@@ -4,6 +4,8 @@ import Header from "@/components/dashboard/Header";
 import Navigation from "@/components/dashboard/Navigation";
 import InactivityGuard from "@/components/dashboard/InactivityGuard";
 import { prisma } from "@/lib/prisma";
+import type { Role } from "@/lib/permissions";
+
 export default async function DashboardLayout({
   children,
   modal,
@@ -11,40 +13,32 @@ export default async function DashboardLayout({
   children: React.ReactNode;
   modal: React.ReactNode;
 }) {
-  // 1. Verify User is Authenticated on the Server
   const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser();
 
-  if (error || !user) {
-    redirect("/login");
-  }
+  if (error || !user) redirect("/login");
 
-  // CHECK: Does this user have an Organization?
   const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { organizationId: true },
+    where:  { id: user.id },
+    select: { organizationId: true, role: true, firstName: true },
   });
-  // If no Org, force them to Onboarding
-  if (!dbUser?.organizationId) {
-    redirect("/onboarding");
-  }
+
+  if (!dbUser?.organizationId) redirect("/onboarding");
+
+  const role = (dbUser.role ?? "STAFF") as Role;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <InactivityGuard />
       <div className="bg-white shadow-sm ring-1 ring-gray-900/5 z-10 relative">
-        <Header userEmail={user.email} />
-        <Navigation />
+        <Header userEmail={user.email} userName={dbUser.firstName} role={role} />
+        <Navigation role={role} />
       </div>
 
-      {/* Main Content Area - Full Width */}
       <main className="py-10">
         <div className="px-4 sm:px-6 lg:px-8">{children}</div>
       </main>
-      {/* Render the modal slot */}
+
       {modal}
     </div>
   );

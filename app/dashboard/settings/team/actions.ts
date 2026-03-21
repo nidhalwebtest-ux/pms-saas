@@ -1,66 +1,131 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { PrismaClient } from "@prisma/client";
-import { revalidatePath } from "next/cache";
-
 import { prisma } from "@/lib/prisma";
+import { can } from "@/lib/permissions";
+import type { UserRole } from "@prisma/client";
+
+// ── Shared auth helper ────────────────────────────────────────────────────────
+
+async function getCallerWithOrg() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const dbUser = await prisma.user.findUnique({
+    where:  { id: user.id },
+    select: { id: true, organizationId: true, role: true },
+  });
+  if (!dbUser?.organizationId) redirect("/onboarding");
+
+  return { authId: user.id, ...dbUser, organizationId: dbUser.organizationId };
+}
+
+// ── Add team member ───────────────────────────────────────────────────────────
 
 export async function addTeamMember(formData: FormData) {
-  // 1. Verify the current user (The Manager)
-  const supabase = await createClient();
-  const {
-    data: { user: currentUser },
-  } = await supabase.auth.getUser();
+  const caller = await getCallerWithOrg();
 
-  if (!currentUser) redirect("/login");
+  if (!can(caller.role, "manageTeam")) {
+    throw new Error("You do not have permission to add team members.");
+  }
 
-  // Get current user's org
-  const dbUser = await prisma.user.findUnique({
-    where: { id: currentUser.id },
-    select: { organizationId: true, role: true },
+  const firstName = formData.get("firstName") as string;
+  const email     = formData.get("email")     as string;
+  const password  = formData.get("password")  as string;
+  const role      = formData.get("role")      as UserRole;
+
+  // Only OWNER can assign MANAGER (Admin) role
+  if (role === "MANAGER" && caller.role !== "OWNER") {
+    throw new Error("Only the Owner can assign the Admin role.");
+  }
+
+  const adminClient = createAdminClient();
+  const { data: newAuth, error: authError } = await adminClient.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
   });
 
-  // Optional: Check permissions (Only Owners/Managers can add staff)
-  if (dbUser?.role !== "OWNER" && dbUser?.role !== "MANAGER") {
-    throw new Error("You do not have permission to add users.");
-  }
+  if (authError) throw new Error(authError.message);
+  if (!newAuth.user) throw new Error("Failed to create user.");
 
-  // 2. Extract Data for the NEW user
-  const firstName = formData.get("firstName") as string;
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
-  const role = formData.get("role") as any;
-
-  // 3. Create Auth User (Using Admin Client)
-  const supabaseAdmin = createAdminClient();
-
-  const { data: newAuthUser, error: authError } =
-    await supabaseAdmin.auth.admin.createUser({
-      email: email,
-      password: password,
-      email_confirm: true, // Auto-confirm their email so they can login immediately
-    });
-
-  if (authError) {
-    throw new Error(authError.message);
-  }
-
-  if (!newAuthUser.user) throw new Error("Failed to create user");
-
-  // 4. Create Public User Record (Linked to YOUR Org)
   await prisma.user.create({
     data: {
-      id: newAuthUser.user.id, // IMPORTANT: Link the IDs
-      email: email,
-      firstName: firstName,
-      role: role,
-      organizationId: dbUser.organizationId!,
+      id:             newAuth.user.id,
+      email,
+      firstName,
+      role,
+      organizationId: caller.organizationId,
     },
   });
 
   revalidatePath("/dashboard/settings/team");
-  redirect("/dashboard/settings/team");
+}
+
+// ── Update member role ────────────────────────────────────────────────────────
+
+export async function updateMemberRole(memberId: string, newRole: UserRole) {
+  const caller = await getCallerWithOrg();
+
+  if (!can(caller.role, "changeRoles")) {
+    throw new Error("Only the Owner can change roles.");
+  }
+  if (memberId === caller.id) {
+    throw new Error("You cannot change your own role.");
+  }
+
+  const target = await prisma.user.findUnique({
+    where:  { id: memberId },
+    select: { role: true, organizationId: true },
+  });
+
+  if (!target || target.organizationId !== caller.organizationId) {
+    throw new Error("Member not found.");
+  }
+  if (target.role === "OWNER") {
+    throw new Error("The Owner role cannot be changed.");
+  }
+
+  await prisma.user.update({
+    where: { id: memberId },
+    data:  { role: newRole },
+  });
+
+  revalidatePath("/dashboard/settings/team");
+}
+
+// ── Remove team member ────────────────────────────────────────────────────────
+
+export async function removeTeamMember(memberId: string) {
+  const caller = await getCallerWithOrg();
+
+  if (!can(caller.role, "removeTeamMember")) {
+    throw new Error("Only the Owner can remove team members.");
+  }
+  if (memberId === caller.id) {
+    throw new Error("You cannot remove yourself.");
+  }
+
+  const target = await prisma.user.findUnique({
+    where:  { id: memberId },
+    select: { role: true, organizationId: true },
+  });
+
+  if (!target || target.organizationId !== caller.organizationId) {
+    throw new Error("Member not found.");
+  }
+  if (target.role === "OWNER") {
+    throw new Error("The Owner account cannot be removed.");
+  }
+
+  const adminClient = createAdminClient();
+  // Delete from Supabase Auth (cascades to public.User via DB trigger or we delete manually)
+  await adminClient.auth.admin.deleteUser(memberId);
+  await prisma.user.delete({ where: { id: memberId } });
+
+  revalidatePath("/dashboard/settings/team");
 }

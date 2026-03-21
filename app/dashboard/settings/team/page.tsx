@@ -1,151 +1,232 @@
-import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
 import { redirect } from "next/navigation";
-import {
-  PageHeader,
-  FormCard,
-  FormInput,
-  FormSelect,
-  FormActions,
-} from "@/components/ui/FormComponents";
-import { addTeamMember } from "./actions";
-
+import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { can, ROLE_LABELS, type Role } from "@/lib/permissions";
+import { addTeamMember } from "./actions";
+import MemberRow from "./MemberRow";
+import {
+  UsersIcon,
+  ShieldCheckIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
+
+// ── Role stats card ───────────────────────────────────────────────────────────
+
+function StatCard({ label, count, color }: { label: string; count: number; color: string }) {
+  return (
+    <div className="rounded-xl bg-white px-5 py-4 shadow-sm ring-1 ring-gray-900/5">
+      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
+      <p className={`mt-1 text-2xl font-bold ${color}`}>{count}</p>
+    </div>
+  );
+}
 
 export default async function TeamPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { organizationId: true },
+    where:  { id: user.id },
+    select: { organizationId: true, role: true },
   });
+  if (!dbUser?.organizationId) redirect("/onboarding");
 
-  // Fetch only active members (We removed invitations)
+  const callerRole = (dbUser.role ?? "STAFF") as Role;
+
+  // Only OWNER and MANAGER (Admin) can access this page
+  if (!can(callerRole, "manageTeam")) {
+    redirect("/dashboard?error=unauthorized");
+  }
+
   const members = await prisma.user.findMany({
-    where: { organizationId: dbUser?.organizationId! },
+    where:   { organizationId: dbUser.organizationId },
     orderBy: { createdAt: "asc" },
   });
 
+  // Stats
+  const counts = {
+    total:       members.length,
+    admins:      members.filter((m) => m.role === "OWNER" || m.role === "MANAGER").length,
+    receptionists: members.filter((m) => m.role === "STAFF").length,
+    accountants: members.filter((m) => m.role === "ACCOUNTANT").length,
+  };
+
+  const canAddAdminRole = callerRole === "OWNER";
+
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <PageHeader
-        title="Team Management"
-        description="Create accounts for your staff members."
-      />
+    <div className="max-w-4xl mx-auto space-y-8">
 
-      {/* --- 1. Add User Form --- */}
-      <div className="mb-12">
-        <form action={addTeamMember}>
-          <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl p-6">
-            <h3 className="text-base font-semibold leading-6 text-gray-900 mb-4">
-              Add New Employee
-            </h3>
+      {/* ── Header ── */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Team Management</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            Manage your staff accounts and their access levels.
+          </p>
+        </div>
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-sm">
+          <UsersIcon className="h-5 w-5 text-white" />
+        </div>
+      </div>
 
-            <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2">
-              {/* Name & Role */}
-              <div className="col-span-1">
-                <label className="block text-sm font-medium leading-6 text-gray-900">
-                  First Name
-                </label>
-                <input
-                  type="text"
-                  name="firstName"
-                  required
-                  className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-blue-600 sm:text-sm sm:leading-6"
-                />
-              </div>
+      {/* ── Stats ── */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <StatCard label="Total Staff"    count={counts.total}         color="text-gray-900" />
+        <StatCard label="Admin"          count={counts.admins}        color="text-blue-600" />
+        <StatCard label="Receptionist"   count={counts.receptionists} color="text-green-600" />
+        <StatCard label="Accountant"     count={counts.accountants}   color="text-amber-600" />
+      </div>
 
-              <div className="col-span-1">
-                <label className="block text-sm font-medium leading-6 text-gray-900">
-                  System Role
-                </label>
-                <select
-                  name="role"
-                  className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-blue-600 sm:text-sm sm:leading-6"
-                >
-                  <option value="STAFF">Receptionist (Limited)</option>
-                  <option value="MANAGER">Manager (Full Access)</option>
-                </select>
-              </div>
+      {/* ── Add new member form ── */}
+      <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
+        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center gap-2">
+          <ShieldCheckIcon className="h-5 w-5 text-gray-400" />
+          <h2 className="text-sm font-semibold text-gray-900">Add New Staff Member</h2>
+        </div>
 
-              {/* Credentials */}
-              <div className="col-span-1">
-                <label className="block text-sm font-medium leading-6 text-gray-900">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  autoComplete="off"
-                  className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-blue-600 sm:text-sm sm:leading-6"
-                />
-              </div>
+        <form action={addTeamMember} className="p-6">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2">
 
-              <div className="col-span-1">
-                <label className="block text-sm font-medium leading-6 text-gray-900">
-                  Assign Password
-                </label>
-                <input
-                  type="text"
-                  name="password"
-                  required
-                  minLength={6}
-                  placeholder="min 6 chars"
-                  className="mt-2 block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-blue-600 sm:text-sm sm:leading-6"
-                />
-              </div>
+            {/* First name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                First Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="firstName"
+                required
+                placeholder="e.g. Ahmed"
+                className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
             </div>
 
-            <div className="mt-6 flex justify-end">
-              <button
-                type="submit"
-                className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+            {/* Role */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Role <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="role"
+                className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                Create Account
-              </button>
+                {canAddAdminRole && (
+                  <option value="MANAGER">Admin — full operational access</option>
+                )}
+                <option value="STAFF">Receptionist — tenants &amp; reservations</option>
+                <option value="ACCOUNTANT">Accountant — payments &amp; expenses</option>
+              </select>
             </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Email Address <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                name="email"
+                required
+                autoComplete="off"
+                placeholder="staff@example.com"
+                className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Initial Password <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="password"
+                required
+                minLength={6}
+                placeholder="min. 6 characters"
+                className="block w-full rounded-lg border border-gray-300 py-2 px-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 flex items-center justify-between">
+            <p className="text-xs text-gray-400 flex items-center gap-1">
+              <ExclamationTriangleIcon className="h-3.5 w-3.5" />
+              The staff member can change their password after first login.
+            </p>
+            <button
+              type="submit"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
+            >
+              Create Account
+            </button>
           </div>
         </form>
       </div>
 
-      {/* --- 2. Members List --- */}
-      <div className="bg-white shadow-sm ring-1 ring-gray-900/5 sm:rounded-xl overflow-hidden mb-8">
-        <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-gray-200">
-          <h3 className="text-base font-semibold leading-6 text-gray-900">
-            Active Staff Accounts
-          </h3>
+      {/* ── Roles reference card ── */}
+      <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
+        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+          <h2 className="text-sm font-semibold text-gray-900">Role Permissions</h2>
         </div>
-        <ul role="list" className="divide-y divide-gray-200">
+        <div className="divide-y divide-gray-100">
+          {[
+            {
+              role: "Admin",
+              color: "bg-blue-100 text-blue-700",
+              perms: ["All properties & units", "All tenants & reservations", "All payments & expenses", "Team management"],
+            },
+            {
+              role: "Receptionist",
+              color: "bg-green-100 text-green-700",
+              perms: ["View properties", "Manage tenants", "Manage reservations", "Cannot access payments or expenses"],
+            },
+            {
+              role: "Accountant",
+              color: "bg-amber-100 text-amber-700",
+              perms: ["View dashboard", "Record payments", "Manage expenses", "Cannot access tenants or reservations"],
+            },
+          ].map((r) => (
+            <div key={r.role} className="flex items-start gap-4 px-6 py-4">
+              <span className={`mt-0.5 flex-shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold ${r.color}`}>
+                {r.role}
+              </span>
+              <ul className="flex flex-wrap gap-x-6 gap-y-1">
+                {r.perms.map((p) => (
+                  <li key={p} className="text-xs text-gray-600 flex items-center gap-1">
+                    <span className="h-1 w-1 rounded-full bg-gray-400 flex-shrink-0" />
+                    {p}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Members list ── */}
+      <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
+        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-900">
+            Staff Accounts
+            <span className="ml-2 rounded-full bg-gray-200 px-2 py-0.5 text-xs text-gray-600">
+              {members.length}
+            </span>
+          </h2>
+          {callerRole === "OWNER" && (
+            <p className="text-xs text-gray-500">Click ✏ to change a member&apos;s role</p>
+          )}
+        </div>
+
+        <ul role="list" className="divide-y divide-gray-100">
           {members.map((member) => (
-            <li
+            <MemberRow
               key={member.id}
-              className="px-4 py-4 sm:px-6 flex items-center justify-between hover:bg-gray-50"
-            >
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                  {member.firstName ? member.firstName[0].toUpperCase() : "U"}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">
-                    {member.firstName}
-                    <span className="text-gray-400 font-normal ml-2">
-                      ({member.email})
-                    </span>
-                    {member.id === user.id && (
-                      <span className="ml-2 text-blue-600 text-xs bg-blue-50 px-2 py-0.5 rounded-full">
-                        You
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-gray-500">{member.role}</p>
-                </div>
-              </div>
-            </li>
+              member={member}
+              currentUserId={user.id}
+              callerRole={callerRole}
+            />
           ))}
         </ul>
       </div>

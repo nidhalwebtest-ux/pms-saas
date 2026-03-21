@@ -38,20 +38,29 @@ enum ReservationStatus {
 
 // 3. The New Powerhouse: Organization
 model Organization {
-  id                String   @id @default(uuid())
-  name              String   // e.g. "Salalah Real Estate Co."
-  
+  id                 String   @id @default(uuid())
+  name               String   // e.g. "Salalah Real Estate Co."
+
+  // Company details (set during onboarding)
+  phone              String?
+  address            String?
+  city               String   @default("Salalah")
+  area               String?
+  logo               String?  // URL from Supabase Storage
+  timezone           String   @default("Asia/Muscat")
+  currency           String   @default("OMR")
+
   // Subscription / Limits Logic
-  plan              String   @default("FREE") // FREE, STARTER, PRO
-  maxProperties     Int      @default(1)
-  subscriptionStatus String  @default("ACTIVE") // ACTIVE, PAST_DUE
-  
-  createdAt         DateTime @default(now())
-  
-  // Everything belongs to the Org now, not the User
-  users             User[]
-  properties        Property[]
-  tenants           Tenant[]
+  plan               String   @default("FREE") // FREE, STARTER, PRO
+  maxProperties      Int      @default(1)
+  subscriptionStatus String   @default("ACTIVE") // ACTIVE, PAST_DUE
+
+  createdAt          DateTime @default(now())
+
+  // Everything belongs to the Org
+  users              User[]
+  properties         Property[]
+  tenants            Tenant[]
 }
 
 // 4. Users (Staff Members)

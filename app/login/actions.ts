@@ -156,6 +156,15 @@ export async function signup(formData: FormData) {
   redirect(`/verify-email?email=${encodeURIComponent(email)}`);
 }
 
+// ─── Logout ───────────────────────────────────────────────────────────────────
+
+export async function logout() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  revalidatePath("/", "layout");
+  redirect("/login");
+}
+
 // ─── Google OAuth ─────────────────────────────────────────────────────────────
 
 export async function signInWithGoogle() {

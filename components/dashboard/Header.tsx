@@ -1,22 +1,11 @@
-"use client";
-
-import { createClient } from "@/utils/supabase/client"; // You might need to create this client-side helper
-import { useRouter } from "next/navigation";
-import { MagnifyingGlassIcon, BellIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon, BellIcon, ArrowRightStartOnRectangleIcon } from "@heroicons/react/24/outline";
+import { logout } from "@/app/login/actions";
 
 export default function Header({
   userEmail,
 }: {
   userEmail: string | undefined;
 }) {
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-  };
-
   return (
     <div className="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 border-b border-gray-200">
       {/* 1. Logo Section */}
@@ -33,10 +22,7 @@ export default function Header({
       <div className="hidden sm:flex flex-1 max-w-md mx-8">
         <div className="relative w-full">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-            <MagnifyingGlassIcon
-              className="h-5 w-5 text-gray-400"
-              aria-hidden="true"
-            />
+            <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
           </div>
           <input
             type="text"
@@ -50,32 +36,28 @@ export default function Header({
 
       {/* 3. Right Actions & Profile */}
       <div className="flex items-center gap-x-4 lg:gap-x-6">
-        <button
-          type="button"
-          className="-m-2.5 p-2.5 text-gray-400 hover:text-gray-500"
-        >
+        <button type="button" className="-m-2.5 p-2.5 text-gray-400 hover:text-gray-500">
           <span className="sr-only">View notifications</span>
           <BellIcon className="h-6 w-6" aria-hidden="true" />
         </button>
 
-        {/* Separator */}
-        <div
-          className="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-200"
-          aria-hidden="true"
-        />
+        <div className="hidden lg:block lg:h-6 lg:w-px lg:bg-gray-200" aria-hidden="true" />
 
-        {/* Profile Dropdown (Simplified for MVP) */}
+        {/* Profile + Logout */}
         <div className="flex items-center gap-x-3">
           <div className="text-right hidden sm:block">
             <p className="text-sm font-semibold text-gray-900">Admin User</p>
             <p className="text-xs text-gray-500">{userEmail}</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="rounded-md bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-200"
-          >
-            Log out
-          </button>
+          <form action={logout}>
+            <button
+              type="submit"
+              className="flex items-center gap-1.5 rounded-md bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+            >
+              <ArrowRightStartOnRectangleIcon className="h-4 w-4" />
+              Log out
+            </button>
+          </form>
         </div>
       </div>
     </div>

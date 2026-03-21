@@ -14,7 +14,6 @@ import {
   CheckCircleIcon,
   CheckIcon,
   XMarkIcon,
-  ClockIcon,
   ShieldExclamationIcon,
 } from "@heroicons/react/24/outline";
 
@@ -27,6 +26,7 @@ const SERVER_ERRORS: Record<string, string> = {
   oauth_error:          "Google sign-in failed. Please try again.",
   auth_error:           "Authentication link is invalid or expired. Please try again.",
   server_error:         "Something went wrong on our end. Please try again later.",
+  session_expired:      "Your session expired due to inactivity. Please sign in again.",
   too_many_attempts:    "", // handled separately with countdown
 };
 
@@ -116,7 +116,7 @@ export default function LoginForm({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isPending, startTransition] = useTransition();
-  const [googlePending, setGooglePending] = useState(false);
+  const [googlePending] = useState(false);
 
   const isLockedOut = initialError === "too_many_attempts" && !!lockoutUntil;
   const serverError = (initialError && !isLockedOut)
@@ -181,15 +181,6 @@ export default function LoginForm({
       if (mode === "signin") login(formData);
       else signup(formData);
     });
-  };
-
-  const handleGoogleSignIn = async () => {
-    setGooglePending(true);
-    try {
-      await signInWithGoogle();
-    } finally {
-      setGooglePending(false);
-    }
   };
 
   const isLoading = isPending || googlePending;

@@ -2,8 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import Header from "@/components/dashboard/Header";
 import Navigation from "@/components/dashboard/Navigation";
-import { PrismaClient } from "@prisma/client";
-
+import InactivityGuard from "@/components/dashboard/InactivityGuard";
 import { prisma } from "@/lib/prisma";
 export default async function DashboardLayout({
   children,
@@ -35,6 +34,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <InactivityGuard />
       <div className="bg-white shadow-sm ring-1 ring-gray-900/5 z-10 relative">
         <Header userEmail={user.email} />
         <Navigation />

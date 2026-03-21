@@ -60,6 +60,7 @@ model User {
   email          String       @unique
   firstName      String?
   lastName       String?
+  phone          String?
   role           UserRole     @default(OWNER)
   
   // Link to Organization

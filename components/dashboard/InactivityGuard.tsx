@@ -8,10 +8,10 @@ const TIMEOUT_MS  = 60 * 60 * 1000; // 60 minutes
 const STORAGE_KEY = "omrent_last_activity";
 
 /**
- * Mounts invisibly in the dashboard layout.
- * Watches for any user interaction and resets a 60-minute inactivity timer.
- * When the timer fires (or on mount if already expired), signs the user out
- * and redirects to /login?error=session_expired.
+ * Secondary inactivity guard (client-side).
+ * The primary check is in middleware (cookie-based, server-enforced on every
+ * navigation). This component handles long single-page sessions where the user
+ * stays on one page without navigating for 60 minutes.
  */
 export default function InactivityGuard() {
   const router   = useRouter();
@@ -31,15 +31,20 @@ export default function InactivityGuard() {
   }, [signOut]);
 
   useEffect(() => {
-    // Check if user was already inactive (e.g. left tab open overnight)
+    const now  = Date.now();
     const last = Number(localStorage.getItem(STORAGE_KEY) ?? 0);
-    if (last && Date.now() - last > TIMEOUT_MS) {
+
+    // If a previous timestamp exists and the deadline has passed, sign out now
+    if (last && now - last > TIMEOUT_MS) {
       signOut();
       return;
     }
 
-    // Start timer with remaining time if session was saved, else full timeout
-    const remaining = last ? TIMEOUT_MS - (Date.now() - last) : TIMEOUT_MS;
+    // Always stamp the mount time so the expiry check works on the next reload
+    localStorage.setItem(STORAGE_KEY, String(now));
+
+    // Start timer from remaining time (or full duration if first visit)
+    const remaining = last ? TIMEOUT_MS - (now - last) : TIMEOUT_MS;
     timerRef.current = setTimeout(signOut, remaining);
 
     const events = [

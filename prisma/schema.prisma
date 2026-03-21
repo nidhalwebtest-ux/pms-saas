@@ -61,6 +61,7 @@ model Organization {
   users              User[]
   properties         Property[]
   tenants            Tenant[]
+  invitations        Invitation[]
 }
 
 // 4. Users (Staff Members)
@@ -78,6 +79,7 @@ model User {
   
   // Access Control: Which properties can this user see?
   assignedProperties PropertyAssignment[]
+  sentInvitations    Invitation[] @relation("SentInvitations")
 
   createdAt      DateTime     @default(now())
 }
@@ -280,6 +282,28 @@ model LoginAttempt {
   createdAt DateTime @default(now())
 
   @@index([email, createdAt])
+}
+
+// Team member invitations (72-hour expiry, email-based)
+model Invitation {
+  id             String    @id @default(uuid())
+  email          String
+  role           UserRole
+  token          String    @unique @default(uuid())
+  expiresAt      DateTime
+  usedAt         DateTime?
+  cancelledAt    DateTime?
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  invitedById    String
+  invitedBy      User         @relation("SentInvitations", fields: [invitedById], references: [id])
+
+  createdAt      DateTime  @default(now())
+
+  @@index([token])
+  @@index([email, organizationId])
 }
 
 enum ExpenseCategory {

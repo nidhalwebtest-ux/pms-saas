@@ -15,6 +15,7 @@ import {
   XMarkIcon,
   CheckCircleIcon,
   WrenchScrewdriverIcon,
+  ArchiveBoxIcon,
   ChevronUpDownIcon,
   ChevronUpIcon,
   ChevronDownIcon,
@@ -245,9 +246,13 @@ function PropertyCard({ property }: { property: PropertyRow }) {
         </span>
         {/* Status overlay */}
         <span className={`absolute top-2 right-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold shadow-sm ${
-          property.isActive ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+          property.isArchived ? "bg-gray-200 text-gray-600"
+          : property.isActive ? "bg-green-100 text-green-700"
+          : "bg-amber-100 text-amber-700"
         }`}>
-          {property.isActive
+          {property.isArchived
+            ? <><ArchiveBoxIcon className="h-3 w-3" /> Archived</>
+            : property.isActive
             ? <><CheckCircleIcon className="h-3 w-3" /> Active</>
             : <><WrenchScrewdriverIcon className="h-3 w-3" /> Inactive</>}
         </span>
@@ -509,7 +514,11 @@ export default function PropertiesView({
 
                         {/* Status */}
                         <td className="px-3 py-2.5">
-                          {p.isActive ? (
+                          {p.isArchived ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-600">
+                              <ArchiveBoxIcon className="h-3 w-3" /> Archived
+                            </span>
+                          ) : p.isActive ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
                               <CheckCircleIcon className="h-3 w-3" /> Active
                             </span>

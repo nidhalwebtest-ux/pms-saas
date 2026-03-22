@@ -10,6 +10,8 @@ export type PropertyRow = {
   name: string;
   type: string;
   isActive: boolean;
+  isArchived: boolean;
+  archivedAt: string | null;
   photos: string[];
   address: string | null;
   city: string;
@@ -55,9 +57,15 @@ export default async function PropertiesPage({
         { description: { contains: q, mode: "insensitive" } },
       ],
     }),
-    ...(typeFilter   && { type: typeFilter as any }),
-    ...(statusFilter === "active"   && { isActive: true  }),
-    ...(statusFilter === "inactive" && { isActive: false }),
+    ...(typeFilter && { type: typeFilter as any }),
+    // Archived tab shows only archived; all other tabs exclude archived
+    ...(statusFilter === "archived"
+      ? { isArchived: true }
+      : { isArchived: false,
+          ...(statusFilter === "active"   && { isActive: true  }),
+          ...(statusFilter === "inactive" && { isActive: false }),
+        }
+    ),
   };
 
   // Build ORDER BY (server-side for text fields; derived fields sorted client-side)
@@ -95,6 +103,8 @@ export default async function PropertiesPage({
     name:         p.name,
     type:         p.type,
     isActive:     p.isActive,
+    isArchived:   p.isArchived,
+    archivedAt:   p.archivedAt?.toISOString() ?? null,
     photos:       p.photos,
     address:      p.address,
     city:         p.city,

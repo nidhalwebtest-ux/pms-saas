@@ -106,6 +106,8 @@ model Property {
   
   // Status & Media
   isActive       Boolean      @default(true)
+  isArchived     Boolean      @default(false)
+  archivedAt     DateTime?
   photos         String[]     @default([])
 
   // Details

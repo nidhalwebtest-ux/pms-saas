@@ -8,9 +8,10 @@ import {
   CheckCircleIcon,
   PhotoIcon,
   BuildingOffice2Icon,
+  ArchiveBoxIcon,
 } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
-import DeletePropertyButton from "@/components/dashboard/DeletePropertyButton";
+import PropertyDangerZone from "@/components/dashboard/PropertyDangerZone";
 
 const TYPE_BADGE: Record<string, string> = {
   RESIDENTIAL: "bg-blue-100 text-blue-700",
@@ -32,20 +33,18 @@ export default async function PropertyDetailsPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
+    where:  { id: user.id },
     select: { organizationId: true },
   });
 
   const property = await prisma.property.findUnique({
-    where: { id },
+    where:   { id },
     include: {
-      units: { orderBy: { name: "asc" } },
+      units:  { orderBy: { name: "asc" } },
       _count: { select: { units: true } },
     },
   });
@@ -54,7 +53,25 @@ export default async function PropertyDetailsPage({
   if (property.organizationId !== dbUser?.organizationId) redirect("/dashboard");
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+
+      {/* ── Archived banner ───────────────────────────────────── */}
+      {property.isArchived && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
+          <ArchiveBoxIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
+          <div>
+            <p className="text-sm font-semibold text-amber-900">This building is archived</p>
+            <p className="mt-0.5 text-xs text-amber-700">
+              It is hidden from all default views. All units, reservations, and historical data are preserved.
+              {property.archivedAt && (
+                <> Archived on {new Date(property.archivedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}.</>
+              )}
+              {" "}Scroll down to restore it.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ── Header ─────────────────────────────────────────────── */}
       <div className="border-b border-gray-200 pb-5 sm:flex sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
@@ -66,7 +83,11 @@ export default async function PropertyDetailsPage({
               <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${TYPE_BADGE[property.type] ?? "bg-gray-100 text-gray-600"}`}>
                 {TYPE_LABEL[property.type] ?? property.type}
               </span>
-              {property.isActive ? (
+              {property.isArchived ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-semibold text-gray-600">
+                  <ArchiveBoxIcon className="h-3.5 w-3.5" /> Archived
+                </span>
+              ) : property.isActive ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
                   <CheckCircleIcon className="h-3.5 w-3.5" /> Active
                 </span>
@@ -93,12 +114,14 @@ export default async function PropertyDetailsPage({
           >
             Edit Property
           </Link>
-          <Link
-            href={`/dashboard/units/new?propertyId=${id}`}
-            className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
-          >
-            + Add Unit
-          </Link>
+          {!property.isArchived && (
+            <Link
+              href={`/dashboard/units/new?propertyId=${id}`}
+              className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+            >
+              + Add Unit
+            </Link>
+          )}
         </div>
       </div>
 
@@ -129,33 +152,24 @@ export default async function PropertyDetailsPage({
           <table className="min-w-full divide-y divide-gray-300">
             <thead className="bg-gray-50">
               <tr>
-                <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
-                  Name
-                </th>
+                <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Name</th>
                 <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Floor</th>
                 <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
-                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                  Base Price
-                </th>
+                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Base Price</th>
                 <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                <th className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                  <span className="sr-only">Actions</span>
-                </th>
+                <th className="relative py-3.5 pl-3 pr-4 sm:pr-6"><span className="sr-only">Actions</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
               {property.units.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-10 text-center text-sm text-gray-500">
-                    No units yet. Click &ldquo;+ Add Unit&rdquo; to get started.
+                    No units yet.{!property.isArchived && <> Click &ldquo;+ Add Unit&rdquo; to get started.</>}
                   </td>
                 </tr>
               ) : (
                 property.units.map((unit) => (
-                  <tr
-                    key={unit.id}
-                    className={unit.status === "MAINTENANCE" ? "bg-amber-50" : "hover:bg-blue-50"}
-                  >
+                  <tr key={unit.id} className={unit.status === "MAINTENANCE" ? "bg-amber-50" : "hover:bg-blue-50"}>
                     <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                       <div className="flex items-center gap-2">
                         <HomeIcon className="h-4 w-4 text-gray-400" />
@@ -167,9 +181,7 @@ export default async function PropertyDetailsPage({
                         )}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                      {unit.floor ?? "—"}
-                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{unit.floor ?? "—"}</td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                       {unit.bedrooms} Bed / {unit.bathrooms} Bath
                     </td>
@@ -189,10 +201,7 @@ export default async function PropertyDetailsPage({
                       )}
                     </td>
                     <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                      <Link
-                        href={`/dashboard/units/${unit.id}/edit`}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
+                      <Link href={`/dashboard/units/${unit.id}/edit`} className="text-blue-600 hover:text-blue-900">
                         Edit
                       </Link>
                     </td>
@@ -205,18 +214,16 @@ export default async function PropertyDetailsPage({
       </div>
 
       {/* ── Danger Zone ─────────────────────────────────────────── */}
-      <div className="rounded-xl border border-red-100 bg-red-50/40 p-5">
-        <p className="mb-3 text-sm font-semibold text-red-700">Danger Zone</p>
-        <p className="mb-4 text-xs text-red-500">
-          Deleting this property will permanently remove it along with all its units.
-          Active reservations will block deletion.
-        </p>
-        <DeletePropertyButton
+      <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+        <p className="mb-4 text-sm font-semibold text-gray-700">Danger Zone</p>
+        <PropertyDangerZone
           propertyId={id}
           propertyName={property.name}
           unitCount={property._count.units}
+          isArchived={property.isArchived}
         />
       </div>
+
     </div>
   );
 }

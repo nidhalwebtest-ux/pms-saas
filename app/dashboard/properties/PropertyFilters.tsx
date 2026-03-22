@@ -21,6 +21,7 @@ const STATUS_TABS = [
   { value: "all",      label: "All" },
   { value: "active",   label: "Active" },
   { value: "inactive", label: "Inactive" },
+  { value: "archived", label: "Archived" },
 ];
 
 interface Props {
@@ -176,6 +177,8 @@ export default function PropertyFilters({
                       ? "bg-green-600 text-white shadow-sm"
                       : tab.value === "inactive"
                       ? "bg-amber-500 text-white shadow-sm"
+                      : tab.value === "archived"
+                      ? "bg-gray-500 text-white shadow-sm"
                       : "bg-gray-700 text-white shadow-sm"
                     : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:text-gray-800"
                 }`}

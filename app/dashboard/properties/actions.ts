@@ -135,6 +135,54 @@ export async function quickUpdateProperty(formData: FormData): Promise<ActionRes
   return { success: true };
 }
 
+// ─── ARCHIVE (soft-delete) ────────────────────────────────────────────────────
+
+export async function archiveProperty(propertyId: string): Promise<ActionResponse> {
+  const organizationId = await getOrgId();
+  if (!organizationId) return { error: "Unauthorized" };
+
+  const property = await prisma.property.findUnique({
+    where: { id: propertyId },
+    select: { organizationId: true, isArchived: true },
+  });
+  if (!property)                              return { error: "Property not found." };
+  if (property.organizationId !== organizationId) return { error: "Unauthorized." };
+  if (property.isArchived)                    return { error: "Property is already archived." };
+
+  await prisma.property.update({
+    where: { id: propertyId },
+    data:  { isArchived: true, archivedAt: new Date(), isActive: false },
+  });
+
+  revalidatePath("/dashboard/properties");
+  revalidatePath(`/dashboard/properties/${propertyId}`);
+  return { success: true };
+}
+
+// ─── RESTORE ──────────────────────────────────────────────────────────────────
+
+export async function restoreProperty(propertyId: string): Promise<ActionResponse> {
+  const organizationId = await getOrgId();
+  if (!organizationId) return { error: "Unauthorized" };
+
+  const property = await prisma.property.findUnique({
+    where: { id: propertyId },
+    select: { organizationId: true, isArchived: true },
+  });
+  if (!property)                              return { error: "Property not found." };
+  if (property.organizationId !== organizationId) return { error: "Unauthorized." };
+  if (!property.isArchived)                   return { error: "Property is not archived." };
+
+  await prisma.property.update({
+    where: { id: propertyId },
+    data:  { isArchived: false, archivedAt: null },
+  });
+
+  revalidatePath("/dashboard/properties");
+  revalidatePath(`/dashboard/properties/${propertyId}`);
+  return { success: true };
+}
+
 // ─── DELETE ───────────────────────────────────────────────────────────────────
 
 export async function deleteProperty(propertyId: string): Promise<ActionResponse> {

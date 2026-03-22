@@ -7,9 +7,23 @@ import {
   WrenchScrewdriverIcon,
   CheckCircleIcon,
   PhotoIcon,
+  BuildingOffice2Icon,
 } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
 import DeletePropertyButton from "@/components/dashboard/DeletePropertyButton";
+
+const TYPE_BADGE: Record<string, string> = {
+  RESIDENTIAL: "bg-blue-100 text-blue-700",
+  MIXED:       "bg-violet-100 text-violet-700",
+  HOTEL:       "bg-amber-100 text-amber-700",
+  COMMERCIAL:  "bg-green-100 text-green-700",
+};
+const TYPE_LABEL: Record<string, string> = {
+  RESIDENTIAL: "Residential",
+  MIXED:       "Mixed Use",
+  HOTEL:       "Short-term",
+  COMMERCIAL:  "Commercial",
+};
 
 export default async function PropertyDetailsPage({
   params,
@@ -45,11 +59,13 @@ export default async function PropertyDetailsPage({
       <div className="border-b border-gray-200 pb-5 sm:flex sm:items-start sm:justify-between">
         <div className="flex items-start gap-3">
           <div>
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap">
               <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl sm:tracking-tight">
                 {property.name}
               </h2>
-              {/* Active / Inactive badge */}
+              <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${TYPE_BADGE[property.type] ?? "bg-gray-100 text-gray-600"}`}>
+                {TYPE_LABEL[property.type] ?? property.type}
+              </span>
               {property.isActive ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
                   <CheckCircleIcon className="h-3.5 w-3.5" /> Active
@@ -61,9 +77,12 @@ export default async function PropertyDetailsPage({
               )}
             </div>
             <p className="mt-1 text-sm text-gray-500">
-              {[property.address, property.city, property.governorate].filter(Boolean).join(", ")}{" "}
-              &bull; {property.type}
+              {[property.address, property.city, property.governorate].filter(Boolean).join(", ")}
+              {property.totalFloors ? ` · ${property.totalFloors} floor${property.totalFloors > 1 ? "s" : ""}` : ""}
             </p>
+            {property.description && (
+              <p className="mt-2 text-sm text-gray-600 max-w-2xl">{property.description}</p>
+            )}
           </div>
         </div>
 

@@ -9,6 +9,19 @@ import {
 } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
 
+const TYPE_BADGE: Record<string, string> = {
+  RESIDENTIAL: "bg-blue-100 text-blue-700",
+  MIXED:       "bg-violet-100 text-violet-700",
+  HOTEL:       "bg-amber-100 text-amber-700",
+  COMMERCIAL:  "bg-green-100 text-green-700",
+};
+const TYPE_LABEL: Record<string, string> = {
+  RESIDENTIAL: "Residential",
+  MIXED:       "Mixed Use",
+  HOTEL:       "Short-term",
+  COMMERCIAL:  "Commercial",
+};
+
 // New Client Components we will create below
 import PropertyFilters from "./PropertyFilters";
 import ListActionBar from "@/components/ui/list/ListActionBar";
@@ -176,8 +189,10 @@ export default async function PropertiesPage({
                         <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-900 font-medium">
                           {property.name}
                         </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
-                          {property.type}
+                        <td className="whitespace-nowrap px-3 py-3 text-sm">
+                          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${TYPE_BADGE[property.type] ?? "bg-gray-100 text-gray-600"}`}>
+                            {TYPE_LABEL[property.type] ?? property.type}
+                          </span>
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
                           {property.city}, {property.governorate}

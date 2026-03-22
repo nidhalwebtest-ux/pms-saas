@@ -93,7 +93,8 @@ export default function PropertyFilters({
               >
                 <option value="">All Types</option>
                 <option value="RESIDENTIAL">Residential</option>
-                <option value="HOTEL">Hotel</option>
+                <option value="MIXED">Mixed Use</option>
+                <option value="HOTEL">Short-term</option>
                 <option value="COMMERCIAL">Commercial</option>
               </select>
             </div>

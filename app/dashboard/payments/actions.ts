@@ -3,6 +3,11 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import {
+  requireOrgUser,
+  assertTenantOwnership,
+  assertPaymentOwnership,
+} from "@/lib/tenant";
 
 export type ActionResponse = {
   error?: string;
@@ -12,6 +17,10 @@ export type ActionResponse = {
 
 // 1. FETCH OPEN TRANSACTIONS (Used by Client Component)
 export async function getTenantFinancials(tenantId: string) {
+  let orgUser;
+  try { orgUser = await requireOrgUser(); } catch (e: any) { return { invoices: [], balance: 0 }; }
+  try { await assertTenantOwnership(tenantId, orgUser.organizationId); } catch { return { invoices: [], balance: 0 }; }
+
   const unpaidInvoices = await prisma.invoice.findMany({
     where: {
       reservation: { tenantId: tenantId },
@@ -55,6 +64,11 @@ export async function createCustomerPayment(
     .filter(Boolean);
 
   if (!tenantId) return { error: "Tenant is required" };
+
+  // Verify the tenant belongs to the caller's org
+  let orgUser;
+  try { orgUser = await requireOrgUser(); } catch (e: any) { return e; }
+  try { await assertTenantOwnership(tenantId, orgUser.organizationId); } catch (e: any) { return e; }
   if (isNaN(totalAmount) || totalAmount <= 0)
     return { error: "Amount must be valid" };
 
@@ -143,6 +157,11 @@ export async function updateCustomerPayment(
   const reference = formData.get("reference") as string;
   const notes = formData.get("notes") as string;
   const date = new Date(formData.get("date") as string);
+
+  // Verify the payment belongs to the caller's org
+  let orgUser;
+  try { orgUser = await requireOrgUser(); } catch (e: any) { return e; }
+  try { await assertPaymentOwnership(id, orgUser.organizationId); } catch (e: any) { return e; }
 
   try {
     await prisma.payment.update({

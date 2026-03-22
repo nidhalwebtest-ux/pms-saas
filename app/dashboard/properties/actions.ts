@@ -45,9 +45,14 @@ export async function createProperty(formData: FormData): Promise<ActionResponse
 
   const name = (formData.get("name") as string)?.trim();
   const type = formData.get("type") as string;
-  const address = formData.get("address") as string;
-  const city = formData.get("city") as string;
-  const governorate = formData.get("governorate") as string;
+  const address = (formData.get("address") as string)?.trim() || undefined;
+  const cityRaw = (formData.get("city") as string) || "Salalah";
+  const cityCustom = (formData.get("cityCustom") as string)?.trim();
+  const city = cityRaw === "Other" ? (cityCustom || "Other") : cityRaw;
+  const governorate = (formData.get("governorate") as string)?.trim() || "Dhofar";
+  const totalFloorsRaw = formData.get("totalFloors") as string;
+  const totalFloors = totalFloorsRaw ? parseInt(totalFloorsRaw, 10) : undefined;
+  const description = (formData.get("description") as string)?.trim() || undefined;
   const isActive = formData.get("isActive") !== "false"; // default true
   const photos = parsePhotos(formData);
 
@@ -55,7 +60,7 @@ export async function createProperty(formData: FormData): Promise<ActionResponse
 
   try {
     const property = await prisma.property.create({
-      data: { name, type: type as any, address, city, governorate, isActive, photos, organizationId },
+      data: { name, type: type as any, address, city, governorate, totalFloors, description, isActive, photos, organizationId },
     });
 
     revalidatePath("/dashboard/properties");
@@ -75,9 +80,14 @@ export async function updateProperty(formData: FormData): Promise<ActionResponse
   const id = formData.get("id") as string;
   const name = (formData.get("name") as string)?.trim();
   const type = formData.get("type") as string;
-  const address = formData.get("address") as string;
-  const city = formData.get("city") as string;
-  const governorate = formData.get("governorate") as string;
+  const address = (formData.get("address") as string)?.trim() || undefined;
+  const cityRaw = (formData.get("city") as string) || "Salalah";
+  const cityCustom = (formData.get("cityCustom") as string)?.trim();
+  const city = cityRaw === "Other" ? (cityCustom || "Other") : cityRaw;
+  const governorate = (formData.get("governorate") as string)?.trim() || "Dhofar";
+  const totalFloorsRaw = formData.get("totalFloors") as string;
+  const totalFloors = totalFloorsRaw ? parseInt(totalFloorsRaw, 10) : null;
+  const description = (formData.get("description") as string)?.trim() || null;
   const isActive = formData.get("isActive") !== "false";
   const photos = parsePhotos(formData);
 
@@ -90,7 +100,7 @@ export async function updateProperty(formData: FormData): Promise<ActionResponse
   try {
     await prisma.property.update({
       where: { id },
-      data: { name, type: type as any, address, city, governorate, isActive, photos },
+      data: { name, type: type as any, address, city, governorate, totalFloors, description, isActive, photos },
     });
 
     revalidatePath("/dashboard/properties");

@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { requireOrgUser, assertExpenseOwnership } from "@/lib/tenant";
 
 export type ActionResponse = {
   error?: string;
@@ -119,9 +120,14 @@ export async function updateExpense(
 }
 
 // --- DELETE ---
-export async function deleteExpense(formData: FormData) {
+export async function deleteExpense(formData: FormData): Promise<{ error?: string; success?: boolean }> {
+  let orgUser;
+  try { orgUser = await requireOrgUser(); } catch (e: any) { return e; }
+
   const id = formData.get("id") as string;
+  try { await assertExpenseOwnership(id, orgUser.organizationId); } catch (e: any) { return e; }
+
   await prisma.expense.delete({ where: { id } });
   revalidatePath("/dashboard/expenses");
-  // Redirect happens on the client or via a separate transition
+  return { success: true };
 }

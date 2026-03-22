@@ -19,8 +19,9 @@ enum UserRole {
 
 enum PropertyType {
   RESIDENTIAL
-  COMMERCIAL
+  MIXED
   HOTEL
+  COMMERCIAL
 }
 
 enum UnitStatus {
@@ -106,6 +107,10 @@ model Property {
   // Status & Media
   isActive       Boolean      @default(true)
   photos         String[]     @default([])
+
+  // Details
+  totalFloors    Int?
+  description    String?
 
   // Location
   address        String?

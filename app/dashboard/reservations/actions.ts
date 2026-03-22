@@ -2,10 +2,15 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { normalizeReservationDates, calculatePeriod } from "@/utils/date-math";
 import { generateInstallments } from "@/utils/billing-engine";
+import {
+  requireOrgUser,
+  assertTenantOwnership,
+  assertUnitOwnership,
+  assertReservationOwnership,
+} from "@/lib/tenant";
 
 import { prisma } from "@/lib/prisma";
 
@@ -22,14 +27,18 @@ export async function createReservation(
   prevState: any,
   formData: FormData,
 ): Promise<ActionResponse> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { error: "Unauthorized" };
+  let orgUser;
+  try { orgUser = await requireOrgUser(); } catch (e: any) { return e; }
+
   // 1. Extract Data
   const tenantId = formData.get("tenantId") as string;
   const unitId = formData.get("unitId") as string;
+
+  // Verify tenant and unit belong to the caller's org
+  try {
+    await assertTenantOwnership(tenantId, orgUser.organizationId);
+    await assertUnitOwnership(unitId, orgUser.organizationId);
+  } catch (e: any) { return e; }
 
   // Raw dates from form (usually midnight)
   const rawStartDate = new Date(formData.get("startDate") as string);
@@ -115,7 +124,15 @@ export async function createReservation(
 // 2. CONFIRM RESERVATION (Generate Contract & Invoices)
 // ---------------------------------------------------------
 export async function confirmReservation(formData: FormData) {
+  let orgUser;
+  try { orgUser = await requireOrgUser(); } catch (e: any) { return e; }
+
   const reservationId = formData.get("reservationId") as string;
+
+  // Verify reservation belongs to the caller's org
+  try {
+    await assertReservationOwnership(reservationId, orgUser.organizationId);
+  } catch (e: any) { return e; }
 
   // 1. Fetch the Reservation
   const reservation = await prisma.reservation.findUnique({

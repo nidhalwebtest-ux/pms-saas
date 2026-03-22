@@ -81,6 +81,7 @@ model User {
   // Access Control: Which properties can this user see?
   assignedProperties PropertyAssignment[]
   sentInvitations    Invitation[] @relation("SentInvitations")
+  unitNotes          UnitNote[]
 
   createdAt      DateTime     @default(now())
 }
@@ -153,9 +154,52 @@ model Unit {
   property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   reservations Reservation[]
+  prices       UnitPrice[]
+  notes        UnitNote[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// ── Unit Pricing ───────────────────────────────────────────────────────────────
+
+model UnitPrice {
+  id          String   @id @default(uuid())
+
+  priceType   String   @default("DEFAULT") // "DEFAULT" | "SEASONAL"
+  name        String?  // required for SEASONAL (e.g. "Khareef 2026")
+
+  dailyRate   Decimal  @db.Decimal(10, 3)
+  weeklyRate  Decimal? @db.Decimal(10, 3)
+  monthlyRate Decimal  @db.Decimal(10, 3)
+
+  // Only set for SEASONAL
+  startDate   DateTime?
+  endDate     DateTime?
+
+  priority    Int      @default(10)  // higher wins when multiple seasonals overlap
+  isActive    Boolean  @default(true)
+
+  unitId      String
+  unit        Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ── Unit Notes ─────────────────────────────────────────────────────────────────
+
+model UnitNote {
+  id        String   @id @default(uuid())
+  content   String
+
+  unitId    String
+  unit      Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
 }
 
 model Tenant {

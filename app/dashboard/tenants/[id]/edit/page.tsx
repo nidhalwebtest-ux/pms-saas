@@ -1,8 +1,8 @@
-import { PageHeader } from "@/components/ui/FormComponents";
-import TenantForm from "@/components/dashboard/TenantForm";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { PageHeader } from "@/components/ui/FormComponents";
+import TenantForm from "@/components/dashboard/TenantForm";
 
 export default async function EditTenantPage({
   params,
@@ -12,9 +12,7 @@ export default async function EditTenantPage({
   const { id } = await params;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({
@@ -28,14 +26,26 @@ export default async function EditTenantPage({
     return notFound();
   }
 
+  // Serialize dates to strings for client component
+  const initialData = {
+    ...tenant,
+    dateOfBirth:   tenant.dateOfBirth   ? tenant.dateOfBirth.toISOString().split("T")[0]   : null,
+    idExpiryDate:  tenant.idExpiryDate  ? tenant.idExpiryDate.toISOString().split("T")[0]  : null,
+    createdAt:     tenant.createdAt.toISOString(),
+    updatedAt:     tenant.updatedAt.toISOString(),
+    firstStayDate: tenant.firstStayDate ? tenant.firstStayDate.toISOString() : null,
+    lastStayDate:  tenant.lastStayDate  ? tenant.lastStayDate.toISOString()  : null,
+    totalSpent:    tenant.totalSpent?.toString() ?? "0",
+  };
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <PageHeader
         title="Edit Tenant"
         description="Update contact or identity information."
-        listHref="/dashboard/tenants"
+        listHref={`/dashboard/tenants/${id}`}
       />
-      <TenantForm initialData={tenant} />
+      <TenantForm initialData={initialData as any} />
     </div>
   );
 }

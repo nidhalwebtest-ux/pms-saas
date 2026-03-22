@@ -82,6 +82,7 @@ model User {
   assignedProperties PropertyAssignment[]
   sentInvitations    Invitation[] @relation("SentInvitations")
   unitNotes          UnitNote[]
+  createdTenants     Tenant[]     @relation("TenantCreatedBy")
 
   createdAt      DateTime     @default(now())
 }
@@ -204,24 +205,71 @@ model UnitNote {
 
 model Tenant {
   id             String   @id @default(uuid())
-  
-  firstName      String
-  lastName       String   // Added this
-  
-  email          String?
-  phone          String
-  
-  // Identity Fields (Added these for Omani context)
-  nationalId     String?  
-  nationality    String?
-  
-  // Link to Organization
+
+  // ── Personal ────────────────────────────────────────────────────────────────
+  firstName          String
+  lastName           String
+  fullNameArabic     String?           // for official documents
+  gender             String?           // "male" | "female"
+  dateOfBirth        DateTime?
+  nationality        String?
+
+  // ── Identification ──────────────────────────────────────────────────────────
+  nationalId         String?           // kept for backward compat (legacy)
+  idType             String?           @default("national_id")
+  idNumber           String?           // primary id — unique per org enforced in code
+  idExpiryDate       DateTime?
+  idDocumentFront    String?           // Supabase Storage URL
+  idDocumentBack     String?
+
+  // ── Contact ─────────────────────────────────────────────────────────────────
+  email              String?
+  phone              String
+  phoneSecondary     String?
+  whatsappNumber     String?
+
+  // ── Address ─────────────────────────────────────────────────────────────────
+  country            String?
+  city               String?
+  addressLine        String?
+
+  // ── Emergency Contact ───────────────────────────────────────────────────────
+  emergencyContactName     String?
+  emergencyContactPhone    String?
+  emergencyContactRelation String?
+
+  // ── CRM Classification ──────────────────────────────────────────────────────
+  tenantType         String   @default("individual")  // individual|family|corporate|government
+  source             String   @default("walk_in")     // walk_in|phone|whatsapp|website|…
+  classification     String   @default("regular")     // regular|vip|blacklisted
+  corporateName      String?
+  corporateContact   String?
+
+  // ── Preferences & Notes ─────────────────────────────────────────────────────
+  preferredFloor         String?
+  preferredUnitType      String?
+  preferredPaymentMethod String?
+  specialRequests        String?
+  internalNotes          String?
+  tags                   String[]  @default([])
+
+  // ── Status & CRM Stats ──────────────────────────────────────────────────────
+  isActive       Boolean   @default(true)
+  totalStays     Int       @default(0)
+  totalSpent     Decimal   @default(0) @db.Decimal(10, 3)
+  firstStayDate  DateTime?
+  lastStayDate   DateTime?
+
+  // ── Relations ───────────────────────────────────────────────────────────────
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
-  
+
+  createdById    String?
+  createdBy      User?    @relation("TenantCreatedBy", fields: [createdById], references: [id])
+
   reservations   Reservation[]
-  payments    Payment[]
-  
+  payments       Payment[]
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }

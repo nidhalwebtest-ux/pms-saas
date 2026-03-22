@@ -136,3 +136,37 @@ export async function updateTenant(fd: FormData): Promise<ActionResponse> {
   revalidatePath(`/dashboard/tenants/${id}`);
   return { success: true, id };
 }
+
+// ── QUICK UPDATE (inline edit from list) ─────────────────────────────────────
+
+export async function quickUpdateTenant(fd: FormData): Promise<ActionResponse> {
+  const actor = await getActor();
+  if (!actor) return { error: "Unauthorized" };
+
+  const id = (fd.get("id") as string)?.trim();
+  if (!id) return { error: "Missing ID" };
+
+  const existing = await prisma.tenant.findUnique({
+    where: { id }, select: { organizationId: true },
+  });
+  if (!existing || existing.organizationId !== actor.organizationId)
+    return { error: "Unauthorized" };
+
+  const firstName      = (fd.get("firstName")      as string | null)?.trim() || null;
+  const lastName       = (fd.get("lastName")       as string | null)?.trim() || null;
+  const phone          = (fd.get("phone")          as string | null)?.trim() || null;
+  const classification = (fd.get("classification") as string | null)?.trim() || null;
+
+  await prisma.tenant.update({
+    where: { id },
+    data: {
+      ...(firstName      ? { firstName }      : {}),
+      ...(lastName       ? { lastName }       : {}),
+      ...(phone          ? { phone }          : {}),
+      ...(classification ? { classification } : {}),
+    },
+  });
+
+  revalidatePath("/dashboard/tenants");
+  return { success: true, id };
+}

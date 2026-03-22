@@ -2,28 +2,46 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { Prisma } from "@prisma/client";
-import {
-  HomeModernIcon,
-  PlusIcon,
-} from "@heroicons/react/24/outline";
+import { HomeModernIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
-import { getUnitDisplayStatus, UNIT_STATUS_CONFIG } from "@/lib/unit-status";
+import { getUnitDisplayStatus, type UnitDisplayStatus } from "@/lib/unit-status";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import UnitFilters from "./UnitFilters";
+import UnitsView from "./UnitsView";
 
 // Active-reservation statuses used in every query
 const ACTIVE_STATUSES = ["PENDING", "CONFIRMED", "CHECKED_IN"] as const;
+
+export type UnitRow = {
+  id:          string;
+  name:        string;
+  unitType:    string;
+  floor:       number;
+  bedrooms:    number;
+  bathrooms:   number;
+  area:        number | null;
+  basePrice:   string;   // serialised Decimal
+  status:      string;
+  photos:      string[];
+  propertyId:  string;
+  description: string | null;
+  property:    { name: string };
+  reservations: { status: string }[];
+  displayStatus: UnitDisplayStatus;
+};
 
 export default async function UnitsPage({
   searchParams,
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
-  const params       = await searchParams;
-  const q            = params.q        || "";
-  const propertyFilter = params.property || "";
-  const statusFilter = params.status   || "all";
-  const sortParam    = params.sort     || "newest";
+  const params           = await searchParams;
+  const q                = params.q        || "";
+  const propertyFilter   = params.property || "";
+  const statusFilter     = params.status   || "all";
+  const typeFilter       = params.type     || "";
+  const floorFilter      = params.floor    || "";
+  const sortParam        = params.sort     || "newest";
 
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
@@ -45,7 +63,6 @@ export default async function UnitsPage({
   ]);
 
   // ── WHERE ──────────────────────────────────────────────────────────────────
-  // Effective property filter: header selector takes priority, then URL filter
   const effectivePropertyId = selectedPropertyId || propertyFilter;
 
   const statusWhere: Prisma.UnitWhereInput =
@@ -57,30 +74,32 @@ export default async function UnitsPage({
       ? { status: "AVAILABLE", reservations: { some: { status: { in: ["PENDING", "CONFIRMED"] } } } }
       : statusFilter === "maintenance"
       ? { status: "MAINTENANCE" }
-      : {}; // "all"
+      : {};
 
   const whereClause: Prisma.UnitWhereInput = {
     property: { organizationId: dbUser.organizationId },
-    ...(q                    && { name:       { contains: q, mode: "insensitive" } }),
-    ...(effectivePropertyId  && { propertyId: effectivePropertyId }),
+    ...(q                   && { name:       { contains: q, mode: "insensitive" } }),
+    ...(effectivePropertyId && { propertyId: effectivePropertyId }),
+    ...(typeFilter          && { unitType:   typeFilter }),
+    ...(floorFilter !== ""  && { floor:      parseInt(floorFilter) }),
     ...statusWhere,
   };
 
   // ── ORDER BY ───────────────────────────────────────────────────────────────
   let orderByClause: Prisma.UnitOrderByWithRelationInput = { createdAt: "desc" };
-  if (sortParam === "oldest")      orderByClause = { createdAt: "asc"  };
-  if (sortParam === "name_asc")    orderByClause = { name:      "asc"  };
-  if (sortParam === "name_desc")   orderByClause = { name:      "desc" };
-  if (sortParam === "price_asc")   orderByClause = { basePrice: "asc"  };
-  if (sortParam === "price_desc")  orderByClause = { basePrice: "desc" };
-  if (sortParam === "floor_asc")   orderByClause = { floor:     "asc"  };
-  if (sortParam === "floor_desc")  orderByClause = { floor:     "desc" };
+  if (sortParam === "oldest")     orderByClause = { createdAt: "asc"  };
+  if (sortParam === "name_asc")   orderByClause = { name:      "asc"  };
+  if (sortParam === "name_desc")  orderByClause = { name:      "desc" };
+  if (sortParam === "price_asc")  orderByClause = { basePrice: "asc"  };
+  if (sortParam === "price_desc") orderByClause = { basePrice: "desc" };
+  if (sortParam === "floor_asc")  orderByClause = { floor:     "asc"  };
+  if (sortParam === "floor_desc") orderByClause = { floor:     "desc" };
 
   // ── FETCH ──────────────────────────────────────────────────────────────────
-  const units = await prisma.unit.findMany({
+  const rawUnits = await prisma.unit.findMany({
     where: whereClause,
     include: {
-      property: { select: { name: true } },
+      property:     { select: { name: true } },
       reservations: {
         where:  { status: { in: [...ACTIVE_STATUSES] } },
         select: { status: true },
@@ -88,6 +107,34 @@ export default async function UnitsPage({
     },
     orderBy: orderByClause,
   });
+
+  // Serialize Decimals + compute displayStatus
+  const units: UnitRow[] = rawUnits.map((u) => ({
+    id:            u.id,
+    name:          u.name,
+    unitType:      u.unitType,
+    floor:         u.floor,
+    bedrooms:      u.bedrooms,
+    bathrooms:     u.bathrooms,
+    area:          u.area,
+    basePrice:     u.basePrice.toString(),
+    status:        u.status,
+    photos:        u.photos,
+    propertyId:    u.propertyId,
+    description:   u.description,
+    property:      u.property,
+    reservations:  u.reservations,
+    displayStatus: getUnitDisplayStatus(u.status, u.reservations),
+  }));
+
+  // Distinct floors for filter dropdown
+  const floorRows = await prisma.unit.findMany({
+    where:    { property: { organizationId: dbUser.organizationId } },
+    select:   { floor: true },
+    distinct: ["floor"],
+    orderBy:  { floor: "asc" },
+  });
+  const availableFloors = floorRows.map((r) => r.floor);
 
   // Summary counts — respect the selected property scope
   const countBase: Prisma.UnitWhereInput = {
@@ -137,142 +184,15 @@ export default async function UnitsPage({
         currentSearch={q}
         currentProperty={propertyFilter}
         currentStatus={statusFilter}
+        currentType={typeFilter}
+        currentFloor={floorFilter}
         properties={properties}
+        availableFloors={availableFloors}
         counts={{ vacant: vacantCount, occupied: occupiedCount, reserved: reservedCount, maintenance: maintenanceCount }}
       />
 
-      {/* ── Table ──────────────────────────────────────────────────── */}
-      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 sm:pl-5">
-                  Unit
-                </th>
-                <th className="hidden px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell">
-                  Property
-                </th>
-                <th className="hidden px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 md:table-cell">
-                  Floor
-                </th>
-                <th className="hidden px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 md:table-cell">
-                  Type
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Price / mo
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Status
-                </th>
-                <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {units.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-16 text-center text-sm text-gray-400">
-                    <HomeModernIcon className="mx-auto mb-3 h-10 w-10 text-gray-200" />
-                    No units match your filters.
-                  </td>
-                </tr>
-              ) : (
-                units.map((unit) => {
-                  const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations);
-                  const cfg = UNIT_STATUS_CONFIG[displayStatus];
-                  const typeLabel = {
-                    STUDIO: "Studio", ONE_BR: "1 BR", TWO_BR: "2 BR",
-                    THREE_BR: "3 BR", SUITE: "Suite",
-                  }[unit.unitType] ?? unit.unitType;
-
-                  return (
-                    <tr key={unit.id} className="hover:bg-blue-50/40 transition-colors">
-                      {/* Unit name */}
-                      <td className="py-3 pl-4 pr-3 sm:pl-5">
-                        <Link
-                          href={`/dashboard/units/${unit.id}/edit`}
-                          className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-                        >
-                          {unit.name}
-                        </Link>
-                        {unit.description && (
-                          <p className="mt-0.5 line-clamp-1 text-xs text-gray-400">{unit.description}</p>
-                        )}
-                      </td>
-
-                      {/* Property */}
-                      <td className="hidden px-3 py-3 text-sm sm:table-cell">
-                        <Link
-                          href={`/dashboard/properties/${unit.propertyId}`}
-                          className="text-gray-600 hover:text-blue-600 transition-colors"
-                        >
-                          {unit.property.name}
-                        </Link>
-                      </td>
-
-                      {/* Floor */}
-                      <td className="hidden px-3 py-3 text-sm text-gray-500 md:table-cell">
-                        {unit.floor > 0 ? `Floor ${unit.floor}` : "G"}
-                      </td>
-
-                      {/* Type */}
-                      <td className="hidden px-3 py-3 text-sm text-gray-500 md:table-cell">
-                        <span className="font-medium">{typeLabel}</span>
-                        <span className="text-gray-400"> · {unit.bedrooms}b/{unit.bathrooms}ba</span>
-                        {unit.area && (
-                          <span className="text-gray-400"> · {unit.area}m²</span>
-                        )}
-                      </td>
-
-                      {/* Price */}
-                      <td className="px-3 py-3 text-sm font-semibold text-gray-800 whitespace-nowrap">
-                        {Number(unit.basePrice).toFixed(3)}{" "}
-                        <span className="text-xs font-normal text-gray-400">OMR</span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-3 py-3">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.badge}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-                          {cfg.label}
-                        </span>
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-3 py-3 text-right text-sm">
-                        <div className="flex items-center justify-end gap-3">
-                          <Link
-                            href={`/dashboard/units/${unit.id}/edit`}
-                            className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                          >
-                            Edit
-                          </Link>
-                          <Link
-                            href={`/dashboard/properties/${unit.propertyId}`}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                          >
-                            Building
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Footer */}
-        {units.length > 0 && (
-          <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-2.5 text-xs text-gray-500">
-            Showing {units.length} unit{units.length !== 1 ? "s" : ""}
-            {statusFilter !== "all" && ` · filtered by ${statusFilter}`}
-          </div>
-        )}
-      </div>
+      {/* ── Table (client component with sort + quick actions) ───── */}
+      <UnitsView units={units} statusFilter={statusFilter} />
     </div>
   );
 }

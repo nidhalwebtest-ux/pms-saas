@@ -2,15 +2,19 @@
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useCallback, useState, useEffect, useRef } from "react";
-import { MagnifyingGlassIcon, XMarkIcon, HomeModernIcon, FunnelIcon } from "@heroicons/react/24/outline";
-import { UNIT_STATUS_CONFIG, type UnitDisplayStatus } from "@/lib/unit-status";
+import {
+  MagnifyingGlassIcon,
+  XMarkIcon,
+  HomeModernIcon,
+  FunnelIcon,
+} from "@heroicons/react/24/outline";
 
 const STATUS_TABS: { value: string; label: string }[] = [
   { value: "all",         label: "All"              },
-  { value: "vacant",      label: "Vacant"            },
-  { value: "occupied",    label: "Occupied"          },
-  { value: "reserved",    label: "Reserved"          },
-  { value: "maintenance", label: "Under Maintenance" },
+  { value: "vacant",      label: "Vacant"           },
+  { value: "occupied",    label: "Occupied"         },
+  { value: "reserved",    label: "Reserved"         },
+  { value: "maintenance", label: "Maintenance"      },
 ];
 
 const STATUS_ACTIVE_CLASSES: Record<string, string> = {
@@ -21,11 +25,23 @@ const STATUS_ACTIVE_CLASSES: Record<string, string> = {
   maintenance: "bg-amber-500 text-white shadow-sm",
 };
 
+const TYPE_TABS: { value: string; label: string }[] = [
+  { value: "",         label: "All Types" },
+  { value: "STUDIO",   label: "Studio"   },
+  { value: "ONE_BR",   label: "1 BR"     },
+  { value: "TWO_BR",   label: "2 BR"     },
+  { value: "THREE_BR", label: "3 BR"     },
+  { value: "SUITE",    label: "Suite"    },
+];
+
 interface Props {
   currentSearch:   string;
   currentProperty: string;
   currentStatus:   string;
+  currentType:     string;
+  currentFloor:    string;
   properties:      { id: string; name: string }[];
+  availableFloors: number[];
   counts:          { vacant: number; occupied: number; reserved: number; maintenance: number };
 }
 
@@ -33,7 +49,10 @@ export default function UnitFilters({
   currentSearch,
   currentProperty,
   currentStatus,
+  currentType,
+  currentFloor,
   properties,
+  availableFloors,
   counts,
 }: Props) {
   const router       = useRouter();
@@ -42,7 +61,6 @@ export default function UnitFilters({
   const inputRef     = useRef<HTMLInputElement>(null);
 
   const [searchTerm, setSearchTerm] = useState(currentSearch);
-
   useEffect(() => { setSearchTerm(currentSearch); }, [currentSearch]);
 
   const push = useCallback(
@@ -70,11 +88,13 @@ export default function UnitFilters({
     currentSearch,
     currentProperty,
     currentStatus !== "all" ? currentStatus : "",
+    currentType,
+    currentFloor,
   ].filter(Boolean).length;
 
   const clearAll = () => {
     setSearchTerm("");
-    push({ q: "", property: "", status: "" });
+    push({ q: "", property: "", status: "", type: "", floor: "" });
   };
 
   const countFor = (value: string): number | null => {
@@ -89,7 +109,7 @@ export default function UnitFilters({
   return (
     <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
 
-      {/* ── Top bar: search + meta ──────────────────────────────────── */}
+      {/* ── Top bar: search + dropdowns ─────────────────────────── */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
         <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50">
           <HomeModernIcon className="h-4 w-4 text-blue-600" />
@@ -121,13 +141,29 @@ export default function UnitFilters({
         <select
           value={currentProperty}
           onChange={(e) => push({ property: e.target.value })}
-          className="hidden sm:block rounded-lg border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
+          className="hidden sm:block rounded-lg border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-gray-700 focus:border-blue-500 focus:outline-none transition"
         >
           <option value="">All Properties</option>
           {properties.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
+
+        {/* Floor dropdown */}
+        {availableFloors.length > 0 && (
+          <select
+            value={currentFloor}
+            onChange={(e) => push({ floor: e.target.value })}
+            className="hidden md:block rounded-lg border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-gray-700 focus:border-blue-500 focus:outline-none transition"
+          >
+            <option value="">All Floors</option>
+            {availableFloors.map((f) => (
+              <option key={f} value={String(f)}>
+                {f === 0 ? "Ground Floor" : `Floor ${f}`}
+              </option>
+            ))}
+          </select>
+        )}
 
         {/* Clear */}
         {activeFilterCount > 0 && (
@@ -144,7 +180,7 @@ export default function UnitFilters({
         )}
       </div>
 
-      {/* ── Property (mobile) ───────────────────────────────────────── */}
+      {/* ── Property (mobile) ───────────────────────────────────── */}
       <div className="sm:hidden border-b border-gray-100 px-4 py-2.5 bg-gray-50/50">
         <select
           value={currentProperty}
@@ -158,8 +194,52 @@ export default function UnitFilters({
         </select>
       </div>
 
-      {/* ── Status pills ─────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-1.5 px-4 py-2.5 bg-gray-50/50">
+      {/* ── Type pills ──────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-1.5 px-4 py-2.5 border-b border-gray-100 bg-gray-50/30">
+        <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide pr-1">
+          Type
+        </span>
+        {TYPE_TABS.map((tab) => {
+          const active = currentType === tab.value || (tab.value === "" && !currentType);
+          return (
+            <button
+              key={tab.value}
+              onClick={() => push({ type: tab.value })}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                active
+                  ? "bg-blue-700 text-white shadow-sm"
+                  : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:text-gray-800"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+
+        {/* Floor pills (mobile) */}
+        {availableFloors.length > 0 && (
+          <>
+            <span className="ml-3 text-[11px] font-medium text-gray-400 uppercase tracking-wide pr-1 md:hidden">
+              Floor
+            </span>
+            <select
+              value={currentFloor}
+              onChange={(e) => push({ floor: e.target.value })}
+              className="md:hidden rounded-lg border border-gray-200 bg-white py-1 pl-2 pr-6 text-xs text-gray-700 focus:border-blue-500 focus:outline-none"
+            >
+              <option value="">All</option>
+              {availableFloors.map((f) => (
+                <option key={f} value={String(f)}>
+                  {f === 0 ? "Ground" : `F${f}`}
+                </option>
+              ))}
+            </select>
+          </>
+        )}
+      </div>
+
+      {/* ── Status pills ─────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-1.5 px-4 py-2.5 bg-gray-50/30">
         <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide pr-1">
           Status
         </span>

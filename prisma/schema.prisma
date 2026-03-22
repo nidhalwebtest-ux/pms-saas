@@ -137,10 +137,14 @@ model Property {
 model Unit {
   id          String   @id @default(uuid())
   name        String   // e.g. "Room 101"
+  unitType    String   @default("ONE_BR") // STUDIO | ONE_BR | TWO_BR | THREE_BR | SUITE
   floor       Int      @default(0)
   bedrooms    Int      @default(1)
   bathrooms   Int      @default(1)
-  
+  area        Float?   // sqm
+  description String?
+  amenities   String[] @default([]) // AC | FURNISHED | KITCHEN | PARKING | WIFI | TV | BALCONY | POOL
+
   basePrice   Decimal    @db.Decimal(10, 3)
   status      UnitStatus @default(AVAILABLE)
   photos      String[]   @default([])

@@ -47,15 +47,19 @@ export default async function EditUnitPage({
       <UnitForm
         properties={properties}
         initialData={{
-          id: unit.id,
-          propertyId: unit.propertyId,
-          name: unit.name,
-          basePrice: unit.basePrice,
-          floor: unit.floor,
-          bedrooms: unit.bedrooms,
-          bathrooms: unit.bathrooms,
-          status: unit.status,
-          photos: unit.photos,
+          id:          unit.id,
+          propertyId:  unit.propertyId,
+          name:        unit.name,
+          basePrice:   unit.basePrice,
+          unitType:    unit.unitType,
+          floor:       unit.floor,
+          bedrooms:    unit.bedrooms,
+          bathrooms:   unit.bathrooms,
+          area:        unit.area,
+          description: unit.description,
+          amenities:   unit.amenities,
+          status:      unit.status,
+          photos:      unit.photos,
         }}
       />
     </div>

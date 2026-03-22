@@ -21,6 +21,17 @@ function parsePhotos(formData: FormData): string[] {
   }
 }
 
+function parseAmenities(formData: FormData): string[] {
+  try {
+    const raw = formData.get("amenities") as string;
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 // ─── CREATE ───────────────────────────────────────────────────────────────────
 
 export async function createUnit(formData: FormData): Promise<ActionResponse> {
@@ -38,11 +49,16 @@ export async function createUnit(formData: FormData): Promise<ActionResponse> {
   const propertyId = formData.get("propertyId") as string;
   const name = (formData.get("name") as string)?.trim();
   const basePrice = parseFloat(formData.get("basePrice") as string);
-  const floor = parseInt(formData.get("floor") as string) || 1;
-  const bedrooms = parseInt(formData.get("bedrooms") as string) || 1;
-  const bathrooms = parseInt(formData.get("bathrooms") as string) || 1;
+  const floor = parseInt(formData.get("floor") as string) || 0;
+  const bedrooms = parseInt(formData.get("bedrooms") as string) ?? 1;
+  const bathrooms = parseInt(formData.get("bathrooms") as string) ?? 1;
+  const unitType = (formData.get("unitType") as string) || "ONE_BR";
+  const areaRaw = formData.get("area") as string;
+  const area = areaRaw ? parseFloat(areaRaw) : undefined;
+  const description = (formData.get("description") as string)?.trim() || undefined;
   const status = (formData.get("status") as string) || "AVAILABLE";
   const photos = parsePhotos(formData);
+  const amenities = parseAmenities(formData);
 
   if (!propertyId || !name || isNaN(basePrice) || basePrice < 0) {
     return { error: "Property, Name, and a valid Base Price are required." };
@@ -61,10 +77,14 @@ export async function createUnit(formData: FormData): Promise<ActionResponse> {
     const newUnit = await prisma.unit.create({
       data: {
         name,
+        unitType,
         basePrice,
         floor,
         bedrooms,
         bathrooms,
+        area,
+        description,
+        amenities,
         status: status as any,
         photos,
         propertyId,
@@ -98,11 +118,16 @@ export async function updateUnit(formData: FormData): Promise<ActionResponse> {
   const propertyId = formData.get("propertyId") as string;
   const name = (formData.get("name") as string)?.trim();
   const basePrice = parseFloat(formData.get("basePrice") as string);
-  const floor = parseInt(formData.get("floor") as string) || 1;
-  const bedrooms = parseInt(formData.get("bedrooms") as string) || 1;
-  const bathrooms = parseInt(formData.get("bathrooms") as string) || 1;
+  const floor = parseInt(formData.get("floor") as string) || 0;
+  const bedrooms = parseInt(formData.get("bedrooms") as string) ?? 1;
+  const bathrooms = parseInt(formData.get("bathrooms") as string) ?? 1;
+  const unitType = (formData.get("unitType") as string) || "ONE_BR";
+  const areaRaw = formData.get("area") as string;
+  const area = areaRaw ? parseFloat(areaRaw) : null;
+  const description = (formData.get("description") as string)?.trim() || null;
   const status = (formData.get("status") as string) || "AVAILABLE";
   const photos = parsePhotos(formData);
+  const amenities = parseAmenities(formData);
 
   if (!name || isNaN(basePrice) || basePrice < 0) {
     return { error: "Name and a valid Base Price are required." };
@@ -127,7 +152,7 @@ export async function updateUnit(formData: FormData): Promise<ActionResponse> {
   try {
     await prisma.unit.update({
       where: { id },
-      data: { name, basePrice, floor, bedrooms, bathrooms, propertyId, status: status as any, photos },
+      data: { name, unitType, basePrice, floor, bedrooms, bathrooms, area, description, amenities, propertyId, status: status as any, photos },
     });
 
     revalidatePath("/dashboard/units");

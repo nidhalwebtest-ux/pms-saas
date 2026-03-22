@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import {
   Squares2X2Icon,
   ListBulletIcon,
+  RectangleGroupIcon,
   DocumentArrowDownIcon,
   PrinterIcon,
   PencilSquareIcon,
@@ -23,6 +24,8 @@ import {
   MapPinIcon,
   PlusIcon,
   ArrowTopRightOnSquareIcon,
+  BanknotesIcon,
+  HomeIcon,
 } from "@heroicons/react/24/outline";
 import { quickUpdateProperty } from "./actions";
 import type { PropertyRow } from "./page";
@@ -36,7 +39,7 @@ const TYPE_BADGE: Record<string, { bg: string; text: string; label: string }> = 
   COMMERCIAL:  { bg: "bg-green-100",  text: "text-green-700",  label: "Commercial"  },
 };
 
-type SortKey = "name" | "type" | "city" | "totalUnits" | "occupiedUnits" | "vacantUnits" | "isActive" | "createdAt";
+type SortKey = "name" | "type" | "city" | "totalUnits" | "occupiedUnits" | "vacantUnits" | "isActive" | "createdAt" | "revenueThisMonth";
 type SortDir = "asc" | "desc";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -54,7 +57,7 @@ function sortProperties(items: PropertyRow[], key: SortKey, dir: SortDir): Prope
 }
 
 function exportCSV(rows: PropertyRow[]) {
-  const headers = ["Name", "Type", "City", "Address", "Floors", "Total Units", "Occupied", "Vacant", "Status", "Created"];
+  const headers = ["Name", "Type", "City", "Address", "Floors", "Total Units", "Occupied", "Vacant", "Revenue (OMR)", "Status", "Created"];
   const lines = rows.map((p) => [
     `"${p.name.replace(/"/g, '""')}"`,
     TYPE_BADGE[p.type]?.label ?? p.type,
@@ -64,6 +67,7 @@ function exportCSV(rows: PropertyRow[]) {
     p.totalUnits,
     p.occupiedUnits,
     p.vacantUnits,
+    p.revenueThisMonth.toFixed(3),
     p.isActive ? "Active" : "Inactive",
     new Date(p.createdAt).toLocaleDateString(),
   ].join(","));
@@ -310,6 +314,144 @@ function PropertyCard({ property }: { property: PropertyRow }) {
   );
 }
 
+// ── Summary Card ─────────────────────────────────────────────────────────────
+
+function SummaryCard({ property }: { property: PropertyRow }) {
+  const typeMeta = TYPE_BADGE[property.type] ?? { bg: "bg-gray-100", text: "text-gray-600", label: property.type };
+  const hasPhoto  = property.photos.length > 0;
+  const pct       = property.totalUnits > 0
+    ? Math.round((property.occupiedUnits / property.totalUnits) * 100) : 0;
+  const barColor  = pct >= 90 ? "bg-red-500" : pct >= 60 ? "bg-amber-400" : "bg-emerald-500";
+
+  const stats = [
+    {
+      label: "Total Units",
+      value: property.totalUnits,
+      sub: property.totalFloors ? `${property.totalFloors} floor${property.totalFloors > 1 ? "s" : ""}` : null,
+      icon: HomeIcon,
+      iconCls: "bg-blue-50 text-blue-500",
+      valCls: "text-gray-900",
+    },
+    {
+      label: "Occupied",
+      value: `${pct}%`,
+      sub: `${property.occupiedUnits} of ${property.totalUnits} units`,
+      icon: CheckCircleIcon,
+      iconCls: "bg-emerald-50 text-emerald-500",
+      valCls: pct >= 90 ? "text-red-600" : pct >= 60 ? "text-amber-600" : "text-emerald-600",
+    },
+    {
+      label: "Vacant",
+      value: property.vacantUnits,
+      sub: property.totalUnits > 0 ? `${100 - pct}% available` : "—",
+      icon: BuildingOffice2Icon,
+      iconCls: "bg-gray-50 text-gray-400",
+      valCls: "text-gray-700",
+    },
+    {
+      label: "Revenue this month",
+      value: property.revenueThisMonth > 0
+        ? property.revenueThisMonth.toLocaleString("en-OM", { minimumFractionDigits: 3, maximumFractionDigits: 3 })
+        : "—",
+      sub: property.revenueThisMonth > 0 ? "OMR" : "No payments yet",
+      icon: BanknotesIcon,
+      iconCls: "bg-violet-50 text-violet-500",
+      valCls: "text-violet-700",
+    },
+  ];
+
+  return (
+    <Link
+      href={`/dashboard/properties/${property.id}`}
+      className="group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+    >
+      {/* Cover photo */}
+      <div className="relative h-44 w-full flex-shrink-0 bg-gray-100">
+        {hasPhoto ? (
+          <Image src={property.photos[0]} alt={property.name} fill className="object-cover" unoptimized />
+        ) : (
+          <div className="flex h-full items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+            <BuildingOffice2Icon className="h-16 w-16 text-gray-300" />
+          </div>
+        )}
+        {/* Gradient overlay for text legibility */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+        {/* Type badge */}
+        <span className={`absolute top-3 left-3 inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold shadow ${typeMeta.bg} ${typeMeta.text}`}>
+          {typeMeta.label}
+        </span>
+        {/* Status badge */}
+        <span className={`absolute top-3 right-3 inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold shadow ${
+          property.isArchived ? "bg-gray-200 text-gray-700"
+          : property.isActive  ? "bg-emerald-100 text-emerald-700"
+          : "bg-amber-100 text-amber-700"
+        }`}>
+          {property.isArchived ? <><ArchiveBoxIcon className="h-3 w-3" />Archived</>
+          : property.isActive  ? <><CheckCircleIcon className="h-3 w-3" />Active</>
+          : <><WrenchScrewdriverIcon className="h-3 w-3" />Inactive</>}
+        </span>
+        {/* Name over photo */}
+        <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+          <h3 className="text-base font-bold text-white leading-tight drop-shadow line-clamp-1 group-hover:underline">
+            {property.name}
+          </h3>
+          {(property.city || property.governorate) && (
+            <div className="mt-0.5 flex items-center gap-1 text-xs text-white/80">
+              <MapPinIcon className="h-3 w-3 flex-shrink-0" />
+              {[property.city, property.governorate].filter(Boolean).join(", ")}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Occupancy bar */}
+      <div className="px-4 pt-3 pb-1">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs font-medium text-gray-500">Occupancy</span>
+          <span className={`text-xs font-bold ${pct >= 90 ? "text-red-600" : pct >= 60 ? "text-amber-600" : "text-emerald-600"}`}>
+            {pct}%
+          </span>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100">
+          <div
+            className={`h-full rounded-full ${barColor} transition-all duration-500`}
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Stats grid */}
+      <div className="grid grid-cols-2 gap-px bg-gray-100 border-t border-gray-100 mt-3">
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <div key={s.label} className="flex items-start gap-2.5 bg-white px-4 py-3">
+              <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ${s.iconCls}`}>
+                <Icon className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <p className={`text-sm font-bold leading-tight ${s.valCls} truncate`}>{s.value}</p>
+                <p className="text-[11px] text-gray-400 leading-tight mt-0.5 truncate">{s.label}</p>
+                {s.sub && <p className="text-[10px] text-gray-300 mt-0.5 truncate">{s.sub}</p>}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Footer CTA */}
+      <div className="flex items-center justify-between border-t border-gray-100 bg-gray-50/60 px-4 py-2.5">
+        <span className="text-xs text-gray-400">
+          {property.description
+            ? <span className="line-clamp-1">{property.description}</span>
+            : <span>View all details →</span>}
+        </span>
+        <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5 flex-shrink-0 text-gray-400 group-hover:text-blue-500 transition-colors" />
+      </div>
+    </Link>
+  );
+}
+
 // ── Main Component ───────────────────────────────────────────────────────────
 
 export default function PropertiesView({
@@ -328,7 +470,7 @@ export default function PropertiesView({
   };
   const [initKey, initDir] = parseSort(initialSort);
 
-  const [viewMode,     setViewMode]     = useState<"table" | "card">("table");
+  const [viewMode,     setViewMode]     = useState<"table" | "card" | "summary">("table");
   const [sortKey,      setSortKey]      = useState<SortKey>(initKey);
   const [sortDir,      setSortDir]      = useState<SortDir>(initDir);
   const [inlineEditId, setInlineEditId] = useState<string | null>(null);
@@ -412,6 +554,15 @@ export default function PropertiesView({
               title="Card view"
             >
               <Squares2X2Icon className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("summary")}
+              className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                viewMode === "summary" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50"
+              }`}
+              title="Summary view"
+            >
+              <RectangleGroupIcon className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -591,6 +742,24 @@ export default function PropertiesView({
                 <PlusIcon className="h-8 w-8" />
                 Add Building
               </Link>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Summary view ─────────────────────────────────────────── */}
+      {viewMode === "summary" && (
+        <>
+          {sorted.length === 0 ? (
+            <div className="rounded-xl border border-gray-200 bg-white py-16 text-center shadow-sm">
+              <BuildingOffice2Icon className="mx-auto mb-3 h-10 w-10 text-gray-200" />
+              <p className="text-sm text-gray-400">No buildings match your filters.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {sorted.map((p) => (
+                <SummaryCard key={p.id} property={p} />
+              ))}
             </div>
           )}
         </>

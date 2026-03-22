@@ -175,7 +175,7 @@ export async function restoreProperty(propertyId: string): Promise<ActionRespons
 
   await prisma.property.update({
     where: { id: propertyId },
-    data:  { isArchived: false, archivedAt: null },
+    data:  { isArchived: false, archivedAt: null, isActive: true },
   });
 
   revalidatePath("/dashboard/properties");

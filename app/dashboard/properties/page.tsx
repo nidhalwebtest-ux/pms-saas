@@ -22,6 +22,7 @@ export type PropertyRow = {
   totalUnits: number;
   occupiedUnits: number;
   vacantUnits: number;
+  revenueThisMonth: number;
 };
 
 export default async function PropertiesPage({
@@ -78,24 +79,48 @@ export default async function PropertiesPage({
   if (sortParam === "newest")       orderByClause = { createdAt: "desc" };
   if (sortParam === "oldest")       orderByClause = { createdAt: "asc"  };
 
-  // Fetch with occupancy data (single query via nested select + take:1)
-  const raw = await prisma.property.findMany({
-    where: whereClause,
-    include: {
-      units: {
-        select: {
-          id: true,
-          status: true,
-          reservations: {
-            where:  { status: { in: ["CONFIRMED", "CHECKED_IN"] } },
-            select: { id: true },
-            take:   1,
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  // Run both queries in parallel
+  const [raw, paymentsThisMonth] = await Promise.all([
+    prisma.property.findMany({
+      where: whereClause,
+      include: {
+        units: {
+          select: {
+            id: true,
+            status: true,
+            reservations: {
+              where:  { status: { in: ["CONFIRMED", "CHECKED_IN"] } },
+              select: { id: true },
+              take:   1,
+            },
           },
         },
       },
-    },
-    orderBy: orderByClause,
-  });
+      orderBy: orderByClause,
+    }),
+    prisma.payment.findMany({
+      where: {
+        date: { gte: startOfMonth },
+        reservation: {
+          unit: { property: { organizationId: dbUser.organizationId } },
+        },
+      },
+      select: {
+        amount: true,
+        reservation: { select: { unit: { select: { propertyId: true } } } },
+      },
+    }),
+  ]);
+
+  // Build revenue map: propertyId → total OMR this month
+  const revenueByProperty: Record<string, number> = {};
+  for (const p of paymentsThisMonth) {
+    const pid = p.reservation?.unit?.propertyId;
+    if (pid) revenueByProperty[pid] = (revenueByProperty[pid] ?? 0) + Number(p.amount);
+  }
 
   // Serialize for client (no Date objects)
   const properties: PropertyRow[] = raw.map((p) => ({
@@ -117,6 +142,7 @@ export default async function PropertiesPage({
     vacantUnits:   p.units.filter(
       (u) => u.reservations.length === 0 && u.status === "AVAILABLE",
     ).length,
+    revenueThisMonth: revenueByProperty[p.id] ?? 0,
   }));
 
   return (

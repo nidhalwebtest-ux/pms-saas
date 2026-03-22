@@ -112,6 +112,29 @@ export async function updateProperty(formData: FormData): Promise<ActionResponse
   }
 }
 
+// ─── QUICK UPDATE (inline edit: name + status only) ───────────────────────────
+
+export async function quickUpdateProperty(formData: FormData): Promise<ActionResponse> {
+  const organizationId = await getOrgId();
+  if (!organizationId) return { error: "Unauthorized" };
+
+  const id = formData.get("id") as string;
+  const name = (formData.get("name") as string)?.trim();
+  const isActive = formData.get("isActive") !== "false";
+
+  if (!name) return { error: "Name is required." };
+
+  const existing = await prisma.property.findUnique({
+    where: { id },
+    select: { organizationId: true },
+  });
+  if (existing?.organizationId !== organizationId) return { error: "Unauthorized." };
+
+  await prisma.property.update({ where: { id }, data: { name, isActive } });
+  revalidatePath("/dashboard/properties");
+  return { success: true };
+}
+
 // ─── DELETE ───────────────────────────────────────────────────────────────────
 
 export async function deleteProperty(propertyId: string): Promise<ActionResponse> {

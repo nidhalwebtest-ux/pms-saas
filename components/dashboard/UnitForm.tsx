@@ -374,8 +374,12 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
         </div>
       </Section>
 
-      {/* ── 4. Availability Status ───────────────────────────────────── */}
-      <Section icon={AdjustmentsHorizontalIcon} title="Availability Status">
+      {/* ── 4. Maintenance Mode ──────────────────────────────────────── */}
+      <Section icon={AdjustmentsHorizontalIcon} title="Maintenance Mode">
+        <p className="mb-4 text-xs text-gray-500 leading-relaxed">
+          Vacant / Reserved / Occupied status is <strong>auto-calculated</strong> from reservations.
+          Use this toggle only to temporarily block the unit for maintenance work.
+        </p>
         <div className="flex items-center gap-4">
           <button
             type="button"
@@ -397,14 +401,14 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
               <>
                 <CheckCircleIcon className="h-4 w-4 text-green-600" />
                 <span className="text-sm font-medium text-green-700">
-                  Available — can accept reservations
+                  Normal — status auto-updates (Vacant / Reserved / Occupied)
                 </span>
               </>
             ) : (
               <>
                 <WrenchScrewdriverIcon className="h-4 w-4 text-amber-600" />
                 <span className="text-sm font-medium text-amber-700">
-                  Under Maintenance — blocked for booking
+                  Under Maintenance — blocked for all bookings
                 </span>
               </>
             )}

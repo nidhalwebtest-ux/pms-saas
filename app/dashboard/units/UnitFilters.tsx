@@ -1,139 +1,193 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useState, useEffect } from "react";
-import {
-  MagnifyingGlassIcon,
-  ChevronDownIcon,
-  AdjustmentsHorizontalIcon,
-} from "@heroicons/react/24/outline";
+import { useCallback, useState, useEffect, useRef } from "react";
+import { MagnifyingGlassIcon, XMarkIcon, HomeModernIcon, FunnelIcon } from "@heroicons/react/24/outline";
+import { UNIT_STATUS_CONFIG, type UnitDisplayStatus } from "@/lib/unit-status";
 
-interface PropertyOption {
-  id: string;
-  name: string;
+const STATUS_TABS: { value: string; label: string }[] = [
+  { value: "all",         label: "All"              },
+  { value: "vacant",      label: "Vacant"            },
+  { value: "occupied",    label: "Occupied"          },
+  { value: "reserved",    label: "Reserved"          },
+  { value: "maintenance", label: "Under Maintenance" },
+];
+
+const STATUS_ACTIVE_CLASSES: Record<string, string> = {
+  all:         "bg-gray-700 text-white shadow-sm",
+  vacant:      "bg-emerald-600 text-white shadow-sm",
+  occupied:    "bg-blue-600 text-white shadow-sm",
+  reserved:    "bg-violet-600 text-white shadow-sm",
+  maintenance: "bg-amber-500 text-white shadow-sm",
+};
+
+interface Props {
+  currentSearch:   string;
+  currentProperty: string;
+  currentStatus:   string;
+  properties:      { id: string; name: string }[];
+  counts:          { vacant: number; occupied: number; reserved: number; maintenance: number };
 }
 
 export default function UnitFilters({
   currentSearch,
   currentProperty,
+  currentStatus,
   properties,
-}: {
-  currentSearch: string;
-  currentProperty: string;
-  properties: PropertyOption[];
-}) {
-  const router = useRouter();
-  const pathname = usePathname();
+  counts,
+}: Props) {
+  const router       = useRouter();
+  const pathname     = usePathname();
   const searchParams = useSearchParams();
+  const inputRef     = useRef<HTMLInputElement>(null);
 
   const [searchTerm, setSearchTerm] = useState(currentSearch);
-  const [isExpanded, setIsExpanded] = useState(true);
 
-  const createQueryString = useCallback(
-    (name: string, value: string) => {
+  useEffect(() => { setSearchTerm(currentSearch); }, [currentSearch]);
+
+  const push = useCallback(
+    (updates: Record<string, string>) => {
       const params = new URLSearchParams(searchParams.toString());
-      if (value) params.set(name, value);
-      else params.delete(name);
-      return params.toString();
+      for (const [k, v] of Object.entries(updates)) {
+        if (v) params.set(k, v);
+        else   params.delete(k);
+      }
+      params.delete("page");
+      router.push(pathname + "?" + params.toString());
     },
-    [searchParams],
+    [searchParams, pathname, router],
   );
 
+  // Debounce search
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (searchTerm !== currentSearch) {
-        router.push(pathname + "?" + createQueryString("q", searchTerm));
-      }
-    }, 500);
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, currentSearch, pathname, createQueryString, router]);
+    const t = setTimeout(() => {
+      if (searchTerm !== currentSearch) push({ q: searchTerm });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const hasActiveFilters =
-    currentSearch || currentProperty || searchParams.get("inactive") === "true";
+  const activeFilterCount = [
+    currentSearch,
+    currentProperty,
+    currentStatus !== "all" ? currentStatus : "",
+  ].filter(Boolean).length;
+
+  const clearAll = () => {
+    setSearchTerm("");
+    push({ q: "", property: "", status: "" });
+  };
+
+  const countFor = (value: string): number | null => {
+    if (value === "all")         return null;
+    if (value === "vacant")      return counts.vacant;
+    if (value === "occupied")    return counts.occupied;
+    if (value === "reserved")    return counts.reserved;
+    if (value === "maintenance") return counts.maintenance;
+    return null;
+  };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-4 transition-all overflow-hidden">
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full px-4 py-3 flex justify-between items-center bg-gray-50/50 hover:bg-gray-100/50 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <AdjustmentsHorizontalIcon className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-semibold text-gray-700">Filters</span>
-          {!isExpanded && hasActiveFilters && (
-            <span className="ml-2 flex h-2 w-2 rounded-full bg-blue-600"></span>
+    <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+
+      {/* ── Top bar: search + meta ──────────────────────────────────── */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50">
+          <HomeModernIcon className="h-4 w-4 text-blue-600" />
+        </div>
+
+        {/* Search */}
+        <div className="relative flex-1">
+          <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by unit name or number…"
+            className="block w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-9 pr-8 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => { setSearchTerm(""); push({ q: "" }); inputRef.current?.focus(); }}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <XMarkIcon className="h-3.5 w-3.5" />
+            </button>
           )}
         </div>
-        <ChevronDownIcon
-          className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${isExpanded ? "rotate-180" : ""}`}
-        />
-      </button>
 
-      {isExpanded && (
-        <div className="p-4 border-t border-gray-100 bg-white">
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-            <div className="sm:col-span-2 relative rounded-md shadow-sm">
-              <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                <MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                className="block w-full rounded-md border-0 py-1.5 pl-10 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm sm:leading-6"
-                placeholder="Search unit name or number..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
+        {/* Property dropdown */}
+        <select
+          value={currentProperty}
+          onChange={(e) => push({ property: e.target.value })}
+          className="hidden sm:block rounded-lg border border-gray-200 bg-gray-50 py-2 pl-3 pr-8 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
+        >
+          <option value="">All Properties</option>
+          {properties.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
 
-            {/* Dynamic Property Dropdown */}
-            <div>
-              <select
-                className="block w-full rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm sm:leading-6"
-                value={currentProperty}
-                onChange={(e) =>
-                  router.push(
-                    pathname +
-                      "?" +
-                      createQueryString("property", e.target.value),
-                  )
-                }
-              >
-                <option value="">All Properties</option>
-                {properties.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+        {/* Clear */}
+        {activeFilterCount > 0 && (
+          <button
+            onClick={clearAll}
+            className="flex flex-shrink-0 items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-colors"
+          >
+            <FunnelIcon className="h-3 w-3" />
+            Clear
+            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+              {activeFilterCount}
+            </span>
+          </button>
+        )}
+      </div>
 
-            <div className="flex items-center pl-2">
-              <input
-                id="show-inactive"
-                type="checkbox"
-                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
-                checked={searchParams.get("inactive") === "true"}
-                onChange={(e) =>
-                  router.push(
-                    pathname +
-                      "?" +
-                      createQueryString(
-                        "inactive",
-                        e.target.checked ? "true" : "",
-                      ),
-                  )
-                }
-              />
-              <label
-                htmlFor="show-inactive"
-                className="ml-2 text-sm text-gray-600 cursor-pointer"
-              >
-                Show Inactives
-              </label>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ── Property (mobile) ───────────────────────────────────────── */}
+      <div className="sm:hidden border-b border-gray-100 px-4 py-2.5 bg-gray-50/50">
+        <select
+          value={currentProperty}
+          onChange={(e) => push({ property: e.target.value })}
+          className="block w-full rounded-lg border border-gray-200 bg-white py-2 pl-3 pr-8 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
+        >
+          <option value="">All Properties</option>
+          {properties.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* ── Status pills ─────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-1.5 px-4 py-2.5 bg-gray-50/50">
+        <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide pr-1">
+          Status
+        </span>
+        {STATUS_TABS.map((tab) => {
+          const active = currentStatus === tab.value || (tab.value === "all" && currentStatus === "all");
+          const count  = countFor(tab.value);
+          return (
+            <button
+              key={tab.value}
+              onClick={() => push({ status: tab.value === "all" ? "" : tab.value })}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                active
+                  ? STATUS_ACTIVE_CLASSES[tab.value]
+                  : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:text-gray-800"
+              }`}
+            >
+              {tab.label}
+              {count !== null && count > 0 && (
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${
+                  active ? "bg-white/20" : "bg-gray-100 text-gray-500"
+                }`}>
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

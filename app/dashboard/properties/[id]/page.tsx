@@ -4,14 +4,15 @@ import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import {
   HomeIcon,
-  WrenchScrewdriverIcon,
-  CheckCircleIcon,
   PhotoIcon,
   BuildingOffice2Icon,
   ArchiveBoxIcon,
+  CheckCircleIcon,
+  WrenchScrewdriverIcon,
 } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
 import PropertyDangerZone from "@/components/dashboard/PropertyDangerZone";
+import { getUnitDisplayStatus, UNIT_STATUS_CONFIG } from "@/lib/unit-status";
 
 const TYPE_BADGE: Record<string, string> = {
   RESIDENTIAL: "bg-blue-100 text-blue-700",
@@ -44,7 +45,15 @@ export default async function PropertyDetailsPage({
   const property = await prisma.property.findUnique({
     where:   { id },
     include: {
-      units:  { orderBy: { name: "asc" } },
+      units: {
+        orderBy: { name: "asc" },
+        include: {
+          reservations: {
+            where:  { status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN"] } },
+            select: { status: true },
+          },
+        },
+      },
       _count: { select: { units: true } },
     },
   });
@@ -168,8 +177,11 @@ export default async function PropertyDetailsPage({
                   </td>
                 </tr>
               ) : (
-                property.units.map((unit) => (
-                  <tr key={unit.id} className={unit.status === "MAINTENANCE" ? "bg-amber-50" : "hover:bg-blue-50"}>
+                property.units.map((unit) => {
+                  const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations);
+                  const cfg = UNIT_STATUS_CONFIG[displayStatus];
+                  return (
+                  <tr key={unit.id} className="hover:bg-blue-50/40 transition-colors">
                     <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
                       <div className="flex items-center gap-2">
                         <HomeIcon className="h-4 w-4 text-gray-400" />
@@ -190,15 +202,10 @@ export default async function PropertyDetailsPage({
                       <span className="text-xs font-normal text-gray-500">OMR</span>
                     </td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm">
-                      {unit.status === "AVAILABLE" ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
-                          <CheckCircleIcon className="h-3 w-3" /> Available
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                          <WrenchScrewdriverIcon className="h-3 w-3" /> Maintenance
-                        </span>
-                      )}
+                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.badge}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                        {cfg.label}
+                      </span>
                     </td>
                     <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                       <Link href={`/dashboard/units/${unit.id}/edit`} className="text-blue-600 hover:text-blue-900">
@@ -206,7 +213,8 @@ export default async function PropertyDetailsPage({
                       </Link>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

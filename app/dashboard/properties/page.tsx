@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getSelectedPropertyId } from "@/lib/selected-property";
 import PropertyFilters from "./PropertyFilters";
 import PropertiesView from "./PropertiesView";
 
@@ -47,9 +48,12 @@ export default async function PropertiesPage({
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
 
+  const selectedPropertyId = await getSelectedPropertyId();
+
   // Build WHERE
   const whereClause: Prisma.PropertyWhereInput = {
     organizationId: dbUser.organizationId,
+    ...(selectedPropertyId && { id: selectedPropertyId }),
     ...(q && {
       OR: [
         { name:        { contains: q, mode: "insensitive" } },

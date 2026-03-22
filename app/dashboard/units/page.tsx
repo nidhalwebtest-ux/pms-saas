@@ -8,6 +8,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
 import { getUnitDisplayStatus, UNIT_STATUS_CONFIG } from "@/lib/unit-status";
+import { getSelectedPropertyId } from "@/lib/selected-property";
 import UnitFilters from "./UnitFilters";
 
 // Active-reservation statuses used in every query
@@ -34,14 +35,19 @@ export default async function UnitsPage({
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
 
-  // Properties for filter dropdown
-  const properties = await prisma.property.findMany({
-    where:   { organizationId: dbUser.organizationId },
-    select:  { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
+  const [properties, selectedPropertyId] = await Promise.all([
+    prisma.property.findMany({
+      where:   { organizationId: dbUser.organizationId },
+      select:  { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    getSelectedPropertyId(),
+  ]);
 
   // ── WHERE ──────────────────────────────────────────────────────────────────
+  // Effective property filter: header selector takes priority, then URL filter
+  const effectivePropertyId = selectedPropertyId || propertyFilter;
+
   const statusWhere: Prisma.UnitWhereInput =
     statusFilter === "vacant"
       ? { status: "AVAILABLE", reservations: { none:  { status: { in: [...ACTIVE_STATUSES] } } } }
@@ -55,8 +61,8 @@ export default async function UnitsPage({
 
   const whereClause: Prisma.UnitWhereInput = {
     property: { organizationId: dbUser.organizationId },
-    ...(q              && { name:       { contains: q, mode: "insensitive" } }),
-    ...(propertyFilter && { propertyId: propertyFilter }),
+    ...(q                    && { name:       { contains: q, mode: "insensitive" } }),
+    ...(effectivePropertyId  && { propertyId: effectivePropertyId }),
     ...statusWhere,
   };
 
@@ -83,12 +89,16 @@ export default async function UnitsPage({
     orderBy: orderByClause,
   });
 
-  // Summary counts (scoped to org, all units regardless of filter)
+  // Summary counts — respect the selected property scope
+  const countBase: Prisma.UnitWhereInput = {
+    property: { organizationId: dbUser.organizationId },
+    ...(effectivePropertyId && { propertyId: effectivePropertyId }),
+  };
   const [vacantCount, occupiedCount, reservedCount, maintenanceCount] = await Promise.all([
-    prisma.unit.count({ where: { property: { organizationId: dbUser.organizationId }, status: "AVAILABLE", reservations: { none:  { status: { in: [...ACTIVE_STATUSES] } } } } }),
-    prisma.unit.count({ where: { property: { organizationId: dbUser.organizationId }, reservations: { some: { status: "CHECKED_IN" } } } }),
-    prisma.unit.count({ where: { property: { organizationId: dbUser.organizationId }, status: "AVAILABLE", reservations: { some: { status: { in: ["PENDING","CONFIRMED"] } } } } }),
-    prisma.unit.count({ where: { property: { organizationId: dbUser.organizationId }, status: "MAINTENANCE" } }),
+    prisma.unit.count({ where: { ...countBase, status: "AVAILABLE", reservations: { none:  { status: { in: [...ACTIVE_STATUSES] } } } } }),
+    prisma.unit.count({ where: { ...countBase, reservations: { some: { status: "CHECKED_IN" } } } }),
+    prisma.unit.count({ where: { ...countBase, status: "AVAILABLE", reservations: { some: { status: { in: ["PENDING","CONFIRMED"] } } } } }),
+    prisma.unit.count({ where: { ...countBase, status: "MAINTENANCE" } }),
   ]);
 
   return (

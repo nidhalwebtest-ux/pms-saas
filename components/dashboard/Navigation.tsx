@@ -17,15 +17,26 @@ type DropdownItem = {
 };
 
 type NavItem = {
-  key:       string;
-  name:      string;
-  href:      string;
-  children?: DropdownItem[];
+  key:             string;
+  name:            string;
+  href:            string;
+  /** Extra path prefixes that make this tab active (e.g. child pages not under href). */
+  activePatterns?: string[];
+  children?:       DropdownItem[];
 };
 
 const navigationConfig: NavItem[] = [
   { key: "dashboard",    name: "Dashboard",    href: "/dashboard" },
-  { key: "properties",   name: "Properties",   href: "/dashboard/properties" },
+  {
+    key:             "properties",
+    name:            "Properties",
+    href:            "/dashboard/properties",
+    activePatterns:  ["/dashboard/units"],
+    children: [
+      { name: "Buildings",     href: "/dashboard/properties" },
+      { name: "Units & Rooms", href: "/dashboard/units"      },
+    ],
+  },
   { key: "tenants",      name: "Tenants",      href: "/dashboard/tenants" },
   { key: "reservations", name: "Reservations", href: "/dashboard/reservations" },
   { key: "payments",     name: "Payments",     href: "/dashboard/payments" },
@@ -112,7 +123,10 @@ export default function Navigation({ role }: { role: Role }) {
           {visible.map((item) => {
             const isActive =
               pathname === item.href ||
-              (item.children && pathname.startsWith(item.href + "/"));
+              (item.href !== "/dashboard" && pathname.startsWith(item.href + "/")) ||
+              item.activePatterns?.some(
+                (p) => pathname === p || pathname.startsWith(p + "/"),
+              );
 
             const baseTabCls = cn(
               "inline-flex items-center gap-1 border-b-2 px-3 py-4 text-sm font-medium whitespace-nowrap transition-colors",

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { Prisma } from "@prisma/client";
-import { HomeModernIcon, PlusIcon } from "@heroicons/react/24/outline";
+import { HomeModernIcon, PlusIcon, Squares2X2Icon } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
 import { getUnitDisplayStatus, type UnitDisplayStatus } from "@/lib/unit-status";
 import { getSelectedPropertyId } from "@/lib/selected-property";
@@ -170,13 +170,22 @@ export default async function UnitsPage({
             </p>
           </div>
         </div>
-        <Link
-          href="/dashboard/units/new"
-          className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
-        >
-          <PlusIcon className="h-4 w-4" />
-          New Unit
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/units/bulk"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+          >
+            <Squares2X2Icon className="h-4 w-4" />
+            Bulk Add
+          </Link>
+          <Link
+            href="/dashboard/units/new"
+            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
+          >
+            <PlusIcon className="h-4 w-4" />
+            New Unit
+          </Link>
+        </div>
       </div>
 
       {/* ── Filters ────────────────────────────────────────────────── */}

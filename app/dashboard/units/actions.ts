@@ -190,3 +190,88 @@ export async function updateUnit(formData: FormData): Promise<ActionResponse> {
     return { error: "Failed to update unit." };
   }
 }
+
+// ─── BULK CREATE ─────────────────────────────────────────────────────────────
+
+interface BulkCreateInput {
+  propertyId:         string;
+  unitNames:          string[];
+  unitType:           string;
+  floor:              number;
+  bedrooms:           number;
+  bathrooms:          number;
+  area:               number | null;
+  basePrice:          number;
+  amenities:          string[];
+  createDefaultPrice: boolean;
+  dailyRate:          number | null;
+  weeklyRate:         number | null;
+  monthlyRate:        number | null;
+}
+
+export async function bulkCreateUnits(
+  input: BulkCreateInput,
+): Promise<{ created: number; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { created: 0, error: "Unauthorized" };
+
+  const dbUser = await prisma.user.findUnique({
+    where:  { id: user.id },
+    select: { organizationId: true },
+  });
+
+  const property = await prisma.property.findUnique({
+    where:  { id: input.propertyId },
+    select: { organizationId: true },
+  });
+
+  if (!property || property.organizationId !== dbUser?.organizationId)
+    return { created: 0, error: "Unauthorized" };
+
+  const names = input.unitNames.filter((n) => n.trim());
+  if (names.length === 0) return { created: 0, error: "No unit names provided." };
+  if (names.length > 200) return { created: 0, error: "Maximum 200 units per batch." };
+
+  // Use a transaction: create units, then optionally create default prices
+  const result = await prisma.$transaction(async (tx) => {
+    const created = await Promise.all(
+      names.map((name) =>
+        tx.unit.create({
+          data: {
+            name:        name.trim(),
+            unitType:    input.unitType,
+            floor:       input.floor,
+            bedrooms:    input.bedrooms,
+            bathrooms:   input.bathrooms,
+            area:        input.area,
+            basePrice:   input.basePrice,
+            amenities:   input.amenities,
+            propertyId:  input.propertyId,
+            status:      "AVAILABLE",
+          },
+          select: { id: true },
+        }),
+      ),
+    );
+
+    if (input.createDefaultPrice && input.dailyRate && input.monthlyRate) {
+      await tx.unitPrice.createMany({
+        data: created.map((u) => ({
+          unitId:      u.id,
+          priceType:   "DEFAULT",
+          dailyRate:   input.dailyRate!,
+          weeklyRate:  input.weeklyRate,
+          monthlyRate: input.monthlyRate!,
+          isActive:    true,
+        })),
+      });
+    }
+
+    return created.length;
+  });
+
+  revalidatePath("/dashboard/units");
+  revalidatePath(`/dashboard/properties/${input.propertyId}`);
+  return { created: result };
+}

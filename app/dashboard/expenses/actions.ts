@@ -120,14 +120,13 @@ export async function updateExpense(
 }
 
 // --- DELETE ---
-export async function deleteExpense(formData: FormData): Promise<{ error?: string; success?: boolean }> {
+export async function deleteExpense(formData: FormData): Promise<void> {
   let orgUser;
-  try { orgUser = await requireOrgUser(); } catch (e: any) { return e; }
+  try { orgUser = await requireOrgUser(); } catch { return; }
 
   const id = formData.get("id") as string;
-  try { await assertExpenseOwnership(id, orgUser.organizationId); } catch (e: any) { return e; }
+  try { await assertExpenseOwnership(id, orgUser.organizationId); } catch { return; }
 
   await prisma.expense.delete({ where: { id } });
   revalidatePath("/dashboard/expenses");
-  return { success: true };
 }

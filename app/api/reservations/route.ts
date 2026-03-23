@@ -4,13 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import {
   calculateNights,
-  calculateMonths,
-  buildMonthlyBreakdown,
+  countCalendarMonths,
+  buildCalendarMonthBreakdown,
   collapseToSegments,
   calculateGrandTotal,
   roundOMR,
   sumSubtotals,
-  datesOverlap,
 } from "@/lib/reservation-engine";
 import { getUnitPriceForRange } from "@/lib/pricing";
 
@@ -89,6 +88,8 @@ export async function POST(req: NextRequest) {
     source,
     notes,
     discountAmount: discountRaw = 0,
+    // Custom rate overrides: [{unitId, rateAmount}]
+    unitOverrides = [] as { unitId: string; rateAmount: number }[],
   } = body;
 
   // ── Basic validation ──────────────────────────────────────────────────────
@@ -136,53 +137,81 @@ export async function POST(req: NextRequest) {
 
   // Compute pricing per unit (outside transaction — read-only, safe to do first)
   type UnitPricing = {
-    unitId:       string;
-    rateType:     string;
-    rateAmount:   number;
-    rateSource:   string;
+    unitId:            string;
+    rateType:          string;
+    rateAmount:        number;
+    rateSource:        string;
     seasonalPriceName: string | null;
-    nights:       number;
-    subtotal:     number;
+    nights:            number;
+    subtotal:          number;
   };
 
+  const totalNightsVal = calculateNights(startDate, endDate);
+  const calMonths      = countCalendarMonths(startDate, endDate);
   const unitPricings: UnitPricing[] = [];
 
   for (const unitId of unitIds) {
-    const nights = calculateNights(startDate, endDate);
+    // Check for manual override from the booking UI
+    const override = (unitOverrides as { unitId: string; rateAmount: number }[])
+      .find((o) => o.unitId === unitId);
+
     if (rt === "daily") {
-      const priceResult = await getUnitPriceForRange(unitId, startDate, endDate);
-      const segments    = collapseToSegments(priceResult.dailyBreakdown);
-      const subtotal    = sumSubtotals(segments.map((s) => s.subtotal));
-      const firstSeg    = segments[0];
-      unitPricings.push({
-        unitId,
-        rateType:          "daily",
-        rateAmount:        firstSeg?.ratePerNight ?? 0,
-        rateSource:        firstSeg?.priceType === "SEASONAL" ? "seasonal_price" : "default_price",
-        seasonalPriceName: firstSeg?.priceName ?? null,
-        nights,
-        subtotal,
-      });
+      if (override && override.rateAmount > 0) {
+        // Custom daily rate
+        unitPricings.push({
+          unitId,
+          rateType:          "daily",
+          rateAmount:        override.rateAmount,
+          rateSource:        "manual_override",
+          seasonalPriceName: null,
+          nights:            totalNightsVal,
+          subtotal:          roundOMR(override.rateAmount * totalNightsVal),
+        });
+      } else {
+        const priceResult = await getUnitPriceForRange(unitId, startDate, endDate);
+        const segments    = collapseToSegments(priceResult.dailyBreakdown);
+        const subtotal    = sumSubtotals(segments.map((s) => s.subtotal));
+        const firstSeg    = segments[0];
+        unitPricings.push({
+          unitId,
+          rateType:          "daily",
+          rateAmount:        firstSeg?.ratePerNight ?? 0,
+          rateSource:        firstSeg?.priceType === "SEASONAL" ? "seasonal_price" : "default_price",
+          seasonalPriceName: firstSeg?.priceName ?? null,
+          nights:            totalNightsVal,
+          subtotal,
+        });
+      }
     } else {
-      // Monthly
-      const prices = await prisma.unitPrice.findMany({ where: { unitId, isActive: true } });
-      const defaultPrice = prices.find((p) => p.priceType === "DEFAULT");
-      const monthlyRate  = defaultPrice ? Number(defaultPrice.monthlyRate) : 0;
-      const { fullMonths, remainingDays } = calculateMonths(startDate, endDate);
-      const segments = buildMonthlyBreakdown(
-        monthlyRate, defaultPrice?.name ?? null, "DEFAULT",
-        fullMonths, remainingDays, startDate,
-      );
-      const subtotal = sumSubtotals(segments.map((s) => s.subtotal));
-      unitPricings.push({
-        unitId,
-        rateType:          "monthly",
-        rateAmount:        monthlyRate,
-        rateSource:        "default_price",
-        seasonalPriceName: null,
-        nights,
-        subtotal,
-      });
+      // Monthly — calendar month standard
+      if (override && override.rateAmount > 0) {
+        // Custom monthly rate
+        unitPricings.push({
+          unitId,
+          rateType:          "monthly",
+          rateAmount:        override.rateAmount,
+          rateSource:        "manual_override",
+          seasonalPriceName: null,
+          nights:            totalNightsVal,
+          subtotal:          roundOMR(override.rateAmount * calMonths),
+        });
+      } else {
+        const prices       = await prisma.unitPrice.findMany({ where: { unitId, isActive: true } });
+        const defaultPrice = prices.find((p) => p.priceType === "DEFAULT");
+        const monthlyRate  = defaultPrice ? Number(defaultPrice.monthlyRate) : 0;
+        const segments     = buildCalendarMonthBreakdown(
+          startDate, calMonths, monthlyRate, defaultPrice?.name ?? null, "DEFAULT",
+        );
+        unitPricings.push({
+          unitId,
+          rateType:          "monthly",
+          rateAmount:        monthlyRate,
+          rateSource:        "default_price",
+          seasonalPriceName: null,
+          nights:            totalNightsVal,
+          subtotal:          sumSubtotals(segments.map((s) => s.subtotal)),
+        });
+      }
     }
   }
 
@@ -192,7 +221,7 @@ export async function POST(req: NextRequest) {
     discount,
   );
 
-  const totalNights = calculateNights(startDate, endDate);
+  const totalNights = totalNightsVal;
 
   // ── Serializable transaction (double-booking prevention) ──────────────────
 

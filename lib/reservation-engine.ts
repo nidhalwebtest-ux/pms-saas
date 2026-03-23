@@ -154,18 +154,12 @@ export function collapseToSegments(dailyBreakdown: DayBreakdown[]): PriceSegment
   return segments;
 }
 
-// ── Monthly billing breakdown ─────────────────────────────────────────────────
+// ── Monthly billing breakdown (30-day standard) ───────────────────────────────
 
 /**
- * Build a monthly billing breakdown for a range.
- * Full months are billed at monthlyRate; remaining days at monthlyRate / 30.
- *
- * @param monthlyRate    - the applicable monthly rate (OMR)
- * @param priceName      - price label (null for default)
- * @param priceType      - "DEFAULT" | "SEASONAL"
- * @param fullMonths     - from calculateMonths()
- * @param remainingDays  - from calculateMonths()
- * @param checkIn        - to derive month labels
+ * Build a monthly billing breakdown using the 30-day standard month.
+ * Full months billed at monthlyRate; remaining days at monthlyRate / 30.
+ * Used for legacy/daily-conversion calculations.
  */
 export function buildMonthlyBreakdown(
   monthlyRate:   number,
@@ -178,7 +172,6 @@ export function buildMonthlyBreakdown(
   const result: MonthBreakdown[] = [];
   const dailyEquiv = roundOMR(monthlyRate / 30);
 
-  // Full months
   for (let m = 0; m < fullMonths; m++) {
     const d = new Date(checkIn);
     d.setMonth(d.getMonth() + m);
@@ -195,7 +188,6 @@ export function buildMonthlyBreakdown(
     });
   }
 
-  // Remaining days
   if (remainingDays > 0) {
     const d = new Date(checkIn);
     d.setMonth(d.getMonth() + fullMonths);
@@ -213,6 +205,94 @@ export function buildMonthlyBreakdown(
   }
 
   return result;
+}
+
+// ── Calendar Month breakdown (industry standard) ──────────────────────────────
+
+export interface CalendarMonthSegment {
+  /** e.g. "March 2026" */
+  label:       string;
+  /** Start of this period (ISO date string "YYYY-MM-DD") */
+  periodStart: string;
+  /** End of this period exclusive (ISO date string "YYYY-MM-DD") */
+  periodEnd:   string;
+  /** Actual nights in this calendar month */
+  nights:      number;
+  monthlyRate: number;
+  subtotal:    number;
+  priceName:   string | null;
+  priceType:   "DEFAULT" | "SEASONAL";
+}
+
+/**
+ * Build a billing breakdown using the CALENDAR MONTH standard.
+ *
+ * Industry standard used by Marriott, IHG, Hilton Extended Stay,
+ * and major PMS systems (Opera, Mews, Apaleo):
+ *   - 1 month = from check-in date to the same date next month
+ *   - Jan 31 → Feb 28 = 1 month (date handles end-of-month)
+ *   - The monthly RATE is flat regardless of actual days in the month
+ *
+ * @param checkIn        - arrival date
+ * @param numberOfMonths - integer number of complete calendar months
+ * @param monthlyRate    - flat monthly rate in OMR
+ * @param priceName      - price tier label (null for default)
+ * @param priceType      - "DEFAULT" | "SEASONAL"
+ */
+export function buildCalendarMonthBreakdown(
+  checkIn:        Date,
+  numberOfMonths: number,
+  monthlyRate:    number,
+  priceName:      string | null,
+  priceType:      "DEFAULT" | "SEASONAL",
+): CalendarMonthSegment[] {
+  const result: CalendarMonthSegment[] = [];
+
+  for (let m = 0; m < numberOfMonths; m++) {
+    const periodStartDate = addCalendarMonths(checkIn, m);
+    const periodEndDate   = addCalendarMonths(checkIn, m + 1);
+    const nights          = calculateNights(periodStartDate, periodEndDate);
+
+    const label = periodStartDate.toLocaleString("en-US", { month: "long", year: "numeric" });
+
+    result.push({
+      label,
+      periodStart: toDateString(periodStartDate),
+      periodEnd:   toDateString(periodEndDate),
+      nights,
+      monthlyRate,
+      subtotal:    roundOMR(monthlyRate),
+      priceName,
+      priceType,
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Add N calendar months to a date.
+ * Handles end-of-month: Jan 31 + 1 month = Feb 28 (not Feb 31).
+ * Pure implementation — no date-fns dependency so this file stays import-free.
+ */
+export function addCalendarMonths(date: Date, months: number): Date {
+  const result = new Date(date);
+  const day    = result.getDate();
+  result.setMonth(result.getMonth() + months, 1); // go to 1st to avoid overshoot
+  const daysInTargetMonth = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
+  result.setDate(Math.min(day, daysInTargetMonth));
+  return result;
+}
+
+/**
+ * Count complete calendar months between two dates.
+ * e.g. Jan 15 → Apr 15 = 3, Jan 15 → Apr 10 = 2
+ */
+export function countCalendarMonths(from: Date, to: Date): number {
+  const years  = to.getFullYear()  - from.getFullYear();
+  const months = to.getMonth()     - from.getMonth();
+  const days   = to.getDate()      - from.getDate();
+  return Math.max(0, years * 12 + months + (days < 0 ? -1 : 0));
 }
 
 // ── Subtotal aggregation ──────────────────────────────────────────────────────

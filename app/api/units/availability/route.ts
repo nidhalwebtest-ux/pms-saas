@@ -9,8 +9,8 @@ import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import {
   calculateNights,
-  calculateMonths,
-  buildMonthlyBreakdown,
+  countCalendarMonths,
+  buildCalendarMonthBreakdown,
   collapseToSegments,
   sumSubtotals,
 } from "@/lib/reservation-engine";
@@ -118,10 +118,9 @@ export async function GET(req: NextRequest) {
         } else {
           const defaultPrice = unit.prices.find((p) => p.priceType === "DEFAULT");
           const monthlyRate  = defaultPrice ? Number(defaultPrice.monthlyRate) : 0;
-          const { fullMonths, remainingDays } = calculateMonths(startDate, endDate);
-          const segments = buildMonthlyBreakdown(
-            monthlyRate, defaultPrice?.name ?? null, "DEFAULT",
-            fullMonths, remainingDays, startDate,
+            const calMonths = countCalendarMonths(startDate, endDate);
+          const segments  = buildCalendarMonthBreakdown(
+            startDate, calMonths, monthlyRate, defaultPrice?.name ?? null, "DEFAULT",
           );
           subtotal   = sumSubtotals(segments.map((s) => s.subtotal));
           rateAmount = monthlyRate;

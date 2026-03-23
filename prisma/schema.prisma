@@ -26,6 +26,7 @@ enum PropertyType {
 
 enum UnitStatus {
   AVAILABLE
+  OCCUPIED
   MAINTENANCE
 }
 

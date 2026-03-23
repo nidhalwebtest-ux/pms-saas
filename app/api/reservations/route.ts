@@ -3,6 +3,10 @@ import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import {
+  getDisplayStatus,
+  type StoredStatus,
+} from "@/lib/reservation-status";
+import {
   calculateNights,
   countCalendarMonths,
   buildCalendarMonthBreakdown,
@@ -70,6 +74,123 @@ async function isUnitAvailable(
     select: { id: true },
   });
   return !conflictNew;
+}
+
+// ── GET /api/reservations ─────────────────────────────────────────────────────
+
+export async function GET(req: NextRequest) {
+  const actor = await getActor();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const sp         = new URL(req.url).searchParams;
+  const search     = sp.get("search")     ?? "";
+  const propertyId = sp.get("propertyId") ?? "";
+  const dateFrom   = sp.get("dateFrom")   ?? "";
+  const dateTo     = sp.get("dateTo")     ?? "";
+  const rateType   = sp.get("rateType")   ?? "";
+  const source     = sp.get("source")     ?? "";
+
+  const where: Prisma.ReservationWhereInput = {
+    tenant: { organizationId: actor.organizationId! },
+    ...(search ? {
+      OR: [
+        { reservationNumber: { contains: search, mode: "insensitive" } },
+        { tenant: { firstName:  { contains: search, mode: "insensitive" } } },
+        { tenant: { lastName:   { contains: search, mode: "insensitive" } } },
+        { tenant: { phone:      { contains: search } } },
+        { unit:   { name:       { contains: search, mode: "insensitive" } } },
+        { reservationUnits: { some: { unit: { name: { contains: search, mode: "insensitive" } } } } },
+      ],
+    } : {}),
+    ...(propertyId ? {
+      OR: [
+        { unit: { propertyId } },
+        { reservationUnits: { some: { unit: { propertyId } } } },
+      ],
+    } : {}),
+    ...(dateFrom ? { startDate: { gte: new Date(dateFrom) } } : {}),
+    ...(dateTo   ? { startDate: { lte: new Date(dateTo)   } } : {}),
+    ...(rateType ? { rateType } : {}),
+    ...(source   ? { source }   : {}),
+  };
+
+  const raws = await prisma.reservation.findMany({
+    where,
+    include: {
+      tenant: {
+        select: {
+          id: true, firstName: true, lastName: true,
+          phone: true, nationality: true, classification: true,
+        },
+      },
+      unit: {
+        include: { property: { select: { id: true, name: true } } },
+      },
+      reservationUnits: {
+        include: {
+          unit: {
+            select: {
+              id: true, name: true, floor: true,
+              property: { select: { id: true, name: true } },
+            },
+          },
+        },
+      },
+    },
+    orderBy: { startDate: "desc" },
+    take: 500,
+  });
+
+  const today = new Date();
+  const reservations = raws.map((r) => {
+    const dsInfo = getDisplayStatus(r.status as StoredStatus, r.startDate, r.endDate, today);
+
+    // Merge legacy unit + multi-unit, dedup by id
+    const seen  = new Set<string>();
+    const units: { id: string; name: string; floor: number; propertyId: string; propertyName: string }[] = [];
+    if (r.unit) {
+      seen.add(r.unit.id);
+      units.push({ id: r.unit.id, name: r.unit.name, floor: r.unit.floor, propertyId: r.unit.property.id, propertyName: r.unit.property.name });
+    }
+    for (const ru of r.reservationUnits) {
+      if (!seen.has(ru.unit.id)) {
+        seen.add(ru.unit.id);
+        units.push({ id: ru.unit.id, name: ru.unit.name, floor: ru.unit.floor, propertyId: ru.unit.property.id, propertyName: ru.unit.property.name });
+      }
+    }
+
+    const grandTotal = Number(r.grandTotal ?? r.totalPrice ?? 0);
+    const amountPaid = Number(r.amountPaid ?? 0);
+
+    return {
+      id:                      r.id,
+      reservationNumber:       r.reservationNumber,
+      status:                  r.status,
+      displayStatus:           dsInfo.label,
+      displayStatusBadgeClass: dsInfo.badgeClass,
+      displayStatusRowClass:   dsInfo.rowClass,
+      displayStatusPriority:   dsInfo.priority,
+      displayStatusUrgent:     dsInfo.urgent,
+      displayStatusPulse:      dsInfo.pulse,
+      startDate:               r.startDate.toISOString(),
+      endDate:                 r.endDate.toISOString(),
+      actualCheckIn:           r.actualCheckIn?.toISOString()  ?? null,
+      actualCheckOut:          r.actualCheckOut?.toISOString() ?? null,
+      totalNights:             r.totalNights,
+      rateType:                r.rateType,
+      grandTotal:              grandTotal.toFixed(3),
+      amountPaid:              amountPaid.toFixed(3),
+      balanceDue:              Math.max(0, grandTotal - amountPaid),
+      source:                  r.source,
+      notes:                   r.notes,
+      cancelledReason:         r.cancelledReason,
+      tenant:                  r.tenant,
+      units,
+      createdAt:               r.createdAt.toISOString(),
+    };
+  });
+
+  return NextResponse.json({ reservations });
 }
 
 // ── POST /api/reservations ────────────────────────────────────────────────────

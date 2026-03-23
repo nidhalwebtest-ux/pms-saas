@@ -35,6 +35,7 @@ enum ReservationStatus {
   CHECKED_IN
   COMPLETED
   CANCELLED
+  NO_SHOW
 }
 
 // 3. The New Powerhouse: Organization
@@ -73,16 +74,17 @@ model User {
   lastName       String?
   phone          String?
   role           UserRole     @default(OWNER)
-  
+
   // Link to Organization
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
-  
+
   // Access Control: Which properties can this user see?
-  assignedProperties PropertyAssignment[]
-  sentInvitations    Invitation[] @relation("SentInvitations")
-  unitNotes          UnitNote[]
-  createdTenants     Tenant[]     @relation("TenantCreatedBy")
+  assignedProperties  PropertyAssignment[]
+  sentInvitations     Invitation[]   @relation("SentInvitations")
+  unitNotes           UnitNote[]
+  createdTenants      Tenant[]       @relation("TenantCreatedBy")
+  createdReservations Reservation[]  @relation("ReservationCreatedBy")
 
   createdAt      DateTime     @default(now())
 }
@@ -154,9 +156,10 @@ model Unit {
   propertyId  String
   property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
-  reservations Reservation[]
-  prices       UnitPrice[]
-  notes        UnitNote[]
+  reservations     Reservation[]       // legacy: direct FK via Reservation.unitId
+  reservationUnits ReservationUnit[]   @relation("ReservationUnitToUnit")
+  prices           UnitPrice[]
+  notes            UnitNote[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -283,27 +286,74 @@ enum PaymentFrequency {
 
 
 model Reservation {
-  id          String   @id @default(uuid())
-  
-  startDate   DateTime
-  endDate     DateTime
-  status      ReservationStatus @default(PENDING)
-  frequency   PaymentFrequency @default(MONTHLY)
-  amount      Decimal          @db.Decimal(10, 2)
-  totalPrice Float   @default(0)
-  
-  // Relations
-  unitId      String
-  unit        Unit     @relation(fields: [unitId], references: [id])
-  
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  id                String   @id @default(uuid())
+  reservationNumber String?  @unique  // e.g. "RES-2026-00042"
 
-  payments    Payment[]
-  invoices    Invoice[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  startDate         DateTime
+  endDate           DateTime
+  actualCheckIn     DateTime?
+  actualCheckOut    DateTime?
+
+  status            ReservationStatus @default(PENDING)
+  frequency         PaymentFrequency  @default(MONTHLY) // keep for compat
+
+  // ── Financial ──────────────────────────────────────────────────────────────
+  totalNights       Int      @default(0)
+  amount            Decimal  @db.Decimal(10, 3)          // kept for compat (= totalAmount)
+  totalAmount       Decimal  @default(0) @db.Decimal(10, 3)
+  discountAmount    Decimal  @default(0) @db.Decimal(10, 3)
+  taxAmount         Decimal  @default(0) @db.Decimal(10, 3)
+  grandTotal        Decimal  @default(0) @db.Decimal(10, 3)
+  amountPaid        Decimal  @default(0) @db.Decimal(10, 3)
+  totalPrice        Float    @default(0)                  // kept for compat
+
+  // ── Rate & meta ────────────────────────────────────────────────────────────
+  rateType          String   @default("daily")  // "daily" | "monthly"
+  source            String   @default("walk_in")
+  notes             String?
+  cancelledReason   String?
+  cancelledAt       DateTime?
+
+  // ── Relations ──────────────────────────────────────────────────────────────
+  // Legacy single-unit FK (nullable — new reservations use reservationUnits)
+  unitId            String?
+  unit              Unit?    @relation(fields: [unitId], references: [id])
+
+  tenantId          String
+  tenant            Tenant   @relation(fields: [tenantId], references: [id])
+
+  reservationUnits  ReservationUnit[]
+
+  payments          Payment[]
+  invoices          Invoice[]
+
+  createdById       String?
+  createdBy         User?    @relation("ReservationCreatedBy", fields: [createdById], references: [id])
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+// ── Multi-unit junction table ─────────────────────────────────────────────────
+
+model ReservationUnit {
+  id                  String   @id @default(uuid())
+
+  reservationId       String
+  reservation         Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  unitId              String
+  unit                Unit        @relation("ReservationUnitToUnit", fields: [unitId], references: [id])
+
+  rateType            String   @default("daily")  // "daily" | "monthly"
+  rateAmount          Decimal  @db.Decimal(10, 3)
+  rateSource          String   @default("default_price") // default_price|seasonal_price|manual_override
+  seasonalPriceName   String?
+
+  nights              Int      @default(0)
+  subtotal            Decimal  @db.Decimal(10, 3)
+
+  createdAt           DateTime @default(now())
 }
 enum InvoiceStatus {
   PENDING   // Future date

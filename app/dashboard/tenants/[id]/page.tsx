@@ -380,8 +380,8 @@ export default async function TenantProfilePage({
                       <div className="flex items-center justify-between gap-3">
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-blue-600 truncate">
-                            {res.unit.name}
-                            <span className="ml-1 text-gray-500 font-normal">in {res.unit.property.name}</span>
+                            {res.unit?.name ?? "Multiple Units"}
+                            <span className="ml-1 text-gray-500 font-normal">in {res.unit?.property.name ?? "—"}</span>
                           </p>
                           <div className="flex items-center gap-1.5 mt-0.5 text-xs text-gray-500">
                             <CalendarDaysIcon className="h-3.5 w-3.5" />

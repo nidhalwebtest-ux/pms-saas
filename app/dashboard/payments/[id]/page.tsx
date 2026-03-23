@@ -166,10 +166,10 @@ export default async function PaymentDetailsPage({
                 <div className="bg-gray-50 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between border border-gray-100">
                   <div>
                     <p className="font-semibold text-gray-900">
-                      {payment.reservation.unit.property.name}
+                      {payment.reservation.unit?.property.name ?? "Multiple Units"}
                     </p>
                     <p className="text-sm text-gray-500">
-                      Unit: {payment.reservation.unit.name}
+                      Unit: {payment.reservation.unit?.name ?? "—"}
                     </p>
                   </div>
                   <div className="mt-4 sm:mt-0 text-right">

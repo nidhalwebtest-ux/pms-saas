@@ -68,7 +68,8 @@ export async function assertUnitOwnership(
 }
 
 /**
- * Asserts that a reservation belongs to the given org (via unit → property).
+ * Asserts that a reservation belongs to the given org (via tenant.organizationId).
+ * NOTE: We use tenant instead of unit because unitId is nullable on multi-unit reservations.
  */
 export async function assertReservationOwnership(
   reservationId: string,
@@ -76,9 +77,9 @@ export async function assertReservationOwnership(
 ): Promise<void> {
   const reservation = await prisma.reservation.findUnique({
     where: { id: reservationId },
-    include: { unit: { include: { property: { select: { organizationId: true } } } } },
+    include: { tenant: { select: { organizationId: true } } },
   });
-  if (!reservation || reservation.unit.property.organizationId !== organizationId) {
+  if (!reservation || reservation.tenant.organizationId !== organizationId) {
     throw { error: "Unauthorized access to this reservation" };
   }
 }

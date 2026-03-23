@@ -1,96 +1,61 @@
 import { createClient } from "@/utils/supabase/server";
-import { PrismaClient } from "@prisma/client";
 import { redirect } from "next/navigation";
-import { PageHeader } from "@/components/ui/FormComponents";
-import ReservationForm from "@/components/dashboard/ReservationForm";
-
 import { prisma } from "@/lib/prisma";
+import { PageHeader } from "@/components/ui/FormComponents";
+import BookingEngine from "@/components/dashboard/BookingEngine";
+import Link from "next/link";
 
 export default async function NewReservationPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
+    where:  { id: user.id },
     select: { organizationId: true },
   });
+  if (!dbUser?.organizationId) redirect("/onboarding");
 
-  // 1. Fetch Tenants
-  const tenants = await prisma.tenant.findMany({
-    where: { organizationId: dbUser?.organizationId! },
-    select: { id: true, firstName: true, lastName: true },
-    orderBy: { firstName: "asc" },
-  });
-
-  // 2. Fetch Properties AND their Units
   const properties = await prisma.property.findMany({
-    where: { organizationId: dbUser?.organizationId! },
-    select: {
-      id: true,
-      name: true,
-      units: {
-        select: {
-          id: true,
-          name: true,
-          basePrice: true,
-          // FETCH RESERVATIONS FOR AVAILABILITY CHECK
-          reservations: {
-            select: { startDate: true, endDate: true, status: true },
-            where: { status: { not: "CANCELLED" } }, // Don't block cancelled dates
-          },
-        },
-      },
-    },
+    where:   { organizationId: dbUser.organizationId, isArchived: false, isActive: true },
+    select:  { id: true, name: true },
+    orderBy: { name: "asc" },
   });
 
-  // Edge case: No data yet
-  if (properties.length === 0 || tenants.length === 0) {
+  // Need at least one property + one tenant
+  const tenantCount = await prisma.tenant.count({
+    where: { organizationId: dbUser.organizationId },
+  });
+
+  if (properties.length === 0 || tenantCount === 0) {
     return (
-      <div className="max-w-2xl mx-auto py-8 text-center">
+      <div className="max-w-2xl mx-auto py-16 text-center space-y-4 px-4">
+        <div className="text-4xl">🏗️</div>
         <h3 className="text-lg font-bold text-gray-900">Setup Required</h3>
-        <p className="text-gray-500 mb-6">
-          You need at least one Property, one Unit, and one Tenant before
+        <p className="text-gray-500">
+          You need at least one <strong>active property</strong> and one <strong>tenant</strong> before
           creating a reservation.
         </p>
-        <div className="flex justify-center gap-4">
-          <a
-            href="/dashboard/properties"
-            className="text-blue-600 hover:underline"
-          >
-            Add Property
-          </a>
-          <a
-            href="/dashboard/tenants"
-            className="text-blue-600 hover:underline"
-          >
-            Add Tenant
-          </a>
+        <div className="flex justify-center gap-4 pt-2">
+          <Link href="/dashboard/properties/new" className="text-sm text-blue-600 hover:underline font-medium">
+            + Add Property
+          </Link>
+          <Link href="/dashboard/tenants/new" className="text-sm text-blue-600 hover:underline font-medium">
+            + Add Tenant
+          </Link>
         </div>
       </div>
     );
   }
 
-  // Convert Decimal to Number for Client Component compatibility
-  const serializedProperties = properties.map((p) => ({
-    ...p,
-    units: p.units.map((u) => ({
-      ...u,
-      basePrice: Number(u.basePrice),
-      reservations: u.reservations, // pass reservations down
-    })),
-  }));
-
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <PageHeader
         title="New Reservation"
-        description="Create a lease or check-in a guest."
-        listHref="/dashboard/reservations" // <-- Top right button
+        description="Book a unit for a tenant or guest."
+        listHref="/dashboard/reservations"
       />
-      <ReservationForm properties={serializedProperties} tenants={tenants} />
+      <BookingEngine properties={properties} />
     </div>
   );
 }

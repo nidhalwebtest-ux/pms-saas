@@ -40,7 +40,7 @@ export default async function ReservationDetailsPage({
   const reservation = await prisma.reservation.findUnique({
     where: { id },
     include: {
-      tenant: true,
+      tenant: { include: { organization: { select: { id: true } } } },
       unit: { include: { property: true } },
       payments: { orderBy: { date: "desc" } },
       invoices: {
@@ -50,10 +50,10 @@ export default async function ReservationDetailsPage({
     },
   });
 
-  // 2. Security Check
+  // 2. Security Check — use tenant.organizationId (unit may be null for multi-unit bookings)
   if (
     !reservation ||
-    reservation.unit.property.organizationId !== dbUser?.organizationId
+    reservation.tenant.organizationId !== dbUser?.organizationId
   ) {
     return notFound();
   }
@@ -133,13 +133,13 @@ export default async function ReservationDetailsPage({
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900">
-                    {reservation.unit.property.name}
+                    {reservation.unit?.property.name ?? "Multiple Units"}
                   </p>
                   <p className="text-sm text-gray-500">
-                    {reservation.unit.name}
+                    {reservation.unit?.name ?? "—"}
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
-                    {reservation.unit.property.city}
+                    {reservation.unit?.property.city ?? ""}
                   </p>
                 </div>
               </div>

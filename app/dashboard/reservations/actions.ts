@@ -204,10 +204,10 @@ export async function updateReservationStatus(formData: FormData) {
   });
   const reservation = await prisma.reservation.findUnique({
     where: { id },
-    include: { unit: { include: { property: true } } },
+    include: { tenant: { select: { organizationId: true } } },
   });
 
-  if (reservation?.unit.property.organizationId !== dbUser?.organizationId) {
+  if (reservation?.tenant.organizationId !== dbUser?.organizationId) {
     return { error: "Unauthorized access to this reservation" };
   }
 

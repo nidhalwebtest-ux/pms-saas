@@ -190,10 +190,10 @@ export default async function ReservationsListPage({
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
                           <div className="font-medium text-gray-900">
-                            {res.unit.name}
+                            {res.unit?.name ?? "Multiple Units"}
                           </div>
                           <div className="text-xs text-gray-400">
-                            {res.unit.property.name}
+                            {res.unit?.property.name ?? "—"}
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">

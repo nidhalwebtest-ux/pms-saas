@@ -456,7 +456,7 @@ export default async function DashboardOverview() {
                           {res.tenant.firstName} {res.tenant.lastName}
                         </p>
                         <p className="truncate text-xs text-gray-500">
-                          {res.unit.property.name} — {res.unit.name}
+                          {res.unit?.property.name ?? "—"} — {res.unit?.name ?? "Multiple Units"}
                         </p>
                       </div>
                     </div>
@@ -519,7 +519,7 @@ export default async function DashboardOverview() {
                           {res.tenant.firstName} {res.tenant.lastName}
                         </p>
                         <p className="truncate text-xs text-gray-500">
-                          {res.unit.property.name} — {res.unit.name}
+                          {res.unit?.property.name ?? "—"} — {res.unit?.name ?? "Multiple Units"}
                         </p>
                       </div>
                     </div>
@@ -578,7 +578,7 @@ export default async function DashboardOverview() {
                           {res.tenant.firstName} {res.tenant.lastName}
                         </p>
                         <p className="truncate text-xs text-gray-500">
-                          {res.unit.property.name} · {res.unit.name} ·{" "}
+                          {res.unit?.property.name ?? "—"} · {res.unit?.name ?? "Multiple Units"} ·{" "}
                           {format(new Date(res.startDate), "MMM d")} →{" "}
                           {format(new Date(res.endDate), "MMM d, yyyy")}
                         </p>
@@ -643,8 +643,8 @@ export default async function DashboardOverview() {
                           {inv.reservation.tenant.lastName}
                         </p>
                         <p className="truncate text-xs text-gray-500">
-                          {inv.reservation.unit.property.name} ·{" "}
-                          {inv.reservation.unit.name}
+                          {inv.reservation.unit?.property.name ?? "—"} ·{" "}
+                          {inv.reservation.unit?.name ?? "Multiple Units"}
                         </p>
                         <p className="mt-0.5 text-xs text-red-500">
                           Due {format(new Date(inv.dueDate), "MMM d, yyyy")}

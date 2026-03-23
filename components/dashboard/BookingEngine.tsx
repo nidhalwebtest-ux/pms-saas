@@ -92,8 +92,12 @@ function fmtOMR(v: number) {
   return v.toLocaleString("en-OM", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 }
 
+/** Format a Date as "YYYY-MM-DD" using LOCAL date components (avoids UTC timezone shift). */
 function toDateInput(d: Date): string {
-  return d.toISOString().slice(0, 10);
+  const y  = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  const dy = String(d.getDate()).padStart(2, "0");
+  return `${y}-${mo}-${dy}`;
 }
 
 function parseLocalDate(s: string): Date {
@@ -138,7 +142,8 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
   const [unitsLoading,  setUnitsLoading]  = useState(false);
   const [selectedUnits, setSelectedUnits] = useState<string[]>([]); // unitIds
   const [unitTypeFilter, setUnitTypeFilter] = useState("ALL");
-  const [customRates,   setCustomRates]   = useState<Record<string, string>>({}); // unitId → rate string
+  const [customRates,   setCustomRates]   = useState<Record<string, string>>({}); // unitId → rate/night or rate/month
+  const [customTotals,  setCustomTotals]  = useState<Record<string, string>>({}); // unitId → total amount for period
 
   // ── Step 4: Details ───────────────────────────────────────────────────────
   const [discount,  setDiscount]  = useState("");
@@ -166,17 +171,30 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
   const selectedUnitObjects = useMemo(() => {
     return selectedUnits.map((id) => {
       const unit = units.find((u) => u.id === id)!;
-      const customStr = customRates[id] ?? "";
-      const customVal = parseFloat(customStr);
-      const hasCustom = customStr !== "" && !isNaN(customVal) && customVal > 0;
-      const subtotal  = hasCustom
-        ? rateType === "daily"
-          ? roundOMR(customVal * nights)
-          : roundOMR(customVal * calMonths)
-        : unit?.subtotal ?? 0;
-      return { unit, subtotal, customRate: hasCustom ? customVal : null };
-    }).filter((x) => x.unit != null);
-  }, [selectedUnits, units, customRates, rateType, nights, calMonths]);
+      if (!unit) return null;
+
+      const periodCount = rateType === "daily" ? nights : calMonths;
+
+      // Custom total takes priority over custom rate
+      const totalStr  = customTotals[id] ?? "";
+      const totalVal  = parseFloat(totalStr);
+      const hasTotal  = totalStr !== "" && !isNaN(totalVal) && totalVal > 0;
+
+      const rateStr   = customRates[id] ?? "";
+      const rateVal   = parseFloat(rateStr);
+      const hasRate   = rateStr !== "" && !isNaN(rateVal) && rateVal > 0;
+
+      if (hasTotal) {
+        // Total entered — derive rate per night/month
+        const derivedRate = periodCount > 0 ? roundOMR(totalVal / periodCount) : 0;
+        return { unit, subtotal: roundOMR(totalVal), customRate: derivedRate, isCustom: true };
+      }
+      if (hasRate) {
+        return { unit, subtotal: roundOMR(rateVal * periodCount), customRate: rateVal, isCustom: true };
+      }
+      return { unit, subtotal: unit.subtotal ?? 0, customRate: null, isCustom: false };
+    }).filter((x): x is NonNullable<typeof x> => x !== null);
+  }, [selectedUnits, units, customRates, customTotals, rateType, nights, calMonths]);
 
   const grandTotal = useMemo(() => {
     const disc = parseFloat(discount) || 0;
@@ -311,6 +329,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
     setUnitsLoading(true);
     setSelectedUnits([]);
     setCustomRates({});
+    setCustomTotals({});
     try {
       const url  = `/api/units/availability?propertyId=${propertyId}&startDate=${startDate}&endDate=${endDate}&rateType=${rateType}`;
       const res  = await fetch(url);
@@ -754,12 +773,22 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
               {filteredUnits.map((unit) => {
                 const isSelected = selectedUnits.includes(unit.id);
                 const canSelect  = unit.available;
-                const customStr  = customRates[unit.id] ?? "";
-                const customVal  = parseFloat(customStr);
-                const hasCustom  = customStr !== "" && !isNaN(customVal) && customVal > 0;
-                const displaySubtotal = hasCustom
-                  ? rateType === "daily" ? roundOMR(customVal * nights) : roundOMR(customVal * calMonths)
+                const rateStr  = customRates[unit.id] ?? "";
+                const rateVal  = parseFloat(rateStr);
+                const hasRate  = rateStr !== "" && !isNaN(rateVal) && rateVal > 0;
+                const totalStr = customTotals[unit.id] ?? "";
+                const totalVal = parseFloat(totalStr);
+                const hasTotal = totalStr !== "" && !isNaN(totalVal) && totalVal > 0;
+                const hasCustom = hasRate || hasTotal;
+                const periodCount = rateType === "daily" ? nights : calMonths;
+                const displaySubtotal = hasTotal
+                  ? roundOMR(totalVal)
+                  : hasRate
+                  ? roundOMR(rateVal * periodCount)
                   : unit.subtotal;
+                const displayRate = hasTotal && periodCount > 0
+                  ? roundOMR(totalVal / periodCount)
+                  : hasRate ? rateVal : unit.rateAmount;
 
                 return (
                   <div key={unit.id} className={`rounded-xl border-2 transition-all ${
@@ -802,7 +831,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                             )}
                             {hasCustom && (
                               <div className="text-[10px] text-purple-700 font-medium">
-                                ✏ {fmtOMR(customVal)} / {rateType === "daily" ? "night" : "month"} (custom)
+                                ✏ {fmtOMR(displayRate)} / {rateType === "daily" ? "night" : "month"} (custom)
                               </div>
                             )}
                           </div>
@@ -814,33 +843,76 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                       )}
                     </div>
 
-                    {/* Custom rate input — only when selected */}
+                    {/* Custom price inputs — shown when unit is selected */}
                     {isSelected && unit.available && (
-                      <div className="px-4 pb-4 pt-0 border-t border-blue-100">
-                        <label className="flex items-center gap-1 text-xs text-gray-500 mb-1 mt-2">
-                          <PencilSquareIcon className="h-3.5 w-3.5" />
-                          Custom {rateType === "daily" ? "nightly" : "monthly"} rate (OMR) — optional
-                        </label>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min={0}
-                            step="0.001"
-                            className="block flex-1 rounded-lg border-0 py-1.5 px-2.5 text-sm ring-1 ring-inset ring-purple-300 focus:ring-2 focus:ring-purple-500"
-                            placeholder={`Default: ${fmtOMR(unit.rateAmount)}`}
-                            value={customStr}
-                            onChange={(e) =>
-                              setCustomRates((prev) => ({ ...prev, [unit.id]: e.target.value }))
-                            }
-                          />
+                      <div className="px-4 pb-4 pt-2 border-t border-blue-100 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="flex items-center gap-1 text-xs font-medium text-purple-700">
+                            <PencilSquareIcon className="h-3.5 w-3.5" />
+                            Custom price (optional)
+                          </span>
                           {hasCustom && (
                             <button
-                              onClick={() => setCustomRates((prev) => { const n = { ...prev }; delete n[unit.id]; return n; })}
-                              className="text-gray-400 hover:text-red-500"
+                              onClick={() => {
+                                setCustomRates((p) => { const n = { ...p }; delete n[unit.id]; return n; });
+                                setCustomTotals((p) => { const n = { ...p }; delete n[unit.id]; return n; });
+                              }}
+                              className="text-[10px] text-gray-400 hover:text-red-500 flex items-center gap-0.5"
                             >
-                              <XMarkIcon className="h-4 w-4" />
+                              <XMarkIcon className="h-3 w-3" /> Reset
                             </button>
                           )}
+                        </div>
+
+                        {/* Rate per night/month */}
+                        <div>
+                          <label className="block text-[10px] text-gray-500 mb-0.5">
+                            Rate per {rateType === "daily" ? "night" : "month"} (OMR)
+                          </label>
+                          <input
+                            type="number" min={0} step="0.001"
+                            className={`block w-full rounded-lg border-0 py-1.5 px-2.5 text-sm ring-1 ring-inset focus:ring-2 focus:ring-purple-500 ${
+                              hasTotal ? "bg-gray-50 ring-gray-200 text-gray-400" : "ring-purple-300"
+                            }`}
+                            placeholder={hasTotal
+                              ? `≈ ${fmtOMR(displayRate)} (from total)`
+                              : `Default: ${fmtOMR(unit.rateAmount)}`}
+                            value={hasTotal ? "" : rateStr}
+                            disabled={hasTotal}
+                            onChange={(e) => {
+                              setCustomRates((p) => ({ ...p, [unit.id]: e.target.value }));
+                              setCustomTotals((p) => { const n = { ...p }; delete n[unit.id]; return n; });
+                            }}
+                          />
+                        </div>
+
+                        {/* OR divider */}
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 border-t border-gray-200" />
+                          <span className="text-[10px] font-medium text-gray-400">OR</span>
+                          <div className="flex-1 border-t border-gray-200" />
+                        </div>
+
+                        {/* Total amount for the full period */}
+                        <div>
+                          <label className="block text-[10px] text-gray-500 mb-0.5">
+                            Total for full period ({periodCount} {rateType === "daily" ? "nights" : "months"}) (OMR)
+                          </label>
+                          <input
+                            type="number" min={0} step="0.001"
+                            className={`block w-full rounded-lg border-0 py-1.5 px-2.5 text-sm ring-1 ring-inset focus:ring-2 focus:ring-purple-500 ${
+                              hasRate ? "bg-gray-50 ring-gray-200 text-gray-400" : "ring-purple-300"
+                            }`}
+                            placeholder={hasRate
+                              ? `≈ ${fmtOMR(displaySubtotal)} (from rate)`
+                              : `Default: ${fmtOMR(unit.subtotal)}`}
+                            value={hasRate ? "" : totalStr}
+                            disabled={hasRate}
+                            onChange={(e) => {
+                              setCustomTotals((p) => ({ ...p, [unit.id]: e.target.value }));
+                              setCustomRates((p) => { const n = { ...p }; delete n[unit.id]; return n; });
+                            }}
+                          />
                         </div>
                       </div>
                     )}

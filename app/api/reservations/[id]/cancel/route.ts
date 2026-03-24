@@ -31,9 +31,9 @@ export async function PATCH(
   const res = await prisma.reservation.findUnique({
     where: { id },
     include: {
-      tenant:          { select: { organizationId: true } },
+      tenant:           { select: { organizationId: true } },
       reservationUnits: { select: { unitId: true } },
-      payments:        { select: { amount: true } },
+      payments:         { select: { amount: true } },
     },
   });
 
@@ -72,12 +72,22 @@ export async function PATCH(
         data:  { status: "AVAILABLE" },
       });
     }
+    await tx.reservationActivity.create({
+      data: {
+        reservationId: id,
+        organizationId: actor.organizationId!,
+        action: "CANCELLED",
+        description: `Reservation cancelled. Reason: ${reason}${notes ? ` — ${notes}` : ""}`,
+        performedById: actor.id,
+        metadata: { reason, notes },
+      },
+    });
   });
 
   const totalPaid = res.payments.reduce((s, p) => s + Number(p.amount), 0);
   return NextResponse.json({
-    success:    true,
-    totalPaid:  totalPaid.toFixed(3),
-    message:    `Reservation ${res.id.slice(0, 8).toUpperCase()} cancelled.`,
+    success:   true,
+    totalPaid: totalPaid.toFixed(3),
+    message:   `Reservation ${res.id.slice(0, 8).toUpperCase()} cancelled.`,
   });
 }

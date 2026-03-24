@@ -26,7 +26,7 @@ export async function PATCH(
   const res = await prisma.reservation.findUnique({
     where: { id },
     include: {
-      tenant:          { select: { organizationId: true, firstName: true, lastName: true } },
+      tenant:           { select: { organizationId: true, firstName: true, lastName: true } },
       reservationUnits: { select: { unitId: true } },
     },
   });
@@ -41,7 +41,7 @@ export async function PATCH(
     );
 
   // No Show is only valid if check-in date is in the past
-  const todayMidnight  = new Date(); todayMidnight.setHours(0, 0, 0, 0);
+  const todayMidnight   = new Date(); todayMidnight.setHours(0, 0, 0, 0);
   const checkInMidnight = new Date(res.startDate); checkInMidnight.setHours(0, 0, 0, 0);
   if (checkInMidnight >= todayMidnight)
     return NextResponse.json(
@@ -67,6 +67,16 @@ export async function PATCH(
         data:  { status: "AVAILABLE" },
       });
     }
+    await tx.reservationActivity.create({
+      data: {
+        reservationId: id,
+        organizationId: actor.organizationId!,
+        action: "NO_SHOW",
+        description: `Marked as No Show`,
+        performedById: actor.id,
+        metadata: {},
+      },
+    });
   });
 
   return NextResponse.json({

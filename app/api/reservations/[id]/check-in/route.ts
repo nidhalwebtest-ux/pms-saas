@@ -15,7 +15,7 @@ async function getActor() {
 }
 
 export async function PATCH(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const actor = await getActor();
@@ -23,10 +23,13 @@ export async function PATCH(
 
   const { id } = await params;
 
+  let body: { payment?: { amount: number; method: string; reference?: string; notes?: string } } = {};
+  try { body = await req.json(); } catch { /* no body */ }
+
   const res = await prisma.reservation.findUnique({
     where: { id },
     include: {
-      tenant:          { select: { organizationId: true, firstName: true, lastName: true } },
+      tenant:           { select: { organizationId: true, firstName: true, lastName: true } },
       reservationUnits: { select: { unitId: true } },
     },
   });
@@ -47,25 +50,66 @@ export async function PATCH(
     ]),
   ];
 
+  const unitNames = await prisma.unit.findMany({
+    where:  { id: { in: unitIds } },
+    select: { name: true },
+  });
+  const unitLabel = unitNames.map((u) => u.name).join(", ");
+
   await prisma.$transaction(async (tx) => {
     await tx.reservation.update({
       where: { id },
       data: { status: "CHECKED_IN", actualCheckIn: new Date() },
     });
+
     if (unitIds.length > 0) {
       await tx.unit.updateMany({
         where: { id: { in: unitIds } },
         data:  { status: "OCCUPIED" },
       });
     }
+
+    // Optional payment at check-in
+    if (body.payment && Number(body.payment.amount) > 0) {
+      const payAmt = Number(body.payment.amount);
+      await tx.payment.create({
+        data: {
+          amount: payAmt,
+          method: body.payment.method as any,
+          reference: body.payment.reference ?? null,
+          notes: body.payment.notes ?? null,
+          tenantId: res.tenantId,
+          reservationId: id,
+        },
+      });
+      await tx.reservation.update({
+        where: { id },
+        data: { amountPaid: { increment: payAmt } },
+      });
+      await tx.reservationActivity.create({
+        data: {
+          reservationId: id,
+          organizationId: actor.organizationId!,
+          action: "PAYMENT_RECORDED",
+          description: `Payment of ${payAmt.toFixed(3)} OMR recorded at check-in (${body.payment.method})`,
+          performedById: actor.id,
+          metadata: { amount: payAmt, method: body.payment.method, atCheckIn: true },
+        },
+      });
+    }
+
+    await tx.reservationActivity.create({
+      data: {
+        reservationId: id,
+        organizationId: actor.organizationId!,
+        action: "CHECKED_IN",
+        description: `Checked in${unitLabel ? ` — Units ${unitLabel} marked as Occupied` : ""}`,
+        performedById: actor.id,
+        metadata: { unitIds, unitNames: unitNames.map((u) => u.name) },
+      },
+    });
   });
 
-  const unitNames = await prisma.unit.findMany({
-    where:  { id: { in: unitIds } },
-    select: { name: true },
-  });
-
-  const unitLabel = unitNames.map((u) => u.name).join(", ");
   return NextResponse.json({
     success: true,
     message: `${res.tenant.firstName} ${res.tenant.lastName} checked in${unitLabel ? ` to ${unitLabel}` : ""}.`,

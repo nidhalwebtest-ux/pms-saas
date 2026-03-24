@@ -39,6 +39,20 @@ enum ReservationStatus {
   NO_SHOW
 }
 
+enum ReservationActivityAction {
+  CREATED
+  CHECKED_IN
+  CHECKED_OUT
+  CANCELLED
+  NO_SHOW
+  PAYMENT_RECORDED
+  CHARGE_ADDED
+  UNIT_CHANGED
+  DATES_CHANGED
+  EXTENDED
+  NOTE_ADDED
+}
+
 // 3. The New Powerhouse: Organization
 model Organization {
   id                 String   @id @default(uuid())
@@ -82,10 +96,12 @@ model User {
 
   // Access Control: Which properties can this user see?
   assignedProperties  PropertyAssignment[]
-  sentInvitations     Invitation[]   @relation("SentInvitations")
+  sentInvitations     Invitation[]         @relation("SentInvitations")
   unitNotes           UnitNote[]
-  createdTenants      Tenant[]       @relation("TenantCreatedBy")
-  createdReservations Reservation[]  @relation("ReservationCreatedBy")
+  createdTenants      Tenant[]             @relation("TenantCreatedBy")
+  createdReservations Reservation[]        @relation("ReservationCreatedBy")
+  performedActivities ReservationActivity[] @relation("ActivityPerformedBy")
+  createdCharges      ReservationCharge[]   @relation("ChargeCreatedBy")
 
   createdAt      DateTime     @default(now())
 }
@@ -327,6 +343,8 @@ model Reservation {
 
   payments          Payment[]
   invoices          Invoice[]
+  activities        ReservationActivity[]
+  charges           ReservationCharge[]
 
   createdById       String?
   createdBy         User?    @relation("ReservationCreatedBy", fields: [createdById], references: [id])
@@ -356,6 +374,36 @@ model ReservationUnit {
 
   createdAt           DateTime @default(now())
 }
+
+model ReservationActivity {
+  id             String                    @id @default(uuid())
+  reservationId  String
+  reservation    Reservation               @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  organizationId String
+  action         ReservationActivityAction
+  description    String
+  performedById  String?
+  performedBy    User?                     @relation("ActivityPerformedBy", fields: [performedById], references: [id])
+  metadata       Json?
+  createdAt      DateTime                  @default(now())
+
+  @@index([reservationId])
+  @@index([organizationId, createdAt])
+}
+
+model ReservationCharge {
+  id             String      @id @default(uuid())
+  reservationId  String
+  reservation    Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  organizationId String
+  description    String
+  amount         Decimal     @db.Decimal(10, 3)
+  category       String      @default("other")
+  createdById    String?
+  createdBy      User?       @relation("ChargeCreatedBy", fields: [createdById], references: [id])
+  createdAt      DateTime    @default(now())
+}
+
 enum InvoiceStatus {
   PENDING   // Future date
   PARTIAL   // Future date

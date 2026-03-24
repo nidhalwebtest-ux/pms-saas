@@ -99,15 +99,10 @@ export function getDisplayStatus(
         pulse:      false,
       };
 
+    // PENDING is treated as CONFIRMED for date-based display.
+    // Receptionists see "Arriving Today" / "Upcoming" etc., not a useless "Pending" badge.
     case "PENDING":
-      return {
-        label:      "Pending",
-        badgeClass: "bg-gray-100 text-gray-600",
-        rowClass:   "",
-        priority:   8,
-        urgent:     false,
-        pulse:      false,
-      };
+    // falls through ↓
 
     case "CONFIRMED": {
       if (checkInMs > todayMs) {
@@ -182,7 +177,7 @@ export function getDisplayStatus(
  * Terminal states (COMPLETED, CANCELLED, NO_SHOW) are absent → no transitions.
  */
 export const VALID_TRANSITIONS: Partial<Record<StoredStatus, StoredStatus[]>> = {
-  PENDING:    ["CONFIRMED", "CANCELLED"],
+  PENDING:    ["CONFIRMED", "CHECKED_IN", "CANCELLED", "NO_SHOW"],
   CONFIRMED:  ["CHECKED_IN", "CANCELLED", "NO_SHOW"],
   CHECKED_IN: ["COMPLETED", "CANCELLED"],
 };

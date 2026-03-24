@@ -723,12 +723,12 @@ function NoteModal({ res, onSuccess, onClose }: {
 
 // ── Action Buttons ─────────────────────────────────────────────────────────────
 
-function ActionButtons({ ds, onAction }: {
+function ActionButtons({ ds, onAction, reservationId }: {
   ds: string;
   onAction: (a: ModalType) => void;
+  reservationId: string;
 }) {
-  const printUrl = window?.location ? `${window.location.pathname}/print` : "#";
-  const openPrint = () => window.open(printUrl, "_blank");
+  const openPrint = () => window.open(`/api/reservations/${reservationId}/pdf`, "_blank");
 
   switch (ds) {
     case "Upcoming":
@@ -880,7 +880,7 @@ export default function ReservationDetail({ id }: { id: string }) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ── TOP BAR ── */}
-      <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-3 gap-4 flex-wrap">
             {/* Left: back + reservation number + status */}
@@ -907,7 +907,7 @@ export default function ReservationDetail({ id }: { id: string }) {
 
             {/* Right: action buttons */}
             <div className="flex items-center gap-2 flex-wrap">
-              <ActionButtons ds={res.displayStatus} onAction={setActiveModal} />
+              <ActionButtons ds={res.displayStatus} onAction={setActiveModal} reservationId={res.id} />
             </div>
           </div>
         </div>

@@ -20,6 +20,14 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Force dark text on all form controls regardless of OS dark-mode preference.
+   Individual components can override with text-* utilities if needed. */
+input,
+select,
+textarea {
+  color: #111827;
+}
+
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }

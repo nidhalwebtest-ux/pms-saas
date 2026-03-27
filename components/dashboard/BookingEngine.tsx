@@ -48,6 +48,13 @@ interface TenantResult {
   nationality:    string | null;
 }
 
+interface UnitConflict {
+  reservationNumber: string | null;
+  guestName: string;
+  startDate: string;
+  endDate: string;
+}
+
 interface UnitOption {
   id:         string;
   name:       string;
@@ -59,6 +66,7 @@ interface UnitOption {
   amenities:  string[];
   status:     string;
   available:  boolean;
+  conflict:   UnitConflict | null;
   nights:     number;
   rateType:   string;
   rateAmount: number;
@@ -152,6 +160,11 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
 
   // ── Step 5: Submit ────────────────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false);
+  const [conflictError, setConflictError] = useState<{
+    unitId: string; unitName: string;
+    reservationNumber: string | null; guestName: string;
+    startDate: string; endDate: string;
+  } | null>(null);
 
   // ── Derived values ────────────────────────────────────────────────────────
 
@@ -330,6 +343,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
     setSelectedUnits([]);
     setCustomRates({});
     setCustomTotals({});
+    setConflictError(null);
     try {
       const url  = `/api/units/availability?propertyId=${propertyId}&startDate=${startDate}&endDate=${endDate}&rateType=${rateType}`;
       const res  = await fetch(url);
@@ -393,7 +407,15 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
         }),
       });
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to create reservation."); return; }
+      if (!res.ok) {
+        if (res.status === 409 && data.error === "double_booking" && data.conflict) {
+          setConflictError(data.conflict);
+          setStep(3); // go back to unit selection step to show the conflict
+        } else {
+          toast.error(data.error ?? "Failed to create reservation.");
+        }
+        return;
+      }
       toast.success("Reservation created!");
       router.push(`/dashboard/reservations/${data.reservation.id}`);
     } catch {
@@ -733,6 +755,45 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
       {/* ── STEP 3: Units ──────────────────────────────────────────────────── */}
       {step === 3 && (
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
+
+          {/* Double-booking conflict error panel */}
+          {conflictError && (
+            <div className="rounded-xl border-2 border-red-300 bg-red-50 p-4">
+              <div className="flex items-start gap-3">
+                <div className="h-8 w-8 rounded-full bg-red-600 flex items-center justify-center shrink-0">
+                  <XMarkIcon className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-red-800 text-sm">Double-Booking Conflict</p>
+                  <p className="text-sm text-red-700 mt-0.5">
+                    Unit <strong>{conflictError.unitName}</strong> was booked by someone else while you were completing this form.
+                  </p>
+                  <div className="mt-2 bg-white border border-red-200 rounded-lg px-3 py-2 text-xs text-gray-700 space-y-0.5">
+                    {conflictError.reservationNumber && (
+                      <p>Reservation: <span className="font-mono font-medium">{conflictError.reservationNumber}</span></p>
+                    )}
+                    <p>Guest: <span className="font-medium">{conflictError.guestName}</span></p>
+                    <p>
+                      Dates:{" "}
+                      <span className="font-medium">
+                        {new Date(conflictError.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        {" → "}
+                        {new Date(conflictError.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    </p>
+                  </div>
+                  <p className="text-xs text-red-600 mt-2">Please select a different unit or change the dates.</p>
+                </div>
+                <button
+                  onClick={() => setConflictError(null)}
+                  className="p-1 rounded hover:bg-red-100 text-red-400 hover:text-red-600"
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between flex-wrap gap-2">
             <h2 className="text-lg font-semibold text-gray-900">Select Units</h2>
             {selectedUnits.length > 0 && (
@@ -839,6 +900,20 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                             <div className="text-base font-bold text-gray-900">{fmtOMR(displaySubtotal)}</div>
                             <div className="text-[10px] text-gray-400">OMR total</div>
                           </div>
+                        </div>
+                      )}
+
+                      {!unit.available && unit.conflict && (
+                        <div className="mt-2 pt-2 border-t border-gray-200">
+                          <p className="text-[10px] text-red-600 font-medium">
+                            {unit.conflict.reservationNumber ? `#${unit.conflict.reservationNumber} · ` : ""}
+                            {unit.conflict.guestName}
+                          </p>
+                          <p className="text-[10px] text-gray-400">
+                            {new Date(unit.conflict.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                            {" → "}
+                            {new Date(unit.conflict.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                          </p>
                         </div>
                       )}
                     </div>

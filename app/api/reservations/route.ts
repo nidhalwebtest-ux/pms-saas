@@ -40,13 +40,23 @@ async function generateReservationNumber(): Promise<string> {
 
 // ── Availability check (re-used inside transaction) ───────────────────────────
 
-async function isUnitAvailable(
+type ConflictDetail = {
+  unitId: string;
+  unitName: string;
+  reservationNumber: string | null;
+  guestName: string;
+  startDate: string;
+  endDate: string;
+} | null;
+
+async function getUnitConflict(
   tx:        Prisma.TransactionClient,
   unitId:    string,
+  unitName:  string,
   startDate: Date,
   endDate:   Date,
   excludeReservationId?: string,
-): Promise<boolean> {
+): Promise<ConflictDetail> {
   // Check old-style reservations (Reservation.unitId)
   const conflictOld = await tx.reservation.findFirst({
     where: {
@@ -56,9 +66,23 @@ async function isUnitAvailable(
       startDate: { lt: endDate },
       endDate:   { gt: startDate },
     },
-    select: { id: true },
+    select: {
+      reservationNumber: true,
+      startDate: true,
+      endDate: true,
+      tenant: { select: { firstName: true, lastName: true } },
+    },
   });
-  if (conflictOld) return false;
+  if (conflictOld) {
+    return {
+      unitId,
+      unitName,
+      reservationNumber: conflictOld.reservationNumber,
+      guestName: `${conflictOld.tenant.firstName} ${conflictOld.tenant.lastName}`,
+      startDate: conflictOld.startDate.toISOString(),
+      endDate:   conflictOld.endDate.toISOString(),
+    };
+  }
 
   // Check new-style reservations (ReservationUnit)
   const conflictNew = await tx.reservationUnit.findFirst({
@@ -71,9 +95,28 @@ async function isUnitAvailable(
         endDate:   { gt: startDate },
       },
     },
-    select: { id: true },
+    select: {
+      reservation: {
+        select: {
+          reservationNumber: true,
+          startDate: true,
+          endDate: true,
+          tenant: { select: { firstName: true, lastName: true } },
+        },
+      },
+    },
   });
-  return !conflictNew;
+  if (conflictNew) {
+    return {
+      unitId,
+      unitName,
+      reservationNumber: conflictNew.reservation.reservationNumber,
+      guestName: `${conflictNew.reservation.tenant.firstName} ${conflictNew.reservation.tenant.lastName}`,
+      startDate: conflictNew.reservation.startDate.toISOString(),
+      endDate:   conflictNew.reservation.endDate.toISOString(),
+    };
+  }
+  return null;
 }
 
 // ── GET /api/reservations ─────────────────────────────────────────────────────
@@ -351,9 +394,10 @@ export async function POST(req: NextRequest) {
       async (tx) => {
         // Re-check availability inside the transaction
         for (const unitId of unitIds) {
-          const available = await isUnitAvailable(tx, unitId, startDate, endDate);
-          if (!available) {
-            throw new Error(`CONFLICT:${unitId}`);
+          const unitName = unitRecords.find((u) => u.id === unitId)?.name ?? unitId;
+          const conflict = await getUnitConflict(tx, unitId, unitName, startDate, endDate);
+          if (conflict) {
+            throw new Error(`CONFLICT:${JSON.stringify(conflict)}`);
           }
         }
 
@@ -407,10 +451,16 @@ export async function POST(req: NextRequest) {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.startsWith("CONFLICT:")) {
-      const conflictUnitId = msg.replace("CONFLICT:", "");
-      const unit = unitRecords.find((u) => u.id === conflictUnitId);
+      try {
+        const conflict = JSON.parse(msg.replace("CONFLICT:", "")) as ConflictDetail;
+        if (conflict) {
+          return NextResponse.json({ error: "double_booking", conflict }, { status: 409 });
+        }
+      } catch {
+        // fallback
+      }
       return NextResponse.json(
-        { error: `Unit "${unit?.name ?? conflictUnitId}" is no longer available for the selected dates.` },
+        { error: "Unit is no longer available for the selected dates." },
         { status: 409 },
       );
     }

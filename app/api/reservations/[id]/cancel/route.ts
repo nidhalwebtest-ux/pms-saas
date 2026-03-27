@@ -50,6 +50,9 @@ export async function PATCH(
     ? `${reason.trim()}: ${notes.trim()}`
     : reason.trim();
 
+  const totalPaid = res.payments.reduce((s, p) => s + Number(p.amount), 0);
+  const hasPayment = totalPaid > 0;
+
   const unitIds = [
     ...new Set([
       ...(res.unitId ? [res.unitId] : []),
@@ -64,6 +67,7 @@ export async function PATCH(
         status:          "CANCELLED",
         cancelledReason: cancelledReason,
         cancelledAt:     new Date(),
+        refundPending:   hasPayment,
       },
     });
     if (unitIds.length > 0) {
@@ -77,17 +81,17 @@ export async function PATCH(
         reservationId: id,
         organizationId: actor.organizationId!,
         action: "CANCELLED",
-        description: `Reservation cancelled. Reason: ${reason}${notes ? ` — ${notes}` : ""}`,
+        description: `Reservation cancelled. Reason: ${reason}${notes ? ` — ${notes}` : ""}${hasPayment ? ` Refund required: ${totalPaid.toFixed(3)} OMR.` : ""}`,
         performedById: actor.id,
-        metadata: { reason, notes },
+        metadata: { reason, notes, refundPending: hasPayment, totalPaid },
       },
     });
   });
 
-  const totalPaid = res.payments.reduce((s, p) => s + Number(p.amount), 0);
   return NextResponse.json({
-    success:   true,
-    totalPaid: totalPaid.toFixed(3),
-    message:   `Reservation ${res.id.slice(0, 8).toUpperCase()} cancelled.`,
+    success:       true,
+    totalPaid:     totalPaid.toFixed(3),
+    refundPending: hasPayment,
+    message:       `Reservation cancelled.${hasPayment ? ` Refund of ${totalPaid.toFixed(3)} OMR is pending.` : ""}`,
   });
 }

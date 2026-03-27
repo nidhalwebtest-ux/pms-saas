@@ -331,6 +331,7 @@ model Reservation {
   notes             String?
   cancelledReason   String?
   cancelledAt       DateTime?
+  refundPending     Boolean   @default(false)
 
   // ── Relations ──────────────────────────────────────────────────────────────
   // Legacy single-unit FK (nullable — new reservations use reservationUnits)

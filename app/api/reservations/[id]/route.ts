@@ -135,6 +135,7 @@ export async function GET(
     notes: r.notes,
     cancelledReason: r.cancelledReason,
     cancelledAt: r.cancelledAt?.toISOString() ?? null,
+    refundPending: r.refundPending,
     totalAmount: Number(r.totalAmount).toFixed(3),
     discountAmount: Number(r.discountAmount).toFixed(3),
     taxAmount: Number(r.taxAmount).toFixed(3),

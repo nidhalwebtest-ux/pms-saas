@@ -71,6 +71,7 @@ type ReservationData = {
   notes: string | null;
   cancelledReason: string | null;
   cancelledAt: string | null;
+  refundPending: boolean;
   totalAmount: string;
   discountAmount: string;
   taxAmount: string;
@@ -938,6 +939,21 @@ export default function ReservationDetail({ id }: { id: string }) {
           {res.displayStatus === "Overstay"
             ? `⚠ OVERSTAY — Guest should have checked out ${Math.abs(diffDays(today, res.endDate))} day(s) ago`
             : "⏰ CHECKOUT DUE TODAY — Guest must check out today"}
+        </div>
+      )}
+
+      {/* ── REFUND PENDING BANNER ── */}
+      {res.status === "CANCELLED" && res.refundPending && (
+        <div className="bg-yellow-500 text-white px-4 py-3">
+          <div className="max-w-7xl mx-auto flex items-center gap-3">
+            <BanknotesIcon className="h-5 w-5 shrink-0" />
+            <div className="flex-1">
+              <span className="font-semibold">Refund Required — </span>
+              <span>This reservation was cancelled after payment of </span>
+              <span className="font-bold">{res.amountPaid} OMR</span>
+              <span>. Please process the refund and mark this reservation accordingly.</span>
+            </div>
+          </div>
         </div>
       )}
 

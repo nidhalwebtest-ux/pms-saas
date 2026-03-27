@@ -73,7 +73,13 @@ export async function GET(req: NextRequest) {
       startDate: { lt: endDate },
       endDate:   { gt: startDate },
     },
-    select: { unitId: true },
+    select: {
+      unitId: true,
+      reservationNumber: true,
+      startDate: true,
+      endDate: true,
+      tenant: { select: { firstName: true, lastName: true } },
+    },
   });
 
   const conflictingNew = await prisma.reservationUnit.findMany({
@@ -85,13 +91,50 @@ export async function GET(req: NextRequest) {
         endDate:   { gt: startDate },
       },
     },
-    select: { unitId: true },
+    select: {
+      unitId: true,
+      reservation: {
+        select: {
+          reservationNumber: true,
+          startDate: true,
+          endDate: true,
+          tenant: { select: { firstName: true, lastName: true } },
+        },
+      },
+    },
   });
 
-  const occupiedUnitIds = new Set([
-    ...conflictingOld.map((r) => r.unitId).filter(Boolean) as string[],
-    ...conflictingNew.map((r) => r.unitId),
-  ]);
+  // Build a map: unitId → conflict info (first conflict found)
+  type ConflictInfo = {
+    reservationNumber: string | null;
+    guestName: string;
+    startDate: string;
+    endDate: string;
+  };
+  const conflictMap = new Map<string, ConflictInfo>();
+
+  for (const r of conflictingOld) {
+    if (r.unitId && !conflictMap.has(r.unitId)) {
+      conflictMap.set(r.unitId, {
+        reservationNumber: r.reservationNumber,
+        guestName: `${r.tenant.firstName} ${r.tenant.lastName}`,
+        startDate: r.startDate.toISOString(),
+        endDate:   r.endDate.toISOString(),
+      });
+    }
+  }
+  for (const ru of conflictingNew) {
+    if (!conflictMap.has(ru.unitId)) {
+      conflictMap.set(ru.unitId, {
+        reservationNumber: ru.reservation.reservationNumber,
+        guestName: `${ru.reservation.tenant.firstName} ${ru.reservation.tenant.lastName}`,
+        startDate: ru.reservation.startDate.toISOString(),
+        endDate:   ru.reservation.endDate.toISOString(),
+      });
+    }
+  }
+
+  const occupiedUnitIds = new Set(conflictMap.keys());
 
   const nights = calculateNights(startDate, endDate);
 
@@ -141,6 +184,7 @@ export async function GET(req: NextRequest) {
         amenities:   unit.amenities,
         status:      unit.status,
         available,
+        conflict:    available ? null : (conflictMap.get(unit.id) ?? null),
         nights,
         rateType,
         rateAmount,

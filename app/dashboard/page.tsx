@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { format } from "date-fns";
+import { AvailabilityCalendar } from "@/components/dashboard/AvailabilityCalendar";
 import {
   BanknotesIcon,
   BuildingOfficeIcon,
@@ -106,6 +107,13 @@ export default async function DashboardOverview() {
     select: { organizationId: true, firstName: true },
   });
   const orgId = dbUser?.organizationId!;
+
+  // ── Properties (for availability calendar) ──
+  const properties = await prisma.property.findMany({
+    where: { organizationId: orgId, isArchived: false },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
 
   // ── Date ranges ──
   const now = new Date();
@@ -405,6 +413,14 @@ export default async function DashboardOverview() {
           </div>
         </div>
       </div>
+
+      {/* ── Availability Calendar widget ── */}
+      {properties.length > 0 && (
+        <AvailabilityCalendar
+          properties={properties}
+          defaultPropertyId={properties[0]?.id}
+        />
+      )}
 
       {/* ── Main grid ── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

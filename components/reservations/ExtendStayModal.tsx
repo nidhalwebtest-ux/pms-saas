@@ -26,6 +26,7 @@ interface UnitPreview {
   unitName: string;
   propertyName: string;
   effectiveCheckOut: string;
+  existingRate: number;
   available: boolean;
   conflict?: {
     reservationNumber: string | null;
@@ -35,6 +36,7 @@ interface UnitPreview {
   };
   segments?: Segment[];
   extensionSubtotal: number;
+  extensionNights: number;
 }
 
 interface PreviewData {
@@ -84,6 +86,9 @@ export default function ExtendStayModal({
   // Unit extension overrides (for partial extends)
   const [unitExtendMap, setUnitExtendMap] = useState<Map<string, boolean>>(new Map());
 
+  // Custom rate per unit (OMR/night) — pre-filled from existingRate, user-editable
+  const [customRates, setCustomRates] = useState<Record<string, string>>({});
+
   // Payment
   const [collectPayment, setCollectPayment] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState("");
@@ -112,10 +117,14 @@ export default function ExtendStayModal({
         setPreview(data as PreviewData);
         // Initialize unit map: all available units are extended by default
         const map = new Map<string, boolean>();
+        const rates: Record<string, string> = {};
         for (const u of (data as PreviewData).units) {
           map.set(u.unitId, u.available);
+          // Pre-fill custom rate with the existing reservation rate
+          rates[u.unitId] = u.existingRate.toFixed(3);
         }
         setUnitExtendMap(map);
+        setCustomRates(rates);
         // Pre-fill payment amount with balance due
         setPaymentAmount(((data as PreviewData).summary.newBalanceDue).toFixed(3));
       } catch {
@@ -156,9 +165,18 @@ export default function ExtendStayModal({
       return;
     }
 
+    // Build customRates map (only for units being extended, only if changed from default)
+    const ratesPayload: Record<string, number> = {};
+    for (const ue of unitExtensions) {
+      if (!ue.extend) continue;
+      const v = Number(customRates[ue.unitId]);
+      if (v > 0) ratesPayload[ue.unitId] = v;
+    }
+
     const body: Record<string, unknown> = {
       newCheckOutDate: newDate,
       unitExtensions,
+      customRates: ratesPayload,
     };
 
     if (collectPayment && paymentAmount && Number(paymentAmount) > 0) {
@@ -351,6 +369,30 @@ export default function ExtendStayModal({
                             <span>Extension Subtotal</span>
                             <span>{fmtOMR(u.extensionSubtotal)}</span>
                           </div>
+                        </div>
+                      )}
+
+                      {/* Custom rate override */}
+                      {u.available && (
+                        <div className="mt-3 border-t border-green-200 pt-3 flex items-center gap-3">
+                          <label className="text-xs text-gray-600 shrink-0">
+                            Override rate (OMR/night):
+                          </label>
+                          <input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            value={customRates[u.unitId] ?? u.existingRate.toFixed(3)}
+                            onChange={(e) =>
+                              setCustomRates((prev) => ({ ...prev, [u.unitId]: e.target.value }))
+                            }
+                            className="w-32 rounded-lg border border-gray-300 px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                          />
+                          {customRates[u.unitId] && Number(customRates[u.unitId]) !== u.existingRate && (
+                            <span className="text-xs text-blue-600 font-medium">
+                              → {fmtOMR(Number(customRates[u.unitId]) * u.extensionNights)}
+                            </span>
+                          )}
                         </div>
                       )}
                     </div>

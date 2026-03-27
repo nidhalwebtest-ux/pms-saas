@@ -121,6 +121,9 @@ export default function MoveUnitModal({
   // Step 6: Pricing option
   const [pricingOption, setPricingOption] = useState<PricingOption>("charge_difference");
 
+  // Custom rate override (OMR/night) — pre-filled with fromUnit rate when availability loads
+  const [customRate, setCustomRate] = useState<string>("");
+
   const [submitting, setSubmitting] = useState(false);
 
   const fetchAvailability = useCallback(async () => {
@@ -139,6 +142,8 @@ export default function MoveUnitModal({
         return;
       }
       setAvailability(data as AvailabilityData);
+      // Pre-fill custom rate with fromUnit's current rate
+      setCustomRate((data as AvailabilityData).fromUnit.rateAmount.toFixed(3));
     } catch {
       setAvailError("Network error loading available units");
     } finally {
@@ -199,6 +204,7 @@ export default function MoveUnitModal({
           reason,
           notes: notes || undefined,
           pricingOption,
+          customRate: customRate && Number(customRate) > 0 ? Number(customRate) : undefined,
         }),
       });
       const data = await res.json();
@@ -470,6 +476,26 @@ export default function MoveUnitModal({
                     <span>{fmtOMR(newSubtotal)}</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Custom rate input */}
+              <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                <label className="text-sm text-gray-700 shrink-0 font-medium">
+                  Rate for new unit (OMR/night):
+                </label>
+                <input
+                  type="number"
+                  step="0.001"
+                  min="0"
+                  value={customRate}
+                  onChange={(e) => setCustomRate(e.target.value)}
+                  className="w-32 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                />
+                {customRate && Number(customRate) > 0 && (
+                  <span className="text-xs text-blue-700 font-medium">
+                    Total: {fmtOMR(Number(customRate) * remainingNights)}
+                  </span>
+                )}
               </div>
 
               {/* Pricing options */}

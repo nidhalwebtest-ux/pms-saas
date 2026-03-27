@@ -18,6 +18,8 @@ async function getActor() {
 interface ExtendBody {
   newCheckOutDate: string;
   unitExtensions: Array<{ unitId: string; extend: boolean }>;
+  /** Custom rate overrides keyed by unitId — user-entered in the modal */
+  customRates?: Record<string, number>;
   payment?: { amount: number; method: string; reference?: string };
 }
 
@@ -37,21 +39,19 @@ export async function POST(
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { newCheckOutDate, unitExtensions, payment } = body;
+  const { newCheckOutDate, unitExtensions, customRates = {}, payment } = body;
   if (!newCheckOutDate || !unitExtensions || !Array.isArray(unitExtensions)) {
     return NextResponse.json({ error: "newCheckOutDate and unitExtensions are required" }, { status: 400 });
   }
 
-  // Load reservation with active units
+  // NOTE: isMovedOut: { not: true } matches both false AND null (legacy records)
   const r = await prisma.reservation.findUnique({
     where: { id },
     include: {
       tenant: { select: { organizationId: true, firstName: true, lastName: true } },
       reservationUnits: {
-        where: { isMovedOut: false },
-        include: {
-          unit: { select: { id: true, name: true } },
-        },
+        where: { isMovedOut: { not: true } },
+        include: { unit: { select: { id: true, name: true } } },
       },
     },
   });
@@ -62,7 +62,6 @@ export async function POST(
 
   const originalEndDate = new Date(r.endDate);
   originalEndDate.setHours(0, 0, 0, 0);
-
   const newCheckOut = new Date(newCheckOutDate);
   newCheckOut.setHours(0, 0, 0, 0);
 
@@ -73,43 +72,36 @@ export async function POST(
     );
   }
 
-  // Map extensions for quick lookup
   const extensionMap = new Map<string, boolean>();
-  for (const ue of unitExtensions) {
-    extensionMap.set(ue.unitId, ue.extend);
-  }
+  for (const ue of unitExtensions) extensionMap.set(ue.unitId, ue.extend);
 
-  // Verify availability for units being extended, and compute pricing outside TX
-  const extendedUnitPricings: Map<string, { additionalNights: number; additionalSubtotal: number }> = new Map();
+  // Verify availability + compute pricing outside the transaction
+  const extendedUnitPricings = new Map<string, { additionalNights: number; additionalSubtotal: number }>();
 
   for (const ru of r.reservationUnits) {
     const shouldExtend = extensionMap.get(ru.unitId) ?? false;
     if (!shouldExtend) continue;
 
-    // The extension window starts at the unit's effective checkout (or reservation end)
     const extensionStart = ru.effectiveCheckOut ? new Date(ru.effectiveCheckOut) : new Date(r.endDate);
     extensionStart.setHours(0, 0, 0, 0);
 
     // Re-check availability
     const conflict = await prisma.reservation.findFirst({
       where: {
-        id: { not: id },
+        id:     { not: id },
         status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN"] },
         OR: [
           {
-            unitId: ru.unitId,
+            unitId:    ru.unitId,
             startDate: { lt: newCheckOut },
-            endDate: { gt: extensionStart },
+            endDate:   { gt: extensionStart },
           },
           {
             reservationUnits: {
-              some: {
-                unitId: ru.unitId,
-                isMovedOut: false,
-              },
+              some: { unitId: ru.unitId, isMovedOut: { not: true } },
             },
             startDate: { lt: newCheckOut },
-            endDate: { gt: extensionStart },
+            endDate:   { gt: extensionStart },
           },
         ],
       },
@@ -122,92 +114,83 @@ export async function POST(
       );
     }
 
-    // Calculate extension pricing
-    const pricing = await getUnitPriceForRange(ru.unitId, extensionStart, newCheckOut);
-    extendedUnitPricings.set(ru.unitId, {
-      additionalNights: pricing.nights,
-      additionalSubtotal: roundOMR(pricing.totalAmount),
-    });
+    // Determine extension rate (custom > DB price > existing reservation rate)
+    const extensionNights = calculateNights(extensionStart, newCheckOut);
+    const customRate = customRates[ru.unitId] ? Number(customRates[ru.unitId]) : null;
+
+    let additionalSubtotal: number;
+    if (customRate !== null && customRate > 0) {
+      additionalSubtotal = roundOMR(customRate * extensionNights);
+    } else {
+      const pricing = await getUnitPriceForRange(ru.unitId, extensionStart, newCheckOut);
+      if (pricing.totalAmount > 0) {
+        additionalSubtotal = roundOMR(pricing.totalAmount);
+      } else {
+        // Fall back to the rate already on this reservation unit
+        const fallbackRate = roundOMR(Number(ru.rateAmount));
+        additionalSubtotal = roundOMR(fallbackRate * extensionNights);
+      }
+    }
+
+    extendedUnitPricings.set(ru.unitId, { additionalNights: extensionNights, additionalSubtotal });
   }
 
-  // Execute in a serializable transaction
   let newGrandTotal = 0;
   let additionalCharges = 0;
 
   await prisma.$transaction(
     async (tx) => {
-      // For units NOT being extended: set effectiveCheckOut = originalEndDate
+      // Units NOT being extended: pin their effectiveCheckOut to the original end date
       for (const ru of r.reservationUnits) {
-        const shouldExtend = extensionMap.get(ru.unitId) ?? false;
-        if (!shouldExtend) {
+        if (!(extensionMap.get(ru.unitId) ?? false)) {
           await tx.reservationUnit.update({
             where: { id: ru.id },
-            data: { effectiveCheckOut: originalEndDate },
+            data:  { effectiveCheckOut: originalEndDate },
           });
         }
       }
 
-      // For units being extended: update nights and subtotal
+      // Units being extended: update nights + subtotal
       for (const ru of r.reservationUnits) {
-        const shouldExtend = extensionMap.get(ru.unitId) ?? false;
-        if (!shouldExtend) continue;
-
+        if (!(extensionMap.get(ru.unitId) ?? false)) continue;
         const ext = extendedUnitPricings.get(ru.unitId);
         if (!ext) continue;
 
-        const newNights = ru.nights + ext.additionalNights;
+        const newNights   = ru.nights + ext.additionalNights;
         const newSubtotal = roundOMR(Number(ru.subtotal) + ext.additionalSubtotal);
         additionalCharges = roundOMR(additionalCharges + ext.additionalSubtotal);
 
         await tx.reservationUnit.update({
           where: { id: ru.id },
-          data: {
-            nights: newNights,
-            subtotal: newSubtotal,
-          },
+          data:  { nights: newNights, subtotal: newSubtotal },
         });
       }
 
-      // Update reservation endDate
-      await tx.reservation.update({
-        where: { id },
-        data: { endDate: newCheckOut },
-      });
-
-      // Recalculate totals: reload all non-moved-out RUs with updated data
+      // Recalculate reservation totals from updated RUs
       const allActiveRUs = await tx.reservationUnit.findMany({
-        where: { reservationId: id, isMovedOut: false },
-        select: { subtotal: true, nights: true },
+        where:  { reservationId: id, isMovedOut: { not: true } },
+        select: { subtotal: true },
       });
+      const newTotalAmount  = roundOMR(allActiveRUs.reduce((s, ru) => s + Number(ru.subtotal), 0));
+      const discountAmount  = roundOMR(Number(r.discountAmount));
+      const newGrand        = roundOMR(newTotalAmount - discountAmount);
+      const totalNights     = calculateNights(new Date(r.startDate), newCheckOut);
+      newGrandTotal         = newGrand;
 
-      const newTotalAmount = roundOMR(
-        allActiveRUs.reduce((s, ru) => s + Number(ru.subtotal), 0),
-      );
-      const discountAmount = roundOMR(Number(r.discountAmount));
-      const newGrand = roundOMR(newTotalAmount - discountAmount);
-      const totalNights = calculateNights(new Date(r.startDate), newCheckOut);
-
-      newGrandTotal = newGrand;
-
-      // Handle payment
       let newAmountPaid = roundOMR(Number(r.amountPaid));
       if (payment && Number(payment.amount) > 0) {
         const payAmt = roundOMR(Number(payment.amount));
         await tx.payment.create({
           data: {
-            amount: payAmt,
-            method: payment.method as any,
+            amount: payAmt, method: payment.method as any,
             reference: payment.reference ?? null,
-            tenantId: r.tenantId,
-            reservationId: id,
+            tenantId: r.tenantId, reservationId: id,
           },
         });
         newAmountPaid = roundOMR(newAmountPaid + payAmt);
-
         await tx.reservationActivity.create({
           data: {
-            reservationId: id,
-            organizationId: actor.organizationId!,
+            reservationId: id, organizationId: actor.organizationId!,
             action: "PAYMENT_RECORDED",
             description: `Payment of ${payAmt.toFixed(3)} OMR recorded at stay extension (${payment.method})`,
             performedById: actor.id,
@@ -219,27 +202,22 @@ export async function POST(
       await tx.reservation.update({
         where: { id },
         data: {
-          endDate: newCheckOut,
-          totalAmount: newTotalAmount,
-          grandTotal: newGrand,
-          amountPaid: newAmountPaid,
-          totalNights,
+          endDate: newCheckOut, totalAmount: newTotalAmount,
+          grandTotal: newGrand, amountPaid: newAmountPaid, totalNights,
         },
       });
 
-      // Activity log
       await tx.reservationActivity.create({
         data: {
-          reservationId: id,
-          organizationId: actor.organizationId!,
+          reservationId: id, organizationId: actor.organizationId!,
           action: "EXTENDED",
           description: `Stay extended from ${originalEndDate.toISOString().slice(0, 10)} to ${newCheckOut.toISOString().slice(0, 10)}. Additional charges: ${additionalCharges.toFixed(3)} OMR.`,
           performedById: actor.id,
           metadata: {
             originalEndDate: originalEndDate.toISOString(),
-            newEndDate: newCheckOut.toISOString(),
+            newEndDate:      newCheckOut.toISOString(),
             additionalCharges,
-            extendedUnits: Array.from(extendedUnitPricings.keys()),
+            extendedUnits:   Array.from(extendedUnitPricings.keys()),
           },
         },
       });
@@ -247,10 +225,5 @@ export async function POST(
     { isolationLevel: "Serializable" },
   );
 
-  return NextResponse.json({
-    success: true,
-    newEndDate: newCheckOut.toISOString(),
-    newGrandTotal,
-    additionalCharges,
-  });
+  return NextResponse.json({ success: true, newEndDate: newCheckOut.toISOString(), newGrandTotal, additionalCharges });
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getUnitPriceForRange } from "@/lib/pricing";
-import { collapseToSegments, roundOMR } from "@/lib/reservation-engine";
+import { collapseToSegments, roundOMR, calculateNights } from "@/lib/reservation-engine";
 
 async function getActor() {
   const supabase = await createClient();
@@ -29,16 +29,19 @@ export async function GET(
     return NextResponse.json({ error: "newCheckOutDate is required" }, { status: 400 });
   }
 
-  // Load reservation
+  // NOTE: isMovedOut: { not: true } matches both false AND null (legacy records)
   const r = await prisma.reservation.findUnique({
     where: { id },
     include: {
       tenant: { select: { organizationId: true, firstName: true, lastName: true } },
       reservationUnits: {
-        where: { isMovedOut: false },
+        where: { isMovedOut: { not: true } },
         include: {
           unit: {
-            select: { id: true, name: true, floor: true, unitType: true, propertyId: true, property: { select: { name: true } } },
+            select: {
+              id: true, name: true, floor: true, unitType: true, propertyId: true,
+              property: { select: { name: true } },
+            },
           },
         },
       },
@@ -61,91 +64,102 @@ export async function GET(
     );
   }
 
-  // For each active unit, check availability and compute pricing
   const unitResults = await Promise.all(
     r.reservationUnits.map(async (ru) => {
-      const unitId = ru.unitId;
-      const unitName = ru.unit.name;
+      const unitId      = ru.unitId;
+      const unitName    = ru.unit.name;
       const propertyName = ru.unit.property.name;
+      // The rate already stored on this reservation line — use as default
+      const existingRate = roundOMR(Number(ru.rateAmount));
 
-      // The start of the extension window
       const effectiveCheckOutDate = ru.effectiveCheckOut
         ? new Date(ru.effectiveCheckOut)
         : new Date(r.endDate);
       effectiveCheckOutDate.setHours(0, 0, 0, 0);
 
-      // Check availability: look for other reservations that conflict with [effectiveCheckOut, newCheckOut)
+      // Availability check: conflicts with [effectiveCheckOut, newCheckOut)
       const conflictingReservation = await prisma.reservation.findFirst({
         where: {
-          id: { not: id }, // exclude current reservation
+          id:     { not: id },
           status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN"] },
           OR: [
-            // Old-style: reservation.unitId
             {
-              unitId: unitId,
+              unitId,
               startDate: { lt: newCheckOut },
-              endDate: { gt: effectiveCheckOutDate },
+              endDate:   { gt: effectiveCheckOutDate },
             },
-            // New-style: ReservationUnit junction
             {
               reservationUnits: {
-                some: {
-                  unitId: unitId,
-                  isMovedOut: false,
-                },
+                some: { unitId, isMovedOut: { not: true } },
               },
               startDate: { lt: newCheckOut },
-              endDate: { gt: effectiveCheckOutDate },
+              endDate:   { gt: effectiveCheckOutDate },
             },
           ],
         },
-        include: {
-          tenant: { select: { firstName: true, lastName: true } },
-        },
+        include: { tenant: { select: { firstName: true, lastName: true } } },
       });
 
       if (conflictingReservation) {
         return {
-          unitId,
-          unitName,
-          propertyName,
+          unitId, unitName, propertyName,
           effectiveCheckOut: effectiveCheckOutDate.toISOString(),
+          existingRate,
           available: false,
           conflict: {
             reservationNumber: conflictingReservation.reservationNumber,
-            guestFirstName: conflictingReservation.tenant.firstName,
-            guestLastName: conflictingReservation.tenant.lastName,
-            fromDate: conflictingReservation.startDate.toISOString(),
+            guestFirstName:    conflictingReservation.tenant.firstName,
+            guestLastName:     conflictingReservation.tenant.lastName,
+            fromDate:          conflictingReservation.startDate.toISOString(),
           },
+          segments:          [] as { startDate: string; endDate: string; nights: number; ratePerNight: number; subtotal: number; priceName: string | null }[],
           extensionSubtotal: 0,
+          extensionNights:   0,
         };
       }
 
-      // Available — calculate pricing
+      // ── Compute pricing for extension window ────────────────────────────────
+      const extensionNights = calculateNights(effectiveCheckOutDate, newCheckOut);
+
+      // Try fetching configured DB prices first
       const priceResult = await getUnitPriceForRange(unitId, effectiveCheckOutDate, newCheckOut);
-      const segments = collapseToSegments(priceResult.dailyBreakdown).map((s) => ({
-        startDate: s.startDate,
-        endDate: s.endDate,
-        nights: s.nights,
-        ratePerNight: s.ratePerNight,
-        subtotal: s.subtotal,
-        priceName: s.priceName,
-      }));
-      const extensionSubtotal = roundOMR(priceResult.totalAmount);
+      let segments: { startDate: string; endDate: string; nights: number; ratePerNight: number; subtotal: number; priceName: string | null }[];
+      let extensionSubtotal: number;
+
+      if (priceResult.totalAmount > 0) {
+        // DB prices are configured — use them
+        segments = collapseToSegments(priceResult.dailyBreakdown).map((s) => ({
+          startDate: s.startDate, endDate: s.endDate,
+          nights: s.nights, ratePerNight: s.ratePerNight,
+          subtotal: s.subtotal, priceName: s.priceName,
+        }));
+        extensionSubtotal = roundOMR(priceResult.totalAmount);
+      } else {
+        // No DB prices — fall back to the reservation's existing rate
+        extensionSubtotal = roundOMR(existingRate * extensionNights);
+        const from = effectiveCheckOutDate.toISOString().slice(0, 10);
+        const to   = new Date(newCheckOut.getTime() - 86400000).toISOString().slice(0, 10);
+        segments = [{
+          startDate: from, endDate: to,
+          nights: extensionNights, ratePerNight: existingRate,
+          subtotal: extensionSubtotal, priceName: null,
+        }];
+      }
 
       return {
-        unitId,
-        unitName,
-        propertyName,
+        unitId, unitName, propertyName,
         effectiveCheckOut: effectiveCheckOutDate.toISOString(),
+        existingRate,         // ← the rate currently on the reservation (used as UI default)
         available: true,
+        conflict: undefined,
         segments,
         extensionSubtotal,
+        extensionNights,
       };
     }),
   );
 
-  const allAvailable = unitResults.every((u) => u.available);
+  const allAvailable  = unitResults.every((u) => u.available);
   const someAvailable = unitResults.some((u) => u.available);
   const extensionTotal = roundOMR(
     unitResults.filter((u) => u.available).reduce((s, u) => s + u.extensionSubtotal, 0),
@@ -153,22 +167,19 @@ export async function GET(
 
   const previousGrandTotal = roundOMR(Number(r.grandTotal));
   const previousAmountPaid = roundOMR(Number(r.amountPaid));
-  const newGrandTotal = roundOMR(previousGrandTotal + extensionTotal);
-  const newBalanceDue = roundOMR(newGrandTotal - previousAmountPaid);
+  const newGrandTotal      = roundOMR(previousGrandTotal + extensionTotal);
+  const newBalanceDue      = roundOMR(newGrandTotal - previousAmountPaid);
 
   return NextResponse.json({
     reservationId: id,
     currentCheckOut: currentEndDate.toISOString(),
-    newCheckOut: newCheckOut.toISOString(),
-    units: unitResults,
+    newCheckOut:     newCheckOut.toISOString(),
+    units:           unitResults,
     summary: {
-      allAvailable,
-      someAvailable,
+      allAvailable, someAvailable,
       extensionTotal,
-      previousGrandTotal,
-      previousAmountPaid,
-      newGrandTotal,
-      newBalanceDue,
+      previousGrandTotal, previousAmountPaid,
+      newGrandTotal, newBalanceDue,
     },
   });
 }

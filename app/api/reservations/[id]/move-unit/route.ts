@@ -24,6 +24,8 @@ interface MoveUnitBody {
   reason: string;
   notes?: string;
   pricingOption: PricingOption;
+  /** User-entered custom rate for the new unit (overrides DB price and fromUnit rate) */
+  customRate?: number;
 }
 
 export async function POST(
@@ -42,7 +44,7 @@ export async function POST(
     return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
   }
 
-  const { fromUnitId, toUnitId, moveDate: moveDateStr, reason, notes, pricingOption } = body;
+  const { fromUnitId, toUnitId, moveDate: moveDateStr, reason, notes, pricingOption, customRate } = body;
 
   if (!fromUnitId || !toUnitId || !moveDateStr || !reason || !pricingOption) {
     return NextResponse.json(
@@ -57,7 +59,8 @@ export async function POST(
     include: {
       tenant: { select: { organizationId: true, firstName: true, lastName: true } },
       reservationUnits: {
-        where: { isMovedOut: false },
+        // isMovedOut: { not: true } matches both false AND null (legacy records)
+        where: { isMovedOut: { not: true } },
       },
     },
   });
@@ -120,7 +123,7 @@ export async function POST(
           reservationUnits: {
             some: {
               unitId: toUnitId,
-              isMovedOut: false,
+              isMovedOut: { not: true },
             },
           },
           startDate: { lt: periodEnd },
@@ -187,6 +190,13 @@ export async function POST(
       selectedRateAmount = toRatePerNight;
       newUnitSubtotal = roundOMR(toUnitPricing.totalAmount);
       rateSource = "default_price";
+  }
+
+  // customRate overrides everything when provided
+  if (customRate !== undefined && customRate > 0) {
+    selectedRateAmount = roundOMR(customRate);
+    newUnitSubtotal = roundOMR(customRate * remainingNights);
+    rateSource = "manual_override";
   }
 
   // Get toUnit name for activity log

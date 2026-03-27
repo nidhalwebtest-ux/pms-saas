@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const reservationId = searchParams.get("reservationId");
-  const fromUnitId = searchParams.get("fromUnitId");
-  const moveDateStr = searchParams.get("moveDate");
+  const fromUnitId    = searchParams.get("fromUnitId");
+  const moveDateStr   = searchParams.get("moveDate");
 
   if (!reservationId || !fromUnitId || !moveDateStr) {
     return NextResponse.json(
@@ -31,13 +31,13 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  // Load reservation with org validation
+  // NOTE: isMovedOut: { not: true } matches both false AND null (legacy records pre-schema-change)
   const reservation = await prisma.reservation.findUnique({
     where: { id: reservationId },
     include: {
       tenant: { select: { organizationId: true } },
       reservationUnits: {
-        where: { isMovedOut: false },
+        where: { isMovedOut: { not: true } },
         select: { unitId: true },
       },
     },
@@ -47,9 +47,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Reservation not found" }, { status: 404 });
   }
 
-  // Load the current ReservationUnit for fromUnitId
+  // Find the active RU for the unit being moved FROM
   const fromRU = await prisma.reservationUnit.findFirst({
-    where: { reservationId, unitId: fromUnitId, isMovedOut: false },
+    where: { reservationId, unitId: fromUnitId, isMovedOut: { not: true } },
     include: { unit: { select: { id: true, name: true } } },
   });
 
@@ -67,126 +67,116 @@ export async function GET(req: NextRequest) {
 
   const remainingNights = calculateNights(moveDate, periodEnd);
 
-  // Collect unit IDs already in this reservation (exclude from candidates)
+  // All units already in this reservation — exclude from candidates
+  // Include legacy unitId in addition to reservationUnits
   const occupiedUnitIds = new Set(reservation.reservationUnits.map((ru) => ru.unitId));
+  if (reservation.unitId) occupiedUnitIds.add(reservation.unitId);
+  // Always exclude the fromUnit itself
+  occupiedUnitIds.add(fromUnitId);
 
-  // Find all units belonging to this org's properties
+  // Fetch all units in the org
   const allProperties = await prisma.property.findMany({
-    where: { organizationId: actor.organizationId },
+    where: { organizationId: actor.organizationId, isArchived: false },
     select: {
-      id: true,
-      name: true,
+      id: true, name: true,
       units: {
-        select: {
-          id: true,
-          name: true,
-          floor: true,
-          unitType: true,
-          status: true,
-        },
+        select: { id: true, name: true, floor: true, unitType: true, status: true },
       },
     },
   });
 
-  // Flatten units, exclude units already in reservation and the fromUnit
-  const candidateUnits: Array<{
-    id: string; name: string; floor: number; unitType: string;
-    propertyName: string; propertyId: string;
-  }> = [];
+  type Candidate = { id: string; name: string; floor: number; unitType: string; propertyName: string; propertyId: string };
+  const candidateUnits: Candidate[] = [];
 
   for (const property of allProperties) {
     for (const unit of property.units) {
       if (occupiedUnitIds.has(unit.id)) continue;
-      if (unit.id === fromUnitId) continue;
       candidateUnits.push({
-        id: unit.id,
-        name: unit.name,
-        floor: unit.floor,
-        unitType: unit.unitType,
-        propertyName: property.name,
-        propertyId: property.id,
+        id: unit.id, name: unit.name, floor: unit.floor,
+        unitType: unit.unitType, propertyName: property.name, propertyId: property.id,
       });
     }
   }
 
-  // Check availability for each candidate and compute pricing
+  const fromRateAmount = roundOMR(Number(fromRU.rateAmount));
   const availableUnits = [];
 
   for (const unit of candidateUnits) {
-    // Check for conflicts in [moveDate, periodEnd)
+    // Check for conflicting reservations over [moveDate, periodEnd)
     const conflict = await prisma.reservation.findFirst({
       where: {
-        id: { not: reservationId },
+        id:     { not: reservationId },
         status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN"] },
         OR: [
           {
-            unitId: unit.id,
+            unitId:    unit.id,
             startDate: { lt: periodEnd },
-            endDate: { gt: moveDate },
+            endDate:   { gt: moveDate },
           },
           {
             reservationUnits: {
-              some: {
-                unitId: unit.id,
-                isMovedOut: false,
-              },
+              some: { unitId: unit.id, isMovedOut: { not: true } },
             },
             startDate: { lt: periodEnd },
-            endDate: { gt: moveDate },
+            endDate:   { gt: moveDate },
           },
         ],
       },
+      select: { id: true },
     });
 
     if (conflict) continue;
 
     // Unit is available — compute pricing
     const priceResult = await getUnitPriceForRange(unit.id, moveDate, periodEnd);
-    const segments = collapseToSegments(priceResult.dailyBreakdown).map((s) => ({
-      startDate: s.startDate,
-      endDate: s.endDate,
-      nights: s.nights,
-      ratePerNight: s.ratePerNight,
-      subtotal: s.subtotal,
-      priceName: s.priceName,
-    }));
-    const subtotal = roundOMR(priceResult.totalAmount);
 
-    // Daily rate from first segment (or total / nights)
-    const rateAmount = priceResult.nights > 0
-      ? roundOMR(priceResult.totalAmount / priceResult.nights)
-      : Number(fromRU.rateAmount);
+    let rateAmount: number;
+    let segments: { startDate: string; endDate: string; nights: number; ratePerNight: number; subtotal: number; priceName: string | null }[];
+    let subtotal: number;
 
-    const firstSegment = segments[0];
-    const rateSource = firstSegment ? "default_price" : "default_price";
-    const priceName = firstSegment?.priceName ?? null;
+    if (priceResult.totalAmount > 0) {
+      // DB prices configured for this unit
+      const rawSegments = collapseToSegments(priceResult.dailyBreakdown);
+      segments = rawSegments.map((s) => ({
+        startDate: s.startDate, endDate: s.endDate,
+        nights: s.nights, ratePerNight: s.ratePerNight,
+        subtotal: s.subtotal, priceName: s.priceName,
+      }));
+      subtotal   = roundOMR(priceResult.totalAmount);
+      rateAmount = remainingNights > 0 ? roundOMR(priceResult.totalAmount / remainingNights) : fromRateAmount;
+    } else {
+      // No DB prices — default to the FROM unit's existing rate so the comparison is meaningful
+      rateAmount = fromRateAmount;
+      subtotal   = roundOMR(fromRateAmount * remainingNights);
+      const from = moveDate.toISOString().slice(0, 10);
+      const to   = new Date(periodEnd.getTime() - 86400000).toISOString().slice(0, 10);
+      segments = [{
+        startDate: from, endDate: to,
+        nights: remainingNights, ratePerNight: fromRateAmount,
+        subtotal, priceName: null,
+      }];
+    }
 
-    const fromRateAmount = roundOMR(Number(fromRU.rateAmount));
     const rateDifference = roundOMR(rateAmount - fromRateAmount);
+    const priceName      = segments[0]?.priceName ?? null;
 
     availableUnits.push({
-      id: unit.id,
-      name: unit.name,
-      floor: unit.floor,
-      unitType: unit.unitType,
-      propertyName: unit.propertyName,
-      propertyId: unit.propertyId,
-      rateAmount,
-      rateSource,
-      priceName,
-      rateDifference,
-      segments,
-      subtotal,
+      id: unit.id, name: unit.name, floor: unit.floor,
+      unitType: unit.unitType, propertyName: unit.propertyName, propertyId: unit.propertyId,
+      rateAmount, priceName, rateDifference, segments, subtotal,
     });
   }
+
+  // Sort: same rate first, then upgrades, then downgrades
+  availableUnits.sort((a, b) => Math.abs(a.rateDifference) - Math.abs(b.rateDifference));
 
   return NextResponse.json({
     remainingNights,
     periodEnd: periodEnd.toISOString(),
     fromUnit: {
-      id: fromRU.unitId,
-      name: fromRU.unit.name,
-      rateAmount: roundOMR(Number(fromRU.rateAmount)),
+      id:         fromRU.unitId,
+      name:       fromRU.unit.name,
+      rateAmount: fromRateAmount,
     },
     availableUnits,
   });

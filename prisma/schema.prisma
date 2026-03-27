@@ -50,6 +50,7 @@ enum ReservationActivityAction {
   UNIT_CHANGED
   DATES_CHANGED
   EXTENDED
+  UNIT_MOVED
   NOTE_ADDED
 }
 
@@ -371,6 +372,14 @@ model ReservationUnit {
 
   nights              Int      @default(0)
   subtotal            Decimal  @db.Decimal(10, 3)
+
+  // ── Move / split-date tracking ─────────────────────────────────────────────
+  effectiveCheckIn    DateTime?   // null = use reservation.startDate
+  effectiveCheckOut   DateTime?   // null = use reservation.endDate; set when unit released early
+  isMovedOut          Boolean   @default(false)   // true = this unit record was replaced by a move
+  movedToUnitId       String?   // ReservationUnit.id of the replacement record
+  moveReason          String?
+  moveDate            DateTime?
 
   createdAt           DateTime @default(now())
 }

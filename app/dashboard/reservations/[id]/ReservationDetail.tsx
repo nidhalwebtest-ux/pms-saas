@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import ExtendStayModal from "@/components/reservations/ExtendStayModal";
+import MoveUnitModal from "@/components/reservations/MoveUnitModal";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -92,7 +94,7 @@ type ReservationData = {
   createdAt: string;
 };
 
-type ModalType = "check-in" | "check-out" | "cancel" | "payment" | "charge" | "note" | null;
+type ModalType = "check-in" | "check-out" | "cancel" | "payment" | "charge" | "note" | "extend-stay" | "move-unit" | null;
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -770,16 +772,33 @@ function ActionButtons({ ds, onAction, reservationId }: {
       );
     case "In House":
     case "Due Checkout":
-    case "Overstay":
       return (
         <>
           <button
             onClick={() => onAction("check-out")}
             className={`inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-white text-sm font-semibold transition-colors shadow-sm ${
-              ds === "Overstay" ? "bg-red-600 hover:bg-red-700 animate-pulse" :
-              ds === "Due Checkout" ? "bg-orange-500 hover:bg-orange-600" :
-              "bg-blue-600 hover:bg-blue-700"
+              ds === "Due Checkout" ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-600 hover:bg-blue-700"
             }`}
+          >
+            Check Out
+          </button>
+          <button onClick={() => onAction("extend-stay")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-300 bg-white text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors">
+            Extend Stay
+          </button>
+          <button onClick={() => onAction("move-unit")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+            Move Unit
+          </button>
+          <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+            <PrinterIcon className="h-4 w-4" /> Print
+          </button>
+        </>
+      );
+    case "Overstay":
+      return (
+        <>
+          <button
+            onClick={() => onAction("check-out")}
+            className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-white text-sm font-semibold transition-colors shadow-sm bg-red-600 hover:bg-red-700 animate-pulse"
           >
             Check Out
           </button>
@@ -1288,6 +1307,31 @@ export default function ReservationDetail({ id }: { id: string }) {
       {activeModal === "payment"   && <PaymentModal  res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "charge"    && <ChargeModal   res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "note"      && <NoteModal     res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
+      {activeModal === "extend-stay" && (
+        <ExtendStayModal
+          reservationId={res.id}
+          currentCheckOut={res.endDate}
+          rateType={res.rateType}
+          onClose={() => setActiveModal(null)}
+          onSuccess={afterAction}
+        />
+      )}
+      {activeModal === "move-unit" && (
+        <MoveUnitModal
+          reservationId={res.id}
+          reservationUnits={res.units.map((u) => ({
+            id: u.id,
+            unitId: u.id,
+            unitName: u.name,
+            floor: u.floor,
+            unitType: u.unitType,
+            rateAmount: Number(u.rateAmount),
+          }))}
+          checkOutDate={res.endDate}
+          onClose={() => setActiveModal(null)}
+          onSuccess={afterAction}
+        />
+      )}
     </div>
   );
 }

@@ -1,0 +1,320 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/utils/supabase/server";
+import { prisma } from "@/lib/prisma";
+import { getUnitPriceForRange } from "@/lib/pricing";
+import { roundOMR, calculateNights } from "@/lib/reservation-engine";
+
+async function getActor() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { id: true, organizationId: true },
+  });
+  return dbUser?.organizationId ? dbUser : null;
+}
+
+type PricingOption = "charge_difference" | "complimentary" | "apply_new_rate" | "keep_original_rate";
+
+interface MoveUnitBody {
+  fromUnitId: string;
+  toUnitId: string;
+  moveDate: string;
+  reason: string;
+  notes?: string;
+  pricingOption: PricingOption;
+}
+
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const actor = await getActor();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+
+  let body: MoveUnitBody;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  const { fromUnitId, toUnitId, moveDate: moveDateStr, reason, notes, pricingOption } = body;
+
+  if (!fromUnitId || !toUnitId || !moveDateStr || !reason || !pricingOption) {
+    return NextResponse.json(
+      { error: "fromUnitId, toUnitId, moveDate, reason, and pricingOption are required" },
+      { status: 400 },
+    );
+  }
+
+  // Load reservation
+  const r = await prisma.reservation.findUnique({
+    where: { id },
+    include: {
+      tenant: { select: { organizationId: true, firstName: true, lastName: true } },
+      reservationUnits: {
+        where: { isMovedOut: false },
+      },
+    },
+  });
+
+  if (!r || r.tenant.organizationId !== actor.organizationId) {
+    return NextResponse.json({ error: "Reservation not found" }, { status: 404 });
+  }
+
+  if (r.status !== "CHECKED_IN") {
+    return NextResponse.json(
+      { error: "Unit moves are only allowed for checked-in reservations" },
+      { status: 409 },
+    );
+  }
+
+  // Find the active ReservationUnit for fromUnitId
+  const fromRU = r.reservationUnits.find((ru) => ru.unitId === fromUnitId);
+  if (!fromRU) {
+    return NextResponse.json({ error: "From unit not found in this reservation" }, { status: 404 });
+  }
+
+  const moveDate = new Date(moveDateStr);
+  moveDate.setHours(0, 0, 0, 0);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const reservationEnd = new Date(r.endDate);
+  reservationEnd.setHours(0, 0, 0, 0);
+
+  // Validate: moveDate >= today and moveDate < reservation.endDate
+  if (moveDate < today) {
+    return NextResponse.json({ error: "Move date cannot be in the past" }, { status: 400 });
+  }
+  if (moveDate >= reservationEnd) {
+    return NextResponse.json(
+      { error: "Move date must be before the reservation end date" },
+      { status: 400 },
+    );
+  }
+
+  // periodEnd for the remaining stay
+  const periodEnd = fromRU.effectiveCheckOut
+    ? new Date(fromRU.effectiveCheckOut)
+    : new Date(r.endDate);
+  periodEnd.setHours(0, 0, 0, 0);
+
+  // Re-check toUnit availability from moveDate to periodEnd
+  const conflict = await prisma.reservation.findFirst({
+    where: {
+      id: { not: id },
+      status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN"] },
+      OR: [
+        {
+          unitId: toUnitId,
+          startDate: { lt: periodEnd },
+          endDate: { gt: moveDate },
+        },
+        {
+          reservationUnits: {
+            some: {
+              unitId: toUnitId,
+              isMovedOut: false,
+            },
+          },
+          startDate: { lt: periodEnd },
+          endDate: { gt: moveDate },
+        },
+      ],
+    },
+  });
+
+  if (conflict) {
+    return NextResponse.json(
+      { error: "The destination unit is not available for the requested period" },
+      { status: 409 },
+    );
+  }
+
+  const remainingNights = calculateNights(moveDate, periodEnd);
+  const fromRateAmount = roundOMR(Number(fromRU.rateAmount));
+
+  // Compute new unit pricing outside TX for performance
+  const toUnitPricing = await getUnitPriceForRange(toUnitId, moveDate, periodEnd);
+  const toRatePerNight = toUnitPricing.nights > 0
+    ? roundOMR(toUnitPricing.totalAmount / toUnitPricing.nights)
+    : fromRateAmount;
+
+  // Calculate old unit revised subtotal (from its effectiveCheckIn to moveDate)
+  const fromEffectiveCheckIn = fromRU.effectiveCheckIn
+    ? new Date(fromRU.effectiveCheckIn)
+    : new Date(r.startDate);
+  fromEffectiveCheckIn.setHours(0, 0, 0, 0);
+
+  const oldUnitRevised = await getUnitPriceForRange(fromUnitId, fromEffectiveCheckIn, moveDate);
+  const oldUnitRevisedSubtotal = roundOMR(oldUnitRevised.totalAmount);
+
+  // Determine new unit's rate and subtotal based on pricingOption
+  let selectedRateAmount: number;
+  let newUnitSubtotal: number;
+  let rateSource: string;
+
+  switch (pricingOption) {
+    case "apply_new_rate":
+      selectedRateAmount = toRatePerNight;
+      newUnitSubtotal = roundOMR(toUnitPricing.totalAmount);
+      rateSource = toUnitPricing.dailyBreakdown.length > 0 ? "default_price" : "default_price";
+      break;
+    case "charge_difference":
+      // New unit at its market rate
+      selectedRateAmount = toRatePerNight;
+      newUnitSubtotal = roundOMR(toUnitPricing.totalAmount);
+      rateSource = "default_price";
+      break;
+    case "complimentary":
+      // No charge for the move — same original rate but difference = 0 conceptually
+      selectedRateAmount = fromRateAmount;
+      newUnitSubtotal = roundOMR(fromRateAmount * remainingNights);
+      rateSource = "manual_override";
+      break;
+    case "keep_original_rate":
+      selectedRateAmount = fromRateAmount;
+      newUnitSubtotal = roundOMR(fromRateAmount * remainingNights);
+      rateSource = "manual_override";
+      break;
+    default:
+      selectedRateAmount = toRatePerNight;
+      newUnitSubtotal = roundOMR(toUnitPricing.totalAmount);
+      rateSource = "default_price";
+  }
+
+  // Get toUnit name for activity log
+  const toUnit = await prisma.unit.findUnique({
+    where: { id: toUnitId },
+    select: { id: true, name: true },
+  });
+  if (!toUnit) {
+    return NextResponse.json({ error: "Destination unit not found" }, { status: 404 });
+  }
+
+  const fromUnit = await prisma.unit.findUnique({
+    where: { id: fromUnitId },
+    select: { id: true, name: true },
+  });
+  if (!fromUnit) {
+    return NextResponse.json({ error: "Source unit not found" }, { status: 404 });
+  }
+
+  // Determine if this is a move happening today (affects unit status updates)
+  const isToday = moveDate.getTime() === today.getTime();
+
+  let newGrandTotal = 0;
+
+  await prisma.$transaction(
+    async (tx) => {
+      const moveReason = reason + (notes ? ` — ${notes}` : "");
+
+      // a. Mark old RU as moved out
+      await tx.reservationUnit.update({
+        where: { id: fromRU.id },
+        data: {
+          isMovedOut: true,
+          effectiveCheckOut: moveDate,
+          moveReason,
+          moveDate,
+          // Revise old RU subtotal to reflect actual stay (check-in to move date)
+          nights: oldUnitRevised.nights,
+          subtotal: oldUnitRevisedSubtotal,
+        },
+      });
+
+      // b. Create new RU for the destination unit
+      const newRU = await tx.reservationUnit.create({
+        data: {
+          reservationId: id,
+          unitId: toUnitId,
+          rateType: fromRU.rateType,
+          rateAmount: selectedRateAmount,
+          rateSource,
+          nights: remainingNights,
+          subtotal: newUnitSubtotal,
+          effectiveCheckIn: moveDate,
+        },
+      });
+
+      // c. Set movedToUnitId on old RU
+      await tx.reservationUnit.update({
+        where: { id: fromRU.id },
+        data: { movedToUnitId: newRU.id },
+      });
+
+      // d. Recalculate reservation totals
+      // Sum all non-moved-out RU subtotals (which now includes the updated old RU and new RU)
+      const allRUs = await tx.reservationUnit.findMany({
+        where: { reservationId: id },
+        select: { subtotal: true, isMovedOut: true },
+      });
+
+      // Include all RUs (moved-out ones contribute their partial stay costs)
+      const newTotalAmount = roundOMR(
+        allRUs.reduce((s, ru) => s + Number(ru.subtotal), 0),
+      );
+      const discountAmount = roundOMR(Number(r.discountAmount));
+      newGrandTotal = roundOMR(newTotalAmount - discountAmount);
+      const totalNights = calculateNights(new Date(r.startDate), new Date(r.endDate));
+
+      await tx.reservation.update({
+        where: { id },
+        data: {
+          totalAmount: newTotalAmount,
+          grandTotal: newGrandTotal,
+          totalNights,
+        },
+      });
+
+      // e. If moveDate is today, update unit statuses
+      if (isToday) {
+        await tx.unit.update({
+          where: { id: fromUnitId },
+          data: { status: "AVAILABLE" },
+        });
+        await tx.unit.update({
+          where: { id: toUnitId },
+          data: { status: "OCCUPIED" },
+        });
+      }
+
+      // f. Create activity log
+      await tx.reservationActivity.create({
+        data: {
+          reservationId: id,
+          organizationId: actor.organizationId!,
+          action: "UNIT_MOVED",
+          description: `Guest moved from Unit ${fromUnit.name} to Unit ${toUnit.name} on ${moveDate.toISOString().slice(0, 10)}. Reason: ${reason}. Pricing: ${pricingOption.replace(/_/g, " ")}.`,
+          performedById: actor.id,
+          metadata: {
+            fromUnitId,
+            fromUnitName: fromUnit.name,
+            toUnitId,
+            toUnitName: toUnit.name,
+            moveDate: moveDate.toISOString(),
+            reason,
+            notes: notes ?? null,
+            pricingOption,
+            newGrandTotal,
+          },
+        },
+      });
+    },
+    { isolationLevel: "Serializable" },
+  );
+
+  return NextResponse.json({
+    success: true,
+    fromUnit: fromUnit.name,
+    toUnit: toUnit.name,
+    moveDate: moveDate.toISOString(),
+    newGrandTotal,
+  });
+}

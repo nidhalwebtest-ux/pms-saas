@@ -101,6 +101,22 @@ export async function assertPaymentOwnership(
 }
 
 /**
+ * Asserts that an invoice belongs to the given org.
+ */
+export async function assertInvoiceOwnership(
+  invoiceId: string,
+  organizationId: string,
+): Promise<void> {
+  const invoice = await prisma.invoice.findUnique({
+    where: { id: invoiceId },
+    select: { organizationId: true },
+  });
+  if (!invoice || invoice.organizationId !== organizationId) {
+    throw { error: "Unauthorized access to this invoice" };
+  }
+}
+
+/**
  * Asserts that an expense belongs to the given org (via its property).
  */
 export async function assertExpenseOwnership(

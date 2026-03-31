@@ -26,6 +26,7 @@ export const NAV_ACCESS: Record<string, Role[]> = {
   properties:   ["OWNER", "MANAGER", "STAFF"],
   tenants:      ["OWNER", "MANAGER", "STAFF"],
   reservations: ["OWNER", "MANAGER", "STAFF"],
+  invoices:     ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],  // All roles can view/manage invoices
   payments:     ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],  // Receptionist can record payments
   expenses:     ["OWNER", "MANAGER", "ACCOUNTANT"],           // Receptionist cannot see expenses
   settings:     ["OWNER", "MANAGER"],

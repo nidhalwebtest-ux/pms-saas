@@ -1,0 +1,51 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireOrgUser } from "@/lib/tenant";
+import { prisma } from "@/lib/prisma";
+
+function ser(obj: unknown): unknown {
+  return JSON.parse(
+    JSON.stringify(obj, (_, v) =>
+      v != null && typeof v === "object" && typeof (v as { toFixed?: unknown }).toFixed === "function"
+        ? Number(v)
+        : v,
+    ),
+  );
+}
+
+// ── PATCH /api/invoices/[id]/issue — DRAFT → ISSUED ──────────────────────────
+
+export async function PATCH(
+  _req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  let orgUser;
+  try {
+    orgUser = await requireOrgUser();
+  } catch (e: unknown) {
+    return NextResponse.json(e, { status: 401 });
+  }
+
+  const { id } = await params;
+  const invoice = await prisma.invoice.findUnique({
+    where: { id },
+    select: { id: true, organizationId: true, status: true },
+  });
+
+  if (!invoice || invoice.organizationId !== orgUser.organizationId) {
+    return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+  }
+
+  if (invoice.status !== "DRAFT") {
+    return NextResponse.json(
+      { error: "Only draft invoices can be issued" },
+      { status: 400 },
+    );
+  }
+
+  const updated = await prisma.invoice.update({
+    where: { id },
+    data: { status: "ISSUED", issueDate: new Date() },
+  });
+
+  return NextResponse.json({ invoice: ser(updated) });
+}

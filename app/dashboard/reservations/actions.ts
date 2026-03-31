@@ -158,19 +158,7 @@ export async function confirmReservation(formData: FormData) {
   // 3. Transaction: Update Status + Create Invoices
   try {
     await prisma.$transaction([
-      // A. Create the Invoices
-      prisma.invoice.createMany({
-        data: installments.map((inst, index) => ({
-          reservationId: reservation.id,
-          invoiceNumber: `INV-${reservation.id.slice(0, 4)}-${index + 1}`,
-          dueDate: inst.dueDate,
-          amount: inst.amount,
-          description: inst.description,
-          status: "PENDING",
-        })),
-      }),
-
-      // B. Update Reservation Status
+      // A. Update Reservation Status (invoices generated separately via invoice engine)
       prisma.reservation.update({
         where: { id: reservationId },
         data: { status: "CONFIRMED" },

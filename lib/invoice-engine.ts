@@ -1,0 +1,1579 @@
+/**
+ * Invoice Engine — invoice generation and payment processing for PMS SaaS.
+ *
+ * Currency: OMR (Omani Rial) — 3 decimal places (1 OMR = 1000 baisa).
+ * All monetary arithmetic uses integer baisa rounding to avoid float drift.
+ *
+ * Multi-tenancy: every operation is scoped to an organizationId. Queries
+ * that cross tenant boundaries will throw.
+ *
+ * Reservation units: supports both the legacy `unitId` FK on Reservation
+ * and the newer `reservationUnits` junction table. Both are handled
+ * transparently via getReservationUnitInfos().
+ *
+ * Key design decisions:
+ *  - Short-term (≤30 nights, daily rate): ONE invoice covers the whole stay.
+ *  - Monthly (monthly rate OR >30 nights): one invoice per calendar month,
+ *    generated on demand / via cron (5 days ahead).
+ *  - All invoice generation runs inside $transaction to guarantee sequential
+ *    invoice numbers without gaps.
+ */
+
+import { prisma } from "@/lib/prisma";
+import { getUnitPriceForRange } from "@/lib/pricing";
+import {
+  collapseToSegments,
+  calculateNights,
+  roundOMR,
+  toDateString,
+  type PriceSegment,
+} from "@/lib/reservation-engine";
+import type { Prisma } from "@prisma/client";
+import { InvoiceStatus, InvoiceType, LineItemCategory, RateType, RateSource } from "@prisma/client";
+
+// ── Re-export so callers can import everything from one place ─────────────────
+
+export type { PriceSegment };
+
+// ── Local types ───────────────────────────────────────────────────────────────
+
+export interface CalendarMonthPeriod {
+  monthNumber:  number;   // 1-indexed
+  periodStart:  Date;     // inclusive
+  periodEnd:    Date;     // inclusive (last day of billing period)
+  days:         number;   // calendar days covered
+  isFullMonth:  boolean;  // true only if 1st of month → last day of month
+}
+
+export interface UnitInfo {
+  unitId:             string;
+  rateType:           string;       // "daily" | "monthly"
+  rateAmount:         number;       // OMR
+  rateSource:         string;       // "default_price" | "seasonal_price" | "manual_override"
+  seasonalPriceName:  string | null;
+  propertyId:         string | null;
+}
+
+export interface GenerateInvoicesResult {
+  invoices:      Awaited<ReturnType<typeof prisma.invoice.findFirst>>[];
+  totalExpected: number;
+}
+
+export interface RecordPaymentParams {
+  tenantId:           string;
+  amount:             number;
+  method:             string;       // PaymentMethod enum value
+  reference?:         string;
+  notes?:             string;
+  orgId:              string;
+  userId:             string;
+  receivedById?:      string;
+  reservationId?:     string;
+  invoiceAllocations?: { invoiceId: string; amount: number }[];
+}
+
+export interface RecordPaymentResult {
+  payment:     Awaited<ReturnType<typeof prisma.payment.create>>;
+  allocations: Awaited<ReturnType<typeof prisma.paymentAllocation.create>>[];
+  overpayment: number;
+}
+
+export interface EarlyCheckoutResult {
+  updatedInvoice: Awaited<ReturnType<typeof prisma.invoice.findFirst>>;
+  cancelledCount: number;
+  creditAmount:   number;
+}
+
+export interface TenantFinancialSummary {
+  totalCharged:       number;
+  totalPaid:          number;
+  totalRefunded:      number;
+  currentBalance:     number;
+  invoices: {
+    total:      number;
+    paid:       number;
+    outstanding: number;
+    overdue:    number;
+    cancelled:  number;
+  };
+  outstandingInvoices: Awaited<ReturnType<typeof prisma.invoice.findMany>>;
+  recentPayments:      Awaited<ReturnType<typeof prisma.payment.findMany>>;
+}
+
+export interface PendingMonthlyResult {
+  generated: number;
+  details:   { reservationId: string; invoiceId: string; monthNumber: number }[];
+}
+
+// ── Prisma status/type constants ──────────────────────────────────────────────
+
+const ACTIVE_INVOICE_STATUSES = [
+  "ISSUED",
+  "PARTIALLY_PAID",
+  "DRAFT",
+  "PENDING",
+  "PARTIAL",
+  "DUE",
+] as const;
+
+const PAID_INVOICE_STATUSES = ["PAID"] as const;
+
+const CANCELLED_STATUSES = ["CANCELLED", "VOID"] as const;
+
+// ── OMR helper (re-exported alias keeps callers DRY) ──────────────────────────
+
+/** Round a number to 3 decimal places (baisa precision). */
+export const omr = roundOMR;
+
+// ── Date helpers ──────────────────────────────────────────────────────────────
+
+/**
+ * Return midnight UTC for any Date.
+ * Normalises time components so date comparisons are unambiguous.
+ */
+export function toDay(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()),
+  );
+}
+
+/**
+ * Return the last calendar day of the month that contains `date`.
+ * e.g. toDay("2026-03-15") → 2026-03-31
+ */
+export function endOfMonth(date: Date): Date {
+  // First day of next month minus one day
+  return new Date(
+    Date.UTC(date.getFullYear(), date.getMonth() + 1, 0),
+  );
+}
+
+/** First day of the month that contains `date`. */
+function startOfMonth(date: Date): Date {
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), 1));
+}
+
+/** Add `n` whole calendar days to a Date. */
+function addDays(date: Date, n: number): Date {
+  const d = new Date(date);
+  d.setUTCDate(d.getUTCDate() + n);
+  return d;
+}
+
+/** Days between two midnight Dates (b - a in whole days). */
+function daysBetween(a: Date, b: Date): number {
+  return Math.round((b.getTime() - a.getTime()) / 86_400_000);
+}
+
+// ── Sequential number helpers ─────────────────────────────────────────────────
+
+/**
+ * Generate the next sequential invoice number for an organisation within the
+ * current calendar year.  Format: "INV-YYYY-NNNNN" (zero-padded to 5 digits).
+ *
+ * MUST be called inside a Prisma $transaction to avoid race conditions.
+ */
+export async function nextInvoiceNumber(
+  orgId: string,
+  tx: Prisma.TransactionClient,
+): Promise<string> {
+  const year = new Date().getFullYear().toString();
+  const prefix = `INV-${year}-`;
+
+  const last = await tx.invoice.findFirst({
+    where: {
+      organizationId: orgId,
+      invoiceNumber: { startsWith: prefix },
+    },
+    orderBy: { invoiceNumber: "desc" },
+    select: { invoiceNumber: true },
+  });
+
+  let seq = 1;
+  if (last?.invoiceNumber) {
+    const parts = last.invoiceNumber.split("-");
+    seq = parseInt(parts[parts.length - 1], 10) + 1;
+  }
+
+  return `${prefix}${String(seq).padStart(5, "0")}`;
+}
+
+/**
+ * Generate the next sequential payment number for an organisation within the
+ * current calendar year.  Format: "PAY-YYYY-NNNNN".
+ *
+ * MUST be called inside a Prisma $transaction.
+ */
+export async function nextPaymentNumber(
+  orgId: string,
+  tx: Prisma.TransactionClient,
+): Promise<string> {
+  const year = new Date().getFullYear().toString();
+  const prefix = `PAY-${year}-`;
+
+  const last = await tx.payment.findFirst({
+    where: {
+      organizationId: orgId,
+      paymentNumber: { startsWith: prefix },
+    },
+    orderBy: { paymentNumber: "desc" },
+    select: { paymentNumber: true },
+  });
+
+  let seq = 1;
+  if (last?.paymentNumber) {
+    const parts = last.paymentNumber.split("-");
+    seq = parseInt(parts[parts.length - 1], 10) + 1;
+  }
+
+  return `${prefix}${String(seq).padStart(5, "0")}`;
+}
+
+// ── Calendar month period builder ─────────────────────────────────────────────
+
+/**
+ * Decompose a reservation stay into per-calendar-month billing periods.
+ *
+ * Rules:
+ *  - Period 1  : checkIn  → last day of checkIn's month  (or checkOut if same month)
+ *  - Middle    : 1st of month → last day of month
+ *  - Last      : 1st of month → checkOut
+ *  - isFullMonth: true only when periodStart is the 1st AND periodEnd is the
+ *    last day of that calendar month
+ *
+ * Both dates are treated as inclusive calendar-day boundaries.
+ *
+ * @param checkIn  - first night of stay (inclusive)
+ * @param checkOut - departure day (exclusive for nights, inclusive for period end)
+ */
+export function buildCalendarMonthPeriods(
+  checkIn: Date,
+  checkOut: Date,
+): CalendarMonthPeriod[] {
+  const start = toDay(checkIn);
+  const end   = toDay(checkOut);
+
+  if (end <= start) return [];
+
+  const periods: CalendarMonthPeriod[] = [];
+  let cursor = start;
+  let monthNumber = 1;
+
+  while (cursor < end) {
+    const eom = endOfMonth(cursor);
+    // The billing period ends at the earlier of: end-of-month or checkOut
+    const periodEnd = eom < end ? eom : new Date(Date.UTC(end.getFullYear(), end.getMonth(), end.getDate() - 1));
+
+    // Edge: if checkOut is the first day of a new month we already handled it
+    if (periodEnd < cursor) break;
+
+    const periodStart = cursor;
+    const days = daysBetween(periodStart, periodEnd) + 1; // inclusive
+
+    const isFirstOfMonth =
+      periodStart.getUTCDate() === 1;
+    const isLastOfMonth =
+      periodEnd.getTime() === endOfMonth(periodEnd).getTime();
+    const isFullMonth = isFirstOfMonth && isLastOfMonth;
+
+    periods.push({
+      monthNumber,
+      periodStart,
+      periodEnd,
+      days,
+      isFullMonth,
+    });
+
+    // Advance cursor to the first day of the next calendar month
+    cursor = new Date(Date.UTC(cursor.getFullYear(), cursor.getMonth() + 1, 1));
+    monthNumber++;
+  }
+
+  return periods;
+}
+
+// ── Unit info extraction ──────────────────────────────────────────────────────
+
+/**
+ * Return a normalised list of units for a reservation, supporting both the
+ * legacy single-unit (unitId FK) and multi-unit (reservationUnits) patterns.
+ *
+ * Units marked isMovedOut=true in the junction table are excluded.
+ */
+export function getReservationUnitInfos(reservation: {
+  unitId?:            string | null;
+  unit?: {
+    id:       string;
+    basePrice?: number | null;
+    property?: { id: string } | null;
+  } | null;
+  reservationUnits?: {
+    unitId:             string;
+    rateType:           string;
+    rateAmount:         number | { toNumber(): number };
+    rateSource:         string;
+    seasonalPriceName?: string | null;
+    isMovedOut?:        boolean;
+    unit?: {
+      id:       string;
+      property?: { id: string } | null;
+    } | null;
+  }[];
+}): UnitInfo[] {
+  const infos: UnitInfo[] = [];
+
+  // --- New junction table pattern ---
+  if (
+    reservation.reservationUnits &&
+    reservation.reservationUnits.length > 0
+  ) {
+    for (const ru of reservation.reservationUnits) {
+      if (ru.isMovedOut) continue;
+      infos.push({
+        unitId:            ru.unitId,
+        rateType:          ru.rateType,
+        rateAmount:        typeof ru.rateAmount === "object"
+                            ? ru.rateAmount.toNumber()
+                            : (ru.rateAmount as number),
+        rateSource:        ru.rateSource,
+        seasonalPriceName: ru.seasonalPriceName ?? null,
+        propertyId:        ru.unit?.property?.id ?? null,
+      });
+    }
+    return infos;
+  }
+
+  // --- Legacy single unitId FK ---
+  if (reservation.unitId && reservation.unit) {
+    infos.push({
+      unitId:            reservation.unitId,
+      rateType:          "daily",
+      rateAmount:        typeof reservation.unit.basePrice === "number"
+                          ? reservation.unit.basePrice
+                          : 0,
+      rateSource:        "default_price",
+      seasonalPriceName: null,
+      propertyId:        reservation.unit.property?.id ?? null,
+    });
+  }
+
+  return infos;
+}
+
+// ── Map rateSource string → Prisma RateSource enum value ─────────────────────
+
+function mapRateSource(src: string): "DEFAULT_PRICE" | "SEASONAL_PRICE" | "MANUAL_OVERRIDE" {
+  const s = src.toLowerCase();
+  if (s === "seasonal_price" || s === "seasonal") return "SEASONAL_PRICE";
+  if (s === "manual_override" || s === "manual") return "MANUAL_OVERRIDE";
+  return "DEFAULT_PRICE";
+}
+
+function mapPriceTypeToSource(priceType: "DEFAULT" | "SEASONAL"): "DEFAULT_PRICE" | "SEASONAL_PRICE" {
+  return priceType === "SEASONAL" ? "SEASONAL_PRICE" : "DEFAULT_PRICE";
+}
+
+// ── Invoice status derivation ─────────────────────────────────────────────────
+
+/**
+ * Derive the correct InvoiceStatus given payment amounts.
+ * Returns Prisma enum string values.
+ */
+function deriveInvoiceStatus(
+  totalAmount: number,
+  amountPaid: number,
+  existingStatus: string,
+): InvoiceStatus {
+  // Never un-cancel an invoice
+  if (existingStatus === "CANCELLED" || existingStatus === "VOID") {
+    return existingStatus as InvoiceStatus;
+  }
+  if (amountPaid <= 0) {
+    // If it was already issued/draft, keep that — don't regress
+    if (existingStatus === "ISSUED" || existingStatus === "DUE") return existingStatus as InvoiceStatus;
+    return InvoiceStatus.DRAFT;
+  }
+  if (roundOMR(totalAmount - amountPaid) <= 0) return InvoiceStatus.PAID;
+  return InvoiceStatus.PARTIALLY_PAID;
+}
+
+// ── Generate invoices for a reservation ──────────────────────────────────────
+
+/**
+ * Generate invoice(s) for a reservation on creation/confirmation.
+ *
+ * - Short-term (≤30 nights, daily rate): creates ONE invoice.
+ * - Monthly (rate_type=monthly OR >30 nights): creates the FIRST period
+ *   invoice only; subsequent invoices are generated by generateNextMonthlyInvoice().
+ *
+ * Idempotent: if non-cancelled invoices already exist the function returns
+ * them unchanged rather than creating duplicates.
+ *
+ * @returns { invoices, totalExpected }
+ */
+export async function generateInvoicesForReservation(
+  reservationId: string,
+  orgId: string,
+  userId: string,
+): Promise<GenerateInvoicesResult> {
+  // 1. Fetch reservation with all needed relations
+  const res = await prisma.reservation.findUniqueOrThrow({
+    where: { id: reservationId },
+    include: {
+      tenant: { select: { organizationId: true } },
+      unit: {
+        select: {
+          id: true,
+          name: true,
+          basePrice: true,
+          property: { select: { id: true } },
+        },
+      },
+      reservationUnits: {
+        where: { isMovedOut: false },
+        include: {
+          unit: {
+            select: {
+              id: true,
+              name: true,
+              basePrice: true,
+              property: { select: { id: true } },
+            },
+          },
+        },
+      },
+      invoices: {
+        where: { status: { notIn: ["CANCELLED", "VOID"] } },
+        select: { id: true, monthNumber: true, status: true },
+      },
+    },
+  });
+
+  // 2. Validate tenant belongs to org
+  if (res.tenant.organizationId !== orgId) {
+    throw new Error("Reservation tenant does not belong to the specified organisation.");
+  }
+
+  // Idempotency: return existing non-cancelled invoices if already generated
+  if (res.invoices.length > 0) {
+    const existing = await prisma.invoice.findMany({
+      where: {
+        reservationId,
+        organizationId: orgId,
+        status: { notIn: ["CANCELLED", "VOID"] },
+      },
+      include: { lineItems: true, allocations: true },
+    });
+    return {
+      invoices:      existing as any,
+      totalExpected: res.expectedInvoiceCount ?? existing.length,
+    };
+  }
+
+  // 3. Determine billing approach
+  const nights = calculateNights(res.startDate, res.endDate);
+  const isMonthly =
+    res.rateType === "monthly" ||
+    res.rateType === "MONTHLY" ||
+    nights > 30;
+
+  const unitInfos = getReservationUnitInfos(res as any);
+
+  if (!isMonthly) {
+    // ── 4a. SHORT-TERM (daily, ≤30 nights) ────────────────────────────────────
+    return await _generateShortTermInvoice(res, unitInfos, orgId, userId, nights);
+  } else {
+    // ── 4b. MONTHLY — generate only the first period invoice ──────────────────
+    return await _generateFirstMonthlyInvoice(res, unitInfos, orgId, userId);
+  }
+}
+
+// ── Internal: short-term invoice ─────────────────────────────────────────────
+
+async function _generateShortTermInvoice(
+  res: any,
+  unitInfos: UnitInfo[],
+  orgId: string,
+  userId: string,
+  nights: number,
+): Promise<GenerateInvoicesResult> {
+  const today = new Date();
+  const discountAmount = roundOMR(Number(res.discountAmount ?? 0));
+
+  const result = await prisma.$transaction(async (tx) => {
+    const invoiceNumber = await nextInvoiceNumber(orgId, tx);
+
+    // Build line items for every unit
+    const lineItemsData: Prisma.InvoiceLineItemCreateManyInvoiceInput[] = [];
+    let subtotal = 0;
+    let sortOrder = 0;
+
+    for (const ui of unitInfos) {
+      // Fetch daily pricing breakdown
+      const pricing = await getUnitPriceForRange(ui.unitId, res.startDate, res.endDate);
+      const segments = collapseToSegments(pricing.dailyBreakdown);
+
+      // Resolve unit name from reservation relation
+      const unitName = _resolveUnitName(res, ui.unitId) ?? ui.unitId;
+
+      for (const seg of segments) {
+        const lineTotal = roundOMR(seg.subtotal);
+        subtotal = roundOMR(subtotal + lineTotal);
+
+        lineItemsData.push({
+          organizationId:    orgId,
+          description:       `${unitName} — ${seg.priceName ?? "Default"} rate (${seg.startDate} – ${seg.endDate})`,
+          category:          "ROOM_CHARGE",
+          unitId:            ui.unitId,
+          quantity:          seg.nights,
+          unitPrice:         seg.ratePerNight,
+          lineTotal,
+          rateType:          "DAILY",
+          rateSource:        mapPriceTypeToSource(seg.priceType),
+          seasonalPriceName: seg.priceName,
+          priceBreakdown:    segments as any,   // full segment array for reference
+          sortOrder:         sortOrder++,
+        });
+      }
+    }
+
+    const totalAmount = roundOMR(subtotal - discountAmount);
+    const balanceDue  = totalAmount; // no payments yet
+
+    const invoice = await tx.invoice.create({
+      data: {
+        organizationId: orgId,
+        invoiceNumber,
+        reservationId:  res.id,
+        tenantId:       res.tenantId,
+        propertyId:     unitInfos[0]?.propertyId ?? null,
+        periodStart:    res.startDate,
+        periodEnd:      res.endDate,
+        invoiceType:    "SHORT_TERM",
+        monthNumber:    null,
+        subtotal,
+        discountAmount,
+        taxAmount:      0,
+        totalAmount,
+        amountPaid:     0,
+        balanceDue,
+        status:         "DRAFT",
+        issueDate:      today,
+        dueDate:        res.startDate,   // due on check-in
+        createdById:    userId,
+        lineItems: {
+          createMany: { data: lineItemsData },
+        },
+      },
+      include: { lineItems: true, allocations: true },
+    });
+
+    return invoice;
+  });
+
+  return { invoices: [result] as any, totalExpected: 1 };
+}
+
+// ── Internal: first monthly invoice ──────────────────────────────────────────
+
+async function _generateFirstMonthlyInvoice(
+  res: any,
+  unitInfos: UnitInfo[],
+  orgId: string,
+  userId: string,
+): Promise<GenerateInvoicesResult> {
+  const periods = buildCalendarMonthPeriods(res.startDate, res.endDate);
+  if (periods.length === 0) {
+    throw new Error("Could not build billing periods for reservation.");
+  }
+
+  const firstPeriod = periods[0];
+
+  const invoice = await _createMonthlyInvoice({
+    res,
+    unitInfos,
+    period: firstPeriod,
+    orgId,
+    userId,
+    dueDate: res.startDate,  // first invoice due on check-in
+  });
+
+  // Update reservation with total expected invoice count
+  await prisma.reservation.update({
+    where: { id: res.id },
+    data: { expectedInvoiceCount: periods.length },
+  });
+
+  return {
+    invoices:      [invoice] as any,
+    totalExpected: periods.length,
+  };
+}
+
+// ── Internal: create one monthly invoice for a period ────────────────────────
+
+async function _createMonthlyInvoice(opts: {
+  res:       any;
+  unitInfos: UnitInfo[];
+  period:    CalendarMonthPeriod;
+  orgId:     string;
+  userId:    string;
+  dueDate:   Date;
+  status?:   InvoiceStatus;
+}): Promise<any> {
+  const { res, unitInfos, period, orgId, userId } = opts;
+  const today = new Date();
+  const status: InvoiceStatus = opts.status ?? InvoiceStatus.DRAFT;
+
+  // Label for line item description
+  const periodLabel = _periodLabel(period);
+
+  return prisma.$transaction(async (tx) => {
+    const invoiceNumber = await nextInvoiceNumber(orgId, tx);
+
+    const lineItemsData: Prisma.InvoiceLineItemCreateManyInvoiceInput[] = [];
+    let subtotal = 0;
+    let sortOrder = 0;
+
+    for (const ui of unitInfos) {
+      // Monthly rate: prefer explicit rateAmount, fall back to unit basePrice
+      const monthlyRate = ui.rateAmount > 0
+        ? ui.rateAmount
+        : 0;
+
+      // Pro-rate: full month billed flat; partial month billed as (rate × days / 30)
+      const amount = period.isFullMonth
+        ? roundOMR(monthlyRate)
+        : roundOMR((monthlyRate / 30) * period.days);
+
+      const unitName = _resolveUnitName(res, ui.unitId) ?? ui.unitId;
+
+      const unitPrice = roundOMR(monthlyRate / 30); // per-day equivalent
+      const lineTotal = amount;
+      subtotal = roundOMR(subtotal + lineTotal);
+
+      lineItemsData.push({
+        organizationId:    orgId,
+        description:       `${unitName} — ${periodLabel}`,
+        category:          "ROOM_CHARGE",
+        unitId:            ui.unitId,
+        quantity:          period.days,
+        unitPrice,
+        lineTotal,
+        rateType:          "MONTHLY",
+        rateSource:        mapRateSource(ui.rateSource),
+        seasonalPriceName: ui.seasonalPriceName,
+        priceBreakdown:    [{ period: periodLabel, days: period.days, monthlyRate, amount }] as any,
+        sortOrder:         sortOrder++,
+      });
+    }
+
+    const discountAmount = roundOMR(Number(res.discountAmount ?? 0));
+    const totalAmount    = roundOMR(subtotal - discountAmount);
+    const balanceDue     = totalAmount;
+
+    const invoice = await tx.invoice.create({
+      data: {
+        organizationId: orgId,
+        invoiceNumber,
+        reservationId:  res.id,
+        tenantId:       res.tenantId,
+        propertyId:     unitInfos[0]?.propertyId ?? null,
+        periodStart:    period.periodStart,
+        periodEnd:      period.periodEnd,
+        invoiceType:    "MONTHLY",
+        monthNumber:    period.monthNumber,
+        subtotal,
+        discountAmount,
+        taxAmount:      0,
+        totalAmount,
+        amountPaid:     0,
+        balanceDue,
+        status,
+        issueDate:      today,
+        dueDate:        opts.dueDate,
+        createdById:    userId,
+        lineItems: {
+          createMany: { data: lineItemsData },
+        },
+      },
+      include: { lineItems: true, allocations: true },
+    });
+
+    return invoice;
+  });
+}
+
+// ── Generate the next monthly invoice ────────────────────────────────────────
+
+/**
+ * Generate the next sequential monthly invoice for a reservation.
+ * Called manually by receptionist or automatically by generatePendingMonthlyInvoices().
+ *
+ * @returns the new invoice, or null if all periods have been invoiced.
+ */
+export async function generateNextMonthlyInvoice(
+  reservationId: string,
+  orgId: string,
+  userId: string,
+): Promise<any | null> {
+  // 1. Fetch reservation
+  const res = await prisma.reservation.findUniqueOrThrow({
+    where: { id: reservationId },
+    include: {
+      tenant: { select: { organizationId: true } },
+      unit: {
+        select: {
+          id: true,
+          name: true,
+          basePrice: true,
+          property: { select: { id: true } },
+        },
+      },
+      reservationUnits: {
+        where: { isMovedOut: false },
+        include: {
+          unit: {
+            select: {
+              id: true,
+              name: true,
+              basePrice: true,
+              property: { select: { id: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  if (res.tenant.organizationId !== orgId) {
+    throw new Error("Reservation tenant does not belong to the specified organisation.");
+  }
+
+  // Must be active
+  if (!["CHECKED_IN", "CONFIRMED"].includes(res.status)) {
+    throw new Error(`Cannot generate invoice for reservation with status: ${res.status}`);
+  }
+
+  // 2. Find existing invoices (not cancelled)
+  const existingInvoices = await prisma.invoice.findMany({
+    where: {
+      reservationId,
+      organizationId: orgId,
+      status: { notIn: ["CANCELLED", "VOID"] },
+    },
+    select: { monthNumber: true },
+    orderBy: { monthNumber: "desc" },
+  });
+
+  const lastMonthNumber = existingInvoices.reduce(
+    (max, inv) => Math.max(max, inv.monthNumber ?? 0),
+    0,
+  );
+
+  // 3. Build all calendar month periods
+  const periods = buildCalendarMonthPeriods(res.startDate, res.endDate);
+
+  // 4. Next period is at index = lastMonthNumber (0-indexed)
+  const nextPeriod = periods[lastMonthNumber];
+
+  if (!nextPeriod) return null;
+  if (nextPeriod.periodStart >= res.endDate) return null;
+
+  const unitInfos = getReservationUnitInfos(res as any);
+
+  // Due date: first day of the period being invoiced
+  const dueDate = nextPeriod.periodStart;
+
+  const invoice = await _createMonthlyInvoice({
+    res,
+    unitInfos,
+    period: nextPeriod,
+    orgId,
+    userId,
+    dueDate,
+    status: "DRAFT",
+  });
+
+  return invoice;
+}
+
+// ── Handle early checkout ─────────────────────────────────────────────────────
+
+/**
+ * Adjust billing when a tenant checks out before the reservation end date.
+ *
+ * 1. Finds the invoice covering actualCheckoutDate.
+ * 2. Recalculates that invoice for the actual days used.
+ * 3. Cancels all future invoices.
+ * 4. Flags refundPending on the reservation if a credit exists.
+ */
+export async function handleEarlyCheckout(
+  reservationId: string,
+  actualCheckoutDate: Date,
+  orgId: string,
+  userId: string,
+): Promise<EarlyCheckoutResult> {
+  const checkoutDay = toDay(actualCheckoutDate);
+  const today = new Date();
+  const checkoutStr = toDateString(checkoutDay);
+
+  // Fetch all non-cancelled invoices for this reservation
+  const allInvoices = await prisma.invoice.findMany({
+    where: {
+      reservationId,
+      organizationId: orgId,
+      status: { notIn: ["CANCELLED", "VOID"] },
+    },
+    include: { lineItems: true },
+    orderBy: { periodStart: "asc" },
+  });
+
+  if (allInvoices.length === 0) {
+    throw new Error("No invoices found for reservation.");
+  }
+
+  // 1. Find the invoice covering actualCheckoutDate
+  const currentInvoice = allInvoices.find((inv) => {
+    const ps = toDay(inv.periodStart);
+    const pe = toDay(inv.periodEnd);
+    return ps <= checkoutDay && checkoutDay <= pe;
+  });
+
+  // 2. Find all FUTURE invoices (periodStart > actualCheckoutDate)
+  const futureInvoices = allInvoices.filter((inv) => {
+    const ps = toDay(inv.periodStart);
+    return ps > checkoutDay;
+  });
+
+  let updatedInvoice: any = currentInvoice ?? null;
+  let creditAmount = 0;
+
+  await prisma.$transaction(async (tx) => {
+    // Cancel future invoices
+    if (futureInvoices.length > 0) {
+      await tx.invoice.updateMany({
+        where: { id: { in: futureInvoices.map((i) => i.id) } },
+        data: {
+          status:         "CANCELLED",
+          cancelledReason: `Early checkout on ${checkoutStr}`,
+          cancelledAt:    today,
+        },
+      });
+    }
+
+    // Recalculate current invoice if it exists and covers the checkout date
+    if (currentInvoice) {
+      const periodStart = toDay(currentInvoice.periodStart);
+      const actualDays  = daysBetween(periodStart, checkoutDay); // exclusive end
+
+      // Rebuild subtotal from existing line items scaled to actualDays
+      // If daily: recalculate via pricing engine; if monthly: pro-rate
+      let newSubtotal = 0;
+
+      if (currentInvoice.invoiceType === "MONTHLY") {
+        // Pro-rate monthly line items
+        for (const li of currentInvoice.lineItems) {
+          const originalDays = Number(li.quantity);
+          if (originalDays <= 0) continue;
+          const newLineTotal = roundOMR((Number(li.lineTotal) / originalDays) * actualDays);
+          newSubtotal = roundOMR(newSubtotal + newLineTotal);
+
+          await tx.invoiceLineItem.update({
+            where: { id: li.id },
+            data: {
+              quantity:  actualDays,
+              lineTotal: newLineTotal,
+            },
+          });
+        }
+      } else {
+        // SHORT_TERM daily: recalculate entirely; just scale existing subtotal
+        const originalDays = Number(currentInvoice.lineItems.reduce(
+          (s, li) => s + Number(li.quantity), 0,
+        )) || 1;
+        newSubtotal = roundOMR((Number(currentInvoice.subtotal) / originalDays) * actualDays);
+      }
+
+      const discountAmount = roundOMR(Number(currentInvoice.discountAmount));
+      const newTotal       = roundOMR(newSubtotal - discountAmount);
+      const amountPaid     = roundOMR(Number(currentInvoice.amountPaid));
+      const newBalance     = roundOMR(newTotal - amountPaid);
+
+      creditAmount = newBalance < 0 ? roundOMR(-newBalance) : 0;
+
+      const newStatus = deriveInvoiceStatus(newTotal, amountPaid, currentInvoice.status);
+
+      updatedInvoice = await tx.invoice.update({
+        where: { id: currentInvoice.id },
+        data: {
+          periodEnd:   checkoutDay,
+          subtotal:    newSubtotal,
+          totalAmount: newTotal,
+          balanceDue:  Math.max(0, newBalance),
+          status:      newStatus,
+        },
+        include: { lineItems: true },
+      });
+
+      // Flag reservation if credit is owed
+      if (creditAmount > 0) {
+        await tx.reservation.update({
+          where: { id: reservationId },
+          data: { refundPending: true },
+        });
+      }
+    }
+  });
+
+  return {
+    updatedInvoice,
+    cancelledCount: futureInvoices.length,
+    creditAmount,
+  };
+}
+
+// ── Handle overstay ───────────────────────────────────────────────────────────
+
+/**
+ * Create an OVERSTAY invoice when a tenant stays beyond their reservation end date.
+ * The invoice is immediately ISSUED with dueDate=today.
+ */
+export async function handleOverstay(
+  reservationId: string,
+  actualCheckoutDate: Date,
+  orgId: string,
+  userId: string,
+): Promise<any> {
+  const res = await prisma.reservation.findUniqueOrThrow({
+    where: { id: reservationId },
+    include: {
+      tenant:          { select: { organizationId: true } },
+      unit:            { select: { id: true, name: true, property: { select: { id: true } } } },
+      reservationUnits: {
+        where: { isMovedOut: false },
+        include: { unit: { select: { id: true, name: true, property: { select: { id: true } } } } },
+      },
+    },
+  });
+
+  if (res.tenant.organizationId !== orgId) {
+    throw new Error("Reservation tenant does not belong to the specified organisation.");
+  }
+
+  const overstayStart = toDay(res.endDate);
+  const overstayEnd   = toDay(actualCheckoutDate);
+  const extraDays     = daysBetween(overstayStart, overstayEnd);
+
+  if (extraDays <= 0) {
+    throw new Error("actualCheckoutDate is not after reservation.endDate; no overstay to bill.");
+  }
+
+  const today    = new Date();
+  const unitInfos = getReservationUnitInfos(res as any);
+
+  return prisma.$transaction(async (tx) => {
+    const invoiceNumber = await nextInvoiceNumber(orgId, tx);
+    const lineItemsData: Prisma.InvoiceLineItemCreateManyInvoiceInput[] = [];
+    let subtotal = 0;
+    let sortOrder = 0;
+
+    for (const ui of unitInfos) {
+      // Get daily pricing for the overstay period
+      const pricing  = await getUnitPriceForRange(ui.unitId, overstayStart, overstayEnd);
+      const segments = collapseToSegments(pricing.dailyBreakdown);
+      const unitName = _resolveUnitName(res, ui.unitId) ?? ui.unitId;
+
+      for (const seg of segments) {
+        const lineTotal = roundOMR(seg.subtotal);
+        subtotal = roundOMR(subtotal + lineTotal);
+
+        lineItemsData.push({
+          organizationId:    orgId,
+          description:       `${unitName} — Overstay ${seg.startDate} – ${seg.endDate}`,
+          category:          "OVERSTAY",
+          unitId:            ui.unitId,
+          quantity:          seg.nights,
+          unitPrice:         seg.ratePerNight,
+          lineTotal,
+          rateType:          "DAILY",
+          rateSource:        mapPriceTypeToSource(seg.priceType),
+          seasonalPriceName: seg.priceName,
+          sortOrder:         sortOrder++,
+        });
+      }
+    }
+
+    const totalAmount = subtotal;
+    const balanceDue  = totalAmount;
+
+    const invoice = await tx.invoice.create({
+      data: {
+        organizationId: orgId,
+        invoiceNumber,
+        reservationId:  res.id,
+        tenantId:       res.tenantId,
+        propertyId:     unitInfos[0]?.propertyId ?? null,
+        periodStart:    overstayStart,
+        periodEnd:      overstayEnd,
+        invoiceType:    "OVERSTAY",
+        monthNumber:    null,
+        subtotal,
+        discountAmount: 0,
+        taxAmount:      0,
+        totalAmount,
+        amountPaid:     0,
+        balanceDue,
+        status:         "ISSUED",   // immediately actionable
+        issueDate:      today,
+        dueDate:        today,
+        createdById:    userId,
+        notes:          `Overstay: ${extraDays} extra day(s) beyond ${toDateString(overstayStart)}`,
+        lineItems: {
+          createMany: { data: lineItemsData },
+        },
+      },
+      include: { lineItems: true },
+    });
+
+    return invoice;
+  });
+}
+
+// ── Add extra charge ──────────────────────────────────────────────────────────
+
+/**
+ * Add an ad-hoc charge to the appropriate invoice for this reservation.
+ *
+ * Strategy:
+ *  - For DRAFT invoices: append line item directly.
+ *  - For ISSUED/PARTIALLY_PAID/PAID invoices: create a new ADDITIONAL invoice.
+ *  - If no active invoice exists at all: create a new ADDITIONAL invoice.
+ *
+ * @param category  - LineItemCategory enum value (default: "OTHER")
+ */
+export async function addExtraCharge(
+  reservationId: string,
+  description:   string,
+  amount:        number,
+  category:      LineItemCategory = LineItemCategory.OTHER,
+  orgId:         string,
+  userId:        string,
+): Promise<any> {
+  const chargeAmount = roundOMR(amount);
+  if (chargeAmount <= 0) throw new Error("Charge amount must be positive.");
+
+  const today = new Date();
+  const todayDay = toDay(today);
+
+  // Fetch reservation basics
+  const res = await prisma.reservation.findUniqueOrThrow({
+    where: { id: reservationId },
+    select: {
+      id:       true,
+      tenantId: true,
+      rateType: true,
+      startDate: true,
+      endDate:  true,
+      unit:     { select: { property: { select: { id: true } } } },
+      reservationUnits: {
+        where: { isMovedOut: false },
+        select: { unit: { select: { property: { select: { id: true } } } } },
+      },
+    },
+  });
+
+  // Fetch existing non-cancelled invoices
+  const existingInvoices = await prisma.invoice.findMany({
+    where: {
+      reservationId,
+      organizationId: orgId,
+      status: { notIn: ["CANCELLED", "VOID"] },
+    },
+    include: { lineItems: true },
+    orderBy: { periodStart: "asc" },
+  });
+
+  const isMonthly =
+    res.rateType === "monthly" || res.rateType === "MONTHLY";
+
+  // Find the "current" draft invoice to amend
+  let targetInvoice = existingInvoices.find((inv) => {
+    if (inv.status !== "DRAFT") return false;
+    if (!isMonthly) return true;   // short-term: any draft
+    const ps = toDay(inv.periodStart);
+    const pe = toDay(inv.periodEnd);
+    return ps <= todayDay && todayDay <= pe;
+  }) ?? null;
+
+  // If target is non-draft, we need a new ADDITIONAL invoice
+  const needsNewInvoice =
+    !targetInvoice ||
+    !["DRAFT"].includes(targetInvoice.status);
+
+  if (needsNewInvoice) {
+    // Create new ADDITIONAL invoice
+    const propertyId =
+      res.reservationUnits?.[0]?.unit?.property?.id ??
+      res.unit?.property?.id ??
+      null;
+
+    return prisma.$transaction(async (tx) => {
+      const invoiceNumber = await nextInvoiceNumber(orgId, tx);
+
+      const invoice = await tx.invoice.create({
+        data: {
+          organizationId: orgId,
+          invoiceNumber,
+          reservationId:  res.id,
+          tenantId:       res.tenantId,
+          propertyId,
+          periodStart:    today,
+          periodEnd:      today,
+          invoiceType:    "ADDITIONAL",
+          subtotal:       chargeAmount,
+          discountAmount: 0,
+          taxAmount:      0,
+          totalAmount:    chargeAmount,
+          amountPaid:     0,
+          balanceDue:     chargeAmount,
+          status:         "DRAFT",
+          issueDate:      today,
+          dueDate:        today,
+          createdById:    userId,
+          lineItems: {
+            createMany: {
+              data: [{
+                organizationId: orgId,
+                description,
+                category,
+                quantity:   1,
+                unitPrice:  chargeAmount,
+                lineTotal:  chargeAmount,
+                sortOrder:  0,
+              }],
+            },
+          },
+        },
+        include: { lineItems: true },
+      });
+
+      return invoice;
+    });
+  }
+
+  // Append line item to existing DRAFT invoice and recalculate totals
+  return prisma.$transaction(async (tx) => {
+    const existingLineCount = targetInvoice!.lineItems.length;
+
+    await tx.invoiceLineItem.create({
+      data: {
+        invoiceId:      targetInvoice!.id,
+        organizationId: orgId,
+        description,
+        category,
+        quantity:   1,
+        unitPrice:  chargeAmount,
+        lineTotal:  chargeAmount,
+        sortOrder:  existingLineCount,
+      },
+    });
+
+    const newSubtotal    = roundOMR(Number(targetInvoice!.subtotal) + chargeAmount);
+    const discountAmount = roundOMR(Number(targetInvoice!.discountAmount));
+    const newTotal       = roundOMR(newSubtotal - discountAmount);
+    const amountPaid     = roundOMR(Number(targetInvoice!.amountPaid));
+    const newBalance     = roundOMR(newTotal - amountPaid);
+
+    const updated = await tx.invoice.update({
+      where: { id: targetInvoice!.id },
+      data: {
+        subtotal:    newSubtotal,
+        totalAmount: newTotal,
+        balanceDue:  Math.max(0, newBalance),
+      },
+      include: { lineItems: true },
+    });
+
+    return updated;
+  });
+}
+
+// ── Record a payment ──────────────────────────────────────────────────────────
+
+/**
+ * Record a payment from a tenant and allocate it across invoices.
+ *
+ * Two allocation modes:
+ *  1. Manual: caller provides `invoiceAllocations` with explicit amounts per invoice.
+ *  2. Auto:   invoices for this tenant (outstanding, ordered oldest-first) are
+ *             filled greedily until the payment amount is exhausted.
+ *
+ * After allocation, each affected invoice's status is recalculated and the
+ * reservation's amountPaid is updated.
+ */
+export async function recordPayment(
+  params: RecordPaymentParams,
+): Promise<RecordPaymentResult> {
+  const {
+    tenantId,
+    amount,
+    method,
+    reference,
+    notes,
+    orgId,
+    userId,
+    receivedById,
+    reservationId,
+    invoiceAllocations,
+  } = params;
+
+  const paymentAmount = roundOMR(amount);
+  if (paymentAmount <= 0) throw new Error("Payment amount must be positive.");
+
+  const today = new Date();
+
+  return prisma.$transaction(async (tx) => {
+    // 1. Generate payment number
+    const paymentNumber = await nextPaymentNumber(orgId, tx);
+
+    // 2. Create payment record
+    const payment = await tx.payment.create({
+      data: {
+        paymentNumber,
+        organizationId: orgId,
+        amount:         paymentAmount,
+        date:           today,
+        method:         method as any,
+        reference:      reference ?? null,
+        notes:          notes ?? null,
+        isRefund:       false,
+        receivedById:   receivedById ?? null,
+        tenantId,
+        reservationId:  reservationId ?? null,
+      },
+    });
+
+    const createdAllocations: any[] = [];
+    let remaining = paymentAmount;
+
+    if (invoiceAllocations && invoiceAllocations.length > 0) {
+      // ── 3a. Manual allocation ──────────────────────────────────────────────
+      for (const alloc of invoiceAllocations) {
+        const allocAmt = roundOMR(alloc.amount);
+        if (allocAmt <= 0) continue;
+
+        const allocation = await tx.paymentAllocation.create({
+          data: {
+            paymentId:      payment.id,
+            invoiceId:      alloc.invoiceId,
+            organizationId: orgId,
+            amount:         allocAmt,
+          },
+        });
+        createdAllocations.push(allocation);
+
+        // Update invoice paid amounts
+        await _applyAllocationToInvoice(tx, alloc.invoiceId, allocAmt, today);
+        remaining = roundOMR(remaining - allocAmt);
+      }
+    } else {
+      // ── 3b. Auto allocation: oldest outstanding invoices first ─────────────
+      const outstandingInvoices = await tx.invoice.findMany({
+        where: {
+          tenantId,
+          organizationId: orgId,
+          status: { in: ["ISSUED", "PARTIALLY_PAID", "DRAFT", "PENDING", "PARTIAL", "DUE"] },
+          balanceDue: { gt: 0 },
+        },
+        orderBy: { dueDate: "asc" },
+        select: { id: true, balanceDue: true },
+      });
+
+      for (const inv of outstandingInvoices) {
+        if (remaining <= 0) break;
+
+        const due      = roundOMR(Number(inv.balanceDue));
+        const allocAmt = roundOMR(Math.min(remaining, due));
+
+        const allocation = await tx.paymentAllocation.create({
+          data: {
+            paymentId:      payment.id,
+            invoiceId:      inv.id,
+            organizationId: orgId,
+            amount:         allocAmt,
+          },
+        });
+        createdAllocations.push(allocation);
+
+        await _applyAllocationToInvoice(tx, inv.id, allocAmt, today);
+        remaining = roundOMR(remaining - allocAmt);
+      }
+    }
+
+    const overpayment = remaining > 0 ? remaining : 0;
+    if (overpayment > 0) {
+      // Log overpayment in payment notes — do not fail
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: {
+          notes: [notes, `Overpayment: ${overpayment} OMR (unapplied credit)`]
+                   .filter(Boolean)
+                   .join(" | "),
+        },
+      });
+    }
+
+    // 6. Update reservation.amountPaid = sum of all non-refund payments for its invoices
+    if (reservationId) {
+      await _recalcReservationAmountPaid(tx, reservationId);
+    }
+
+    return { payment, allocations: createdAllocations, overpayment };
+  });
+}
+
+// ── Internal: apply allocation to an invoice ──────────────────────────────────
+
+async function _applyAllocationToInvoice(
+  tx:       Prisma.TransactionClient,
+  invoiceId: string,
+  amount:    number,
+  today:     Date,
+): Promise<void> {
+  const invoice = await tx.invoice.findUniqueOrThrow({
+    where:  { id: invoiceId },
+    select: { totalAmount: true, amountPaid: true, status: true },
+  });
+
+  const totalAmount = roundOMR(Number(invoice.totalAmount));
+  const amountPaid  = roundOMR(Number(invoice.amountPaid) + amount);
+  const balanceDue  = roundOMR(Math.max(0, totalAmount - amountPaid));
+  const newStatus   = deriveInvoiceStatus(totalAmount, amountPaid, invoice.status);
+
+  await tx.invoice.update({
+    where: { id: invoiceId },
+    data: {
+      amountPaid,
+      balanceDue,
+      status:   newStatus,
+      paidDate: newStatus === "PAID" ? today : null,
+    },
+  });
+}
+
+// ── Internal: recalculate reservation.amountPaid ──────────────────────────────
+
+async function _recalcReservationAmountPaid(
+  tx:            Prisma.TransactionClient,
+  reservationId: string,
+): Promise<void> {
+  // Sum all non-refund payment amounts linked to this reservation's invoices
+  const allocations = await tx.paymentAllocation.findMany({
+    where: {
+      invoice: { reservationId },
+      payment: { isRefund: false },
+    },
+    select: { amount: true },
+  });
+
+  const totalPaid = allocations.reduce(
+    (sum, a) => roundOMR(sum + Number(a.amount)),
+    0,
+  );
+
+  await tx.reservation.update({
+    where: { id: reservationId },
+    data:  { amountPaid: totalPaid },
+  });
+}
+
+// ── Tenant financial summary ───────────────────────────────────────────────────
+
+/**
+ * Return a comprehensive financial summary for a tenant:
+ *   - Totals charged, paid, refunded and current balance.
+ *   - Invoice counts broken down by status.
+ *   - All outstanding invoices (for display).
+ *   - Last 10 payments.
+ */
+export async function getTenantFinancialSummary(
+  tenantId: string,
+  orgId: string,
+): Promise<TenantFinancialSummary> {
+  const today = new Date();
+
+  const [invoices, payments] = await Promise.all([
+    prisma.invoice.findMany({
+      where: { tenantId, organizationId: orgId },
+      include: { lineItems: true },
+      orderBy: { dueDate: "asc" },
+    }),
+    prisma.payment.findMany({
+      where: { tenantId, organizationId: orgId },
+      orderBy: { createdAt: "desc" },
+    }),
+  ]);
+
+  // Totals
+  const nonCancelledInvoices = invoices.filter(
+    (inv) => !["CANCELLED", "VOID"].includes(inv.status),
+  );
+  const totalCharged = nonCancelledInvoices.reduce(
+    (sum, inv) => roundOMR(sum + Number(inv.totalAmount)),
+    0,
+  );
+
+  const nonRefundPayments = payments.filter((p) => !p.isRefund);
+  const refundPayments    = payments.filter((p) => p.isRefund);
+
+  const totalPaid = nonRefundPayments.reduce(
+    (sum, p) => roundOMR(sum + Number(p.amount)),
+    0,
+  );
+  const totalRefunded = refundPayments.reduce(
+    (sum, p) => roundOMR(sum + Number(p.amount)),
+    0,
+  );
+
+  const currentBalance = roundOMR(totalCharged - totalPaid + totalRefunded);
+
+  // Invoice counts
+  const paidInvoices = nonCancelledInvoices.filter(
+    (inv) => ["PAID"].includes(inv.status),
+  );
+  const cancelledInvoices = invoices.filter((inv) =>
+    ["CANCELLED", "VOID"].includes(inv.status),
+  );
+  const outstandingInvoicesList = nonCancelledInvoices.filter((inv) =>
+    ["ISSUED", "PARTIALLY_PAID", "DRAFT", "PENDING", "PARTIAL", "DUE"].includes(inv.status),
+  );
+  const overdueInvoices = outstandingInvoicesList.filter(
+    (inv) => toDay(inv.dueDate) < toDay(today) && Number(inv.balanceDue) > 0,
+  );
+
+  return {
+    totalCharged,
+    totalPaid,
+    totalRefunded,
+    currentBalance,
+    invoices: {
+      total:      invoices.length,
+      paid:       paidInvoices.length,
+      outstanding: outstandingInvoicesList.length,
+      overdue:    overdueInvoices.length,
+      cancelled:  cancelledInvoices.length,
+    },
+    outstandingInvoices: outstandingInvoicesList as any,
+    recentPayments:      payments.slice(0, 10) as any,
+  };
+}
+
+// ── Generate pending monthly invoices (cron job) ──────────────────────────────
+
+/**
+ * Scan all CHECKED_IN monthly reservations and auto-generate invoices that
+ * are due within the next 5 days.
+ *
+ * Designed to be called from a daily cron job or scheduled task.
+ *
+ * @param orgId - if provided, restricts to one organisation (for multi-tenant crons)
+ */
+export async function generatePendingMonthlyInvoices(
+  orgId?: string,
+): Promise<PendingMonthlyResult> {
+  const today       = new Date();
+  const horizon     = addDays(today, 5);
+
+  // Find all checked-in monthly reservations
+  const reservations = await prisma.reservation.findMany({
+    where: {
+      status:   "CHECKED_IN",
+      rateType: { in: ["monthly", "MONTHLY"] },
+      ...(orgId ? { tenant: { organizationId: orgId } } : {}),
+    },
+    select: {
+      id:       true,
+      startDate: true,
+      endDate:  true,
+      tenant:   { select: { organizationId: true } },
+      invoices: {
+        where: { status: { notIn: ["CANCELLED", "VOID"] } },
+        select: { monthNumber: true },
+      },
+    },
+  });
+
+  const details: { reservationId: string; invoiceId: string; monthNumber: number }[] = [];
+
+  for (const res of reservations) {
+    const resOrgId = res.tenant.organizationId;
+    if (!resOrgId) continue;
+
+    const periods = buildCalendarMonthPeriods(res.startDate, res.endDate);
+
+    const lastMonthNumber = res.invoices.reduce(
+      (max, inv) => Math.max(max, inv.monthNumber ?? 0),
+      0,
+    );
+
+    const nextPeriod = periods[lastMonthNumber];
+    if (!nextPeriod) continue;
+    if (nextPeriod.periodStart >= res.endDate) continue;
+
+    // Generate if the next period starts within the 5-day horizon
+    if (nextPeriod.periodStart <= horizon) {
+      // Check not already created (race safety)
+      const alreadyExists = await prisma.invoice.findFirst({
+        where: {
+          reservationId: res.id,
+          monthNumber:   lastMonthNumber + 1,
+          status:        { notIn: ["CANCELLED", "VOID"] },
+        },
+        select: { id: true },
+      });
+      if (alreadyExists) continue;
+
+      // Use a sentinel userId for auto-generated invoices
+      const invoice = await generateNextMonthlyInvoice(
+        res.id,
+        resOrgId,
+        "system",
+      );
+
+      if (invoice) {
+        details.push({
+          reservationId: res.id,
+          invoiceId:     invoice.id,
+          monthNumber:   lastMonthNumber + 1,
+        });
+      }
+    }
+  }
+
+  return { generated: details.length, details };
+}
+
+// ── Private utilities ─────────────────────────────────────────────────────────
+
+/** Resolve a human-readable unit name from the reservation's loaded relations. */
+function _resolveUnitName(res: any, unitId: string): string | null {
+  // Try junction table first
+  if (res.reservationUnits) {
+    const ru = res.reservationUnits.find((u: any) => u.unitId === unitId || u.unit?.id === unitId);
+    if (ru?.unit?.name) return ru.unit.name;
+  }
+  // Fall back to legacy unit relation
+  if (res.unit?.id === unitId && res.unit?.name) return res.unit.name;
+  return null;
+}
+
+/** Build a human-readable label for a billing period. */
+function _periodLabel(period: CalendarMonthPeriod): string {
+  const opts: Intl.DateTimeFormatOptions = { month: "long", year: "numeric" };
+  const monthLabel = period.periodStart.toLocaleString("en-US", opts);
+  if (period.isFullMonth) return monthLabel;
+  const startStr = toDateString(period.periodStart);
+  const endStr   = toDateString(period.periodEnd);
+  return `${monthLabel} (${startStr} – ${endStr})`;
+}

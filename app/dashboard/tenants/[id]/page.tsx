@@ -105,14 +105,13 @@ export default async function TenantProfilePage({
     return notFound();
   }
 
-  // Compute open balance
+  // Compute open balance from new invoice schema
   let openBalance = 0;
   tenant.reservations.forEach((res) => {
     res.invoices.forEach((inv) => {
-      if (inv.status === "PENDING" || inv.status === "DUE") {
-        const paid = inv.payments.reduce((s, p) => s + Number(p.amount), 0);
-        const rem = Number(inv.amount) - paid;
-        if (rem > 0) openBalance += rem;
+      if (["ISSUED", "PARTIALLY_PAID", "PENDING", "DUE"].includes(inv.status)) {
+        const bal = Number((inv as any).balanceDue ?? (inv as any).amount ?? 0);
+        if (bal > 0) openBalance += bal;
       }
     });
   });

@@ -39,6 +39,7 @@ const navigationConfig: NavItem[] = [
   },
   { key: "tenants",      name: "Tenants",      href: "/dashboard/tenants" },
   { key: "reservations", name: "Reservations", href: "/dashboard/reservations" },
+  { key: "invoices",     name: "Invoices",     href: "/dashboard/invoices" },
   { key: "payments",     name: "Payments",     href: "/dashboard/payments" },
   { key: "expenses",     name: "Expenses",     href: "/dashboard/expenses" },
   {

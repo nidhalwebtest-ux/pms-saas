@@ -23,19 +23,21 @@ export async function getTenantFinancials(tenantId: string) {
 
   const unpaidInvoices = await prisma.invoice.findMany({
     where: {
-      reservation: { tenantId: tenantId },
-      status: { in: ["PENDING", "DUE"] as any },
+      tenantId: tenantId,
+      status: { in: ["ISSUED", "PARTIALLY_PAID", "PENDING", "DUE"] as any },
     },
-    include: { reservation: { select: { unit: { select: { name: true } } } } },
     orderBy: { dueDate: "asc" },
   });
 
   const serializedInvoices = unpaidInvoices.map((inv) => ({
     ...inv,
-    amount: Number(inv.amount),
+    totalAmount: Number(inv.totalAmount),
+    balanceDue: Number(inv.balanceDue),
+    // compat alias
+    amount: Number(inv.balanceDue),
   }));
 
-  const totalDue = serializedInvoices.reduce((sum, inv) => sum + inv.amount, 0);
+  const totalDue = serializedInvoices.reduce((sum, inv) => sum + inv.balanceDue, 0);
 
   return { invoices: serializedInvoices, balance: totalDue };
 }
@@ -81,17 +83,12 @@ export async function createCustomerPayment(
       const invoicesToPay = await tx.invoice.findMany({
         where: { id: { in: selectedInvoiceIds } },
         orderBy: { dueDate: "asc" },
-        include: { payments: true },
       });
 
       for (const invoice of invoicesToPay) {
         if (remainingPayment <= 0) break;
 
-        const previouslyPaid = invoice.payments.reduce(
-          (sum, p) => sum + Number(p.amount),
-          0,
-        );
-        const outstanding = Number(invoice.amount) - previouslyPaid;
+        const outstanding = Number(invoice.balanceDue);
         const amountToApply = Math.min(remainingPayment, outstanding);
 
         if (amountToApply > 0) {
@@ -110,12 +107,16 @@ export async function createCustomerPayment(
 
           if (!firstCreatedPaymentId) firstCreatedPaymentId = newPayment.id;
 
-          if (amountToApply >= outstanding - 0.001) {
-            await tx.invoice.update({
-              where: { id: invoice.id },
-              data: { status: "PAID" },
-            });
-          }
+          const newBalanceDue = Math.round((outstanding - amountToApply) * 1000) / 1000;
+          await tx.invoice.update({
+            where: { id: invoice.id },
+            data: {
+              amountPaid: { increment: amountToApply },
+              balanceDue: newBalanceDue,
+              status: newBalanceDue <= 0 ? "PAID" : "PARTIALLY_PAID",
+              ...(newBalanceDue <= 0 ? { paidDate: new Date() } : {}),
+            },
+          });
           remainingPayment -= amountToApply;
         }
       }

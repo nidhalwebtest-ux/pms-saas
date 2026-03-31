@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma:*)",
+      "Bash(find \"/Users/apple/Desktop/My Projects/PMS & Portfolio/pms-saas/app/api/units/\" -type f)",
+      "Bash(find \"/Users/apple/Desktop/My Projects/PMS & Portfolio/pms-saas/app/api/reservations/\\\\[id\\\\]/\" -type f)",
+      "Bash(cat \"/Users/apple/Desktop/My Projects/PMS & Portfolio/pms-saas/package.json\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(list\\(d.get\\(''''dependencies'''',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(source ~/.nvm/nvm.sh)",
+      "Bash(nvm use:*)",
+      "Bash(npm install:*)",
+      "Bash(ls \"/Users/apple/Desktop/My Projects/PMS & Portfolio/pms-saas/lib/\")",
+      "Bash(ls \"/Users/apple/Desktop/My Projects/PMS & Portfolio/pms-saas/utils/\")",
+      "Bash(npx tsc:*)",
+      "Bash(find \"/Users/apple/Desktop/My Projects/PMS & Portfolio/pms-saas\" -path */.next -prune -o -path */node_modules -prune -o -type f -path */actions/* -print)",
+      "Bash(ls -la \"/Users/apple/Desktop/My Projects/PMS & Portfolio/pms-saas/lib/\")",
+      "Bash(find \"/Users/apple/Desktop/My Projects/PMS & Portfolio/pms-saas/app/dashboard/payments\" -type f -o -type d)",
+      "Bash(find \"/Users/apple/Desktop/My Projects/PMS & Portfolio/pms-saas/app/api/invoices\" \"/Users/apple/Desktop/My Projects/PMS & Portfolio/pms-saas/app/api/payments\" \"/Users/apple/Desktop/My Projects/PMS & Portfolio/pms-saas/app/api/tenants\" -name \"route.ts\")"
+    ]
+  }
+}

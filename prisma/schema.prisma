@@ -54,35 +54,99 @@ enum ReservationActivityAction {
   NOTE_ADDED
 }
 
-// 3. The New Powerhouse: Organization
+enum PaymentFrequency {
+  DAILY
+  MONTHLY
+  YEARLY
+}
+
+// Invoice status — legacy values kept for backward compatibility
+enum InvoiceStatus {
+  PENDING        // legacy
+  PARTIAL        // legacy
+  DUE            // legacy
+  PAID           // active (paid in full)
+  VOID           // legacy
+  DRAFT          // created but not yet issued
+  ISSUED         // sent to tenant, awaiting payment
+  PARTIALLY_PAID // some payment received
+  CANCELLED      // voided with reason
+}
+
+enum InvoiceType {
+  SHORT_TERM    // single invoice for daily stays ≤30 nights
+  MONTHLY       // one of many monthly invoices for long stays
+  OVERSTAY      // extra days beyond checkout date
+  ADDITIONAL    // ad-hoc extra charges
+}
+
+enum LineItemCategory {
+  ROOM_CHARGE
+  EXTRA_CHARGE
+  CLEANING
+  DAMAGE
+  SERVICE
+  OVERSTAY
+  ADJUSTMENT
+  OTHER
+}
+
+enum RateType {
+  DAILY
+  MONTHLY
+}
+
+enum RateSource {
+  DEFAULT_PRICE
+  SEASONAL_PRICE
+  MANUAL_OVERRIDE
+}
+
+enum PaymentMethod {
+  CASH
+  BANK_TRANSFER
+  CARD
+  CHEQUE
+  ONLINE
+  OTHER
+}
+
+enum ExpenseCategory {
+  UTILITIES      // Water, Electricity, Internet
+  MAINTENANCE    // Spare parts, labor
+  SALARY         // Staff cost
+  MARKETING      // Ads
+  SUPPLIES       // Cleaning stuff
+  OTHER
+}
+
+// 3. Organization
 model Organization {
   id                 String   @id @default(uuid())
-  name               String   // e.g. "Salalah Real Estate Co."
+  name               String
 
-  // Company details (set during onboarding)
   phone              String?
   address            String?
   city               String   @default("Salalah")
   area               String?
-  logo               String?  // URL from Supabase Storage
+  logo               String?
   timezone           String   @default("Asia/Muscat")
   currency           String   @default("OMR")
 
-  // Subscription / Limits Logic
-  plan               String   @default("FREE") // FREE, STARTER, PRO
+  plan               String   @default("FREE")
   maxProperties      Int      @default(1)
-  subscriptionStatus String   @default("ACTIVE") // ACTIVE, PAST_DUE
+  subscriptionStatus String   @default("ACTIVE")
 
   createdAt          DateTime @default(now())
 
-  // Everything belongs to the Org
   users              User[]
   properties         Property[]
   tenants            Tenant[]
   invitations        Invitation[]
+  invoices           Invoice[]
 }
 
-// 4. Users (Staff Members)
+// 4. Users
 model User {
   id             String       @id @default(uuid())
   email          String       @unique
@@ -91,81 +155,74 @@ model User {
   phone          String?
   role           UserRole     @default(OWNER)
 
-  // Link to Organization
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
 
-  // Access Control: Which properties can this user see?
   assignedProperties  PropertyAssignment[]
-  sentInvitations     Invitation[]         @relation("SentInvitations")
+  sentInvitations     Invitation[]          @relation("SentInvitations")
   unitNotes           UnitNote[]
-  createdTenants      Tenant[]             @relation("TenantCreatedBy")
-  createdReservations Reservation[]        @relation("ReservationCreatedBy")
+  createdTenants      Tenant[]              @relation("TenantCreatedBy")
+  createdReservations Reservation[]         @relation("ReservationCreatedBy")
   performedActivities ReservationActivity[] @relation("ActivityPerformedBy")
   createdCharges      ReservationCharge[]   @relation("ChargeCreatedBy")
+  createdInvoices     Invoice[]             @relation("InvoiceCreatedBy")
+  receivedPayments    Payment[]             @relation("PaymentReceivedBy")
 
   createdAt      DateTime     @default(now())
 }
 
-// 5. Explicit Assignments (For Receptionists)
+// 5. Property Assignments
 model PropertyAssignment {
   id          String   @id @default(uuid())
-  
+
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   propertyId  String
   property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, propertyId]) // Prevent duplicate assignments
+  @@unique([userId, propertyId])
 }
 
 // 6. Properties
 model Property {
-  id             String   @id @default(uuid())
+  id             String       @id @default(uuid())
   name           String
   type           PropertyType @default(RESIDENTIAL)
-  
-  // Status & Media
+
   isActive       Boolean      @default(true)
   isArchived     Boolean      @default(false)
   archivedAt     DateTime?
   photos         String[]     @default([])
 
-  // Details
   totalFloors    Int?
   description    String?
 
-  // Location
   address        String?
   city           String       @default("Salalah")
   governorate    String       @default("Dhofar")
 
-  // Link to Org
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  
-  // Relations
+
   units          Unit[]
-  assignments    PropertyAssignment[] // Who works here?
+  assignments    PropertyAssignment[]
   expenses       Expense[]
-  
+  invoices       Invoice[]
+
   createdAt      DateTime @default(now())
 }
 
-// ... (Unit, Tenant, Reservation models remain mostly the same, 
-// just ensure Tenant links to OrganizationId if you want shared tenants)
-
 model Unit {
   id          String   @id @default(uuid())
-  name        String   // e.g. "Room 101"
-  unitType    String   @default("ONE_BR") // STUDIO | ONE_BR | TWO_BR | THREE_BR | SUITE
+  name        String
+  unitType    String   @default("ONE_BR")
   floor       Int      @default(0)
   bedrooms    Int      @default(1)
   bathrooms   Int      @default(1)
-  area        Float?   // sqm
+  area        Float?
   description String?
-  amenities   String[] @default([]) // AC | FURNISHED | KITCHEN | PARKING | WIFI | TV | BALCONY | POOL
+  amenities   String[] @default([])
 
   basePrice   Decimal    @db.Decimal(10, 3)
   status      UnitStatus @default(AVAILABLE)
@@ -174,32 +231,30 @@ model Unit {
   propertyId  String
   property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
-  reservations     Reservation[]       // legacy: direct FK via Reservation.unitId
-  reservationUnits ReservationUnit[]   @relation("ReservationUnitToUnit")
+  reservations     Reservation[]
+  reservationUnits ReservationUnit[]  @relation("ReservationUnitToUnit")
   prices           UnitPrice[]
   notes            UnitNote[]
+  lineItems        InvoiceLineItem[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
-// ── Unit Pricing ───────────────────────────────────────────────────────────────
-
 model UnitPrice {
   id          String   @id @default(uuid())
 
-  priceType   String   @default("DEFAULT") // "DEFAULT" | "SEASONAL"
-  name        String?  // required for SEASONAL (e.g. "Khareef 2026")
+  priceType   String   @default("DEFAULT")
+  name        String?
 
   dailyRate   Decimal  @db.Decimal(10, 3)
   weeklyRate  Decimal? @db.Decimal(10, 3)
   monthlyRate Decimal  @db.Decimal(10, 3)
 
-  // Only set for SEASONAL
   startDate   DateTime?
   endDate     DateTime?
 
-  priority    Int      @default(10)  // higher wins when multiple seasonals overlap
+  priority    Int      @default(10)
   isActive    Boolean  @default(true)
 
   unitId      String
@@ -208,8 +263,6 @@ model UnitPrice {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
-
-// ── Unit Notes ─────────────────────────────────────────────────────────────────
 
 model UnitNote {
   id        String   @id @default(uuid())
@@ -227,61 +280,52 @@ model UnitNote {
 model Tenant {
   id             String   @id @default(uuid())
 
-  // ── Personal ────────────────────────────────────────────────────────────────
   firstName          String
   lastName           String
-  fullNameArabic     String?           // for official documents
-  gender             String?           // "male" | "female"
+  fullNameArabic     String?
+  gender             String?
   dateOfBirth        DateTime?
   nationality        String?
 
-  // ── Identification ──────────────────────────────────────────────────────────
-  nationalId         String?           // kept for backward compat (legacy)
-  idType             String?           @default("national_id")
-  idNumber           String?           // primary id — unique per org enforced in code
+  nationalId         String?
+  idType             String?  @default("national_id")
+  idNumber           String?
   idExpiryDate       DateTime?
-  idDocumentFront    String?           // Supabase Storage URL
+  idDocumentFront    String?
   idDocumentBack     String?
 
-  // ── Contact ─────────────────────────────────────────────────────────────────
   email              String?
   phone              String
   phoneSecondary     String?
   whatsappNumber     String?
 
-  // ── Address ─────────────────────────────────────────────────────────────────
   country            String?
   city               String?
   addressLine        String?
 
-  // ── Emergency Contact ───────────────────────────────────────────────────────
   emergencyContactName     String?
   emergencyContactPhone    String?
   emergencyContactRelation String?
 
-  // ── CRM Classification ──────────────────────────────────────────────────────
-  tenantType         String   @default("individual")  // individual|family|corporate|government
-  source             String   @default("walk_in")     // walk_in|phone|whatsapp|website|…
-  classification     String   @default("regular")     // regular|vip|blacklisted
+  tenantType         String   @default("individual")
+  source             String   @default("walk_in")
+  classification     String   @default("regular")
   corporateName      String?
   corporateContact   String?
 
-  // ── Preferences & Notes ─────────────────────────────────────────────────────
   preferredFloor         String?
   preferredUnitType      String?
   preferredPaymentMethod String?
   specialRequests        String?
   internalNotes          String?
-  tags                   String[]  @default([])
+  tags                   String[] @default([])
 
-  // ── Status & CRM Stats ──────────────────────────────────────────────────────
   isActive       Boolean   @default(true)
   totalStays     Int       @default(0)
   totalSpent     Decimal   @default(0) @db.Decimal(10, 3)
   firstStayDate  DateTime?
   lastStayDate   DateTime?
 
-  // ── Relations ───────────────────────────────────────────────────────────────
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id])
 
@@ -290,22 +334,15 @@ model Tenant {
 
   reservations   Reservation[]
   payments       Payment[]
+  invoices       Invoice[]
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
 
-
-enum PaymentFrequency {
-  DAILY
-  MONTHLY
-  YEARLY
-}
-
-
 model Reservation {
   id                String   @id @default(uuid())
-  reservationNumber String?  @unique  // e.g. "RES-2026-00042"
+  reservationNumber String?  @unique
 
   startDate         DateTime
   endDate           DateTime
@@ -313,28 +350,27 @@ model Reservation {
   actualCheckOut    DateTime?
 
   status            ReservationStatus @default(PENDING)
-  frequency         PaymentFrequency  @default(MONTHLY) // keep for compat
+  frequency         PaymentFrequency  @default(MONTHLY)
 
-  // ── Financial ──────────────────────────────────────────────────────────────
   totalNights       Int      @default(0)
-  amount            Decimal  @db.Decimal(10, 3)          // kept for compat (= totalAmount)
+  amount            Decimal  @db.Decimal(10, 3)
   totalAmount       Decimal  @default(0) @db.Decimal(10, 3)
   discountAmount    Decimal  @default(0) @db.Decimal(10, 3)
   taxAmount         Decimal  @default(0) @db.Decimal(10, 3)
   grandTotal        Decimal  @default(0) @db.Decimal(10, 3)
   amountPaid        Decimal  @default(0) @db.Decimal(10, 3)
-  totalPrice        Float    @default(0)                  // kept for compat
+  totalPrice        Float    @default(0)
 
-  // ── Rate & meta ────────────────────────────────────────────────────────────
-  rateType          String   @default("daily")  // "daily" | "monthly"
+  rateType          String   @default("daily")
   source            String   @default("walk_in")
   notes             String?
   cancelledReason   String?
   cancelledAt       DateTime?
-  refundPending     Boolean   @default(false)
+  refundPending     Boolean  @default(false)
 
-  // ── Relations ──────────────────────────────────────────────────────────────
-  // Legacy single-unit FK (nullable — new reservations use reservationUnits)
+  // Expected total number of monthly invoices (set at creation for monthly stays)
+  expectedInvoiceCount Int?
+
   unitId            String?
   unit              Unit?    @relation(fields: [unitId], references: [id])
 
@@ -342,7 +378,6 @@ model Reservation {
   tenant            Tenant   @relation(fields: [tenantId], references: [id])
 
   reservationUnits  ReservationUnit[]
-
   payments          Payment[]
   invoices          Invoice[]
   activities        ReservationActivity[]
@@ -355,8 +390,6 @@ model Reservation {
   updatedAt         DateTime @updatedAt
 }
 
-// ── Multi-unit junction table ─────────────────────────────────────────────────
-
 model ReservationUnit {
   id                  String   @id @default(uuid())
 
@@ -366,19 +399,18 @@ model ReservationUnit {
   unitId              String
   unit                Unit        @relation("ReservationUnitToUnit", fields: [unitId], references: [id])
 
-  rateType            String   @default("daily")  // "daily" | "monthly"
+  rateType            String   @default("daily")
   rateAmount          Decimal  @db.Decimal(10, 3)
-  rateSource          String   @default("default_price") // default_price|seasonal_price|manual_override
+  rateSource          String   @default("default_price")
   seasonalPriceName   String?
 
   nights              Int      @default(0)
   subtotal            Decimal  @db.Decimal(10, 3)
 
-  // ── Move / split-date tracking ─────────────────────────────────────────────
-  effectiveCheckIn    DateTime?   // null = use reservation.startDate
-  effectiveCheckOut   DateTime?   // null = use reservation.endDate; set when unit released early
-  isMovedOut          Boolean   @default(false)   // true = this unit record was replaced by a move
-  movedToUnitId       String?   // ReservationUnit.id of the replacement record
+  effectiveCheckIn    DateTime?
+  effectiveCheckOut   DateTime?
+  isMovedOut          Boolean  @default(false)
+  movedToUnitId       String?
   moveReason          String?
   moveDate            DateTime?
 
@@ -414,80 +446,173 @@ model ReservationCharge {
   createdAt      DateTime    @default(now())
 }
 
-enum InvoiceStatus {
-  PENDING   // Future date
-  PARTIAL   // Future date
-  DUE       // Date passed, not paid
-  PAID      // Money collected
-  VOID      // Cancelled (Contract terminated)
-}
+// ── Invoice System ────────────────────────────────────────────────────────────
+
 model Invoice {
-  id             String   @id @default(uuid())
-  invoiceNumber  String   // e.g. "INV-2026-001"
-  
-  dueDate        DateTime 
-  amount         Decimal  @db.Decimal(10, 2)
-  status         InvoiceStatus @default(PENDING)
-  description    String?  // e.g. "Rent for March 2026"
+  id              String        @id @default(uuid())
+  organizationId  String
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  // Relations
-  reservationId  String
-  reservation    Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
-  
-  payments       Payment[] // One invoice can be paid in partial payments
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  // Sequential number per org: "INV-2026-00001"
+  invoiceNumber   String
+
+  reservationId   String
+  reservation     Reservation   @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id])
+
+  // Optional link to a specific property/building
+  propertyId      String?
+  property        Property?     @relation(fields: [propertyId], references: [id])
+
+  // Period this invoice covers
+  periodStart     DateTime
+  periodEnd       DateTime
+  invoiceType     InvoiceType   @default(SHORT_TERM)
+  monthNumber     Int?          // 1, 2, 3… for MONTHLY invoices
+
+  // Amounts — all OMR (3 decimal places)
+  subtotal        Decimal       @db.Decimal(10, 3)
+  discountAmount  Decimal       @default(0) @db.Decimal(10, 3)
+  taxAmount       Decimal       @default(0) @db.Decimal(10, 3)
+  totalAmount     Decimal       @db.Decimal(10, 3)
+  amountPaid      Decimal       @default(0) @db.Decimal(10, 3)
+  balanceDue      Decimal       @db.Decimal(10, 3)
+
+  status          InvoiceStatus @default(DRAFT)
+
+  issueDate       DateTime      @default(now())
+  dueDate         DateTime
+  paidDate        DateTime?
+  cancelledAt     DateTime?
+  cancelledReason String?
+
+  notes           String?
+
+  createdById     String?
+  createdBy       User?         @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+
+  lineItems       InvoiceLineItem[]
+  payments        Payment[]         // legacy direct link kept for compat
+  allocations     PaymentAllocation[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([organizationId, invoiceNumber])
+  @@index([organizationId, status])
+  @@index([tenantId])
+  @@index([reservationId])
 }
 
-enum PaymentMethod {
-  CASH
-  BANK_TRANSFER
-  CARD
-  CHEQUE
-  OTHER
+model InvoiceLineItem {
+  id              String           @id @default(uuid())
+
+  invoiceId       String
+  invoice         Invoice          @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  organizationId  String
+
+  description     String
+  category        LineItemCategory @default(ROOM_CHARGE)
+
+  unitId          String?
+  unit            Unit?            @relation(fields: [unitId], references: [id])
+
+  // quantity × unitPrice = lineTotal
+  quantity        Decimal          @db.Decimal(10, 3)
+  unitPrice       Decimal          @db.Decimal(10, 3)
+  lineTotal       Decimal          @db.Decimal(10, 3)
+
+  rateType        RateType?
+  rateSource      RateSource?
+  seasonalPriceName String?
+
+  // JSON array of price segments when rates vary: [{days, rate, label, subtotal}]
+  priceBreakdown  Json?
+
+  sortOrder       Int              @default(0)
+
+  createdAt       DateTime @default(now())
 }
+
+// ── Payments ──────────────────────────────────────────────────────────────────
 
 model Payment {
-  id            String   @id @default(uuid())
-  amount        Decimal  @db.Decimal(10, 2)
-  date          DateTime @default(now())
-  method        PaymentMethod @default(CASH)
-  reference     String?  // e.g. "Receipt #123" or "Transaction ID"
-  notes         String?
+  id              String        @id @default(uuid())
 
-  tenantId      String
-  tenant        Tenant   @relation(fields: [tenantId], references: [id])
-  
-  reservationId String?
-  reservation   Reservation? @relation(fields: [reservationId], references: [id])
+  // Sequential number per org: "PAY-2026-00001" — null for legacy records
+  paymentNumber   String?
+  organizationId  String?
 
-  invoiceId     String?
-  invoice       Invoice? @relation(fields: [invoiceId], references: [id]) 
-  
-  createdAt     DateTime @default(now())
+  amount          Decimal       @db.Decimal(10, 3)
+  date            DateTime      @default(now())
+  method          PaymentMethod @default(CASH)
+  reference       String?
+  notes           String?
+  isRefund        Boolean       @default(false)
+
+  // Which staff member received/logged this payment
+  receivedById    String?
+  receivedBy      User?         @relation("PaymentReceivedBy", fields: [receivedById], references: [id])
+
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id])
+
+  reservationId   String?
+  reservation     Reservation?  @relation(fields: [reservationId], references: [id])
+
+  // Legacy: direct link to one invoice (kept for backward compat)
+  invoiceId       String?
+  invoice         Invoice?      @relation(fields: [invoiceId], references: [id])
+
+  // New: allocation records (one payment → many invoices)
+  allocations     PaymentAllocation[]
+
+  createdAt       DateTime @default(now())
 }
 
-model Expense {
+model PaymentAllocation {
   id             String   @id @default(uuid())
-  title          String   // e.g. "Fix AC in Room 101"
-  amount         Decimal  @db.Decimal(10, 2)
-  date           DateTime @default(now())
-  
+
+  paymentId      String
+  payment        Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  invoiceId      String
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  organizationId String
+
+  // Amount of this payment applied to this invoice
+  amount         Decimal  @db.Decimal(10, 3)
+
+  createdAt      DateTime @default(now())
+
+  @@unique([paymentId, invoiceId])
+}
+
+// ── Expenses ──────────────────────────────────────────────────────────────────
+
+model Expense {
+  id             String          @id @default(uuid())
+  title          String
+  amount         Decimal         @db.Decimal(10, 3)
+  date           DateTime        @default(now())
+
   category       ExpenseCategory @default(MAINTENANCE)
-  
-  // Link to Property (Expenses are usually per property)
+
   propertyId     String
   property       Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  
-  // Optional: Link to a specific Unit if needed
-  unitId         String? 
-  
+
+  unitId         String?
+
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
 
-// Tracks failed login attempts for rate-limiting (5 / 15 min lockout)
+// ── Auth & Team ───────────────────────────────────────────────────────────────
+
 model LoginAttempt {
   id        String   @id @default(uuid())
   email     String
@@ -496,7 +621,6 @@ model LoginAttempt {
   @@index([email, createdAt])
 }
 
-// Team member invitations (72-hour expiry, email-based)
 model Invitation {
   id             String    @id @default(uuid())
   email          String
@@ -516,13 +640,4 @@ model Invitation {
 
   @@index([token])
   @@index([email, organizationId])
-}
-
-enum ExpenseCategory {
-  UTILITIES      // Water, Electricity, Internet
-  MAINTENANCE    // Spare parts, labor
-  SALARY         // Staff cost
-  MARKETING      // Ads
-  SUPPLIES       // Cleaning stuff
-  OTHER
 }

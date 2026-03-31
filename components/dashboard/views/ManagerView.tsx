@@ -12,17 +12,6 @@ import {
   HomeModernIcon,
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from "recharts";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -62,6 +51,169 @@ interface ManagerData {
   buildingComparison: BuildingRow[];
   occupancyTrend: OccTrendPoint[];
   alerts: Alert[];
+}
+
+// ── Inline SVG Charts (no external dependencies) ──────────────────────────────
+
+const SVG_W = 600;
+const SVG_H = 200;
+const PAD = { l: 56, r: 8, t: 8, b: 28 };
+const PLOT_W = SVG_W - PAD.l - PAD.r;
+const PLOT_H = SVG_H - PAD.t - PAD.b;
+
+function MinimalLineChart({ data }: { data: RevPoint[] }) {
+  const [tip, setTip] = useState<{ x: number; y: number; label: string; val: string } | null>(null);
+
+  if (data.length === 0)
+    return <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">No data</div>;
+
+  const maxVal = Math.max(...data.map((d) => d.revenue), 0.001);
+  const n = data.length;
+  const xPx = (i: number) => PAD.l + (n < 2 ? PLOT_W / 2 : (i / (n - 1)) * PLOT_W);
+  const yPx = (v: number) => PAD.t + PLOT_H - (v / maxVal) * PLOT_H;
+
+  const pathD = data
+    .map((pt, i) => `${i === 0 ? "M" : "L"}${xPx(i).toFixed(1)},${yPx(pt.revenue).toFixed(1)}`)
+    .join(" ");
+
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => ({ v: maxVal * f, y: yPx(maxVal * f) }));
+  const xLabelIdxs = Array.from(new Set([0, Math.floor((n - 1) / 2), n - 1]));
+
+  return (
+    <div className="relative">
+      <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} width="100%" height="200" style={{ overflow: "visible" }}>
+        {yTicks.map(({ y, v }) => (
+          <g key={v}>
+            <line x1={PAD.l} y1={y} x2={SVG_W - PAD.r} y2={y} stroke="#f0f0f0" strokeWidth={1} />
+            <text x={PAD.l - 4} y={y + 4} textAnchor="end" fontSize={9} fill="#9ca3af">
+              {v.toFixed(0)}
+            </text>
+          </g>
+        ))}
+        {xLabelIdxs.map((i) => (
+          <text key={i} x={xPx(i)} y={SVG_H - 6} textAnchor="middle" fontSize={9} fill="#9ca3af">
+            {format(parseISO(data[i].date), "d MMM")}
+          </text>
+        ))}
+        <path d={pathD} fill="none" stroke="#3b82f6" strokeWidth={2} strokeLinejoin="round" />
+        {data.map((pt, i) => (
+          <circle
+            key={i}
+            cx={xPx(i)}
+            cy={yPx(pt.revenue)}
+            r={4}
+            fill="white"
+            stroke="#3b82f6"
+            strokeWidth={2}
+            className="cursor-pointer opacity-0 hover:opacity-100"
+            onMouseEnter={() =>
+              setTip({
+                x: xPx(i),
+                y: yPx(pt.revenue),
+                label: format(parseISO(pt.date), "d MMM yyyy"),
+                val: omr(pt.revenue),
+              })
+            }
+            onMouseLeave={() => setTip(null)}
+          />
+        ))}
+        {tip && (
+          <g>
+            <rect
+              x={Math.min(tip.x - 4, SVG_W - 120)}
+              y={tip.y - 38}
+              width={116}
+              height={32}
+              rx={4}
+              fill="#1f2937"
+              opacity={0.9}
+            />
+            <text x={Math.min(tip.x - 4, SVG_W - 120) + 8} y={tip.y - 22} fontSize={9} fill="#d1d5db">
+              {tip.label}
+            </text>
+            <text x={Math.min(tip.x - 4, SVG_W - 120) + 8} y={tip.y - 11} fontSize={10} fill="white" fontWeight="bold">
+              {tip.val}
+            </text>
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+function MinimalBarChart({ data }: { data: OccTrendPoint[] }) {
+  const [tip, setTip] = useState<{ x: number; y: number; label: string; val: string } | null>(null);
+
+  if (data.length === 0)
+    return <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">No data</div>;
+
+  const maxVal = Math.max(...data.map((d) => d.revenue), 0.001);
+  const n = data.length;
+  const slotW = PLOT_W / n;
+  const barW = slotW * 0.6;
+  const xCenter = (i: number) => PAD.l + i * slotW + slotW / 2;
+  const barX = (i: number) => xCenter(i) - barW / 2;
+  const barH = (v: number) => (v / maxVal) * PLOT_H;
+  const barY = (v: number) => PAD.t + PLOT_H - barH(v);
+
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => ({
+    v: maxVal * f,
+    y: PAD.t + PLOT_H - (maxVal * f / maxVal) * PLOT_H,
+  }));
+
+  return (
+    <div className="relative">
+      <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} width="100%" height="200" style={{ overflow: "visible" }}>
+        {yTicks.map(({ y, v }) => (
+          <g key={v}>
+            <line x1={PAD.l} y1={y} x2={SVG_W - PAD.r} y2={y} stroke="#f0f0f0" strokeWidth={1} />
+            <text x={PAD.l - 4} y={y + 4} textAnchor="end" fontSize={9} fill="#9ca3af">
+              {v.toFixed(0)}
+            </text>
+          </g>
+        ))}
+        {data.map((pt, i) => (
+          <g key={i}>
+            <rect
+              x={barX(i)}
+              y={barY(pt.revenue)}
+              width={barW}
+              height={Math.max(barH(pt.revenue), 2)}
+              rx={4}
+              fill="#6366f1"
+              className="cursor-pointer hover:fill-indigo-400 transition-colors"
+              onMouseEnter={() =>
+                setTip({ x: xCenter(i), y: barY(pt.revenue), label: pt.month, val: omr(pt.revenue) })
+              }
+              onMouseLeave={() => setTip(null)}
+            />
+            <text x={xCenter(i)} y={SVG_H - 6} textAnchor="middle" fontSize={9} fill="#9ca3af">
+              {pt.month}
+            </text>
+          </g>
+        ))}
+        {tip && (
+          <g>
+            <rect
+              x={Math.min(tip.x - 4, SVG_W - 120)}
+              y={tip.y - 38}
+              width={116}
+              height={32}
+              rx={4}
+              fill="#1f2937"
+              opacity={0.9}
+            />
+            <text x={Math.min(tip.x - 4, SVG_W - 120) + 8} y={tip.y - 22} fontSize={9} fill="#d1d5db">
+              {tip.label}
+            </text>
+            <text x={Math.min(tip.x - 4, SVG_W - 120) + 8} y={tip.y - 11} fontSize={10} fill="white" fontWeight="bold">
+              {tip.val}
+            </text>
+          </g>
+        )}
+      </svg>
+    </div>
+  );
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -256,37 +408,7 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
           <h3 className="mb-4 text-sm font-semibold text-gray-900">
             Revenue Trend — Last 30 Days
           </h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <LineChart
-              data={revenueTrend}
-              margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis
-                dataKey="date"
-                tickFormatter={(d) => format(parseISO(d), "d MMM")}
-                tick={{ fontSize: 10, fill: "#9ca3af" }}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                tick={{ fontSize: 10, fill: "#9ca3af" }}
-                tickFormatter={(v) => `${v.toFixed(0)}`}
-                width={48}
-              />
-              <Tooltip
-                formatter={(v) => [omr(Number(v ?? 0)), "Revenue"]}
-                labelFormatter={(l) => format(parseISO(l as string), "d MMM yyyy")}
-              />
-              <Line
-                type="monotone"
-                dataKey="revenue"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <MinimalLineChart data={revenueTrend} />
         </div>
 
         {/* Revenue by month (6 months) */}
@@ -294,22 +416,7 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
           <h3 className="mb-4 text-sm font-semibold text-gray-900">
             Revenue — Last 6 Months
           </h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart
-              data={occupancyTrend}
-              margin={{ top: 4, right: 4, bottom: 0, left: 0 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#9ca3af" }} />
-              <YAxis
-                tick={{ fontSize: 10, fill: "#9ca3af" }}
-                tickFormatter={(v) => `${v.toFixed(0)}`}
-                width={48}
-              />
-              <Tooltip formatter={(v) => [omr(Number(v ?? 0)), "Revenue"]} />
-              <Bar dataKey="revenue" fill="#6366f1" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <MinimalBarChart data={occupancyTrend} />
         </div>
       </div>
 

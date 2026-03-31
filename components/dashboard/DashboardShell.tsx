@@ -3,19 +3,9 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import type { Role } from "@/lib/permissions";
-import dynamic from "next/dynamic";
 import { TodayView } from "./views/TodayView";
 import { ReceptionistView } from "./views/ReceptionistView";
-
-// Recharts uses browser-only APIs — must skip SSR
-const ManagerView = dynamic(
-  () => import("./views/ManagerView").then((m) => ({ default: m.ManagerView })),
-  { ssr: false, loading: () => (
-    <div className="flex items-center justify-center py-20">
-      <div className="text-sm text-gray-400">Loading manager data…</div>
-    </div>
-  )},
-);
+import { ManagerView } from "./views/ManagerView";
 
 type Tab = "today" | "receptionist" | "manager";
 

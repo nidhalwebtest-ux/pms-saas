@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { canTransitionTo, type StoredStatus } from "@/lib/reservation-status";
+import { generateInvoicesForReservation } from "@/lib/invoice-engine";
 
 async function getActor() {
   const supabase = await createClient();
@@ -110,8 +111,19 @@ export async function PATCH(
     });
   });
 
+  // Generate invoice(s) after check-in (idempotent — safe to call even if already generated)
+  let invoiceCount = 0;
+  try {
+    const invoiceResult = await generateInvoicesForReservation(id, actor.organizationId!, actor.id);
+    invoiceCount = invoiceResult.invoices.length;
+  } catch (invoiceErr) {
+    // Invoice generation failure must NOT block check-in
+    console.error("[check-in] invoice generation failed:", invoiceErr);
+  }
+
   return NextResponse.json({
     success: true,
     message: `${res.tenant.firstName} ${res.tenant.lastName} checked in${unitLabel ? ` to ${unitLabel}` : ""}.`,
+    invoicesGenerated: invoiceCount,
   });
 }

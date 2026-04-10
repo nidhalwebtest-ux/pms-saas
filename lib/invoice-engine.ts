@@ -108,12 +108,13 @@ export interface PendingMonthlyResult {
 // ── Prisma status/type constants ──────────────────────────────────────────────
 
 const ACTIVE_INVOICE_STATUSES = [
-  "ISSUED",
-  "PARTIALLY_PAID",
-  "DRAFT",
   "PENDING",
+  "PARTIALLY_PAID",
   "PARTIAL",
   "DUE",
+  // legacy values kept for backward compat
+  "ISSUED",
+  "DRAFT",
 ] as const;
 
 const PAID_INVOICE_STATUSES = ["PAID"] as const;
@@ -388,11 +389,7 @@ function deriveInvoiceStatus(
   if (existingStatus === "CANCELLED" || existingStatus === "VOID") {
     return existingStatus as InvoiceStatus;
   }
-  if (amountPaid <= 0) {
-    // If it was already issued/draft, keep that — don't regress
-    if (existingStatus === "ISSUED" || existingStatus === "DUE") return existingStatus as InvoiceStatus;
-    return InvoiceStatus.DRAFT;
-  }
+  if (amountPaid <= 0) return InvoiceStatus.PENDING;
   if (roundOMR(totalAmount - amountPaid) <= 0) return InvoiceStatus.PAID;
   return InvoiceStatus.PARTIALLY_PAID;
 }
@@ -509,29 +506,51 @@ async function _generateShortTermInvoice(
     let sortOrder = 0;
 
     for (const ui of unitInfos) {
-      // Fetch daily pricing breakdown
+      // Fetch daily pricing breakdown (from UnitPrice table)
       const pricing = await getUnitPriceForRange(ui.unitId, res.startDate, res.endDate);
       const segments = collapseToSegments(pricing.dailyBreakdown);
 
       // Resolve unit name from reservation relation
       const unitName = _resolveUnitName(res, ui.unitId) ?? ui.unitId;
 
-      for (const seg of segments) {
-        const lineTotal = roundOMR(seg.subtotal);
-        subtotal = roundOMR(subtotal + lineTotal);
+      if (segments.length > 0 && segments.reduce((s, seg) => s + seg.subtotal, 0) > 0) {
+        // Normal path: use the pricing-engine segments
+        for (const seg of segments) {
+          const lineTotal = roundOMR(seg.subtotal);
+          subtotal = roundOMR(subtotal + lineTotal);
+
+          lineItemsData.push({
+            organizationId:    orgId,
+            description:       `${unitName} — ${seg.priceName ?? "Default"} rate (${seg.startDate} – ${seg.endDate})`,
+            category:          "ROOM_CHARGE",
+            unitId:            ui.unitId,
+            quantity:          seg.nights,
+            unitPrice:         seg.ratePerNight,
+            lineTotal,
+            rateType:          "DAILY",
+            rateSource:        mapPriceTypeToSource(seg.priceType),
+            seasonalPriceName: seg.priceName,
+            priceBreakdown:    segments as any,
+            sortOrder:         sortOrder++,
+          });
+        }
+      } else {
+        // Fallback: no UnitPrice records — use the rateAmount stored on the reservation unit
+        const rate      = ui.rateAmount > 0 ? ui.rateAmount : Number(res.amount ?? 0);
+        const lineTotal = roundOMR(rate * nights);
+        subtotal        = roundOMR(subtotal + lineTotal);
 
         lineItemsData.push({
           organizationId:    orgId,
-          description:       `${unitName} — ${seg.priceName ?? "Default"} rate (${seg.startDate} – ${seg.endDate})`,
+          description:       `${unitName} — ${nights} night(s) × ${rate.toFixed(3)} OMR`,
           category:          "ROOM_CHARGE",
           unitId:            ui.unitId,
-          quantity:          seg.nights,
-          unitPrice:         seg.ratePerNight,
+          quantity:          nights,
+          unitPrice:         rate,
           lineTotal,
           rateType:          "DAILY",
-          rateSource:        mapPriceTypeToSource(seg.priceType),
-          seasonalPriceName: seg.priceName,
-          priceBreakdown:    segments as any,   // full segment array for reference
+          rateSource:        mapRateSource(ui.rateSource),
+          seasonalPriceName: ui.seasonalPriceName,
           sortOrder:         sortOrder++,
         });
       }
@@ -557,7 +576,7 @@ async function _generateShortTermInvoice(
         totalAmount,
         amountPaid:     0,
         balanceDue,
-        status:         "DRAFT",
+        status:         "PENDING",
         issueDate:      today,
         dueDate:        res.startDate,   // due on check-in
         createdById:    userId,
@@ -623,7 +642,7 @@ async function _createMonthlyInvoice(opts: {
 }): Promise<any> {
   const { res, unitInfos, period, orgId, userId } = opts;
   const today = new Date();
-  const status: InvoiceStatus = opts.status ?? InvoiceStatus.DRAFT;
+  const status: InvoiceStatus = opts.status ?? InvoiceStatus.PENDING;
 
   // Label for line item description
   const periodLabel = _periodLabel(period);
@@ -792,7 +811,7 @@ export async function generateNextMonthlyInvoice(
     orgId,
     userId,
     dueDate,
-    status: "DRAFT",
+    status: "PENDING",
   });
 
   return invoice;
@@ -1024,7 +1043,7 @@ export async function handleOverstay(
         totalAmount,
         amountPaid:     0,
         balanceDue,
-        status:         "ISSUED",   // immediately actionable
+        status:         "PENDING",
         issueDate:      today,
         dueDate:        today,
         createdById:    userId,
@@ -1097,9 +1116,9 @@ export async function addExtraCharge(
   const isMonthly =
     res.rateType === "monthly" || res.rateType === "MONTHLY";
 
-  // Find the "current" draft invoice to amend
+  // Find the "current" pending invoice to amend
   let targetInvoice = existingInvoices.find((inv) => {
-    if (inv.status !== "DRAFT") return false;
+    if (inv.status !== "PENDING") return false;
     if (!isMonthly) return true;   // short-term: any draft
     const ps = toDay(inv.periodStart);
     const pe = toDay(inv.periodEnd);
@@ -1109,7 +1128,7 @@ export async function addExtraCharge(
   // If target is non-draft, we need a new ADDITIONAL invoice
   const needsNewInvoice =
     !targetInvoice ||
-    !["DRAFT"].includes(targetInvoice.status);
+    !["PENDING"].includes(targetInvoice.status);
 
   if (needsNewInvoice) {
     // Create new ADDITIONAL invoice
@@ -1137,7 +1156,7 @@ export async function addExtraCharge(
           totalAmount:    chargeAmount,
           amountPaid:     0,
           balanceDue:     chargeAmount,
-          status:         "DRAFT",
+          status:         "PENDING",
           issueDate:      today,
           dueDate:        today,
           createdById:    userId,
@@ -1283,7 +1302,7 @@ export async function recordPayment(
         where: {
           tenantId,
           organizationId: orgId,
-          status: { in: ["ISSUED", "PARTIALLY_PAID", "DRAFT", "PENDING", "PARTIAL", "DUE"] },
+          status: { in: ["PENDING", "PARTIALLY_PAID", "PARTIAL", "DUE", "ISSUED", "DRAFT"] },
           balanceDue: { gt: 0 },
         },
         orderBy: { dueDate: "asc" },

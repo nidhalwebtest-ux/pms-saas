@@ -34,6 +34,10 @@ export async function PATCH(
       tenant:           { select: { organizationId: true } },
       reservationUnits: { select: { unitId: true } },
       payments:         { select: { amount: true } },
+      invoices: {
+        where: { status: { notIn: ["CANCELLED", "VOID"] } },
+        select: { id: true, status: true, amountPaid: true, invoiceNumber: true },
+      },
     },
   });
 
@@ -45,6 +49,19 @@ export async function PATCH(
       { error: `Cannot cancel a reservation with status "${res.status}".` },
       { status: 409 },
     );
+
+  // Block cancel if any invoice has been partially or fully paid
+  const paidInvoices = res.invoices.filter((inv) =>
+    ["PAID", "PARTIALLY_PAID", "PARTIAL"].includes(inv.status),
+  );
+  if (paidInvoices.length > 0) {
+    return NextResponse.json(
+      {
+        error: `Cannot cancel: ${paidInvoices.length} invoice(s) have recorded payments (${paidInvoices.map((i) => i.invoiceNumber).join(", ")}). Cancel those invoices first.`,
+      },
+      { status: 409 },
+    );
+  }
 
   const cancelledReason = notes.trim()
     ? `${reason.trim()}: ${notes.trim()}`
@@ -60,16 +77,36 @@ export async function PATCH(
     ]),
   ];
 
+  // IDs of PENDING invoices to auto-cancel
+  const pendingInvoiceIds = res.invoices
+    .filter((inv) => ["PENDING", "DRAFT", "DUE", "ISSUED"].includes(inv.status))
+    .map((inv) => inv.id);
+
+  const now = new Date();
+
   await prisma.$transaction(async (tx) => {
     await tx.reservation.update({
       where: { id },
       data: {
         status:          "CANCELLED",
         cancelledReason: cancelledReason,
-        cancelledAt:     new Date(),
+        cancelledAt:     now,
         refundPending:   hasPayment,
       },
     });
+
+    // Auto-cancel PENDING invoices
+    if (pendingInvoiceIds.length > 0) {
+      await tx.invoice.updateMany({
+        where: { id: { in: pendingInvoiceIds } },
+        data: {
+          status:          "CANCELLED",
+          cancelledReason: `Reservation cancelled: ${cancelledReason}`,
+          cancelledAt:     now,
+        },
+      });
+    }
+
     if (unitIds.length > 0) {
       await tx.unit.updateMany({
         where: { id: { in: unitIds } },
@@ -81,17 +118,18 @@ export async function PATCH(
         reservationId: id,
         organizationId: actor.organizationId!,
         action: "CANCELLED",
-        description: `Reservation cancelled. Reason: ${reason}${notes ? ` — ${notes}` : ""}${hasPayment ? ` Refund required: ${totalPaid.toFixed(3)} OMR.` : ""}`,
+        description: `Reservation cancelled. Reason: ${reason}${notes ? ` — ${notes}` : ""}${pendingInvoiceIds.length > 0 ? ` ${pendingInvoiceIds.length} invoice(s) auto-cancelled.` : ""}${hasPayment ? ` Refund required: ${totalPaid.toFixed(3)} OMR.` : ""}`,
         performedById: actor.id,
-        metadata: { reason, notes, refundPending: hasPayment, totalPaid },
+        metadata: { reason, notes, refundPending: hasPayment, totalPaid, cancelledInvoiceCount: pendingInvoiceIds.length },
       },
     });
   });
 
   return NextResponse.json({
-    success:       true,
-    totalPaid:     totalPaid.toFixed(3),
-    refundPending: hasPayment,
-    message:       `Reservation cancelled.${hasPayment ? ` Refund of ${totalPaid.toFixed(3)} OMR is pending.` : ""}`,
+    success:              true,
+    totalPaid:            totalPaid.toFixed(3),
+    refundPending:        hasPayment,
+    cancelledInvoices:    pendingInvoiceIds.length,
+    message:              `Reservation cancelled.${pendingInvoiceIds.length > 0 ? ` ${pendingInvoiceIds.length} invoice(s) cancelled.` : ""}${hasPayment ? ` Refund of ${totalPaid.toFixed(3)} OMR is pending.` : ""}`,
   });
 }

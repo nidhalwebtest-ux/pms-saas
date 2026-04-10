@@ -52,6 +52,20 @@ type ActivityRow = {
   performedByName: string | null; createdAt: string; metadata: unknown;
 };
 
+type InvoiceRow = {
+  id: string;
+  invoiceNumber: string;
+  invoiceType: string;
+  monthNumber: number | null;
+  status: string;
+  totalAmount: string;
+  amountPaid: string;
+  balanceDue: string;
+  dueDate: string;
+  periodStart: string;
+  periodEnd: string;
+};
+
 type ReservationData = {
   id: string;
   reservationNumber: string | null;
@@ -91,11 +105,13 @@ type ReservationData = {
   payments: PaymentRow[];
   charges: ChargeRow[];
   activities: ActivityRow[];
+  invoicesGenerated: boolean;
+  invoices: InvoiceRow[];
   createdByName: string | null;
   createdAt: string;
 };
 
-type ModalType = "check-in" | "check-out" | "cancel" | "payment" | "charge" | "note" | "extend-stay" | "move-unit" | null;
+type ModalType = "check-in" | "check-out" | "cancel" | "payment" | "charge" | "note" | "extend-stay" | "move-unit" | "generate-invoices" | null;
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -260,7 +276,6 @@ function PaymentForm({
 function CheckInModal({ res, onSuccess, onClose }: {
   res: ReservationData; onSuccess: () => void; onClose: () => void;
 }) {
-  const [payment, setPayment] = useState({ amount: "", method: "CASH", reference: "" });
   const [loading, setLoading] = useState(false);
 
   const checkInDate = res.startDate;
@@ -268,14 +283,10 @@ function CheckInModal({ res, onSuccess, onClose }: {
 
   async function handleConfirm() {
     setLoading(true);
-    const body: Record<string, unknown> = {};
-    if (payment.amount && Number(payment.amount) > 0) {
-      body.payment = { amount: Number(payment.amount), method: payment.method, reference: payment.reference || null };
-    }
     const r = await fetch(`/api/reservations/${res.id}/check-in`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({}),
     });
     const data = await r.json();
     setLoading(false);
@@ -318,12 +329,12 @@ function CheckInModal({ res, onSuccess, onClose }: {
           </div>
         </div>
 
-        {/* Payment */}
-        <PaymentForm
-          balanceDue={res.balanceDue}
-          value={payment}
-          onChange={setPayment}
-        />
+        {res.invoicesGenerated && (
+          <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+            <BanknotesIcon className="h-4 w-4 shrink-0" />
+            <span>{res.invoices.length} invoice(s) exist — due dates will be set to today.</span>
+          </div>
+        )}
 
         <button
           onClick={handleConfirm}
@@ -724,6 +735,144 @@ function NoteModal({ res, onSuccess, onClose }: {
   );
 }
 
+// ── Generate Invoices Modal ────────────────────────────────────────────────────
+
+function GenerateInvoicesModal({ res, onSuccess, onClose }: {
+  res: ReservationData; onSuccess: () => void; onClose: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+
+  async function handleConfirm() {
+    setLoading(true);
+    const r = await fetch(`/api/reservations/${res.id}/generate-invoices`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    const data = await r.json();
+    setLoading(false);
+    if (!r.ok) { toast.error(data.error ?? "Failed to generate invoices"); return; }
+    toast.success(data.message ?? `${data.invoiceCount} invoice(s) generated`);
+    onSuccess();
+  }
+
+  return (
+    <Modal title="Generate Invoices" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="p-4 bg-blue-50 rounded-xl text-sm text-blue-800 border border-blue-200">
+          This will generate invoice(s) for this reservation based on the rate type and stay duration.
+          Once generated, invoices cannot be duplicated.
+        </div>
+        <div className="bg-gray-50 rounded-xl p-4 space-y-1 text-sm text-gray-700">
+          <div className="flex justify-between">
+            <span>Grand Total</span>
+            <span className="font-semibold">{res.grandTotal} OMR</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Rate Type</span>
+            <span>{res.rateType === "monthly" ? "Monthly" : "Daily"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Duration</span>
+            <span>{res.rateType === "monthly" ? `${Math.round(res.totalNights / 30)} month(s)` : `${res.totalNights} night(s)`}</span>
+          </div>
+        </div>
+        <button
+          onClick={handleConfirm}
+          disabled={loading}
+          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
+        >
+          {loading ? "Generating…" : "Generate Invoices"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// ── Invoice Pay Modal ──────────────────────────────────────────────────────────
+
+function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
+  res: ReservationData;
+  invoice: InvoiceRow;
+  onSuccess: () => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState({
+    amount: Number(invoice.balanceDue).toFixed(3),
+    method: "CASH",
+    reference: "",
+  });
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit() {
+    const amt = Number(form.amount);
+    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
+    setLoading(true);
+    const r = await fetch(`/api/reservations/${res.id}/payments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amount:  amt,
+        method:  form.method,
+        reference: form.reference || null,
+        invoiceAllocations: [{ invoiceId: invoice.id, amount: amt }],
+      }),
+    });
+    const data = await r.json();
+    setLoading(false);
+    if (!r.ok) { toast.error(data.error ?? "Payment failed"); return; }
+    toast.success("Payment recorded");
+    onSuccess();
+  }
+
+  const invoiceStatusClass = (s: string) => {
+    if (s === "PAID") return "bg-green-100 text-green-700";
+    if (s === "PARTIALLY_PAID" || s === "PARTIAL") return "bg-yellow-100 text-yellow-700";
+    if (s === "CANCELLED" || s === "VOID") return "bg-gray-100 text-gray-400";
+    return "bg-orange-100 text-orange-700";
+  };
+
+  return (
+    <Modal title={`Pay Invoice ${invoice.invoiceNumber}`} onClose={onClose}>
+      <div className="space-y-4">
+        <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-500">Invoice</span>
+            <span className="font-mono font-semibold">{invoice.invoiceNumber}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-500">Status</span>
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${invoiceStatusClass(invoice.status)}`}>
+              {invoice.status.replace("_", " ")}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-500">Total</span>
+            <span>{Number(invoice.totalAmount).toFixed(3)} OMR</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-gray-500">Already Paid</span>
+            <span className="text-green-600">{Number(invoice.amountPaid).toFixed(3)} OMR</span>
+          </div>
+          <div className="flex items-center justify-between font-bold border-t pt-2">
+            <span>Balance Due</span>
+            <span className="text-red-600">{Number(invoice.balanceDue).toFixed(3)} OMR</span>
+          </div>
+        </div>
+
+        <PaymentForm balanceDue={invoice.balanceDue} value={form} onChange={setForm} />
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
+        >
+          {loading ? "Recording…" : "Record Payment"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 // ── Action Buttons ─────────────────────────────────────────────────────────────
 
 function ActionButtons({ ds, onAction, reservationId }: {
@@ -852,6 +1001,7 @@ export default function ReservationDetail({ id }: { id: string }) {
   const [res, setRes] = useState<ReservationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
+  const [activeInvoice, setActiveInvoice] = useState<InvoiceRow | null>(null);
 
   const loadData = useCallback(async () => {
     const r = await fetch(`/api/reservations/${id}`);
@@ -1146,6 +1296,114 @@ export default function ReservationDetail({ id }: { id: string }) {
               )}
             </div>
 
+            {/* Section 3b: Related Invoices */}
+            <Collapsible
+              title={`Invoices (${res.invoices.filter((i) => i.status !== "CANCELLED" && i.status !== "VOID").length})`}
+              defaultOpen={true}
+            >
+              {!res.invoicesGenerated ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-400 text-center py-2">No invoices generated yet.</p>
+                  {["PENDING", "CONFIRMED", "CHECKED_IN"].includes(res.status) && (
+                    <button
+                      onClick={() => setActiveModal("generate-invoices")}
+                      className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
+                    >
+                      Generate Invoices
+                    </button>
+                  )}
+                </div>
+              ) : res.invoices.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-2">No invoices found.</p>
+              ) : (
+                <div>
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-xs text-gray-400 border-b border-gray-100">
+                        <th className="text-left pb-2 font-medium">Invoice</th>
+                        <th className="text-left pb-2 font-medium">Period</th>
+                        <th className="text-right pb-2 font-medium">Total</th>
+                        <th className="text-right pb-2 font-medium">Due</th>
+                        <th className="text-center pb-2 font-medium">Status</th>
+                        <th className="pb-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {res.invoices.map((inv) => {
+                        const isCancelled = inv.status === "CANCELLED" || inv.status === "VOID";
+                        const isPaid      = inv.status === "PAID";
+                        const isPartial   = inv.status === "PARTIALLY_PAID" || inv.status === "PARTIAL";
+                        const isOverdue   = !isPaid && !isCancelled && new Date(inv.dueDate) < new Date();
+                        const statusClass = isPaid
+                          ? "bg-green-100 text-green-700"
+                          : isPartial
+                          ? "bg-yellow-100 text-yellow-700"
+                          : isCancelled
+                          ? "bg-gray-100 text-gray-400"
+                          : isOverdue
+                          ? "bg-red-100 text-red-700"
+                          : "bg-orange-100 text-orange-700";
+                        const statusLabel = isPaid
+                          ? "Paid"
+                          : isPartial
+                          ? "Partial"
+                          : isCancelled
+                          ? "Cancelled"
+                          : isOverdue
+                          ? "Overdue"
+                          : "Pending";
+
+                        return (
+                          <tr key={inv.id} className={isCancelled ? "opacity-40" : ""}>
+                            <td className="py-2 font-mono text-xs text-gray-700 pr-2">
+                              <Link href={`/dashboard/invoices/${inv.id}`} className="hover:text-blue-600 hover:underline">
+                                {inv.invoiceNumber}
+                              </Link>
+                            </td>
+                            <td className="py-2 text-xs text-gray-500 pr-2">
+                              {fmtDate(inv.periodStart, { day: "numeric", month: "short" })}
+                              {" — "}
+                              {fmtDate(inv.periodEnd, { day: "numeric", month: "short" })}
+                            </td>
+                            <td className="py-2 text-right font-medium text-gray-800 pr-2">
+                              {Number(inv.totalAmount).toFixed(3)}
+                            </td>
+                            <td className={`py-2 text-right text-xs pr-2 ${isOverdue && !isCancelled ? "text-red-600 font-medium" : "text-gray-400"}`}>
+                              {fmtDate(inv.dueDate, { day: "numeric", month: "short" })}
+                            </td>
+                            <td className="py-2 text-center">
+                              <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${statusClass}`}>
+                                {statusLabel}
+                              </span>
+                            </td>
+                            <td className="py-2 text-right pl-1">
+                              {!isPaid && !isCancelled && (
+                                <button
+                                  onClick={() => setActiveInvoice(inv)}
+                                  className="text-xs text-blue-600 hover:underline font-medium"
+                                >
+                                  Pay
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between text-sm font-medium text-gray-700">
+                    <span>Total Outstanding</span>
+                    <span className="text-red-600">
+                      {res.invoices
+                        .filter((i) => i.status !== "CANCELLED" && i.status !== "VOID")
+                        .reduce((s, i) => s + Number(i.balanceDue), 0)
+                        .toFixed(3)} OMR
+                    </span>
+                  </div>
+                </div>
+              )}
+            </Collapsible>
+
             {/* Section 4: Pricing Breakdown */}
             <Collapsible title="Pricing Breakdown" defaultOpen={false}>
               {res.units.length === 0 ? (
@@ -1346,6 +1604,21 @@ export default function ReservationDetail({ id }: { id: string }) {
           checkOutDate={res.endDate}
           onClose={() => setActiveModal(null)}
           onSuccess={afterAction}
+        />
+      )}
+      {activeModal === "generate-invoices" && (
+        <GenerateInvoicesModal
+          res={res}
+          onSuccess={afterAction}
+          onClose={() => setActiveModal(null)}
+        />
+      )}
+      {activeInvoice && (
+        <InvoicePayModal
+          res={res}
+          invoice={activeInvoice}
+          onSuccess={() => { setActiveInvoice(null); loadData(); }}
+          onClose={() => setActiveInvoice(null)}
         />
       )}
     </div>

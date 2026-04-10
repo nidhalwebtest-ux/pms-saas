@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { canTransitionTo, type StoredStatus } from "@/lib/reservation-status";
-import { generateInvoicesForReservation } from "@/lib/invoice-engine";
 
 async function getActor() {
   const supabase = await createClient();
@@ -16,7 +15,7 @@ async function getActor() {
 }
 
 export async function PATCH(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const actor = await getActor();
@@ -24,14 +23,15 @@ export async function PATCH(
 
   const { id } = await params;
 
-  let body: { payment?: { amount: number; method: string; reference?: string; notes?: string } } = {};
-  try { body = await req.json(); } catch { /* no body */ }
-
   const res = await prisma.reservation.findUnique({
     where: { id },
     include: {
       tenant:           { select: { organizationId: true, firstName: true, lastName: true } },
       reservationUnits: { select: { unitId: true } },
+      invoices: {
+        where: { status: { notIn: ["CANCELLED", "VOID"] } },
+        select: { id: true, status: true, periodStart: true, invoiceType: true },
+      },
     },
   });
 
@@ -57,10 +57,28 @@ export async function PATCH(
   });
   const unitLabel = unitNames.map((u) => u.name).join(", ");
 
+  const today    = new Date();
+  const todayDay = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()));
+
+  // Determine which invoices need their due date set to today:
+  //  - DAILY/SHORT_TERM: all PENDING invoices → due today
+  //  - MONTHLY: invoices whose periodStart <= today → due today
+  const isMonthly = res.rateType === "monthly" || res.rateType === "MONTHLY";
+
+  const invoiceIdsForDueDate = res.invoices
+    .filter((inv) => ["PENDING", "DRAFT", "DUE", "ISSUED"].includes(inv.status))
+    .filter((inv) => {
+      if (!isMonthly) return true;
+      const ps = new Date(inv.periodStart);
+      const psDay = new Date(Date.UTC(ps.getFullYear(), ps.getMonth(), ps.getDate()));
+      return psDay <= todayDay;
+    })
+    .map((inv) => inv.id);
+
   await prisma.$transaction(async (tx) => {
     await tx.reservation.update({
       where: { id },
-      data: { status: "CHECKED_IN", actualCheckIn: new Date() },
+      data: { status: "CHECKED_IN", actualCheckIn: today },
     });
 
     if (unitIds.length > 0) {
@@ -70,60 +88,29 @@ export async function PATCH(
       });
     }
 
-    // Optional payment at check-in
-    if (body.payment && Number(body.payment.amount) > 0) {
-      const payAmt = Number(body.payment.amount);
-      await tx.payment.create({
-        data: {
-          amount: payAmt,
-          method: body.payment.method as any,
-          reference: body.payment.reference ?? null,
-          notes: body.payment.notes ?? null,
-          tenantId: res.tenantId,
-          reservationId: id,
-        },
-      });
-      await tx.reservation.update({
-        where: { id },
-        data: { amountPaid: { increment: payAmt } },
-      });
-      await tx.reservationActivity.create({
-        data: {
-          reservationId: id,
-          organizationId: actor.organizationId!,
-          action: "PAYMENT_RECORDED",
-          description: `Payment of ${payAmt.toFixed(3)} OMR recorded at check-in (${body.payment.method})`,
-          performedById: actor.id,
-          metadata: { amount: payAmt, method: body.payment.method, atCheckIn: true },
-        },
+    // Set due date to today for relevant invoices
+    if (invoiceIdsForDueDate.length > 0) {
+      await tx.invoice.updateMany({
+        where: { id: { in: invoiceIdsForDueDate } },
+        data:  { dueDate: todayDay },
       });
     }
 
     await tx.reservationActivity.create({
       data: {
-        reservationId: id,
+        reservationId:  id,
         organizationId: actor.organizationId!,
-        action: "CHECKED_IN",
-        description: `Checked in${unitLabel ? ` — Units ${unitLabel} marked as Occupied` : ""}`,
-        performedById: actor.id,
-        metadata: { unitIds, unitNames: unitNames.map((u) => u.name) },
+        action:         "CHECKED_IN",
+        description:    `Checked in${unitLabel ? ` — Units ${unitLabel} marked as Occupied` : ""}${invoiceIdsForDueDate.length > 0 ? `. ${invoiceIdsForDueDate.length} invoice(s) due today.` : ""}`,
+        performedById:  actor.id,
+        metadata:       { unitIds, unitNames: unitNames.map((u) => u.name), invoicesDue: invoiceIdsForDueDate },
       },
     });
   });
 
-  // Generate invoice(s) after check-in (idempotent — safe to call even if already generated)
-  let invoiceCount = 0;
-  try {
-    const invoiceResult = await generateInvoicesForReservation(id, actor.organizationId!, actor.id);
-    invoiceCount = invoiceResult.invoices.length;
-  } catch (invoiceErr) {
-    // Invoice generation failure must NOT block check-in
-    console.error("[check-in] invoice generation failed:", invoiceErr);
-  }
-
   return NextResponse.json({
     success: true,
     message: `${res.tenant.firstName} ${res.tenant.lastName} checked in${unitLabel ? ` to ${unitLabel}` : ""}.`,
-    invoicesGenerated: invoiceCount,
+    invoicesDueToday: invoiceIdsForDueDate.length,
   });
 }

@@ -58,6 +58,22 @@ export async function GET(
         orderBy: { createdAt: "asc" },
         include: { createdBy: { select: { firstName: true, lastName: true } } },
       },
+      invoices: {
+        orderBy: { periodStart: "asc" },
+        select: {
+          id: true,
+          invoiceNumber: true,
+          invoiceType: true,
+          monthNumber: true,
+          status: true,
+          totalAmount: true,
+          amountPaid: true,
+          balanceDue: true,
+          dueDate: true,
+          periodStart: true,
+          periodEnd: true,
+        },
+      },
       activities: {
         orderBy: { createdAt: "desc" },
         take: 50,
@@ -193,6 +209,20 @@ export async function GET(
         : null,
       createdAt: a.createdAt.toISOString(),
       metadata: a.metadata,
+    })),
+    invoicesGenerated: r.invoicesGenerated,
+    invoices: r.invoices.map((inv) => ({
+      id:            inv.id,
+      invoiceNumber: inv.invoiceNumber,
+      invoiceType:   inv.invoiceType,
+      monthNumber:   inv.monthNumber,
+      status:        inv.status,
+      totalAmount:   Number(inv.totalAmount).toFixed(3),
+      amountPaid:    Number(inv.amountPaid).toFixed(3),
+      balanceDue:    Number(inv.balanceDue).toFixed(3),
+      dueDate:       inv.dueDate.toISOString(),
+      periodStart:   inv.periodStart.toISOString(),
+      periodEnd:     inv.periodEnd.toISOString(),
     })),
     createdByName: r.createdBy
       ? `${r.createdBy.firstName ?? ""} ${r.createdBy.lastName ?? ""}`.trim()

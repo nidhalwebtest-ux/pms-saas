@@ -5,7 +5,6 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { normalizeReservationDates, calculatePeriod } from "@/utils/date-math";
 import { generateInstallments } from "@/utils/billing-engine";
-import { generateInvoicesForReservation } from "@/lib/invoice-engine";
 import {
   requireOrgUser,
   assertTenantOwnership,
@@ -165,14 +164,6 @@ export async function confirmReservation(formData: FormData) {
   } catch (error) {
     console.error("Confirmation Error:", error);
     return { error: "Failed to confirm reservation. Please try again." };
-  }
-
-  // 4. Generate invoice(s) for this reservation (idempotent — safe if called twice)
-  try {
-    await generateInvoicesForReservation(reservationId, orgUser.organizationId, orgUser.userId);
-  } catch (invoiceErr) {
-    console.error("Invoice generation failed after confirm:", invoiceErr);
-    // Don't fail the confirmation — invoice can be regenerated manually
   }
 
   revalidatePath(`/dashboard/reservations/${reservationId}`);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { recordPayment } from "@/lib/invoice-engine";
 
 async function getActor() {
   const supabase = await createClient();
@@ -22,7 +23,14 @@ export async function POST(
 
   const { id } = await params;
   const body = await req.json();
-  const { amount, method = "CASH", reference, notes } = body;
+  const {
+    amount,
+    method = "CASH",
+    reference,
+    notes,
+    // Optional: explicit invoice allocation [{invoiceId, amount}]
+    invoiceAllocations,
+  } = body;
 
   if (!amount || Number(amount) <= 0)
     return NextResponse.json({ error: "Valid amount is required." }, { status: 400 });
@@ -31,45 +39,54 @@ export async function POST(
     where: { id },
     select: {
       tenantId: true,
-      amountPaid: true,
-      grandTotal: true,
       tenant: { select: { organizationId: true } },
     },
   });
   if (!res || res.tenant.organizationId !== actor.organizationId)
     return NextResponse.json({ error: "Reservation not found." }, { status: 404 });
 
-  const payAmt = Number(amount);
-  const newAmountPaid = Number(res.amountPaid) + payAmt;
-
-  await prisma.$transaction(async (tx) => {
-    await tx.payment.create({
-      data: {
-        amount: payAmt,
-        method: method as any,
-        reference: reference ?? null,
-        notes: notes ?? null,
-        tenantId: res.tenantId,
-        reservationId: id,
-      },
+  try {
+    const result = await recordPayment({
+      tenantId:       res.tenantId,
+      amount:         Number(amount),
+      method,
+      reference:      reference ?? undefined,
+      notes:          notes ?? undefined,
+      orgId:          actor.organizationId!,
+      userId:         actor.id,
+      receivedById:   actor.id,
+      reservationId:  id,
+      invoiceAllocations: invoiceAllocations ?? undefined,
     });
 
-    await tx.reservation.update({
-      where: { id },
-      data: { amountPaid: newAmountPaid },
-    });
-
-    await tx.reservationActivity.create({
+    // Log activity
+    await prisma.reservationActivity.create({
       data: {
-        reservationId: id,
+        reservationId:  id,
         organizationId: actor.organizationId!,
-        action: "PAYMENT_RECORDED",
-        description: `Payment of ${payAmt.toFixed(3)} OMR recorded (${method})`,
-        performedById: actor.id,
-        metadata: { amount: payAmt, method, reference },
+        action:         "PAYMENT_RECORDED",
+        description:    `Payment of ${Number(amount).toFixed(3)} OMR recorded (${method})${result.overpayment > 0 ? ` — overpayment: ${result.overpayment.toFixed(3)} OMR` : ""}`,
+        performedById:  actor.id,
+        metadata:       {
+          amount:        Number(amount),
+          method,
+          reference,
+          paymentId:     result.payment.id,
+          allocations:   result.allocations.length,
+          overpayment:   result.overpayment,
+        },
       },
     });
-  });
 
-  return NextResponse.json({ success: true });
+    return NextResponse.json({
+      success:    true,
+      paymentId:  result.payment.id,
+      allocations: result.allocations.length,
+      overpayment: result.overpayment,
+    });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Payment recording failed.";
+    console.error("[POST /api/reservations/[id]/payments]", err);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }

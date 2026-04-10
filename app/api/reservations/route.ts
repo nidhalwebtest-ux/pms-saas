@@ -6,7 +6,6 @@ import {
   getDisplayStatus,
   type StoredStatus,
 } from "@/lib/reservation-status";
-import { generateInvoicesForReservation } from "@/lib/invoice-engine";
 import {
   calculateNights,
   countCalendarMonths,
@@ -447,14 +446,6 @@ export async function POST(req: NextRequest) {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
-
-    // Generate invoice(s) immediately after creation (idempotent)
-    try {
-      await generateInvoicesForReservation(reservation.id, actor.organizationId!, actor.id);
-    } catch (invErr) {
-      console.error("[POST /api/reservations] invoice generation failed:", invErr);
-      // Don't fail the reservation creation — invoice can be regenerated
-    }
 
     return NextResponse.json({ reservation }, { status: 201 });
   } catch (err: unknown) {

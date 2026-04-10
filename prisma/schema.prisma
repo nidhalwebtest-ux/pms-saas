@@ -60,17 +60,20 @@ enum PaymentFrequency {
   YEARLY
 }
 
-// Invoice status — legacy values kept for backward compatibility
+// Invoice status
 enum InvoiceStatus {
-  PENDING        // legacy
-  PARTIAL        // legacy
-  DUE            // legacy
-  PAID           // active (paid in full)
-  VOID           // legacy
-  DRAFT          // created but not yet issued
-  ISSUED         // sent to tenant, awaiting payment
-  PARTIALLY_PAID // some payment received
-  CANCELLED      // voided with reason
+  // ── Active statuses ───────────────────────────────────────────────
+  PENDING        // created, no payment received yet
+  PARTIALLY_PAID // some payment received, balance remaining
+  PAID           // fully paid, balance_due = 0
+  RETURNED       // payment returned/refunded to tenant
+  CANCELLED      // voided — excluded from all financial calculations
+  // ── Legacy values (kept so PostgreSQL doesn't error on old rows) ──
+  PARTIAL        // migrated → PARTIALLY_PAID
+  DUE            // migrated → PENDING
+  VOID           // migrated → CANCELLED
+  DRAFT          // migrated → PENDING
+  ISSUED         // migrated → PENDING
 }
 
 enum InvoiceType {
@@ -165,8 +168,9 @@ model User {
   createdReservations Reservation[]         @relation("ReservationCreatedBy")
   performedActivities ReservationActivity[] @relation("ActivityPerformedBy")
   createdCharges      ReservationCharge[]   @relation("ChargeCreatedBy")
-  createdInvoices     Invoice[]             @relation("InvoiceCreatedBy")
-  receivedPayments    Payment[]             @relation("PaymentReceivedBy")
+  createdInvoices               Invoice[]       @relation("InvoiceCreatedBy")
+  receivedPayments              Payment[]       @relation("PaymentReceivedBy")
+  invoicesGeneratedReservations Reservation[]  @relation("InvoicesGeneratedBy")
 
   createdAt      DateTime     @default(now())
 }
@@ -370,6 +374,12 @@ model Reservation {
 
   // Expected total number of monthly invoices (set at creation for monthly stays)
   expectedInvoiceCount Int?
+
+  // Invoice generation tracking
+  invoicesGenerated     Boolean   @default(false)
+  invoicesGeneratedAt   DateTime?
+  invoicesGeneratedById String?
+  invoicesGeneratedBy   User?     @relation("InvoicesGeneratedBy", fields: [invoicesGeneratedById], references: [id])
 
   unitId            String?
   unit              Unit?    @relation(fields: [unitId], references: [id])

@@ -230,52 +230,65 @@ export async function nextPaymentNumber(
   return `${prefix}${String(seq).padStart(5, "0")}`;
 }
 
-// ── Calendar month period builder ─────────────────────────────────────────────
+// ── Billing cycle period builder ──────────────────────────────────────────────
 
 /**
- * Decompose a reservation stay into per-calendar-month billing periods.
+ * Add N whole months to a UTC Date.
+ * Handles end-of-month overflow (e.g. Jan 31 + 1 month = Feb 28).
+ */
+function addUTCMonths(date: Date, n: number): Date {
+  const d = new Date(date);
+  const originalDay = d.getUTCDate();
+  d.setUTCMonth(d.getUTCMonth() + n);
+  // If the day overflowed (e.g. Jan 31 → Mar 3), snap back to last day of target month
+  if (d.getUTCDate() !== originalDay) {
+    d.setUTCDate(0); // last day of the previous (correct) month
+  }
+  return d;
+}
+
+/**
+ * Decompose a reservation stay into billing cycles that follow the check-in day.
  *
- * Rules:
- *  - Period 1  : checkIn  → last day of checkIn's month  (or checkOut if same month)
- *  - Middle    : 1st of month → last day of month
- *  - Last      : 1st of month → checkOut
- *  - isFullMonth: true only when periodStart is the 1st AND periodEnd is the
- *    last day of that calendar month
+ * Rules (per CLAUDE.md: "Billing cycle follows check-in day"):
+ *  - Cycle 1 : checkIn        → (checkIn + 1 month - 1 day)   e.g. Apr 10 → May 9
+ *  - Cycle 2 : checkIn+1mo    → (checkIn + 2 months - 1 day)  e.g. May 10 → Jun 9
+ *  - Last     : truncated at (checkOut - 1 day) if checkOut falls mid-cycle
  *
- * Both dates are treated as inclusive calendar-day boundaries.
+ * isFullMonth = the natural cycle end date (checkIn+Nmo-1) does NOT exceed checkOut-1,
+ * meaning the tenant stays through the entire billing cycle.
+ * Full months are charged the flat monthly rate; partial months are pro-rated.
  *
  * @param checkIn  - first night of stay (inclusive)
- * @param checkOut - departure day (exclusive for nights, inclusive for period end)
+ * @param checkOut - departure day (exclusive — the morning the guest leaves)
  */
-export function buildCalendarMonthPeriods(
+export function buildBillingCyclePeriods(
   checkIn: Date,
   checkOut: Date,
 ): CalendarMonthPeriod[] {
   const start = toDay(checkIn);
-  const end   = toDay(checkOut);
+  const end   = toDay(checkOut); // exclusive
 
   if (end <= start) return [];
 
   const periods: CalendarMonthPeriod[] = [];
-  let cursor = start;
   let monthNumber = 1;
+  let periodStart = start;
 
-  while (cursor < end) {
-    const eom = endOfMonth(cursor);
-    // The billing period ends at the earlier of: end-of-month or checkOut
-    const periodEnd = eom < end ? eom : new Date(Date.UTC(end.getFullYear(), end.getMonth(), end.getDate() - 1));
+  while (periodStart < end) {
+    // Next billing date = same day N months from check-in
+    const nextBilling = addUTCMonths(start, monthNumber); // checkIn + N months
 
-    // Edge: if checkOut is the first day of a new month we already handled it
-    if (periodEnd < cursor) break;
+    // The natural end of this cycle (day before next billing date)
+    const naturalEnd = addDays(nextBilling, -1);
 
-    const periodStart = cursor;
-    const days = daysBetween(periodStart, periodEnd) + 1; // inclusive
+    // Actual period end: natural end OR day before checkOut, whichever is earlier
+    const periodEnd = naturalEnd < end ? naturalEnd : addDays(end, -1);
 
-    const isFirstOfMonth =
-      periodStart.getUTCDate() === 1;
-    const isLastOfMonth =
-      periodEnd.getTime() === endOfMonth(periodEnd).getTime();
-    const isFullMonth = isFirstOfMonth && isLastOfMonth;
+    if (periodEnd < periodStart) break;
+
+    const days       = daysBetween(periodStart, periodEnd) + 1; // inclusive count
+    const isFullMonth = naturalEnd < end; // full cycle fits within stay
 
     periods.push({
       monthNumber,
@@ -285,13 +298,18 @@ export function buildCalendarMonthPeriods(
       isFullMonth,
     });
 
-    // Advance cursor to the first day of the next calendar month
-    cursor = new Date(Date.UTC(cursor.getFullYear(), cursor.getMonth() + 1, 1));
+    periodStart = nextBilling; // advance to start of next cycle
     monthNumber++;
   }
 
   return periods;
 }
+
+/**
+ * @deprecated Use buildBillingCyclePeriods instead.
+ * Kept as alias so external callers (reports, etc.) don't break.
+ */
+export const buildCalendarMonthPeriods = buildBillingCyclePeriods;
 
 // ── Unit info extraction ──────────────────────────────────────────────────────
 
@@ -480,8 +498,8 @@ export async function generateInvoicesForReservation(
     // ── 4a. SHORT-TERM (daily, ≤30 nights) ────────────────────────────────────
     return await _generateShortTermInvoice(res, unitInfos, orgId, userId, nights);
   } else {
-    // ── 4b. MONTHLY — generate only the first period invoice ──────────────────
-    return await _generateFirstMonthlyInvoice(res, unitInfos, orgId, userId);
+    // ── 4b. MONTHLY — generate ALL billing-cycle invoices up front ────────────
+    return await _generateAllMonthlyInvoices(res, unitInfos, orgId, userId);
   }
 }
 
@@ -593,38 +611,60 @@ async function _generateShortTermInvoice(
   return { invoices: [result] as any, totalExpected: 1 };
 }
 
-// ── Internal: first monthly invoice ──────────────────────────────────────────
+// ── Internal: generate ALL monthly invoices at once ──────────────────────────
 
-async function _generateFirstMonthlyInvoice(
+/**
+ * Generate one invoice per billing cycle for a monthly reservation.
+ *
+ * Status assignment:
+ *  - Cycles whose periodStart <= today  → PENDING  (dueDate = today)
+ *  - Future cycles                       → DRAFT    (dueDate = periodStart)
+ *
+ * All invoices are created sequentially (to preserve invoice number order)
+ * but in separate transactions (so a single failure doesn't wipe everything).
+ */
+async function _generateAllMonthlyInvoices(
   res: any,
   unitInfos: UnitInfo[],
   orgId: string,
   userId: string,
 ): Promise<GenerateInvoicesResult> {
-  const periods = buildCalendarMonthPeriods(res.startDate, res.endDate);
+  const periods = buildBillingCyclePeriods(res.startDate, res.endDate);
   if (periods.length === 0) {
     throw new Error("Could not build billing periods for reservation.");
   }
 
-  const firstPeriod = periods[0];
+  const today    = new Date();
+  const todayDay = toDay(today);
 
-  const invoice = await _createMonthlyInvoice({
-    res,
-    unitInfos,
-    period: firstPeriod,
-    orgId,
-    userId,
-    dueDate: res.startDate,  // first invoice due on check-in
-  });
+  const createdInvoices: any[] = [];
 
-  // Update reservation with total expected invoice count
+  for (const period of periods) {
+    const isFuture = toDay(period.periodStart) > todayDay;
+    const status   = isFuture ? InvoiceStatus.DRAFT : InvoiceStatus.PENDING;
+    // Due today for current/past cycles; on cycle start for future cycles
+    const dueDate  = isFuture ? period.periodStart : todayDay;
+
+    const invoice = await _createMonthlyInvoice({
+      res,
+      unitInfos,
+      period,
+      orgId,
+      userId,
+      dueDate,
+      status,
+    });
+    createdInvoices.push(invoice);
+  }
+
+  // Store the expected total on the reservation
   await prisma.reservation.update({
     where: { id: res.id },
-    data: { expectedInvoiceCount: periods.length },
+    data:  { expectedInvoiceCount: periods.length },
   });
 
   return {
-    invoices:      [invoice] as any,
+    invoices:      createdInvoices,
     totalExpected: periods.length,
   };
 }
@@ -791,7 +831,7 @@ export async function generateNextMonthlyInvoice(
   );
 
   // 3. Build all calendar month periods
-  const periods = buildCalendarMonthPeriods(res.startDate, res.endDate);
+  const periods = buildBillingCyclePeriods(res.startDate, res.endDate);
 
   // 4. Next period is at index = lastMonthNumber (0-indexed)
   const nextPeriod = periods[lastMonthNumber];
@@ -1529,7 +1569,7 @@ export async function generatePendingMonthlyInvoices(
     const resOrgId = res.tenant.organizationId;
     if (!resOrgId) continue;
 
-    const periods = buildCalendarMonthPeriods(res.startDate, res.endDate);
+    const periods = buildBillingCyclePeriods(res.startDate, res.endDate);
 
     const lastMonthNumber = res.invoices.reduce(
       (max, inv) => Math.max(max, inv.monthNumber ?? 0),

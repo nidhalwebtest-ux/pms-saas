@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { canTransitionTo, type StoredStatus } from "@/lib/reservation-status";
+import { generateInvoicesForReservation } from "@/lib/invoice-engine";
 
 async function getActor() {
   const supabase = await createClient();
@@ -34,6 +35,7 @@ export async function PATCH(
       },
     },
   });
+
 
   if (!res || res.tenant.organizationId !== actor.organizationId)
     return NextResponse.json({ error: "Reservation not found." }, { status: 404 });
@@ -88,7 +90,7 @@ export async function PATCH(
       });
     }
 
-    // Set due date to today for relevant invoices
+    // Set due date to today for already-existing relevant invoices
     if (invoiceIdsForDueDate.length > 0) {
       await tx.invoice.updateMany({
         where: { id: { in: invoiceIdsForDueDate } },
@@ -101,16 +103,52 @@ export async function PATCH(
         reservationId:  id,
         organizationId: actor.organizationId!,
         action:         "CHECKED_IN",
-        description:    `Checked in${unitLabel ? ` — Units ${unitLabel} marked as Occupied` : ""}${invoiceIdsForDueDate.length > 0 ? `. ${invoiceIdsForDueDate.length} invoice(s) due today.` : ""}`,
+        description:    `Checked in${unitLabel ? ` — Units ${unitLabel} marked as Occupied` : ""}`,
         performedById:  actor.id,
-        metadata:       { unitIds, unitNames: unitNames.map((u) => u.name), invoicesDue: invoiceIdsForDueDate },
+        metadata:       { unitIds, unitNames: unitNames.map((u) => u.name) },
       },
     });
   });
 
+  // ── Auto-generate invoices on check-in (if not yet generated) ───────────────
+  let generatedCount = 0;
+  if (!res.invoicesGenerated) {
+    try {
+      const invoiceResult = await generateInvoicesForReservation(
+        id,
+        actor.organizationId!,
+        actor.id,
+      );
+      generatedCount = invoiceResult.invoices.length;
+
+      await prisma.reservation.update({
+        where: { id },
+        data: {
+          invoicesGenerated:     true,
+          invoicesGeneratedAt:   new Date(),
+          invoicesGeneratedById: actor.id,
+        },
+      });
+
+      await prisma.reservationActivity.create({
+        data: {
+          reservationId:  id,
+          organizationId: actor.organizationId!,
+          action:         "CHARGE_ADDED",
+          description:    `${generatedCount} invoice(s) auto-generated on check-in`,
+          performedById:  actor.id,
+          metadata:       { invoiceCount: generatedCount, totalExpected: invoiceResult.totalExpected },
+        },
+      });
+    } catch (invErr) {
+      // Log but don't fail check-in if invoice generation has an error
+      console.error("[check-in] auto-generate invoices failed:", invErr);
+    }
+  }
+
   return NextResponse.json({
-    success: true,
-    message: `${res.tenant.firstName} ${res.tenant.lastName} checked in${unitLabel ? ` to ${unitLabel}` : ""}.`,
-    invoicesDueToday: invoiceIdsForDueDate.length,
+    success:        true,
+    message:        `${res.tenant.firstName} ${res.tenant.lastName} checked in${unitLabel ? ` to ${unitLabel}` : ""}${generatedCount > 0 ? `. ${generatedCount} invoice(s) generated.` : ""}.`,
+    invoicesGenerated: generatedCount,
   });
 }

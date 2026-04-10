@@ -576,16 +576,72 @@ function CancelModal({ res, onSuccess, onClose }: {
 function PaymentModal({ res, onSuccess, onClose }: {
   res: ReservationData; onSuccess: () => void; onClose: () => void;
 }) {
+  // Outstanding invoices (not cancelled/paid) sorted by due date
+  const outstandingInvoices = res.invoices.filter(
+    (inv) => !["CANCELLED", "VOID", "PAID"].includes(inv.status) && Number(inv.balanceDue) > 0,
+  );
+  const hasInvoices = outstandingInvoices.length > 0;
+
+  // "auto" = system picks oldest-first; "manual" = user selects which invoices
+  const [allocationMode, setAllocationMode] = useState<"auto" | "manual">(
+    hasInvoices ? "auto" : "auto",
+  );
+  // In manual mode: { [invoiceId]: allocatedAmount (string) }
+  const [manualAmounts, setManualAmounts] = useState<Record<string, string>>(() =>
+    Object.fromEntries(outstandingInvoices.map((inv) => [inv.id, ""])),
+  );
   const [form, setForm] = useState({ amount: res.balanceDue, method: "CASH", reference: "" });
   const [loading, setLoading] = useState(false);
 
+  // In auto mode: compute how the payment would be distributed (oldest-first)
+  const autoAllocations = (() => {
+    let remaining = Number(form.amount) || 0;
+    return outstandingInvoices.map((inv) => {
+      const due    = Number(inv.balanceDue);
+      const alloc  = Math.min(remaining, due);
+      remaining    = Math.max(0, remaining - alloc);
+      return { invoiceId: inv.id, amount: alloc, invoiceNumber: inv.invoiceNumber, due };
+    });
+  })();
+
+  const manualTotal = Object.values(manualAmounts).reduce(
+    (s, v) => s + (Number(v) || 0), 0,
+  );
+
   async function handleSubmit() {
-    if (!form.amount || Number(form.amount) <= 0) { toast.error("Enter a valid amount"); return; }
+    const amt = Number(form.amount);
+    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
+
+    if (allocationMode === "manual" && hasInvoices) {
+      if (manualTotal <= 0) { toast.error("Allocate at least one invoice"); return; }
+      if (Math.abs(manualTotal - amt) > 0.001) {
+        toast.error(`Allocated ${manualTotal.toFixed(3)} OMR but payment amount is ${amt.toFixed(3)} OMR — they must match`);
+        return;
+      }
+    }
+
     setLoading(true);
+
+    // Build invoice allocations payload
+    let invoiceAllocations: { invoiceId: string; amount: number }[] | undefined;
+    if (hasInvoices) {
+      if (allocationMode === "manual") {
+        invoiceAllocations = Object.entries(manualAmounts)
+          .filter(([, v]) => Number(v) > 0)
+          .map(([invoiceId, v]) => ({ invoiceId, amount: Number(v) }));
+      }
+      // auto mode → omit invoiceAllocations, engine handles it oldest-first
+    }
+
     const r = await fetch(`/api/reservations/${res.id}/payments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: Number(form.amount), method: form.method, reference: form.reference || null }),
+      body: JSON.stringify({
+        amount:             amt,
+        method:             form.method,
+        reference:          form.reference || null,
+        invoiceAllocations,
+      }),
     });
     const data = await r.json();
     setLoading(false);
@@ -594,13 +650,109 @@ function PaymentModal({ res, onSuccess, onClose }: {
     onSuccess();
   }
 
+  const fmtInvStatus = (s: string) => {
+    if (s === "PARTIALLY_PAID" || s === "PARTIAL") return "Partial";
+    if (s === "PENDING" || s === "DRAFT" || s === "DUE" || s === "ISSUED") return "Pending";
+    return s;
+  };
+  const isOverdue = (inv: InvoiceRow) =>
+    new Date(inv.dueDate) < new Date() && !["PAID", "CANCELLED", "VOID"].includes(inv.status);
+
   return (
     <Modal title="Record Payment" onClose={onClose}>
       <div className="space-y-4">
-        <div className="text-sm text-gray-600">
-          Balance due: <span className="font-bold text-red-600">{res.balanceDue} OMR</span>
-        </div>
+        {/* Amount + method */}
         <PaymentForm balanceDue={res.balanceDue} value={form} onChange={setForm} />
+
+        {/* Invoice allocation section */}
+        {hasInvoices && (
+          <div className="border border-gray-200 rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
+              <span className="text-sm font-medium text-gray-700">Apply to invoices</span>
+              <div className="flex gap-1 bg-white border border-gray-200 rounded-lg p-0.5">
+                <button
+                  onClick={() => setAllocationMode("auto")}
+                  className={`text-xs px-3 py-1 rounded-md font-medium transition-colors ${allocationMode === "auto" ? "bg-blue-600 text-white" : "text-gray-500 hover:text-gray-700"}`}
+                >
+                  Auto
+                </button>
+                <button
+                  onClick={() => setAllocationMode("manual")}
+                  className={`text-xs px-3 py-1 rounded-md font-medium transition-colors ${allocationMode === "manual" ? "bg-blue-600 text-white" : "text-gray-500 hover:text-gray-700"}`}
+                >
+                  Manual
+                </button>
+              </div>
+            </div>
+
+            <div className="divide-y divide-gray-50">
+              {outstandingInvoices.map((inv) => {
+                const autoAlloc = autoAllocations.find((a) => a.invoiceId === inv.id);
+                return (
+                  <div key={inv.id} className="flex items-center gap-3 px-4 py-3 text-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs text-gray-600">{inv.invoiceNumber}</span>
+                        {isOverdue(inv) && (
+                          <span className="text-xs text-red-600 font-medium">Overdue</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        {fmtDate(inv.periodStart, { day: "numeric", month: "short" })}
+                        {" – "}
+                        {fmtDate(inv.periodEnd, { day: "numeric", month: "short" })}
+                        {" · "}
+                        <span className={Number(inv.amountPaid) > 0 ? "text-yellow-600" : ""}>
+                          {fmtInvStatus(inv.status)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <div className="text-xs text-gray-400 mb-1">
+                        Due: {Number(inv.balanceDue).toFixed(3)} OMR
+                      </div>
+                      {allocationMode === "auto" ? (
+                        <span className={`text-xs font-semibold ${(autoAlloc?.amount ?? 0) > 0 ? "text-blue-600" : "text-gray-300"}`}>
+                          {(autoAlloc?.amount ?? 0) > 0
+                            ? `− ${(autoAlloc!.amount).toFixed(3)} OMR`
+                            : "—"}
+                        </span>
+                      ) : (
+                        <input
+                          type="number"
+                          step="0.001"
+                          min="0"
+                          max={Number(inv.balanceDue)}
+                          value={manualAmounts[inv.id] ?? ""}
+                          onChange={(e) =>
+                            setManualAmounts((m) => ({ ...m, [inv.id]: e.target.value }))
+                          }
+                          placeholder="0.000"
+                          className="w-24 text-right rounded-md border border-gray-300 px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500"
+                        />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {allocationMode === "manual" && (
+              <div className="flex justify-between items-center px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs">
+                <span className="text-gray-500">Total allocated</span>
+                <span className={`font-semibold ${Math.abs(manualTotal - Number(form.amount)) > 0.001 ? "text-red-600" : "text-green-600"}`}>
+                  {manualTotal.toFixed(3)} OMR
+                  {Math.abs(manualTotal - Number(form.amount)) > 0.001 && (
+                    <span className="text-red-500 ml-1">
+                      (must equal {Number(form.amount).toFixed(3)})
+                    </span>
+                  )}
+                </span>
+              </div>
+            )}
+          </div>
+        )}
+
         <button
           onClick={handleSubmit}
           disabled={loading}

@@ -20,6 +20,7 @@ import {
   ArrowLeftIcon,
 } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
+import TenantLedger from "./TenantLedger";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -73,10 +74,13 @@ const TYPE_LABELS: Record<string, string> = {
 
 export default async function TenantProfilePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }) {
   const { id } = await params;
+  const { tab = "overview" } = await searchParams;
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -210,6 +214,44 @@ export default async function TenantProfilePage({
           </div>
         </div>
       )}
+
+      {/* ── Tab navigation ── */}
+      <div className="border-b border-gray-200 mb-6">
+        <nav className="-mb-px flex space-x-6">
+          <Link
+            href={`/dashboard/tenants/${id}?tab=overview`}
+            className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              tab === "overview"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Overview
+          </Link>
+          <Link
+            href={`/dashboard/tenants/${id}?tab=ledger`}
+            className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+              tab === "ledger"
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Financial Ledger
+          </Link>
+        </nav>
+      </div>
+
+      {/* ── Financial Ledger tab ── */}
+      {tab === "ledger" && (
+        <TenantLedger
+          tenantId={id}
+          tenantName={`${tenant.firstName} ${tenant.lastName}`}
+        />
+      )}
+
+      {/* ── Overview tab ── */}
+      {tab !== "ledger" && (
+      <>
 
       {/* ── KPI Row ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
@@ -441,6 +483,10 @@ export default async function TenantProfilePage({
           </div>
         </div>
       </div>
+
+      </> // end overview tab
+      )}
+
     </div>
   );
 }

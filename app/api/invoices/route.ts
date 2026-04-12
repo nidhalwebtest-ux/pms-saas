@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
 
   const sp            = new URL(req.url).searchParams;
   const status        = sp.get("status")        ?? "";
+  const outstanding   = sp.get("outstanding")   ?? "";   // "true" → PENDING + PARTIALLY_PAID
   const tenantId      = sp.get("tenantId")      ?? "";
   const reservationId = sp.get("reservationId") ?? "";
   const propertyId    = sp.get("propertyId")    ?? "";
@@ -40,7 +41,11 @@ export async function GET(req: NextRequest) {
   // Build where clause
   const where: Record<string, unknown> = { organizationId: orgUser.organizationId };
 
-  if (status)        where.status        = status;
+  if (outstanding === "true") {
+    where.status = { in: ["PENDING", "PARTIALLY_PAID", "DUE", "ISSUED", "PARTIAL"] };
+  } else if (status) {
+    where.status = status;
+  }
   if (tenantId)      where.tenantId      = tenantId;
   if (reservationId) where.reservationId = reservationId;
   if (propertyId)    where.propertyId    = propertyId;

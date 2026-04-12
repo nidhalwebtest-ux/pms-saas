@@ -1194,8 +1194,14 @@ export default function ReservationDetail({ id }: { id: string }) {
     );
   }
 
-  const balanceDue = Number(res.balanceDue);
-  const isPaid = balanceDue === 0;
+  // Use invoice balances as the source of truth when invoices exist
+  const invoiceBalanceDue = res.invoices.length > 0
+    ? res.invoices
+        .filter((inv) => !["CANCELLED", "VOID"].includes(inv.status))
+        .reduce((s, inv) => s + Number(inv.balanceDue), 0)
+    : Number(res.balanceDue);
+  const balanceDue = Math.round(invoiceBalanceDue * 1000) / 1000;
+  const isPaid = balanceDue <= 0 && res.invoices.some((inv) => ["PAID"].includes(inv.status));
   const isOverpaid = balanceDue < 0;
   const today = new Date().toISOString();
 

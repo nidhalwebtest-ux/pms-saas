@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Combobox } from "@headlessui/react";
 import {
   MagnifyingGlassIcon,
   UserCircleIcon,
@@ -11,6 +12,8 @@ import {
   PrinterIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
+  ChevronUpDownIcon,
+  CheckIcon,
 } from "@heroicons/react/24/outline";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -100,11 +103,10 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
   // ── State ─────────────────────────────────────────────────────────────────
   const [mode, setMode]                   = useState<"tenant" | "invoice">(preselectedInvoiceId ? "invoice" : "tenant");
 
-  // Tenant search
+  // Tenant search (Combobox)
   const [tenantQuery, setTenantQuery]     = useState("");
   const [tenantResults, setTenantResults] = useState<TenantResult[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<TenantResult | null>(null);
-  const [showDropdown, setShowDropdown]   = useState(false);
   const searchTimeout                     = useRef<ReturnType<typeof setTimeout>>();
 
   // Invoices
@@ -201,24 +203,27 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
   }, [selectedInvoiceIds, invoices, selectedTenant]);
 
   // ── Tenant search (debounced) ─────────────────────────────────────────────
-  function onTenantInput(val: string) {
+  function onTenantQueryChange(val: string) {
     setTenantQuery(val);
     clearTimeout(searchTimeout.current);
-    if (val.trim().length < 2) { setTenantResults([]); setShowDropdown(false); return; }
+    if (val.trim().length < 2) { setTenantResults([]); return; }
     searchTimeout.current = setTimeout(async () => {
       try {
         const res  = await fetch(`/api/tenants?search=${encodeURIComponent(val)}&limit=10`);
         const data = await res.json();
         setTenantResults(data.tenants ?? []);
-        setShowDropdown(true);
       } catch { /* ignore */ }
     }, 300);
   }
 
-  function pickTenant(t: TenantResult) {
+  function pickTenant(t: TenantResult | null) {
     setSelectedTenant(t);
-    setTenantQuery(`${t.firstName} ${t.lastName}`);
-    setShowDropdown(false);
+    if (!t) {
+      setTenantQuery("");
+      setInvoices([]);
+      setSelectedInvoiceIds(new Set());
+      setAmount("");
+    }
   }
 
   // ── Allocation preview ────────────────────────────────────────────────────
@@ -349,51 +354,61 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
             <h2 className="text-sm font-semibold text-gray-700">Step 1 — Select Tenant</h2>
           </div>
           <div className="px-4 py-4">
-            <div className="relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-              <input
-                type="text"
-                value={tenantQuery}
-                onChange={(e) => onTenantInput(e.target.value)}
-                onFocus={() => tenantResults.length > 0 && setShowDropdown(true)}
-                placeholder="Search tenant by name or phone…"
-                className="block w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              {showDropdown && tenantResults.length > 0 && (
-                <ul className="absolute z-10 mt-1 w-full bg-white rounded-md shadow-lg border border-gray-200 max-h-60 overflow-y-auto">
-                  {tenantResults.map((t) => (
-                    <li
-                      key={t.id}
-                      onClick={() => pickTenant(t)}
-                      className="px-4 py-2.5 text-sm cursor-pointer hover:bg-blue-50 flex items-center justify-between"
-                    >
-                      <span className="font-medium text-gray-900">{t.firstName} {t.lastName}</span>
-                      <span className="text-gray-500 text-xs">{t.phone}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            {selectedTenant && (
-              <div className="mt-3 flex items-center gap-3 p-3 bg-blue-50 rounded-md border border-blue-100">
-                <div className="h-8 w-8 rounded-full bg-blue-200 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-blue-700">
-                    {selectedTenant.firstName[0]}{selectedTenant.lastName[0]}
-                  </span>
+            <Combobox
+              as="div"
+              value={selectedTenant}
+              onChange={pickTenant}
+            >
+              <div className="relative">
+                <div className="relative">
+                  <Combobox.Input
+                    className="w-full rounded-md border-0 bg-white py-2 pl-3 pr-10 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                    displayValue={(t: TenantResult | null) =>
+                      t ? `${t.firstName} ${t.lastName}` : ""
+                    }
+                    onChange={(e) => onTenantQueryChange(e.target.value)}
+                    placeholder="Search by name or phone…"
+                  />
+                  <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
+                    <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  </Combobox.Button>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">{selectedTenant.firstName} {selectedTenant.lastName}</p>
-                  <p className="text-xs text-gray-500">{selectedTenant.phone}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => { setSelectedTenant(null); setTenantQuery(""); setInvoices([]); setSelectedInvoiceIds(new Set()); setAmount(""); }}
-                  className="text-xs text-gray-400 hover:text-red-600"
-                >
-                  Change
-                </button>
+
+                {tenantResults.length > 0 && (
+                  <Combobox.Options className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                    {tenantResults.map((t) => (
+                      <Combobox.Option
+                        key={t.id}
+                        value={t}
+                        className={({ active }) =>
+                          `relative cursor-pointer select-none py-2 pl-3 pr-9 ${
+                            active ? "bg-blue-600 text-white" : "text-gray-900"
+                          }`
+                        }
+                      >
+                        {({ active, selected }) => (
+                          <>
+                            <div className="flex items-center justify-between gap-3">
+                              <span className={`block truncate ${selected ? "font-semibold" : "font-normal"}`}>
+                                {t.firstName} {t.lastName}
+                              </span>
+                              <span className={`text-xs ${active ? "text-blue-200" : "text-gray-500"}`}>
+                                {t.phone}
+                              </span>
+                            </div>
+                            {selected && (
+                              <span className={`absolute inset-y-0 right-0 flex items-center pr-4 ${active ? "text-white" : "text-blue-600"}`}>
+                                <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </Combobox.Option>
+                    ))}
+                  </Combobox.Options>
+                )}
               </div>
-            )}
+            </Combobox>
           </div>
         </div>
       )}

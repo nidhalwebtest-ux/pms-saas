@@ -10,7 +10,6 @@ import {
   BanknotesIcon,
   CalendarDaysIcon,
 } from "@heroicons/react/24/outline";
-import { AvailabilityCalendar } from "@/components/dashboard/AvailabilityCalendar";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -262,13 +261,6 @@ export function ReceptionistView({
             </div>
           )}
 
-          {/* Availability Calendar widget */}
-          {properties.length > 0 && (
-            <AvailabilityCalendar
-              properties={properties}
-              defaultPropertyId={propertyId || properties[0]?.id}
-            />
-          )}
         </div>
       )}
 

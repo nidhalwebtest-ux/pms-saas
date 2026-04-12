@@ -4,6 +4,7 @@ import Header from "@/components/dashboard/Header";
 import Navigation from "@/components/dashboard/Navigation";
 import InactivityGuard from "@/components/dashboard/InactivityGuard";
 import NavigationProgress from "@/components/ui/NavigationProgress";
+import AvailabilityCalendarButton from "@/components/dashboard/AvailabilityCalendarButton";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import type { Role } from "@/lib/permissions";
@@ -60,6 +61,11 @@ export default async function DashboardLayout({
       </main>
 
       {modal}
+
+      <AvailabilityCalendarButton
+        properties={properties}
+        defaultPropertyId={selectedPropertyId ?? properties[0]?.id}
+      />
     </div>
   );
 }

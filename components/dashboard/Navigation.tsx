@@ -37,7 +37,17 @@ const navigationConfig: NavItem[] = [
       { name: "Units & Rooms", href: "/dashboard/units"      },
     ],
   },
-  { key: "tenants",      name: "Tenants",      href: "/dashboard/tenants" },
+  {
+    key:            "tenants",
+    name:           "Tenants",
+    href:           "/dashboard/tenants",
+    activePatterns: ["/dashboard/tenants"],
+    children: [
+      { name: "Tenant List",   href: "/dashboard/tenants" },
+      { name: "New Tenant",    href: "/dashboard/tenants/new" },
+      { name: "Tenant Ledger", href: "/dashboard/tenants/ledger" },
+    ],
+  },
   { key: "reservations", name: "Reservations", href: "/dashboard/reservations" },
   { key: "invoices",     name: "Invoices",     href: "/dashboard/invoices" },
   { key: "payments",     name: "Payments",     href: "/dashboard/payments" },

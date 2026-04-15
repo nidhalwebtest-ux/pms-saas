@@ -15,8 +15,6 @@ import {
   EnvelopeIcon,
   IdentificationIcon,
   CalendarDaysIcon,
-  BuildingOfficeIcon,
-  CreditCardIcon,
   ClockIcon,
   ExclamationTriangleIcon,
   PlusIcon,
@@ -66,6 +64,32 @@ type InvoiceRow = {
   periodEnd: string;
 };
 
+type ReturnLineItem = {
+  id: string; description: string; quantity: number;
+  unitPrice: string; lineTotal: string;
+};
+
+type ReturnRow = {
+  id: string;
+  returnNumber: string;
+  returnFrom: string;
+  returnTo: string;
+  returnDays: number;
+  returnType: string;
+  returnAmount: string;
+  refundRequired: boolean;
+  refundAmount: string;
+  refundStatus: string;       // NOT_REQUIRED | PENDING | COMPLETED
+  refundMethod: string | null;
+  refundReference: string | null;
+  refundDate: string | null;
+  reason: string;
+  notes: string | null;
+  invoiceNumber: string | null;
+  createdAt: string;
+  lineItems: ReturnLineItem[];
+};
+
 type ReservationData = {
   id: string;
   reservationNumber: string | null;
@@ -107,11 +131,12 @@ type ReservationData = {
   activities: ActivityRow[];
   invoicesGenerated: boolean;
   invoices: InvoiceRow[];
+  returns: ReturnRow[];
   createdByName: string | null;
   createdAt: string;
 };
 
-type ModalType = "check-in" | "check-out" | "cancel" | "payment" | "charge" | "note" | "extend-stay" | "move-unit" | "generate-invoices" | null;
+type ModalType = "check-in" | "check-out" | "cancel" | "payment" | "charge" | "note" | "extend-stay" | "move-unit" | "generate-invoices" | "return" | null;
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -1025,12 +1050,381 @@ function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
   );
 }
 
+// ── Return Modal ───────────────────────────────────────────────────────────────
+
+const RETURN_REASONS = [
+  "Early departure",
+  "Family emergency",
+  "Travel change",
+  "Dissatisfied with unit",
+  "Found alternative accommodation",
+  "Work / business reason",
+  "Other",
+];
+
+function ReturnModal({ res, onSuccess, onClose }: {
+  res: ReservationData; onSuccess: () => void; onClose: () => void;
+}) {
+  const isMonthly = res.rateType === "monthly" || res.rateType === "MONTHLY";
+
+  // Default new checkout = tomorrow
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const [newCheckout, setNewCheckout] = useState(
+    tomorrow.toISOString().slice(0, 10),
+  );
+  const [reason, setReason]   = useState("");
+  const [notes, setNotes]     = useState("");
+  const [loading, setLoading] = useState(false);
+
+  // Preview state
+  type Preview = {
+    returnFrom: string; returnTo: string; returnDays: number; returnType: string;
+    returnAmount: string;
+    lineItems: { id: string; description: string; quantity: number; unitPrice: string; lineTotal: string }[];
+    affectedInvoices: {
+      id: string; invoiceNumber: string; status: string; totalAmount: string;
+      amountPaid: string; balanceDue: string; returnAmount: string; refundNeeded: string;
+    }[];
+    refundRequired: boolean; refundAmount: string;
+    invoicesToCancel: string[];
+  };
+  const [preview, setPreview] = useState<Preview | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Fetch preview whenever newCheckout changes
+  useEffect(() => {
+    if (!newCheckout) return;
+    const ctrl = new AbortController();
+    setPreviewLoading(true);
+    setPreviewError(null);
+    fetch(
+      `/api/reservations/${res.id}/return?newCheckoutDate=${newCheckout}`,
+      { signal: ctrl.signal },
+    )
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) { setPreviewError(data.error); setPreview(null); }
+        else setPreview(data.preview);
+      })
+      .catch((e) => { if (e.name !== "AbortError") setPreviewError("Failed to calculate return"); })
+      .finally(() => setPreviewLoading(false));
+    return () => ctrl.abort();
+  }, [newCheckout, res.id]);
+
+  async function handleConfirm() {
+    if (!reason) { toast.error("Please select a reason"); return; }
+    if (!preview) { toast.error("No valid return preview"); return; }
+    setLoading(true);
+    const r = await fetch(`/api/reservations/${res.id}/return`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ newCheckoutDate: newCheckout, reason, notes: notes || undefined }),
+    });
+    const data = await r.json();
+    setLoading(false);
+    if (!r.ok) { toast.error(data.error ?? "Return failed"); return; }
+    toast.success(`Return ${data.return?.returnNumber} processed. Reservation checked out.`);
+    onSuccess();
+  }
+
+  const title = isMonthly
+    ? `Return Months — ${res.reservationNumber ?? res.id.slice(0, 8)}`
+    : `Return Days — ${res.reservationNumber ?? res.id.slice(0, 8)}`;
+
+  return (
+    <Modal title={title} onClose={onClose}>
+      <div className="space-y-5">
+        {/* Current stay summary */}
+        <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-1">
+          <div className="flex justify-between text-gray-600">
+            <span>Check-in</span>
+            <span className="font-medium text-gray-900">{fmtDate(res.startDate)}</span>
+          </div>
+          <div className="flex justify-between text-gray-600">
+            <span>Current checkout</span>
+            <span className="font-medium text-gray-900">{fmtDate(res.endDate)}</span>
+          </div>
+          <div className="flex justify-between text-gray-600">
+            <span>Rate type</span>
+            <span className="font-medium text-gray-900">{isMonthly ? "Monthly" : `Daily (${res.totalNights} nights)`}</span>
+          </div>
+        </div>
+
+        {/* New checkout date */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            New Checkout Date <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="date"
+            value={newCheckout}
+            min={new Date().toISOString().slice(0, 10)}
+            max={new Date(res.endDate).toISOString().slice(0, 10)}
+            onChange={(e) => setNewCheckout(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500"
+          />
+          {isMonthly && (
+            <p className="mt-1 text-xs text-gray-500">
+              For monthly reservations, the current billing period cannot be returned.
+              Only future periods are eligible.
+            </p>
+          )}
+        </div>
+
+        {/* Preview */}
+        {previewLoading && (
+          <div className="text-sm text-gray-400 text-center py-2">Calculating return…</div>
+        )}
+        {previewError && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+            {previewError}
+          </div>
+        )}
+        {preview && !previewError && (
+          <div className="space-y-3">
+            {/* Return period */}
+            <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-sm">
+              <p className="font-semibold text-purple-800 mb-2">
+                Returning: {fmtDate(preview.returnFrom)} → {fmtDate(preview.returnTo)}
+                {" "}({preview.returnDays} {preview.returnType === "MONTHLY" ? "month(s)" : "night(s)"})
+              </p>
+              <div className="space-y-1">
+                {preview.lineItems.map((li, i) => (
+                  <div key={i} className="flex justify-between text-gray-700">
+                    <span>{li.description}</span>
+                    <span className="font-medium">{li.lineTotal} OMR</span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-bold text-purple-800 border-t border-purple-200 pt-1 mt-1">
+                  <span>Total Return</span>
+                  <span>{preview.returnAmount} OMR</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Invoice impact */}
+            {preview.affectedInvoices.length > 0 && (
+              <div className="text-sm space-y-2">
+                <p className="font-medium text-gray-700">Invoice Impact:</p>
+                {preview.affectedInvoices.map((inv: Preview["affectedInvoices"][0]) => (
+                  <div key={inv.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-xs space-y-1">
+                    <div className="flex justify-between font-medium">
+                      <span>{inv.invoiceNumber}</span>
+                      <span className={`px-1.5 py-0.5 rounded-full ${
+                        inv.status === "PAID" ? "bg-green-100 text-green-700" :
+                        inv.status === "PARTIALLY_PAID" ? "bg-yellow-100 text-yellow-700" :
+                        "bg-orange-100 text-orange-700"
+                      }`}>{inv.status}</span>
+                    </div>
+                    {(inv.status === "PENDING" || inv.status === "DRAFT") && Number(inv.returnAmount) > 0 && (
+                      <p className="text-green-700">→ Invoice total will be reduced by {inv.returnAmount} OMR</p>
+                    )}
+                    {inv.status === "PAID" && (
+                      <p className="text-orange-700">→ Invoice stays PAID. Refund of {Number(inv.returnAmount).toFixed(3)} OMR required.</p>
+                    )}
+                    {preview.invoicesToCancel.includes(inv.id) && (
+                      <p className="text-red-700 font-medium">→ This invoice will be CANCELLED (unpaid, full period returned)</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Refund notice */}
+            {preview.refundRequired ? (
+              <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-xl text-sm text-orange-800">
+                <ExclamationTriangleIcon className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>Refund of <strong>{preview.refundAmount} OMR</strong> is required. You can process it after the return.</span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800">
+                <CheckIcon className="h-4 w-4 shrink-0" />
+                <span>No refund required — invoice was not paid.</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Reason */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Reason <span className="text-red-500">*</span>
+          </label>
+          <select
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="">Select reason…</option>
+            {RETURN_REASONS.map((r) => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Notes */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+          <textarea
+            rows={2}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Additional details…"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500"
+          />
+        </div>
+
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+          ⚠ This will immediately check out the reservation and cannot be undone.
+        </div>
+
+        <button
+          onClick={handleConfirm}
+          disabled={loading || !preview || !!previewError || !reason}
+          className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
+        >
+          {loading ? "Processing…" : "Process Return & Checkout"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+// ── Process Refund Modal ───────────────────────────────────────────────────────
+
+function ProcessRefundModal({ ret, onSuccess, onClose }: {
+  ret: ReturnRow; onSuccess: () => void; onClose: () => void;
+}) {
+  const [form, setForm] = useState({
+    amount:    ret.refundAmount,
+    method:    "CASH",
+    reference: "",
+    notes:     "",
+  });
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit() {
+    const amt = Number(form.amount);
+    if (!amt || amt <= 0) { toast.error("Enter a valid refund amount"); return; }
+    setLoading(true);
+    const r = await fetch(`/api/returns/${ret.id}/refund`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({
+        amount:    amt,
+        method:    form.method,
+        reference: form.reference || undefined,
+        notes:     form.notes || undefined,
+      }),
+    });
+    const data = await r.json();
+    setLoading(false);
+    if (!r.ok) { toast.error(data.error ?? "Refund failed"); return; }
+    toast.success("Refund processed successfully");
+    onSuccess();
+  }
+
+  return (
+    <Modal title={`Process Refund — ${ret.returnNumber}`} onClose={onClose}>
+      <div className="space-y-4">
+        <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm space-y-1">
+          <div className="flex justify-between">
+            <span className="text-gray-600">Return</span>
+            <span className="font-mono font-semibold">{ret.returnNumber}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-600">Return Amount</span>
+            <span>{ret.returnAmount} OMR</span>
+          </div>
+          <div className="flex justify-between font-bold border-t border-orange-200 pt-1 mt-1">
+            <span>Refund Required</span>
+            <span className="text-orange-700">{ret.refundAmount} OMR</span>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Refund Amount (OMR) <span className="text-red-500">*</span>
+          </label>
+          <input
+            type="number" step="0.001" min="0.001"
+            value={form.amount}
+            onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500"
+          />
+          <p className="text-xs text-gray-400 mt-1">Pre-filled with refund amount. You may reduce this if needed.</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Refund Method <span className="text-red-500">*</span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {(["CASH", "CARD", "BANK_TRANSFER"] as const).map((m) => (
+              <label
+                key={m}
+                className={`flex items-center gap-2 cursor-pointer rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  form.method === m
+                    ? "border-orange-500 bg-orange-50 text-orange-700"
+                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <input
+                  type="radio" name="refund-method" value={m}
+                  checked={form.method === m}
+                  onChange={() => setForm((f) => ({ ...f, method: m }))}
+                  className="sr-only"
+                />
+                {m === "CASH" ? "Cash" : m === "CARD" ? "Card Reversal" : "Bank Transfer"}
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reference (optional)</label>
+            <input
+              type="text"
+              value={form.reference}
+              onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))}
+              placeholder="Transaction ref…"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+            <input
+              type="text"
+              value={form.notes}
+              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+              placeholder="Internal notes…"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
+        >
+          {loading ? "Processing Refund…" : "Complete Refund"}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 // ── Action Buttons ─────────────────────────────────────────────────────────────
 
-function ActionButtons({ ds, onAction, reservationId }: {
+function ActionButtons({ ds, onAction, reservationId, rateType }: {
   ds: string;
   onAction: (a: ModalType) => void;
   reservationId: string;
+  rateType: string;
 }) {
   const openPrint = () => window.open(`/api/reservations/${reservationId}/pdf`, "_blank");
 
@@ -1083,6 +1477,9 @@ function ActionButtons({ ds, onAction, reservationId }: {
             }`}
           >
             Check Out
+          </button>
+          <button onClick={() => onAction("return")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-purple-300 bg-white text-sm font-medium text-purple-700 hover:bg-purple-50 transition-colors">
+            {rateType === "monthly" ? "Return Months" : "Return Days"}
           </button>
           <button onClick={() => onAction("extend-stay")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-300 bg-white text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors">
             Extend Stay
@@ -1154,6 +1551,7 @@ export default function ReservationDetail({ id }: { id: string }) {
   const [loading, setLoading] = useState(true);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [activeInvoice, setActiveInvoice] = useState<InvoiceRow | null>(null);
+  const [activeReturn, setActiveReturn] = useState<ReturnRow | null>(null);
 
   const loadData = useCallback(async () => {
     const r = await fetch(`/api/reservations/${id}`);
@@ -1235,7 +1633,7 @@ export default function ReservationDetail({ id }: { id: string }) {
 
             {/* Right: action buttons */}
             <div className="flex items-center gap-2 flex-wrap">
-              <ActionButtons ds={res.displayStatus} onAction={setActiveModal} reservationId={res.id} />
+              <ActionButtons ds={res.displayStatus} onAction={setActiveModal} reservationId={res.id} rateType={res.rateType} />
             </div>
           </div>
         </div>
@@ -1700,6 +2098,74 @@ export default function ReservationDetail({ id }: { id: string }) {
               </div>
             </div>
 
+            {/* Section 4b: Returns */}
+            {res.returns.length > 0 && (
+              <Collapsible title={`Returns / المرتجعات (${res.returns.length})`} defaultOpen={true}>
+                <div className="space-y-4">
+                  {res.returns.map((ret) => (
+                    <div key={ret.id} className="border border-purple-200 rounded-xl bg-purple-50 p-4 space-y-3">
+                      {/* Header row */}
+                      <div className="flex items-start justify-between gap-2 flex-wrap">
+                        <div>
+                          <span className="font-mono font-bold text-purple-800 text-sm">{ret.returnNumber}</span>
+                          <span className="ml-2 text-sm text-gray-600">
+                            {fmtDate(ret.returnFrom)} → {fmtDate(ret.returnTo)}
+                            {" "}({ret.returnDays} {ret.returnType === "MONTHLY" ? "month(s)" : "night(s)"})
+                          </span>
+                        </div>
+                        <span className="text-sm font-semibold text-purple-800">{ret.returnAmount} OMR returned</span>
+                      </div>
+
+                      {/* Reason */}
+                      <p className="text-xs text-gray-500">Reason: <span className="text-gray-700">{ret.reason}</span></p>
+
+                      {/* Line items */}
+                      {ret.lineItems.length > 0 && (
+                        <div className="text-xs space-y-0.5 text-gray-600 bg-white rounded-lg p-2 border border-purple-100">
+                          {ret.lineItems.map((li) => (
+                            <div key={li.id} className="flex justify-between">
+                              <span>{li.description}</span>
+                              <span className="font-medium">{li.lineTotal} OMR</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Refund status */}
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        {ret.refundStatus === "NOT_REQUIRED" && (
+                          <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full">
+                            <CheckIcon className="h-3 w-3" /> No refund required
+                          </span>
+                        )}
+                        {ret.refundStatus === "PENDING" && (
+                          <>
+                            <span className="inline-flex items-center gap-1 text-xs text-orange-700 bg-orange-100 px-2 py-1 rounded-full">
+                              <ExclamationTriangleIcon className="h-3 w-3" /> Refund {ret.refundAmount} OMR — PENDING
+                            </span>
+                            <button
+                              onClick={() => setActiveReturn(ret)}
+                              className="text-xs px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
+                            >
+                              Process Refund
+                            </button>
+                          </>
+                        )}
+                        {ret.refundStatus === "COMPLETED" && (
+                          <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full">
+                            <CheckIcon className="h-3 w-3" />
+                            Refund {ret.refundAmount} OMR — COMPLETED
+                            {ret.refundMethod && ` (${fmtMethod(ret.refundMethod)})`}
+                            {ret.refundDate && `, ${fmtDate(ret.refundDate)}`}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Collapsible>
+            )}
+
             {/* Section 5: Activity Timeline */}
             <Collapsible title={`Activity (${res.activities.length})`} defaultOpen={true}>
               {res.activities.length === 0 ? (
@@ -1771,12 +2237,26 @@ export default function ReservationDetail({ id }: { id: string }) {
           onClose={() => setActiveModal(null)}
         />
       )}
+      {activeModal === "return" && (
+        <ReturnModal
+          res={res}
+          onSuccess={afterAction}
+          onClose={() => setActiveModal(null)}
+        />
+      )}
       {activeInvoice && (
         <InvoicePayModal
           res={res}
           invoice={activeInvoice}
           onSuccess={() => { setActiveInvoice(null); loadData(); }}
           onClose={() => setActiveInvoice(null)}
+        />
+      )}
+      {activeReturn && (
+        <ProcessRefundModal
+          ret={activeReturn}
+          onSuccess={() => { setActiveReturn(null); loadData(); }}
+          onClose={() => setActiveReturn(null)}
         />
       )}
     </div>

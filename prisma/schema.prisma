@@ -52,6 +52,19 @@ enum ReservationActivityAction {
   EXTENDED
   UNIT_MOVED
   NOTE_ADDED
+  RETURN_PROCESSED
+  REFUND_PROCESSED
+}
+
+enum ReturnType {
+  DAILY
+  MONTHLY
+}
+
+enum RefundStatus {
+  NOT_REQUIRED
+  PENDING
+  COMPLETED
 }
 
 enum PaymentFrequency {
@@ -171,6 +184,8 @@ model User {
   createdInvoices               Invoice[]       @relation("InvoiceCreatedBy")
   receivedPayments              Payment[]       @relation("PaymentReceivedBy")
   invoicesGeneratedReservations Reservation[]  @relation("InvoicesGeneratedBy")
+  createdReturns                Return[]        @relation("ReturnCreatedBy")
+  processedRefunds              Return[]        @relation("ReturnRefundProcessedBy")
 
   createdAt      DateTime     @default(now())
 }
@@ -339,6 +354,7 @@ model Tenant {
   reservations   Reservation[]
   payments       Payment[]
   invoices       Invoice[]
+  returns        Return[]
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
@@ -392,6 +408,7 @@ model Reservation {
   invoices          Invoice[]
   activities        ReservationActivity[]
   charges           ReservationCharge[]
+  returns           Return[]
 
   createdById       String?
   createdBy         User?    @relation("ReservationCreatedBy", fields: [createdById], references: [id])
@@ -506,6 +523,7 @@ model Invoice {
   lineItems       InvoiceLineItem[]
   payments        Payment[]         // legacy direct link kept for compat
   allocations     PaymentAllocation[]
+  returns         Return[]
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -600,6 +618,78 @@ model PaymentAllocation {
   createdAt      DateTime @default(now())
 
   @@unique([paymentId, invoiceId])
+}
+
+// ── Returns ───────────────────────────────────────────────────────────────────
+
+model Return {
+  id             String       @id @default(uuid())
+  returnNumber   String
+
+  organizationId String
+
+  reservationId  String
+  reservation    Reservation  @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  tenantId       String
+  tenant         Tenant       @relation(fields: [tenantId], references: [id])
+
+  invoiceId      String?
+  invoice        Invoice?     @relation(fields: [invoiceId], references: [id])
+
+  // Return period
+  returnFrom     DateTime
+  returnTo       DateTime
+  returnDays     Int          @default(0)
+  returnType     ReturnType   @default(DAILY)
+
+  // Amounts
+  returnAmount   Decimal      @db.Decimal(10, 3)
+
+  // Refund
+  refundRequired Boolean      @default(false)
+  refundAmount   Decimal      @default(0) @db.Decimal(10, 3)
+  refundStatus   RefundStatus @default(NOT_REQUIRED)
+  refundMethod   String?
+  refundReference String?
+  refundDate     DateTime?
+  refundProcessedById String?
+  refundProcessedBy   User?   @relation("ReturnRefundProcessedBy", fields: [refundProcessedById], references: [id])
+
+  // Meta
+  reason         String
+  notes          String?
+  status         String       @default("active")  // "active" | "cancelled"
+
+  createdById    String?
+  createdBy      User?        @relation("ReturnCreatedBy", fields: [createdById], references: [id])
+
+  lineItems      ReturnLineItem[]
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, returnNumber])
+  @@index([reservationId])
+  @@index([tenantId])
+}
+
+model ReturnLineItem {
+  id             String   @id @default(uuid())
+
+  returnId       String
+  return         Return   @relation(fields: [returnId], references: [id], onDelete: Cascade)
+
+  organizationId String
+
+  unitId         String?
+
+  description    String
+  quantity       Decimal  @db.Decimal(10, 3)
+  unitPrice      Decimal  @db.Decimal(10, 3)
+  lineTotal      Decimal  @db.Decimal(10, 3)
+
+  createdAt      DateTime @default(now())
 }
 
 // ── Expenses ──────────────────────────────────────────────────────────────────

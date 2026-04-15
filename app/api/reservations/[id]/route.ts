@@ -79,6 +79,16 @@ export async function GET(
         take: 50,
         include: { performedBy: { select: { firstName: true, lastName: true } } },
       },
+      returns: {
+        where:   { status: "active" },
+        orderBy: { createdAt: "desc" },
+        include: {
+          lineItems: true,
+          invoice:   { select: { id: true, invoiceNumber: true } },
+          refundProcessedBy: { select: { firstName: true, lastName: true } },
+          createdBy:         { select: { firstName: true, lastName: true } },
+        },
+      },
       createdBy: { select: { firstName: true, lastName: true } },
     },
   });
@@ -223,6 +233,38 @@ export async function GET(
       dueDate:       inv.dueDate.toISOString(),
       periodStart:   inv.periodStart.toISOString(),
       periodEnd:     inv.periodEnd.toISOString(),
+    })),
+    returns: r.returns.map((ret) => ({
+      id:              ret.id,
+      returnNumber:    ret.returnNumber,
+      returnFrom:      ret.returnFrom.toISOString(),
+      returnTo:        ret.returnTo.toISOString(),
+      returnDays:      ret.returnDays,
+      returnType:      ret.returnType,
+      returnAmount:    Number(ret.returnAmount).toFixed(3),
+      refundRequired:  ret.refundRequired,
+      refundAmount:    Number(ret.refundAmount).toFixed(3),
+      refundStatus:    ret.refundStatus,
+      refundMethod:    ret.refundMethod,
+      refundReference: ret.refundReference,
+      refundDate:      ret.refundDate?.toISOString() ?? null,
+      reason:          ret.reason,
+      notes:           ret.notes,
+      invoiceNumber:   ret.invoice?.invoiceNumber ?? null,
+      createdAt:       ret.createdAt.toISOString(),
+      createdByName:   ret.createdBy
+        ? `${ret.createdBy.firstName ?? ""} ${ret.createdBy.lastName ?? ""}`.trim()
+        : null,
+      refundProcessedByName: ret.refundProcessedBy
+        ? `${ret.refundProcessedBy.firstName ?? ""} ${ret.refundProcessedBy.lastName ?? ""}`.trim()
+        : null,
+      lineItems: ret.lineItems.map((li) => ({
+        id:          li.id,
+        description: li.description,
+        quantity:    Number(li.quantity),
+        unitPrice:   Number(li.unitPrice).toFixed(3),
+        lineTotal:   Number(li.lineTotal).toFixed(3),
+      })),
     })),
     createdByName: r.createdBy
       ? `${r.createdBy.firstName ?? ""} ${r.createdBy.lastName ?? ""}`.trim()

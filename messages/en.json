@@ -177,6 +177,59 @@
     "returnDays": "Return Days",
     "returnMonths": "Return Months",
     "generateInvoices": "Generate Invoices",
+    "search": "Search reservation #, guest name, phone, unit…",
+    "filters": "Filters",
+    "refresh": "Refresh",
+    "clearAllFilters": "Clear all filters",
+    "from": "From",
+    "to": "To",
+    "allProperties": "All Properties",
+    "allRateTypes": "All Rate Types",
+    "allSources": "All Sources",
+    "today": "Today",
+    "loading": "Loading reservations…",
+    "loadFailed": "Failed to load reservations.",
+    "showingCount": "Showing {shown} of {total} reservations",
+    "revenue": "Revenue",
+    "outstanding": "Outstanding",
+    "paid": "Paid",
+    "vip": "VIP",
+    "moreUnits": "+{n} more",
+    "tabs": {
+      "all": "All",
+      "arriving": "Arriving Today",
+      "inHouse": "In House",
+      "dueCheckout": "Due Checkout",
+      "overstay": "Overstay",
+      "upcoming": "Upcoming",
+      "checkedOut": "Checked Out",
+      "cancelled": "Cancelled",
+      "noShow": "No Show",
+      "overdueArrival": "Overdue Arrival"
+    },
+    "table": {
+      "resNumber": "Res #",
+      "status": "Status",
+      "guest": "Guest",
+      "units": "Units",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out",
+      "duration": "Duration",
+      "total": "Total",
+      "balance": "Balance",
+      "actions": "Actions"
+    },
+    "duration": {
+      "nights": "{count, plural, one {# night} other {# nights}}",
+      "months": "{count, plural, one {# month} other {# months}}"
+    },
+    "sources": {
+      "walkIn": "Walk-in",
+      "phone": "Phone",
+      "whatsapp": "WhatsApp",
+      "online": "Online",
+      "agent": "Agent"
+    },
     "statuses": {
       "upcoming": "Upcoming",
       "arrivingToday": "Arriving Today",
@@ -191,8 +244,78 @@
     "actions": {
       "checkIn": "Check In",
       "checkOut": "Check Out",
+      "checkOutUrgent": "Check Out !",
       "cancel": "Cancel",
-      "markNoShow": "No Show"
+      "markNoShow": "No Show",
+      "edit": "Edit",
+      "view": "View"
+    },
+    "checkInModal": {
+      "title": "Check In Guest",
+      "confirm": "Confirm Check-In",
+      "earlyWarning": "Check-in date is <b>{date}</b>. This is an early check-in.",
+      "failed": "Check-in failed"
+    },
+    "checkOutModal": {
+      "title": "Check Out Guest",
+      "confirm": "Confirm Check-Out",
+      "outstandingBalance": "Outstanding balance: {amount} OMR",
+      "unpaidWarning": "Guest will leave with an unpaid balance.",
+      "overstayWarning": "⚠ Overstay: {count, plural, one {# extra night} other {# extra nights}}",
+      "overstayPlanned": "Planned checkout was {date}.",
+      "extraChargePlaceholder": "Extra charge (OMR)",
+      "addOverstayCharge": "add overstay charge",
+      "earlyCheckout": "Early checkout: {count, plural, one {# day} other {# days}} early",
+      "recalcCharges": "Recalculate charges for actual stay duration",
+      "failed": "Check-out failed"
+    },
+    "cancelModal": {
+      "title": "Cancel Reservation",
+      "totalPaidRefund": "Total paid: <b>{amount} OMR</b> — a refund may be required.",
+      "reasonLabel": "Reason *",
+      "selectReason": "Select reason…",
+      "notesLabelRequired": "Notes *",
+      "notesLabelOptional": "Notes (optional)",
+      "notesPlaceholder": "Add any additional details…",
+      "confirm": "Cancel Reservation",
+      "errors": {
+        "selectReason": "Please select a cancellation reason.",
+        "notesRequired": "Notes are required when reason is 'Other'.",
+        "cancelFailed": "Cancel failed"
+      },
+      "successDefault": "Reservation cancelled.",
+      "reasons": {
+        "guestCancelled": "Guest Cancelled",
+        "noShow": "No Show",
+        "overbooking": "Overbooking",
+        "duplicateBooking": "Duplicate Booking",
+        "other": "Other"
+      }
+    },
+    "noShowModal": {
+      "title": "Mark as No Show",
+      "prompt": "Mark <b>{name}</b> as No Show? The unit will be freed and the reservation closed.",
+      "confirm": "Mark No Show",
+      "failed": "Failed"
+    },
+    "guestInfo": {
+      "unitsLabel": "Units:"
+    },
+    "empty": {
+      "arriving":     { "title": "No arrivals today",        "sub": "Enjoy the quiet!" },
+      "overstay":     { "title": "No overstays",             "sub": "All checkouts are on time!" },
+      "dueCheckout":  { "title": "No checkouts due today",   "sub": "You're all caught up." },
+      "inHouse":      { "title": "No guests in house",       "sub": "" },
+      "upcoming":     { "title": "No upcoming reservations", "sub": "" },
+      "default":      { "title": "No reservations found",    "sub": "Create your first reservation to get started." }
+    },
+    "newPage": {
+      "title": "New Reservation",
+      "description": "Book a unit for a tenant or guest.",
+      "setupRequiredHeading": "Setup Required",
+      "setupRequiredBody": "You need at least one <strong>active property</strong> and one <strong>tenant</strong> before creating a reservation.",
+      "addProperty": "+ Add Property",
+      "addTenant": "+ Add Tenant"
     },
     "calendar": {
       "availabilityCalendar": "Availability Calendar",

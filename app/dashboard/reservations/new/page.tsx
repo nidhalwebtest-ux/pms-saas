@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/FormComponents";
 import BookingEngine from "@/components/dashboard/BookingEngine";
@@ -27,21 +28,22 @@ export default async function NewReservationPage() {
     where: { organizationId: dbUser.organizationId },
   });
 
+  const t = await getTranslations("reservations.newPage");
+
   if (properties.length === 0 || tenantCount === 0) {
     return (
       <div className="max-w-2xl mx-auto py-16 text-center space-y-4 px-4">
         <div className="text-4xl">🏗️</div>
-        <h3 className="text-lg font-bold text-gray-900">Setup Required</h3>
+        <h3 className="text-lg font-bold text-gray-900">{t("setupRequiredHeading")}</h3>
         <p className="text-gray-500">
-          You need at least one <strong>active property</strong> and one <strong>tenant</strong> before
-          creating a reservation.
+          {t.rich("setupRequiredBody", { strong: (chunks) => <strong>{chunks}</strong> })}
         </p>
         <div className="flex justify-center gap-4 pt-2">
           <Link href="/dashboard/properties/new" className="text-sm text-blue-600 hover:underline font-medium">
-            + Add Property
+            {t("addProperty")}
           </Link>
           <Link href="/dashboard/tenants/new" className="text-sm text-blue-600 hover:underline font-medium">
-            + Add Tenant
+            {t("addTenant")}
           </Link>
         </div>
       </div>
@@ -51,8 +53,8 @@ export default async function NewReservationPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <PageHeader
-        title="New Reservation"
-        description="Book a unit for a tenant or guest."
+        title={t("title")}
+        description={t("description")}
         listHref="/dashboard/reservations"
       />
       <BookingEngine properties={properties} />

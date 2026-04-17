@@ -177,6 +177,59 @@
     "returnDays": "إرجاع أيام",
     "returnMonths": "إرجاع أشهر",
     "generateInvoices": "إنشاء الفواتير",
+    "search": "ابحث برقم الحجز، اسم النزيل، الهاتف، أو الوحدة…",
+    "filters": "عوامل التصفية",
+    "refresh": "تحديث",
+    "clearAllFilters": "مسح كل عوامل التصفية",
+    "from": "من",
+    "to": "إلى",
+    "allProperties": "كل العقارات",
+    "allRateTypes": "كل أنواع الأسعار",
+    "allSources": "كل المصادر",
+    "today": "اليوم",
+    "loading": "جارٍ تحميل الحجوزات…",
+    "loadFailed": "تعذر تحميل الحجوزات.",
+    "showingCount": "عرض {shown} من {total} حجز",
+    "revenue": "الإيرادات",
+    "outstanding": "المستحق",
+    "paid": "مدفوع",
+    "vip": "VIP",
+    "moreUnits": "+{n} المزيد",
+    "tabs": {
+      "all": "الكل",
+      "arriving": "يصل اليوم",
+      "inHouse": "مقيم",
+      "dueCheckout": "موعد المغادرة",
+      "overstay": "تجاوز المغادرة",
+      "upcoming": "قادم",
+      "checkedOut": "غادر",
+      "cancelled": "ملغي",
+      "noShow": "لم يحضر",
+      "overdueArrival": "متأخر عن الوصول"
+    },
+    "table": {
+      "resNumber": "رقم الحجز",
+      "status": "الحالة",
+      "guest": "النزيل",
+      "units": "الوحدات",
+      "checkIn": "الدخول",
+      "checkOut": "الخروج",
+      "duration": "المدة",
+      "total": "الإجمالي",
+      "balance": "الرصيد",
+      "actions": "الإجراءات"
+    },
+    "duration": {
+      "nights": "{count, plural, zero {# ليلة} one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}}",
+      "months": "{count, plural, zero {# شهر} one {شهر واحد} two {شهران} few {# أشهر} many {# شهراً} other {# شهر}}"
+    },
+    "sources": {
+      "walkIn": "حضور مباشر",
+      "phone": "هاتف",
+      "whatsapp": "واتساب",
+      "online": "عبر الإنترنت",
+      "agent": "وكيل"
+    },
     "statuses": {
       "upcoming": "قادم",
       "arrivingToday": "يصل اليوم",
@@ -191,8 +244,78 @@
     "actions": {
       "checkIn": "تسجيل دخول",
       "checkOut": "تسجيل خروج",
+      "checkOutUrgent": "تسجيل خروج !",
       "cancel": "إلغاء",
-      "markNoShow": "لم يحضر"
+      "markNoShow": "لم يحضر",
+      "edit": "تعديل",
+      "view": "عرض"
+    },
+    "checkInModal": {
+      "title": "تسجيل دخول النزيل",
+      "confirm": "تأكيد تسجيل الدخول",
+      "earlyWarning": "تاريخ الدخول هو <b>{date}</b>. هذا تسجيل دخول مبكر.",
+      "failed": "فشل تسجيل الدخول"
+    },
+    "checkOutModal": {
+      "title": "تسجيل خروج النزيل",
+      "confirm": "تأكيد تسجيل الخروج",
+      "outstandingBalance": "الرصيد المستحق: {amount} ر.ع.",
+      "unpaidWarning": "سيغادر النزيل برصيد غير مدفوع.",
+      "overstayWarning": "⚠ تجاوز المغادرة: {count, plural, zero {# ليلة إضافية} one {ليلة إضافية} two {ليلتان إضافيتان} few {# ليالٍ إضافية} many {# ليلة إضافية} other {# ليلة إضافية}}",
+      "overstayPlanned": "كان موعد المغادرة المقرر {date}.",
+      "extraChargePlaceholder": "رسوم إضافية (ر.ع.)",
+      "addOverstayCharge": "إضافة رسوم تجاوز",
+      "earlyCheckout": "خروج مبكر: {count, plural, zero {# يوم} one {يوم واحد} two {يومان} few {# أيام} many {# يوماً} other {# يوم}} مبكراً",
+      "recalcCharges": "إعادة حساب الرسوم لمدة الإقامة الفعلية",
+      "failed": "فشل تسجيل الخروج"
+    },
+    "cancelModal": {
+      "title": "إلغاء الحجز",
+      "totalPaidRefund": "إجمالي المدفوع: <b>{amount} ر.ع.</b> — قد يلزم استرداد المبلغ.",
+      "reasonLabel": "السبب *",
+      "selectReason": "اختر السبب…",
+      "notesLabelRequired": "ملاحظات *",
+      "notesLabelOptional": "ملاحظات (اختياري)",
+      "notesPlaceholder": "أضف أي تفاصيل إضافية…",
+      "confirm": "إلغاء الحجز",
+      "errors": {
+        "selectReason": "يرجى اختيار سبب الإلغاء.",
+        "notesRequired": "الملاحظات مطلوبة عند اختيار سبب 'أخرى'.",
+        "cancelFailed": "فشل الإلغاء"
+      },
+      "successDefault": "تم إلغاء الحجز.",
+      "reasons": {
+        "guestCancelled": "إلغاء من النزيل",
+        "noShow": "لم يحضر",
+        "overbooking": "حجز زائد",
+        "duplicateBooking": "حجز مكرر",
+        "other": "أخرى"
+      }
+    },
+    "noShowModal": {
+      "title": "تسجيل عدم الحضور",
+      "prompt": "تسجيل <b>{name}</b> كعدم حضور؟ سيتم تحرير الوحدة وإغلاق الحجز.",
+      "confirm": "تسجيل عدم الحضور",
+      "failed": "فشلت العملية"
+    },
+    "guestInfo": {
+      "unitsLabel": "الوحدات:"
+    },
+    "empty": {
+      "arriving":     { "title": "لا توجد وصولات اليوم",     "sub": "استمتع بالهدوء!" },
+      "overstay":     { "title": "لا توجد حالات تجاوز",      "sub": "كل المغادرات في وقتها!" },
+      "dueCheckout":  { "title": "لا مغادرات مستحقة اليوم",  "sub": "أنت على اطلاع بكل شيء." },
+      "inHouse":      { "title": "لا يوجد نزلاء مقيمون",     "sub": "" },
+      "upcoming":     { "title": "لا توجد حجوزات قادمة",     "sub": "" },
+      "default":      { "title": "لا توجد حجوزات",          "sub": "أنشئ أول حجز للبدء." }
+    },
+    "newPage": {
+      "title": "حجز جديد",
+      "description": "احجز وحدة لمستأجر أو نزيل.",
+      "setupRequiredHeading": "الإعداد مطلوب",
+      "setupRequiredBody": "تحتاج إلى <strong>عقار نشط</strong> واحد على الأقل و<strong>مستأجر</strong> واحد قبل إنشاء حجز.",
+      "addProperty": "+ إضافة عقار",
+      "addTenant": "+ إضافة مستأجر"
     },
     "calendar": {
       "availabilityCalendar": "تقويم التوفر",

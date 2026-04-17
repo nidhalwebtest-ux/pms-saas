@@ -3,6 +3,9 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations, useLocale } from "next-intl";
+import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
+import { format as fmtDateFns } from "date-fns";
 import { toast } from "sonner";
 import {
   CalendarDaysIcon,
@@ -88,26 +91,33 @@ function toLocalDay(iso: string): number {
 
 const todayMs = toLocalDay(new Date().toISOString());
 
-function fmtDate(iso: string): { text: string; cls: string } {
-  const ms = toLocalDay(iso);
-  if (ms === todayMs) return { text: "Today", cls: "text-orange-600 font-semibold" };
-  const d = new Date(iso);
-  return {
-    text: d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
-    cls: "",
+function useFmtDate() {
+  const t = useTranslations("reservations");
+  const locale = useLocale();
+  const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
+  return (iso: string): { text: string; cls: string } => {
+    const ms = toLocalDay(iso);
+    if (ms === todayMs) return { text: t("today"), cls: "text-orange-600 font-semibold" };
+    return {
+      text: fmtDateFns(new Date(iso), "d MMM yyyy", { locale: dateFnsLocale }),
+      cls: "",
+    };
   };
 }
 
-function fmtDuration(row: ReservationRow): string {
-  if (row.rateType === "monthly") {
-    const start = new Date(row.startDate);
-    const end   = new Date(row.endDate);
-    const months =
-      (end.getFullYear() - start.getFullYear()) * 12 +
-      (end.getMonth() - start.getMonth());
-    return months > 0 ? `${months} month${months !== 1 ? "s" : ""}` : `${row.totalNights} nights`;
-  }
-  return `${row.totalNights} night${row.totalNights !== 1 ? "s" : ""}`;
+function useFmtDuration() {
+  const t = useTranslations("reservations.duration");
+  return (row: ReservationRow): string => {
+    if (row.rateType === "monthly") {
+      const start = new Date(row.startDate);
+      const end   = new Date(row.endDate);
+      const months =
+        (end.getFullYear() - start.getFullYear()) * 12 +
+        (end.getMonth() - start.getMonth());
+      return months > 0 ? t("months", { count: months }) : t("nights", { count: row.totalNights });
+    }
+    return t("nights", { count: row.totalNights });
+  };
 }
 
 function countryFlag(nationality: string | null): string {
@@ -119,22 +129,28 @@ function countryFlag(nationality: string | null): string {
   );
 }
 
-function emptyMsg(tab: TabKey): { emoji: string; title: string; sub: string } {
-  const m: Partial<Record<TabKey, { emoji: string; title: string; sub: string }>> = {
-    arriving:     { emoji: "☕", title: "No arrivals today",       sub: "Enjoy the quiet!" },
-    overstay:     { emoji: "✓",  title: "No overstays",            sub: "All checkouts are on time!" },
-    dueCheckout:  { emoji: "👍", title: "No checkouts due today",  sub: "You're all caught up." },
-    inHouse:      { emoji: "🏠", title: "No guests in house",      sub: "" },
-    upcoming:     { emoji: "📅", title: "No upcoming reservations", sub: "" },
-  };
-  return m[tab] ?? { emoji: "📋", title: "No reservations found", sub: "Create your first reservation to get started." };
-}
+const EMPTY_EMOJI: Partial<Record<TabKey, string>> = {
+  arriving:    "☕",
+  overstay:    "✓",
+  dueCheckout: "👍",
+  inHouse:     "🏠",
+  upcoming:    "📅",
+};
+const EMPTY_KEY: Partial<Record<TabKey, string>> = {
+  arriving:    "arriving",
+  overstay:    "overstay",
+  dueCheckout: "dueCheckout",
+  inHouse:     "inHouse",
+  upcoming:    "upcoming",
+};
 
 // ── Modal components ───────────────────────────────────────────────────────────
 
 function CheckInModal({
   res, onClose, onDone,
 }: { res: ReservationRow; onClose: () => void; onDone: () => void }) {
+  const t = useTranslations("reservations.checkInModal");
+  const fmtDate = useFmtDate();
   const [loading, setLoading] = useState(false);
   const checkInDay = toLocalDay(res.startDate);
   const isEarly    = checkInDay > todayMs;
@@ -144,26 +160,29 @@ function CheckInModal({
     try {
       const r = await fetch(`/api/reservations/${res.id}/check-in`, { method: "PATCH" });
       const data = await r.json();
-      if (!r.ok) { toast.error(data.error ?? "Check-in failed"); return; }
+      if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
       toast.success(data.message);
       onDone();
     } finally { setLoading(false); }
   }
 
   return (
-    <ModalShell title="Check In Guest" onClose={onClose}>
+    <ModalShell title={t("title")} onClose={onClose}>
       <div className="space-y-4">
         <GuestInfo res={res} />
         {isEarly && (
           <div className="flex gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
             <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-amber-500 mt-0.5" />
             <span>
-              Check-in date is <strong>{fmtDate(res.startDate).text}</strong>. This is an early check-in.
+              {t.rich("earlyWarning", {
+                date: fmtDate(res.startDate).text,
+                b: (chunks) => <strong>{chunks}</strong>,
+              })}
             </span>
           </div>
         )}
         <ModalActions
-          confirmLabel="Confirm Check-In"
+          confirmLabel={t("confirm")}
           confirmClass="bg-green-600 hover:bg-green-700 text-white"
           loading={loading}
           onCancel={onClose}
@@ -177,6 +196,8 @@ function CheckInModal({
 function CheckOutModal({
   res, onClose, onDone,
 }: { res: ReservationRow; onClose: () => void; onDone: () => void }) {
+  const t       = useTranslations("reservations.checkOutModal");
+  const fmtDate = useFmtDate();
   const [loading,    setLoading]    = useState(false);
   const [additionalAmt, setAdditionalAmt] = useState("");
   const [adjustCharges, setAdjustCharges] = useState(false);
@@ -200,14 +221,14 @@ function CheckOutModal({
 
       const r    = await fetch(`/api/reservations/${res.id}/check-out`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await r.json();
-      if (!r.ok) { toast.error(data.error ?? "Check-out failed"); return; }
+      if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
       toast.success(data.message);
       onDone();
     } finally { setLoading(false); }
   }
 
   return (
-    <ModalShell title="Check Out Guest" onClose={onClose}>
+    <ModalShell title={t("title")} onClose={onClose}>
       <div className="space-y-4">
         <GuestInfo res={res} />
 
@@ -216,8 +237,8 @@ function CheckOutModal({
           <div className="flex gap-2 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-800">
             <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-red-500 mt-0.5" />
             <div>
-              <p className="font-semibold">Outstanding balance: {res.balanceDue.toFixed(3)} OMR</p>
-              <p className="text-xs mt-0.5 text-red-700">Guest will leave with an unpaid balance.</p>
+              <p className="font-semibold">{t("outstandingBalance", { amount: res.balanceDue.toFixed(3) })}</p>
+              <p className="text-xs mt-0.5 text-red-700">{t("unpaidWarning")}</p>
             </div>
           </div>
         )}
@@ -225,13 +246,13 @@ function CheckOutModal({
         {/* Overstay */}
         {isOverstay && (
           <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-800 space-y-2">
-            <p className="font-semibold">⚠ Overstay: {extraNights} extra night{extraNights !== 1 ? "s" : ""}</p>
-            <p className="text-xs">Planned checkout was {fmtDate(res.endDate).text}.</p>
+            <p className="font-semibold">{t("overstayWarning", { count: extraNights })}</p>
+            <p className="text-xs">{t("overstayPlanned", { date: fmtDate(res.endDate).text })}</p>
             <label className="flex items-center gap-2 text-xs">
-              <input type="number" min="0" step="0.001" placeholder="Extra charge (OMR)"
-                className="w-36 rounded border border-red-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-red-400"
+              <input type="number" min="0" step="0.001" placeholder={t("extraChargePlaceholder")}
+                className="w-36 rounded border border-red-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-red-400 ltr-numbers"
                 value={additionalAmt} onChange={(e) => setAdditionalAmt(e.target.value)} />
-              <span>add overstay charge</span>
+              <span>{t("addOverstayCharge")}</span>
             </label>
           </div>
         )}
@@ -239,17 +260,17 @@ function CheckOutModal({
         {/* Early checkout */}
         {isEarly && (
           <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800 space-y-2">
-            <p className="font-semibold">Early checkout: {savedNights} day{savedNights !== 1 ? "s" : ""} early</p>
+            <p className="font-semibold">{t("earlyCheckout", { count: savedNights })}</p>
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={adjustCharges} onChange={(e) => setAdjustCharges(e.target.checked)}
                 className="rounded border-amber-400" />
-              <span className="text-xs">Recalculate charges for actual stay duration</span>
+              <span className="text-xs">{t("recalcCharges")}</span>
             </label>
           </div>
         )}
 
         <ModalActions
-          confirmLabel="Confirm Check-Out"
+          confirmLabel={t("confirm")}
           confirmClass={res.balanceDue > 0 ? "bg-orange-600 hover:bg-orange-700 text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}
           loading={loading}
           onCancel={onClose}
@@ -260,69 +281,77 @@ function CheckOutModal({
   );
 }
 
-const CANCEL_REASONS = [
-  "Guest Cancelled",
-  "No Show",
-  "Overbooking",
-  "Duplicate Booking",
-  "Other",
+const CANCEL_REASONS: { value: string; labelKey: string }[] = [
+  { value: "Guest Cancelled",   labelKey: "guestCancelled" },
+  { value: "No Show",            labelKey: "noShow" },
+  { value: "Overbooking",        labelKey: "overbooking" },
+  { value: "Duplicate Booking",  labelKey: "duplicateBooking" },
+  { value: "Other",              labelKey: "other" },
 ];
 
 function CancelModal({
   res, onClose, onDone,
 }: { res: ReservationRow; onClose: () => void; onDone: () => void }) {
+  const t = useTranslations("reservations.cancelModal");
   const [loading, setLoading] = useState(false);
   const [reason,  setReason]  = useState("");
   const [notes,   setNotes]   = useState("");
   const totalPaid = Number(res.amountPaid);
 
   async function confirm() {
-    if (!reason) { toast.error("Please select a cancellation reason."); return; }
-    if (reason === "Other" && !notes.trim()) { toast.error("Notes are required when reason is 'Other'."); return; }
+    if (!reason) { toast.error(t("errors.selectReason")); return; }
+    if (reason === "Other" && !notes.trim()) { toast.error(t("errors.notesRequired")); return; }
     setLoading(true);
     try {
       const r    = await fetch(`/api/reservations/${res.id}/cancel`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason, notes }) });
       const data = await r.json();
-      if (!r.ok) { toast.error(data.error ?? "Cancel failed"); return; }
-      toast.success(data.message ?? "Reservation cancelled.");
+      if (!r.ok) { toast.error(data.error ?? t("errors.cancelFailed")); return; }
+      toast.success(data.message ?? t("successDefault"));
       onDone();
     } finally { setLoading(false); }
   }
 
   return (
-    <ModalShell title="Cancel Reservation" onClose={onClose}>
+    <ModalShell title={t("title")} onClose={onClose}>
       <div className="space-y-4">
         <GuestInfo res={res} />
 
         {totalPaid > 0 && (
           <div className="flex gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
             <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-amber-500 mt-0.5" />
-            <span>Total paid: <strong>{totalPaid.toFixed(3)} OMR</strong> — a refund may be required.</span>
+            <span>
+              {t.rich("totalPaidRefund", {
+                amount: totalPaid.toFixed(3),
+                b: (chunks) => <strong>{chunks}</strong>,
+              })}
+            </span>
           </div>
         )}
 
         <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">Reason *</label>
+          <label className="block text-xs font-medium text-gray-700 mb-1">{t("reasonLabel")}</label>
           <select value={reason} onChange={(e) => setReason(e.target.value)}
             className="block w-full rounded-md border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-red-500">
-            <option value="">Select reason…</option>
-            {CANCEL_REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+            <option value="">{t("selectReason")}</option>
+            {CANCEL_REASONS.map((r) => (
+              <option key={r.value} value={r.value}>{t(`reasons.${r.labelKey}`)}</option>
+            ))}
           </select>
         </div>
 
         {(reason === "Other" || reason) && (
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
-              Notes {reason === "Other" ? "*" : "(optional)"}
+              {reason === "Other" ? t("notesLabelRequired") : t("notesLabelOptional")}
             </label>
             <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)}
               className="block w-full rounded-md border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-red-500"
-              placeholder="Add any additional details…" />
+              placeholder={t("notesPlaceholder")} />
           </div>
         )}
 
         <ModalActions
-          confirmLabel="Cancel Reservation"
+          confirmLabel={t("confirm")}
           confirmClass="bg-red-600 hover:bg-red-700 text-white"
           loading={loading}
           onCancel={onClose}
@@ -337,6 +366,7 @@ function CancelModal({
 function NoShowModal({
   res, onClose, onDone,
 }: { res: ReservationRow; onClose: () => void; onDone: () => void }) {
+  const t = useTranslations("reservations.noShowModal");
   const [loading, setLoading] = useState(false);
 
   async function confirm() {
@@ -344,22 +374,24 @@ function NoShowModal({
     try {
       const r    = await fetch(`/api/reservations/${res.id}/no-show`, { method: "PATCH" });
       const data = await r.json();
-      if (!r.ok) { toast.error(data.error ?? "Failed"); return; }
+      if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
       toast.success(data.message);
       onDone();
     } finally { setLoading(false); }
   }
 
   return (
-    <ModalShell title="Mark as No Show" onClose={onClose}>
+    <ModalShell title={t("title")} onClose={onClose}>
       <div className="space-y-4">
         <GuestInfo res={res} />
         <p className="text-sm text-gray-600">
-          Mark <strong>{res.tenant.firstName} {res.tenant.lastName}</strong> as No Show?
-          The unit will be freed and the reservation closed.
+          {t.rich("prompt", {
+            name: `${res.tenant.firstName} ${res.tenant.lastName}`,
+            b: (chunks) => <strong>{chunks}</strong>,
+          })}
         </p>
         <ModalActions
-          confirmLabel="Mark No Show"
+          confirmLabel={t("confirm")}
           confirmClass="bg-gray-700 hover:bg-gray-800 text-white"
           loading={loading}
           onCancel={onClose}
@@ -389,6 +421,8 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
 }
 
 function GuestInfo({ res }: { res: ReservationRow }) {
+  const t = useTranslations("reservations.guestInfo");
+  const fmtDate = useFmtDate();
   return (
     <div className="rounded-lg bg-gray-50 border border-gray-200 p-3 text-sm space-y-1">
       <p className="font-semibold text-gray-900">
@@ -400,7 +434,7 @@ function GuestInfo({ res }: { res: ReservationRow }) {
       </p>
       {res.units.length > 0 && (
         <p className="text-gray-500">
-          Units: {res.units.map((u) => u.name).join(", ")}
+          {t("unitsLabel")} {res.units.map((u) => u.name).join(", ")}
         </p>
       )}
     </div>
@@ -413,11 +447,12 @@ function ModalActions({
   confirmLabel: string; confirmClass: string; loading: boolean;
   onCancel: () => void; onConfirm: () => void; disabled?: boolean;
 }) {
+  const tCommon = useTranslations("common");
   return (
     <div className="flex justify-end gap-3 pt-2">
       <button onClick={onCancel} disabled={loading}
         className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 disabled:opacity-50">
-        Cancel
+        {tCommon("cancel")}
       </button>
       <button onClick={onConfirm} disabled={loading || disabled}
         className={`rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-50 transition-colors ${confirmClass}`}>
@@ -437,7 +472,7 @@ function SortTh({
 }) {
   const active = sortKey === sk;
   return (
-    <th onClick={() => onSort(sk)} className={`px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide cursor-pointer select-none hover:text-gray-900 ${className}`}>
+    <th onClick={() => onSort(sk)} className={`px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide cursor-pointer select-none hover:text-gray-900 ${className}`}>
       <span className="inline-flex items-center gap-1">
         {label}
         {active
@@ -450,26 +485,32 @@ function SortTh({
 
 // ── Tab definitions ───────────────────────────────────────────────────────────
 
-const PRIMARY_TABS: { key: TabKey; label: string }[] = [
-  { key: "all",          label: "All" },
-  { key: "arriving",     label: "Arriving Today" },
-  { key: "inHouse",      label: "In House" },
-  { key: "dueCheckout",  label: "Due Checkout" },
-  { key: "overstay",     label: "Overstay" },
-  { key: "upcoming",     label: "Upcoming" },
+const PRIMARY_TABS: { key: TabKey; tKey: string }[] = [
+  { key: "all",          tKey: "all" },
+  { key: "arriving",     tKey: "arriving" },
+  { key: "inHouse",      tKey: "inHouse" },
+  { key: "dueCheckout",  tKey: "dueCheckout" },
+  { key: "overstay",     tKey: "overstay" },
+  { key: "upcoming",     tKey: "upcoming" },
 ];
 
-const SECONDARY_TABS: { key: TabKey; label: string }[] = [
-  { key: "checkedOut",    label: "Checked Out" },
-  { key: "cancelled",     label: "Cancelled" },
-  { key: "noShow",        label: "No Show" },
-  { key: "overdueArrival", label: "Overdue Arrival" },
+const SECONDARY_TABS: { key: TabKey; tKey: string }[] = [
+  { key: "checkedOut",    tKey: "checkedOut" },
+  { key: "cancelled",     tKey: "cancelled" },
+  { key: "noShow",        tKey: "noShow" },
+  { key: "overdueArrival", tKey: "overdueArrival" },
 ];
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function ReservationsView({ properties }: { properties: PropertyOption[] }) {
   const router = useRouter();
+  const t       = useTranslations("reservations");
+  const tTabs   = useTranslations("reservations.tabs");
+  const tTable  = useTranslations("reservations.table");
+  const tSrc    = useTranslations("reservations.sources");
+  const locale  = useLocale();
+  const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
 
   const [reservations, setReservations] = useState<ReservationRow[]>([]);
   const [summary,      setSummary]      = useState<SummaryData | null>(null);
@@ -505,11 +546,11 @@ export default function ReservationsView({ properties }: { properties: PropertyO
       if (listData.reservations) setReservations(listData.reservations);
       if (sumData.all !== undefined) setSummary(sumData);
     } catch {
-      toast.error("Failed to load reservations.");
+      toast.error(t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [advFilters]);
+  }, [advFilters, t]);
 
   // Initial + 60-second summary refresh
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -599,7 +640,7 @@ export default function ReservationsView({ properties }: { properties: PropertyO
   const hasAdvFilters = Object.values(advFilters).some(Boolean);
 
   const today = new Date();
-  const todayLabel = today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const todayLabel = fmtDateFns(today, "EEEE, d MMMM yyyy", { locale: dateFnsLocale });
 
   return (
     <div className="mx-auto max-w-full px-4 sm:px-6 lg:px-8 py-6">
@@ -607,19 +648,19 @@ export default function ReservationsView({ properties }: { properties: PropertyO
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reservations</h1>
+          <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
           <p className="text-sm text-gray-500 mt-0.5">{todayLabel}</p>
         </div>
         <Link href="/dashboard/reservations/new"
           className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors">
           <PlusIcon className="h-4 w-4" />
-          New Reservation
+          {t("newReservation")}
         </Link>
       </div>
 
       {/* ── Primary tabs ───────────────────────────────────────────────────── */}
       <div className="flex flex-wrap gap-1 mb-1">
-        {PRIMARY_TABS.map(({ key, label }) => {
+        {PRIMARY_TABS.map(({ key, tKey }) => {
           const count   = summary?.[key as keyof SummaryData] ?? 0;
           const active  = activeTab === key;
           const isOvr   = key === "overstay"    && count > 0;
@@ -632,7 +673,7 @@ export default function ReservationsView({ properties }: { properties: PropertyO
                   ? "bg-blue-600 text-white shadow-sm"
                   : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
               }`}>
-              {label}
+              {tTabs(tKey)}
               {count > 0 && (
                 <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold ${
                   active
@@ -650,7 +691,7 @@ export default function ReservationsView({ properties }: { properties: PropertyO
         })}
         {/* Secondary tabs dropdown-style */}
         <div className="flex gap-1">
-          {SECONDARY_TABS.map(({ key, label }) => {
+          {SECONDARY_TABS.map(({ key, tKey }) => {
             const count  = summary?.[key as keyof SummaryData] ?? 0;
             const active = activeTab === key;
             return (
@@ -660,7 +701,7 @@ export default function ReservationsView({ properties }: { properties: PropertyO
                     ? "bg-gray-700 text-white"
                     : "bg-white border border-gray-200 text-gray-500 hover:bg-gray-50"
                 }`}>
-                {label}
+                {tTabs(tKey)}
                 {count > 0 && (
                   <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-xs ${
                     active ? "bg-white/25 text-white" : "bg-gray-200 text-gray-600"
@@ -676,16 +717,16 @@ export default function ReservationsView({ properties }: { properties: PropertyO
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden">
         <div className="flex items-center gap-3 px-4 py-3">
           <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <MagnifyingGlassIcon className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search reservation #, guest name, phone, unit…"
+              placeholder={t("search")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="block w-full rounded-lg border-0 py-2 pl-9 pr-3 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
+              className="block w-full rounded-lg border-0 py-2 ps-9 pe-3 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
             />
             {search && (
-              <button onClick={() => setSearch("")} className="absolute right-2 top-1/2 -translate-y-1/2">
+              <button onClick={() => setSearch("")} className="absolute end-2 top-1/2 -translate-y-1/2">
                 <XMarkIcon className="h-4 w-4 text-gray-400 hover:text-gray-600" />
               </button>
             )}
@@ -697,10 +738,10 @@ export default function ReservationsView({ properties }: { properties: PropertyO
                 : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
             }`}>
             <AdjustmentsHorizontalIcon className="h-4 w-4" />
-            Filters
+            {t("filters")}
             {hasAdvFilters && <span className="h-2 w-2 rounded-full bg-blue-600" />}
           </button>
-          <button onClick={fetchData} disabled={loading}
+          <button onClick={fetchData} disabled={loading} aria-label={t("refresh")}
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
             <ArrowPathIcon className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </button>
@@ -713,37 +754,37 @@ export default function ReservationsView({ properties }: { properties: PropertyO
               <select value={advFilters.propertyId}
                 onChange={(e) => setAdvFilters((v) => ({ ...v, propertyId: e.target.value }))}
                 className="rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500">
-                <option value="">All Properties</option>
+                <option value="">{t("allProperties")}</option>
                 {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-              <input type="date" placeholder="From" value={advFilters.dateFrom}
+              <input type="date" placeholder={t("from")} value={advFilters.dateFrom}
                 onChange={(e) => setAdvFilters((v) => ({ ...v, dateFrom: e.target.value }))}
                 className="rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500" />
-              <input type="date" placeholder="To" value={advFilters.dateTo}
+              <input type="date" placeholder={t("to")} value={advFilters.dateTo}
                 onChange={(e) => setAdvFilters((v) => ({ ...v, dateTo: e.target.value }))}
                 className="rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500" />
               <select value={advFilters.rateType}
                 onChange={(e) => setAdvFilters((v) => ({ ...v, rateType: e.target.value }))}
                 className="rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500">
-                <option value="">All Rate Types</option>
-                <option value="daily">Daily</option>
-                <option value="monthly">Monthly</option>
+                <option value="">{t("allRateTypes")}</option>
+                <option value="daily">{t("daily")}</option>
+                <option value="monthly">{t("monthly")}</option>
               </select>
               <select value={advFilters.source}
                 onChange={(e) => setAdvFilters((v) => ({ ...v, source: e.target.value }))}
                 className="rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500">
-                <option value="">All Sources</option>
-                <option value="walk_in">Walk-in</option>
-                <option value="phone">Phone</option>
-                <option value="whatsapp">WhatsApp</option>
-                <option value="online">Online</option>
-                <option value="agent">Agent</option>
+                <option value="">{t("allSources")}</option>
+                <option value="walk_in">{tSrc("walkIn")}</option>
+                <option value="phone">{tSrc("phone")}</option>
+                <option value="whatsapp">{tSrc("whatsapp")}</option>
+                <option value="online">{tSrc("online")}</option>
+                <option value="agent">{tSrc("agent")}</option>
               </select>
             </div>
             {hasAdvFilters && (
               <button onClick={() => { setAdvFilters({ propertyId: "", dateFrom: "", dateTo: "", rateType: "", source: "" }); fetchData(); }}
                 className="mt-2 text-xs text-blue-600 hover:underline">
-                Clear all filters
+                {t("clearAllFilters")}
               </button>
             )}
           </div>
@@ -754,8 +795,8 @@ export default function ReservationsView({ properties }: { properties: PropertyO
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
         {loading && reservations.length === 0 ? (
           <div className="flex items-center justify-center py-20 text-gray-400">
-            <ArrowPathIcon className="h-6 w-6 animate-spin mr-2" />
-            <span className="text-sm">Loading reservations…</span>
+            <ArrowPathIcon className="h-6 w-6 animate-spin me-2" />
+            <span className="text-sm">{t("loading")}</span>
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState tab={activeTab} />
@@ -764,16 +805,16 @@ export default function ReservationsView({ properties }: { properties: PropertyO
             <table className="min-w-full">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="pl-4 pr-2 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Res #</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Guest</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Units</th>
-                  <SortTh label="Check-in"  sk="startDate"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <SortTh label="Check-out" sk="endDate"    sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Duration</th>
-                  <SortTh label="Total"     sk="grandTotal" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="text-right" />
-                  <SortTh label="Balance"   sk="balanceDue" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="text-right" />
-                  <th className="pl-3 pr-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
+                  <th className="ps-4 pe-2 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTable("resNumber")}</th>
+                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTable("status")}</th>
+                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTable("guest")}</th>
+                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTable("units")}</th>
+                  <SortTh label={tTable("checkIn")}  sk="startDate"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <SortTh label={tTable("checkOut")} sk="endDate"    sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
+                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTable("duration")}</th>
+                  <SortTh label={tTable("total")}    sk="grandTotal" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="text-end" />
+                  <SortTh label={tTable("balance")}  sk="balanceDue" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="text-end" />
+                  <th className="ps-3 pe-4 py-3 text-end text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTable("actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -792,10 +833,10 @@ export default function ReservationsView({ properties }: { properties: PropertyO
         {/* Footer */}
         {filtered.length > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
-            <span>Showing {filtered.length} of {reservations.length} reservations</span>
+            <span>{t("showingCount", { shown: filtered.length, total: reservations.length })}</span>
             <div className="flex gap-4">
-              <span>Revenue: <strong className="text-gray-800">{totalRevenue.toFixed(3)} OMR</strong></span>
-              <span>Outstanding: <strong className={totalBalance > 0 ? "text-red-600" : "text-green-600"}>{totalBalance.toFixed(3)} OMR</strong></span>
+              <span>{t("revenue")}: <strong className="text-gray-800 ltr-numbers">{totalRevenue.toFixed(3)} OMR</strong></span>
+              <span>{t("outstanding")}: <strong className={`ltr-numbers ${totalBalance > 0 ? "text-red-600" : "text-green-600"}`}>{totalBalance.toFixed(3)} OMR</strong></span>
             </div>
           </div>
         )}
@@ -818,6 +859,11 @@ function ReservationTableRow({
   res:      ReservationRow;
   onAction: (type: "check-in" | "check-out" | "cancel" | "no-show", res: ReservationRow) => void;
 }) {
+  const t        = useTranslations("reservations");
+  const tStatus  = useTranslations("reservations.statuses");
+  const fmtDate  = useFmtDate();
+  const fmtDuration = useFmtDuration();
+
   const ds         = res.displayStatus;
   const checkIn    = fmtDate(res.startDate);
   const checkOut   = fmtDate(res.endDate);
@@ -830,9 +876,9 @@ function ReservationTableRow({
   return (
     <tr className={`text-sm transition-colors hover:bg-blue-50/30 ${res.displayStatusRowClass}`}>
       {/* Res # */}
-      <td className="pl-4 pr-2 py-3 whitespace-nowrap">
+      <td className="ps-4 pe-2 py-3 whitespace-nowrap">
         <Link href={`/dashboard/reservations/${res.id}`}
-          className={`font-mono text-xs font-semibold text-blue-600 hover:underline ${isCancelled ? "line-through text-gray-400" : ""}`}>
+          className={`font-mono text-xs font-semibold text-blue-600 hover:underline ltr-numbers ${isCancelled ? "line-through text-gray-400" : ""}`}>
           {res.reservationNumber ?? res.id.slice(0, 8).toUpperCase()}
         </Link>
       </td>
@@ -840,7 +886,7 @@ function ReservationTableRow({
       {/* Status badge */}
       <td className="px-3 py-3 whitespace-nowrap">
         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${res.displayStatusBadgeClass} ${res.displayStatusPulse ? "animate-pulse" : ""}`}>
-          {ds}
+          {translateDisplayStatus(ds, tStatus)}
         </span>
       </td>
 
@@ -852,7 +898,7 @@ function ReservationTableRow({
           </p>
         </Link>
         {res.tenant.classification === "vip" && (
-          <span className="inline-flex text-[10px] font-bold bg-yellow-100 text-yellow-700 rounded px-1">⭐ VIP</span>
+          <span className="inline-flex text-[10px] font-bold bg-yellow-100 text-yellow-700 rounded px-1">⭐ {t("vip")}</span>
         )}
       </td>
 
@@ -865,7 +911,7 @@ function ReservationTableRow({
             </span>
           ))}
           {res.units.length > 3 && (
-            <span className="text-xs text-gray-500">+{res.units.length - 3} more</span>
+            <span className="text-xs text-gray-500">{t("moreUnits", { n: res.units.length - 3 })}</span>
           )}
           {res.units.length === 0 && <span className="text-xs text-gray-400">—</span>}
         </div>
@@ -881,23 +927,40 @@ function ReservationTableRow({
       <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500">{fmtDuration(res)}</td>
 
       {/* Total */}
-      <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 text-right">
+      <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 text-end ltr-numbers">
         {Number(res.grandTotal).toFixed(3)}
       </td>
 
       {/* Balance */}
-      <td className="px-3 py-3 whitespace-nowrap text-sm text-right">
+      <td className="px-3 py-3 whitespace-nowrap text-sm text-end">
         {res.balanceDue === 0
-          ? <span className="text-green-600 font-medium">Paid</span>
-          : <span className="text-red-600 font-semibold">{res.balanceDue.toFixed(3)}</span>}
+          ? <span className="text-green-600 font-medium">{t("paid")}</span>
+          : <span className="text-red-600 font-semibold ltr-numbers">{res.balanceDue.toFixed(3)}</span>}
       </td>
 
       {/* Actions */}
-      <td className="pl-3 pr-4 py-3 whitespace-nowrap text-right">
+      <td className="ps-3 pe-4 py-3 whitespace-nowrap text-end">
         <ActionButtons ds={ds} res={res} onAction={onAction} />
       </td>
     </tr>
   );
+}
+
+// Map DisplayStatus (English literal from server) → translated label.
+function translateDisplayStatus(ds: DisplayStatus, t: (k: string) => string): string {
+  const map: Partial<Record<DisplayStatus, string>> = {
+    "Upcoming":         "upcoming",
+    "Arriving Today":   "arrivingToday",
+    "Overdue Arrival":  "overdueArrival",
+    "In House":         "inHouse",
+    "Due Checkout":     "dueCheckout",
+    "Overstay":         "overstay",
+    "Checked Out":      "checkedOut",
+    "Cancelled":        "cancelled",
+    "No Show":          "noShow",
+  };
+  const key = map[ds];
+  return key ? t(key) : ds;
 }
 
 function ActionButtons({
@@ -907,45 +970,50 @@ function ActionButtons({
   res: ReservationRow;
   onAction: (type: "check-in" | "check-out" | "cancel" | "no-show", res: ReservationRow) => void;
 }) {
+  const t = useTranslations("reservations.actions");
   const btn = "rounded-md px-2 py-1 text-xs font-semibold transition-colors";
 
   if (ds === "Arriving Today" || ds === "Overdue Arrival") return (
     <div className="flex gap-1 justify-end">
-      <button onClick={() => onAction("check-in", res)} className={`${btn} bg-green-600 text-white hover:bg-green-700`}>Check In</button>
+      <button onClick={() => onAction("check-in", res)} className={`${btn} bg-green-600 text-white hover:bg-green-700`}>{t("checkIn")}</button>
       {ds === "Overdue Arrival" && (
-        <button onClick={() => onAction("no-show", res)} className={`${btn} bg-gray-600 text-white hover:bg-gray-700`}>No Show</button>
+        <button onClick={() => onAction("no-show", res)} className={`${btn} bg-gray-600 text-white hover:bg-gray-700`}>{t("markNoShow")}</button>
       )}
-      <button onClick={() => onAction("cancel", res)} className={`${btn} bg-white border border-gray-300 text-gray-700 hover:bg-gray-50`}>Cancel</button>
+      <button onClick={() => onAction("cancel", res)} className={`${btn} bg-white border border-gray-300 text-gray-700 hover:bg-gray-50`}>{t("cancel")}</button>
     </div>
   );
 
   if (ds === "In House") return (
-    <button onClick={() => onAction("check-out", res)} className={`${btn} bg-blue-600 text-white hover:bg-blue-700`}>Check Out</button>
+    <button onClick={() => onAction("check-out", res)} className={`${btn} bg-blue-600 text-white hover:bg-blue-700`}>{t("checkOut")}</button>
   );
 
   if (ds === "Due Checkout") return (
-    <button onClick={() => onAction("check-out", res)} className={`${btn} bg-orange-600 text-white hover:bg-orange-700 animate-pulse`}>Check Out</button>
+    <button onClick={() => onAction("check-out", res)} className={`${btn} bg-orange-600 text-white hover:bg-orange-700 animate-pulse`}>{t("checkOut")}</button>
   );
 
   if (ds === "Overstay") return (
-    <button onClick={() => onAction("check-out", res)} className={`${btn} bg-red-600 text-white hover:bg-red-700`}>Check Out !</button>
+    <button onClick={() => onAction("check-out", res)} className={`${btn} bg-red-600 text-white hover:bg-red-700`}>{t("checkOutUrgent")}</button>
   );
 
   if (ds === "Upcoming") return (
     <div className="flex gap-1 justify-end">
-      <Link href={`/dashboard/reservations/${res.id}`} className={`${btn} bg-white border border-gray-300 text-gray-700 hover:bg-gray-50`}>Edit</Link>
-      <button onClick={() => onAction("cancel", res)} className={`${btn} bg-white border border-gray-300 text-gray-700 hover:bg-gray-50`}>Cancel</button>
+      <Link href={`/dashboard/reservations/${res.id}`} className={`${btn} bg-white border border-gray-300 text-gray-700 hover:bg-gray-50`}>{t("edit")}</Link>
+      <button onClick={() => onAction("cancel", res)} className={`${btn} bg-white border border-gray-300 text-gray-700 hover:bg-gray-50`}>{t("cancel")}</button>
     </div>
   );
 
   // Checked Out / Cancelled / No Show
   return (
-    <Link href={`/dashboard/reservations/${res.id}`} className={`${btn} bg-white border border-gray-200 text-gray-600 hover:bg-gray-50`}>View</Link>
+    <Link href={`/dashboard/reservations/${res.id}`} className={`${btn} bg-white border border-gray-200 text-gray-600 hover:bg-gray-50`}>{t("view")}</Link>
   );
 }
 
 function EmptyState({ tab }: { tab: TabKey }) {
-  const { emoji, title, sub } = emptyMsg(tab);
+  const t = useTranslations("reservations.empty");
+  const key = EMPTY_KEY[tab] ?? "default";
+  const emoji = EMPTY_EMOJI[tab] ?? "📋";
+  const title = t(`${key}.title`);
+  const sub   = t(`${key}.sub`);
   return (
     <div className="flex flex-col items-center justify-center py-16 text-gray-400">
       <span className="text-4xl mb-3">{emoji}</span>

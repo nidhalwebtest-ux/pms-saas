@@ -3,6 +3,7 @@ import UnitForm from "@/components/dashboard/UnitForm";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 export default async function EditUnitPage({
   params,
@@ -10,6 +11,7 @@ export default async function EditUnitPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const t = await getTranslations("units.editPage");
 
   const supabase = await createClient();
   const {
@@ -40,8 +42,8 @@ export default async function EditUnitPage({
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <PageHeader
-        title="Edit Unit"
-        description="Update pricing and specifications."
+        title={t("title")}
+        description={t("description")}
         listHref="/dashboard/units"
       />
       <UnitForm properties={properties} initialData={unit} />

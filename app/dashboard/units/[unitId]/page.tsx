@@ -13,30 +13,12 @@ import {
   BuildingOffice2Icon,
   BoltIcon,
 } from "@heroicons/react/24/outline";
+import { getTranslations, getLocale } from "next-intl/server";
+import { format } from "date-fns";
+import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import { getUnitDisplayStatus, UNIT_STATUS_CONFIG } from "@/lib/unit-status";
 import UnitPricingSection from "@/components/dashboard/units/UnitPricingSection";
 import UnitNotesSection   from "@/components/dashboard/units/UnitNotesSection";
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-const UNIT_TYPE_LABELS: Record<string, string> = {
-  STUDIO:   "Studio",
-  ONE_BR:   "1 Bedroom",
-  TWO_BR:   "2 Bedrooms",
-  THREE_BR: "3 Bedrooms",
-  SUITE:    "Suite",
-};
-
-const AMENITY_LABELS: Record<string, string> = {
-  AC:         "Air Conditioning",
-  FURNISHED:  "Furnished",
-  KITCHEN:    "Kitchen",
-  PARKING:    "Parking",
-  WIFI:       "Wi-Fi",
-  TV:         "TV",
-  BALCONY:    "Balcony",
-  POOL:       "Pool",
-};
 
 function fmt(v: any) {
   return `${Number(v).toFixed(3)} OMR`;
@@ -95,6 +77,20 @@ export default async function UnitDetailPage({
   const activeRes     = unit.reservations.find((r) => r.status === "CHECKED_IN");
   const upcomingRes   = unit.reservations.filter((r) => r.status !== "CHECKED_IN");
 
+  const t             = await getTranslations("units.detail");
+  const tTypesLong    = await getTranslations("units.typesLong");
+  const tAmen         = await getTranslations("units.amenities");
+  const tStatus       = await getTranslations("units.displayStatus");
+  const locale        = await getLocale();
+  const dfLocale      = locale === "ar" ? arLocale : enLocale;
+  const fmtDay        = (d: Date) => format(d, "dd MMM yyyy", { locale: dfLocale });
+  const fmtDayShort   = (d: Date) => format(d, "dd MMM",       { locale: dfLocale });
+
+  let typeLabel = unit.unitType;
+  try { typeLabel = tTypesLong(unit.unitType as never); } catch {}
+  let statusLabel = cfg.label;
+  try { statusLabel = tStatus(displayStatus as never); } catch {}
+
   // Serialize Decimal → string for client components
   const serializedPrices = prices.map((p) => ({
     id:          p.id,
@@ -120,7 +116,7 @@ export default async function UnitDetailPage({
     <div className="space-y-6">
       {/* ── Breadcrumb ─────────────────────────────────────────────────── */}
       <nav className="flex items-center gap-2 text-xs text-gray-500">
-        <Link href="/dashboard/properties" className="hover:text-blue-600 transition-colors">Properties</Link>
+        <Link href="/dashboard/properties" className="hover:text-blue-600 transition-colors">{t("breadcrumbProperties")}</Link>
         <span>/</span>
         <Link href={`/dashboard/properties/${unit.property.id}`} className="hover:text-blue-600 transition-colors">
           {unit.property.name}
@@ -140,15 +136,15 @@ export default async function UnitDetailPage({
               <h1 className="text-xl font-bold text-gray-900">{unit.name}</h1>
               <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.badge}`}>
                 <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-                {cfg.label}
+                {statusLabel}
               </span>
             </div>
             <p className="text-sm text-gray-500">
-              {UNIT_TYPE_LABELS[unit.unitType] ?? unit.unitType}
+              {typeLabel}
               {" · "}
-              {unit.bedrooms}b/{unit.bathrooms}ba
-              {unit.area ? ` · ${unit.area} m²` : ""}
-              {unit.floor > 0 ? ` · Floor ${unit.floor}` : " · Ground floor"}
+              <span className="ltr-numbers">{t("bedsBathsShort", { beds: unit.bedrooms, baths: unit.bathrooms })}</span>
+              {unit.area ? <> · <span className="ltr-numbers">{unit.area} m²</span></> : ""}
+              {unit.floor > 0 ? <> · {t("floorN", { n: unit.floor })}</> : <> · {t("groundFloor")}</>}
             </p>
           </div>
         </div>
@@ -159,14 +155,14 @@ export default async function UnitDetailPage({
             className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
           >
             <PencilSquareIcon className="h-4 w-4" />
-            Edit
+            {t("edit")}
           </Link>
           <Link
             href={`/dashboard/reservations/new?unitId=${unitId}`}
             className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 shadow-sm transition-colors"
           >
             <CalendarDaysIcon className="h-4 w-4" />
-            New Reservation
+            {t("newReservation")}
           </Link>
         </div>
       </div>
@@ -181,39 +177,39 @@ export default async function UnitDetailPage({
           <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-800">
               <BuildingOffice2Icon className="h-4 w-4 text-gray-400" />
-              Unit Details
+              {t("unitDetails")}
             </h2>
 
             <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
               <div>
-                <p className="text-xs text-gray-400">Type</p>
-                <p className="font-medium text-gray-800">{UNIT_TYPE_LABELS[unit.unitType] ?? unit.unitType}</p>
+                <p className="text-xs text-gray-400">{t("type")}</p>
+                <p className="font-medium text-gray-800">{typeLabel}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Floor</p>
-                <p className="font-medium text-gray-800">{unit.floor > 0 ? `Floor ${unit.floor}` : "Ground"}</p>
+                <p className="text-xs text-gray-400">{t("floor")}</p>
+                <p className="font-medium text-gray-800 ltr-numbers">{unit.floor > 0 ? t("floorN", { n: unit.floor }) : t("ground")}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Area</p>
-                <p className="font-medium text-gray-800">{unit.area ? `${unit.area} m²` : "—"}</p>
+                <p className="text-xs text-gray-400">{t("area")}</p>
+                <p className="font-medium text-gray-800 ltr-numbers">{unit.area ? `${unit.area} m²` : t("dash")}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Bedrooms</p>
-                <p className="font-medium text-gray-800">{unit.bedrooms}</p>
+                <p className="text-xs text-gray-400">{t("bedrooms")}</p>
+                <p className="font-medium text-gray-800 ltr-numbers">{unit.bedrooms}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Bathrooms</p>
-                <p className="font-medium text-gray-800">{unit.bathrooms}</p>
+                <p className="text-xs text-gray-400">{t("bathrooms")}</p>
+                <p className="font-medium text-gray-800 ltr-numbers">{unit.bathrooms}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Base Price</p>
-                <p className="font-medium text-gray-800">{fmt(unit.basePrice)} / mo</p>
+                <p className="text-xs text-gray-400">{t("basePrice")}</p>
+                <p className="font-medium text-gray-800 ltr-numbers">{t("perMonth", { amount: fmt(unit.basePrice) })}</p>
               </div>
             </div>
 
             {unit.description && (
               <div className="mt-4 border-t border-gray-100 pt-4">
-                <p className="text-xs text-gray-400">Description</p>
+                <p className="text-xs text-gray-400">{t("description")}</p>
                 <p className="mt-1 text-sm text-gray-700 whitespace-pre-wrap">{unit.description}</p>
               </div>
             )}
@@ -221,14 +217,18 @@ export default async function UnitDetailPage({
             {unit.amenities.length > 0 && (
               <div className="mt-4 border-t border-gray-100 pt-4">
                 <p className="mb-2 text-xs text-gray-400 flex items-center gap-1">
-                  <BoltIcon className="h-3.5 w-3.5" /> Amenities
+                  <BoltIcon className="h-3.5 w-3.5" /> {t("amenities")}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
-                  {unit.amenities.map((a) => (
-                    <span key={a} className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
-                      {AMENITY_LABELS[a] ?? a}
-                    </span>
-                  ))}
+                  {unit.amenities.map((a) => {
+                    let label = a;
+                    try { label = tAmen(a as never); } catch {}
+                    return (
+                      <span key={a} className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700">
+                        {label}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -239,25 +239,25 @@ export default async function UnitDetailPage({
             <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-800">
                 <UserGroupIcon className="h-4 w-4" />
-                Currently Occupied
+                {t("currentlyOccupied")}
               </h2>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-semibold text-gray-900">
                     {activeRes.tenant.firstName} {activeRes.tenant.lastName}
                   </p>
-                  <p className="text-xs text-gray-500">{activeRes.tenant.phone}</p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    {new Date(activeRes.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                  <p className="text-xs text-gray-500 ltr-numbers">{activeRes.tenant.phone}</p>
+                  <p className="mt-1 text-xs text-gray-500 ltr-numbers">
+                    {fmtDay(new Date(activeRes.startDate))}
                     {" → "}
-                    {new Date(activeRes.endDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                    {fmtDay(new Date(activeRes.endDate))}
                   </p>
                 </div>
                 <Link
                   href={`/dashboard/reservations/${activeRes.id}`}
                   className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
                 >
-                  View Reservation
+                  {t("viewReservation")}
                 </Link>
               </div>
             </section>
@@ -268,7 +268,7 @@ export default async function UnitDetailPage({
             <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
                 <CalendarDaysIcon className="h-4 w-4 text-gray-400" />
-                Upcoming Reservations
+                {t("upcomingReservations")}
               </h2>
               <div className="space-y-2">
                 {upcomingRes.map((r) => (
@@ -277,23 +277,23 @@ export default async function UnitDetailPage({
                       <p className="text-sm font-medium text-gray-800">
                         {r.tenant.firstName} {r.tenant.lastName}
                       </p>
-                      <p className="text-xs text-gray-500">
-                        {new Date(r.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                      <p className="text-xs text-gray-500 ltr-numbers">
+                        {fmtDayShort(new Date(r.startDate))}
                         {" → "}
-                        {new Date(r.endDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                        {fmtDay(new Date(r.endDate))}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         r.status === "CONFIRMED" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
                       }`}>
-                        {r.status === "CONFIRMED" ? "Confirmed" : "Pending"}
+                        {r.status === "CONFIRMED" ? t("confirmed") : t("pending")}
                       </span>
                       <Link
                         href={`/dashboard/reservations/${r.id}`}
                         className="text-xs text-blue-600 hover:underline"
                       >
-                        View
+                        {t("view")}
                       </Link>
                     </div>
                   </div>
@@ -306,9 +306,9 @@ export default async function UnitDetailPage({
           <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-800">
               <ChatBubbleLeftIcon className="h-4 w-4 text-gray-400" />
-              Internal Notes
+              {t("internalNotes")}
               {notes.length > 0 && (
-                <span className="ml-auto rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                <span className="ms-auto rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 ltr-numbers">
                   {notes.length}
                 </span>
               )}
@@ -326,7 +326,7 @@ export default async function UnitDetailPage({
           <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
             <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-800">
               <CurrencyDollarIcon className="h-4 w-4 text-gray-400" />
-              Pricing
+              {t("pricing")}
             </h2>
             <UnitPricingSection unitId={unitId} prices={serializedPrices} />
           </section>

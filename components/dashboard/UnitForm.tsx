@@ -16,29 +16,21 @@ import {
   CheckIcon,
 } from "@heroicons/react/24/outline";
 import PhotoUpload from "@/components/dashboard/PhotoUpload";
+import { useTranslations } from "next-intl";
 
 // ── Unit types ────────────────────────────────────────────────────────────────
 
 const UNIT_TYPES = [
-  { value: "STUDIO",    label: "Studio", sub: "0 bed",  bedrooms: 0, bathrooms: 1 },
-  { value: "ONE_BR",    label: "1 BR",   sub: "1 bed",  bedrooms: 1, bathrooms: 1 },
-  { value: "TWO_BR",    label: "2 BR",   sub: "2 bed",  bedrooms: 2, bathrooms: 1 },
-  { value: "THREE_BR",  label: "3 BR",   sub: "3 bed",  bedrooms: 3, bathrooms: 2 },
-  { value: "SUITE",     label: "Suite",  sub: "Luxury", bedrooms: 2, bathrooms: 2 },
+  { value: "STUDIO",    subKey: "zeroBed",  bedrooms: 0, bathrooms: 1 },
+  { value: "ONE_BR",    subKey: "oneBed",   bedrooms: 1, bathrooms: 1 },
+  { value: "TWO_BR",    subKey: "twoBed",   bedrooms: 2, bathrooms: 1 },
+  { value: "THREE_BR",  subKey: "threeBed", bedrooms: 3, bathrooms: 2 },
+  { value: "SUITE",     subKey: "luxury",   bedrooms: 2, bathrooms: 2 },
 ] as const;
 
 // ── Amenities ─────────────────────────────────────────────────────────────────
 
-const AMENITIES = [
-  { value: "AC",        label: "A/C" },
-  { value: "FURNISHED", label: "Furnished" },
-  { value: "KITCHEN",   label: "Kitchen" },
-  { value: "PARKING",   label: "Parking" },
-  { value: "WIFI",      label: "Wi-Fi" },
-  { value: "TV",        label: "TV" },
-  { value: "BALCONY",   label: "Balcony" },
-  { value: "POOL",      label: "Pool" },
-] as const;
+const AMENITY_VALUES = ["AC", "FURNISHED", "KITCHEN", "PARKING", "WIFI", "TV", "BALCONY", "POOL"] as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -127,6 +119,10 @@ function Section({
 export default function UnitForm({ properties, initialData, defaultPropertyId }: Props) {
   const router      = useRouter();
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations("units.form");
+  const tTypes = useTranslations("units.types");
+  const tSub = useTranslations("units.typesSub");
+  const tAmen = useTranslations("units.amenities");
 
   const [status,    setStatus]    = useState<"AVAILABLE" | "MAINTENANCE">(
     (initialData?.status as any) ?? "AVAILABLE",
@@ -169,7 +165,7 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
         toast.error(result.error);
         return;
       }
-      toast.success(isEditMode ? "Unit updated!" : "Unit created!");
+      toast.success(isEditMode ? t("unitUpdated") : t("unitCreated"));
       const propertyId = fd.get("propertyId") as string;
       setTimeout(() => {
         router.push(propertyId
@@ -185,13 +181,13 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
       <input type="hidden" name="status" value={status} />
 
       {/* ── 1. Basic Info ────────────────────────────────────────────── */}
-      <Section icon={HomeModernIcon} title="Unit Details">
+      <Section icon={HomeModernIcon} title={t("unitDetails")}>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-6">
 
           {/* Property */}
           <div className="sm:col-span-3">
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Property <span className="text-red-500">*</span>
+              {t("property")} <span className="text-red-500">*</span>
             </label>
             <select
               name="propertyId"
@@ -199,7 +195,7 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
               defaultValue={initialData?.propertyId || defaultPropertyId || ""}
               className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             >
-              <option value="">Choose a property…</option>
+              <option value="">{t("propertyPlaceholder")}</option>
               {properties.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
@@ -209,12 +205,12 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
           {/* Unit name */}
           <div className="sm:col-span-3">
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Unit Name / Number <span className="text-red-500">*</span>
+              {t("name")} <span className="text-red-500">*</span>
             </label>
             <input
               name="name"
               required
-              placeholder="e.g. Room 101, Apt 4B"
+              placeholder={t("namePlaceholder")}
               defaultValue={initialData?.name}
               className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
             />
@@ -223,10 +219,10 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
           {/* Base price */}
           <div className="sm:col-span-2">
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Base Price <span className="text-red-500">*</span>
+              {t("basePrice")} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">
+              <span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">
                 OMR
               </span>
               <input
@@ -235,16 +231,16 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
                 step="0.001"
                 min="0"
                 required
-                placeholder="0.000"
+                placeholder={t("basePricePlaceholder")}
                 defaultValue={initialData ? Number(initialData.basePrice).toFixed(3) : ""}
-                className="block w-full rounded-lg border border-gray-300 py-2.5 pl-12 pr-3 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="block w-full rounded-lg border border-gray-300 py-2.5 ps-12 pe-3 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
             </div>
           </div>
 
           {/* Floor */}
           <div className="sm:col-span-2">
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Floor</label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("floor")}</label>
             <input
               name="floor"
               type="number"
@@ -257,7 +253,7 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
           {/* Area */}
           <div className="sm:col-span-2">
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              Area <span className="text-xs font-normal text-gray-400">(optional)</span>
+              {t("area")} <span className="text-xs font-normal text-gray-400">{t("areaOptional")}</span>
             </label>
             <div className="relative">
               <input
@@ -265,11 +261,11 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
                 type="number"
                 min="0"
                 step="0.1"
-                placeholder="e.g. 65"
+                placeholder={t("areaPlaceholder")}
                 defaultValue={initialData?.area ?? ""}
-                className="block w-full rounded-lg border border-gray-300 py-2.5 pl-3 pr-10 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="block w-full rounded-lg border border-gray-300 py-2.5 ps-3 pe-10 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
-              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
+              <span className="pointer-events-none absolute end-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">
                 m²
               </span>
             </div>
@@ -281,22 +277,22 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
       {/* ── 2. Unit Type ─────────────────────────────────────────────── */}
       <Section
         icon={TagIcon}
-        title="Unit Type"
+        title={t("unitType")}
         badge={
-          <span className="ml-auto text-xs font-normal text-gray-400">
-            Selects type &amp; auto-fills beds/baths
+          <span className="ms-auto text-xs font-normal text-gray-400">
+            {t("unitTypeHelp")}
           </span>
         }
       >
         {/* Type cards */}
         <div className="grid grid-cols-5 gap-2">
-          {UNIT_TYPES.map((t) => {
-            const active = unitType === t.value;
+          {UNIT_TYPES.map((ut) => {
+            const active = unitType === ut.value;
             return (
               <button
-                key={t.value}
+                key={ut.value}
                 type="button"
-                onClick={() => handleTypeSelect(t)}
+                onClick={() => handleTypeSelect(ut)}
                 className={`flex flex-col items-center gap-0.5 rounded-xl border-2 px-2 py-3.5 text-center transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/40 ${
                   active
                     ? "border-blue-500 bg-blue-50 shadow-sm"
@@ -304,10 +300,10 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
                 }`}
               >
                 <span className={`text-sm font-bold leading-none ${active ? "text-blue-600" : "text-gray-700"}`}>
-                  {t.label}
+                  {tTypes(ut.value as never)}
                 </span>
                 <span className={`mt-1 text-[11px] leading-none ${active ? "text-blue-400" : "text-gray-400"}`}>
-                  {t.sub}
+                  {tSub(ut.subKey as never)}
                 </span>
                 {active && (
                   <CheckCircleIcon className="mt-1.5 h-3.5 w-3.5 text-blue-500" />
@@ -319,18 +315,18 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
 
         {/* Bed / Bath counters */}
         <div className="mt-5 flex flex-wrap gap-8">
-          <Counter label="Bedrooms"  value={bedrooms}  onChange={setBedrooms}  />
-          <Counter label="Bathrooms" value={bathrooms} onChange={setBathrooms} />
+          <Counter label={t("bedrooms")}  value={bedrooms}  onChange={setBedrooms}  />
+          <Counter label={t("bathrooms")} value={bathrooms} onChange={setBathrooms} />
         </div>
       </Section>
 
       {/* ── 3. Amenities + Description ───────────────────────────────── */}
       <Section
         icon={SparklesIcon}
-        title="Amenities"
+        title={t("amenities")}
         badge={
           amenities.size > 0 ? (
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white ltr-numbers">
               {amenities.size}
             </span>
           ) : null
@@ -338,13 +334,14 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
       >
         {/* Toggle pills */}
         <div className="flex flex-wrap gap-2">
-          {AMENITIES.map((a) => {
-            const on = amenities.has(a.value);
+          {AMENITY_VALUES.map((v) => {
+            const on = amenities.has(v);
+            const label = v === "AC" ? tAmen("acShort") : tAmen(v as never);
             return (
               <button
-                key={a.value}
+                key={v}
                 type="button"
-                onClick={() => toggleAmenity(a.value)}
+                onClick={() => toggleAmenity(v)}
                 className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-all ${
                   on
                     ? "border-blue-500 bg-blue-600 text-white shadow-sm"
@@ -352,7 +349,7 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
                 }`}
               >
                 {on && <CheckIcon className="h-3.5 w-3.5" />}
-                {a.label}
+                {label}
               </button>
             );
           })}
@@ -361,13 +358,13 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
         {/* Description */}
         <div className="mt-5">
           <label className="mb-1.5 block text-sm font-medium text-gray-700">
-            Description{" "}
-            <span className="text-xs font-normal text-gray-400">(optional)</span>
+            {t("description")}{" "}
+            <span className="text-xs font-normal text-gray-400">{t("descriptionOptional")}</span>
           </label>
           <textarea
             name="description"
             rows={3}
-            placeholder="e.g. Corner unit with sea view, recently renovated…"
+            placeholder={t("descriptionPlaceholder")}
             defaultValue={initialData?.description ?? ""}
             className="block w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           />
@@ -375,10 +372,9 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
       </Section>
 
       {/* ── 4. Maintenance Mode ──────────────────────────────────────── */}
-      <Section icon={AdjustmentsHorizontalIcon} title="Maintenance Mode">
+      <Section icon={AdjustmentsHorizontalIcon} title={t("maintenanceMode")}>
         <p className="mb-4 text-xs text-gray-500 leading-relaxed">
-          Vacant / Reserved / Occupied status is <strong>auto-calculated</strong> from reservations.
-          Use this toggle only to temporarily block the unit for maintenance work.
+          {t.rich("maintenanceModeBody", { b: (chunks) => <strong>{chunks}</strong> })}
         </p>
         <div className="flex items-center gap-4">
           <button
@@ -401,14 +397,14 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
               <>
                 <CheckCircleIcon className="h-4 w-4 text-green-600" />
                 <span className="text-sm font-medium text-green-700">
-                  Normal — status auto-updates (Vacant / Reserved / Occupied)
+                  {t("normal")}
                 </span>
               </>
             ) : (
               <>
                 <WrenchScrewdriverIcon className="h-4 w-4 text-amber-600" />
                 <span className="text-sm font-medium text-amber-700">
-                  Under Maintenance — blocked for all bookings
+                  {t("underMaintenance")}
                 </span>
               </>
             )}
@@ -417,7 +413,7 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
       </Section>
 
       {/* ── 5. Photos ────────────────────────────────────────────────── */}
-      <Section icon={PhotoIcon} title="Photos">
+      <Section icon={PhotoIcon} title={t("photos")}>
         <PhotoUpload
           initialPhotos={initialData?.photos ?? []}
           folder={storageFolder}
@@ -432,7 +428,7 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
             : "/dashboard/units"
         }
         isPending={isPending}
-        submitLabel={isEditMode ? "Save Changes" : "Create Unit"}
+        submitLabel={isEditMode ? t("saveChanges") : t("createUnit")}
       />
     </form>
   );

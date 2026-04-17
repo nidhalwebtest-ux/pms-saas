@@ -17,13 +17,15 @@ import {
   ChevronUpIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 import { UNIT_STATUS_CONFIG } from "@/lib/unit-status";
 import { quickUpdateUnit } from "./actions";
 import type { UnitRow } from "./page";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const TYPE_LABEL: Record<string, string> = {
+// Kept for CSV export (English export only)
+const TYPE_LABEL_EN: Record<string, string> = {
   STUDIO:   "Studio",
   ONE_BR:   "1 BR",
   TWO_BR:   "2 BR",
@@ -65,7 +67,7 @@ function exportCSV(rows: UnitRow[]) {
   const lines = rows.map((u) => [
     `"${u.name.replace(/"/g, '""')}"`,
     `"${u.property.name.replace(/"/g, '""')}"`,
-    TYPE_LABEL[u.unitType] ?? u.unitType,
+    TYPE_LABEL_EN[u.unitType] ?? u.unitType,
     u.floor === 0 ? "Ground" : u.floor,
     u.bedrooms,
     u.bathrooms,
@@ -111,7 +113,7 @@ function SortTh({
     <th
       scope="col"
       onClick={() => onSort(sortKey)}
-      className={`cursor-pointer select-none px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-100 transition-colors group ${className}`}
+      className={`cursor-pointer select-none px-3 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-100 transition-colors group ${className}`}
     >
       <div className="flex items-center gap-1">
         {label}
@@ -133,6 +135,9 @@ function EditableRow({ unit, onDone }: { unit: UnitRow; onDone: () => void }) {
   const [name, setName] = useState(unit.name);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const t       = useTranslations("units.list");
+  const tTypes  = useTranslations("units.types");
+  const tStatus = useTranslations("units.displayStatus");
 
   const save = () => {
     const fd = new FormData();
@@ -143,7 +148,7 @@ function EditableRow({ unit, onDone }: { unit: UnitRow; onDone: () => void }) {
       if (res?.error) {
         toast.error(res.error);
       } else {
-        toast.success("Saved");
+        toast.success(t("savedToast"));
         router.refresh();
         onDone();
       }
@@ -151,11 +156,15 @@ function EditableRow({ unit, onDone }: { unit: UnitRow; onDone: () => void }) {
   };
 
   const cfg = UNIT_STATUS_CONFIG[unit.displayStatus];
+  let typeLabel = unit.unitType;
+  try { typeLabel = tTypes(unit.unitType as never); } catch {}
+  let statusLabel = cfg.label;
+  try { statusLabel = tStatus(unit.displayStatus as never); } catch {}
 
   return (
     <tr className="bg-blue-50 ring-2 ring-inset ring-blue-300">
       {/* Photo */}
-      <td className="py-2.5 pl-4 pr-2 sm:pl-5">
+      <td className="py-2.5 ps-4 pe-2 sm:ps-5">
         <UnitThumbnail photos={unit.photos} name={unit.name} />
       </td>
       {/* Name (editable) */}
@@ -171,27 +180,27 @@ function EditableRow({ unit, onDone }: { unit: UnitRow; onDone: () => void }) {
       {/* Type */}
       <td className="hidden px-3 py-2 md:table-cell">
         <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${TYPE_BADGE[unit.unitType] ?? "bg-gray-100 text-gray-600"}`}>
-          {TYPE_LABEL[unit.unitType] ?? unit.unitType}
+          {typeLabel}
         </span>
       </td>
       {/* Floor */}
-      <td className="hidden px-3 py-2 text-sm text-gray-500 lg:table-cell">
-        {unit.floor > 0 ? `F${unit.floor}` : "G"}
+      <td className="hidden px-3 py-2 text-sm text-gray-500 lg:table-cell ltr-numbers">
+        {unit.floor > 0 ? t("floorShort", { n: unit.floor }) : t("groundShort")}
       </td>
       {/* Beds/Baths */}
-      <td className="hidden px-3 py-2 text-sm text-gray-500 lg:table-cell">
-        {unit.bedrooms}b / {unit.bathrooms}ba
+      <td className="hidden px-3 py-2 text-sm text-gray-500 lg:table-cell ltr-numbers">
+        {t("bedsBathsShort", { beds: unit.bedrooms, baths: unit.bathrooms })}
       </td>
       {/* Price */}
       <td className="hidden px-3 py-2 text-sm font-semibold text-gray-800 xl:table-cell whitespace-nowrap">
-        {Number(unit.basePrice).toFixed(3)}{" "}
+        <span className="ltr-numbers">{Number(unit.basePrice).toFixed(3)}</span>{" "}
         <span className="text-xs font-normal text-gray-400">OMR</span>
       </td>
       {/* Status */}
       <td className="px-3 py-2">
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.badge}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-          {cfg.label}
+          {statusLabel}
         </span>
       </td>
       {/* Actions */}
@@ -202,13 +211,13 @@ function EditableRow({ unit, onDone }: { unit: UnitRow; onDone: () => void }) {
             disabled={isPending}
             className="flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-60 transition-colors"
           >
-            <CheckIcon className="h-3.5 w-3.5" /> Save
+            <CheckIcon className="h-3.5 w-3.5" /> {t("actionSave")}
           </button>
           <button
             onClick={onDone}
             className="flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
           >
-            <XMarkIcon className="h-3.5 w-3.5" /> Cancel
+            <XMarkIcon className="h-3.5 w-3.5" /> {t("actionCancel")}
           </button>
         </div>
       </td>
@@ -220,11 +229,19 @@ function EditableRow({ unit, onDone }: { unit: UnitRow; onDone: () => void }) {
 
 function UnitRow({ unit, onEdit }: { unit: UnitRow; onEdit: () => void }) {
   const cfg = UNIT_STATUS_CONFIG[unit.displayStatus];
+  const t       = useTranslations("units.list");
+  const tTypes  = useTranslations("units.types");
+  const tStatus = useTranslations("units.displayStatus");
+
+  let typeLabel = unit.unitType;
+  try { typeLabel = tTypes(unit.unitType as never); } catch {}
+  let statusLabel = cfg.label;
+  try { statusLabel = tStatus(unit.displayStatus as never); } catch {}
 
   return (
     <tr className="group hover:bg-blue-50/40 transition-colors">
       {/* Photo */}
-      <td className="py-2.5 pl-4 pr-2 sm:pl-5">
+      <td className="py-2.5 ps-4 pe-2 sm:ps-5">
         <UnitThumbnail photos={unit.photos} name={unit.name} />
       </td>
 
@@ -252,24 +269,24 @@ function UnitRow({ unit, onEdit }: { unit: UnitRow; onEdit: () => void }) {
       {/* Type */}
       <td className="hidden px-3 py-2.5 md:table-cell">
         <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${TYPE_BADGE[unit.unitType] ?? "bg-gray-100 text-gray-600"}`}>
-          {TYPE_LABEL[unit.unitType] ?? unit.unitType}
+          {typeLabel}
         </span>
       </td>
 
       {/* Floor */}
-      <td className="hidden px-3 py-2.5 text-sm text-gray-500 lg:table-cell">
-        {unit.floor > 0 ? `F${unit.floor}` : "G"}
+      <td className="hidden px-3 py-2.5 text-sm text-gray-500 lg:table-cell ltr-numbers">
+        {unit.floor > 0 ? t("floorShort", { n: unit.floor }) : t("groundShort")}
       </td>
 
       {/* Beds/Baths */}
-      <td className="hidden px-3 py-2.5 text-sm text-gray-500 lg:table-cell">
-        {unit.bedrooms}b / {unit.bathrooms}ba
-        {unit.area ? <span className="ml-1 text-gray-400">· {unit.area}m²</span> : null}
+      <td className="hidden px-3 py-2.5 text-sm text-gray-500 lg:table-cell ltr-numbers">
+        {t("bedsBathsShort", { beds: unit.bedrooms, baths: unit.bathrooms })}
+        {unit.area ? <span className="ms-1 text-gray-400">{t("areaShort", { area: unit.area })}</span> : null}
       </td>
 
       {/* Base Price */}
       <td className="hidden px-3 py-2.5 text-sm font-semibold text-gray-800 xl:table-cell whitespace-nowrap">
-        {Number(unit.basePrice).toFixed(3)}{" "}
+        <span className="ltr-numbers">{Number(unit.basePrice).toFixed(3)}</span>{" "}
         <span className="text-xs font-normal text-gray-400">OMR</span>
       </td>
 
@@ -277,33 +294,33 @@ function UnitRow({ unit, onEdit }: { unit: UnitRow; onEdit: () => void }) {
       <td className="px-3 py-2.5">
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.badge}`}>
           <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-          {cfg.label}
+          {statusLabel}
         </span>
       </td>
 
       {/* Actions */}
-      <td className="px-3 py-2.5 text-right">
+      <td className="px-3 py-2.5 text-end">
         <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
           <Link
             href={`/dashboard/units/${unit.id}`}
             className="rounded-lg p-1.5 text-gray-500 hover:bg-blue-100 hover:text-blue-700 transition-colors"
-            title="View details"
+            title={t("actionView")}
           >
             <EyeIcon className="h-4 w-4" />
           </Link>
           <button
             onClick={onEdit}
             className="rounded-lg p-1.5 text-gray-500 hover:bg-blue-100 hover:text-blue-700 transition-colors"
-            title="Quick edit"
+            title={t("actionQuickEdit")}
           >
             <PencilSquareIcon className="h-4 w-4" />
           </button>
           <Link
             href={`/dashboard/units/${unit.id}/edit`}
             className="rounded-lg px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100 transition-colors"
-            title="Full edit"
+            title={t("actionFullEdit")}
           >
-            Edit
+            {t("actionFullEdit")}
           </Link>
         </div>
       </td>
@@ -323,6 +340,8 @@ export default function UnitsView({
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const t        = useTranslations("units.list");
+  const tFilters = useTranslations("units.filters");
 
   const sorted = useMemo(() => sortUnits(units, sortKey, sortDir), [units, sortKey, sortDir]);
 
@@ -331,14 +350,22 @@ export default function UnitsView({
     else { setSortKey(key); setSortDir("asc"); }
   }
 
+  const statusValue = (s: string) => {
+    if (s === "vacant")      return tFilters("statusVacant");
+    if (s === "occupied")    return tFilters("statusOccupied");
+    if (s === "reserved")    return tFilters("statusReserved");
+    if (s === "maintenance") return tFilters("statusMaintenance");
+    return s;
+  };
+
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
 
       {/* ── Quick Actions toolbar ──────────────────────────────── */}
       <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/60 px-4 py-2">
         <span className="text-xs text-gray-500">
-          {sorted.length} unit{sorted.length !== 1 ? "s" : ""}
-          {statusFilter !== "all" && <> · filtered by <span className="font-medium">{statusFilter}</span></>}
+          {t("unitsCount", { count: sorted.length })}
+          {statusFilter !== "all" && <> · {t("filteredBy", { value: statusValue(statusFilter) })}</>}
         </span>
         <div className="flex items-center gap-2">
           <button
@@ -346,14 +373,14 @@ export default function UnitsView({
             className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-colors"
           >
             <DocumentArrowDownIcon className="h-3.5 w-3.5" />
-            CSV Export
+            {t("csvExport")}
           </button>
           <button
             onClick={() => window.print()}
             className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-colors"
           >
             <PrinterIcon className="h-3.5 w-3.5" />
-            Print
+            {t("print")}
           </button>
         </div>
       </div>
@@ -363,15 +390,15 @@ export default function UnitsView({
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="py-3 pl-4 pr-2 sm:pl-5" />
-              <SortTh label="Unit"     sortKey="name"          currentKey={sortKey} currentDir={sortDir} onSort={toggleSort} />
-              <th className="hidden px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell">Property</th>
-              <SortTh label="Type"     sortKey="unitType"      currentKey={sortKey} currentDir={sortDir} onSort={toggleSort} className="hidden md:table-cell" />
-              <SortTh label="Floor"    sortKey="floor"         currentKey={sortKey} currentDir={sortDir} onSort={toggleSort} className="hidden lg:table-cell" />
-              <SortTh label="Beds/Baths" sortKey="bedrooms"   currentKey={sortKey} currentDir={sortDir} onSort={toggleSort} className="hidden lg:table-cell" />
-              <SortTh label="Price/mo" sortKey="basePrice"     currentKey={sortKey} currentDir={sortDir} onSort={toggleSort} className="hidden xl:table-cell" />
-              <SortTh label="Status"   sortKey="displayStatus" currentKey={sortKey} currentDir={sortDir} onSort={toggleSort} />
-              <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
+              <th className="py-3 ps-4 pe-2 sm:ps-5" />
+              <SortTh label={t("colUnit")}     sortKey="name"          currentKey={sortKey} currentDir={sortDir} onSort={toggleSort} />
+              <th className="hidden px-3 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell">{t("colProperty")}</th>
+              <SortTh label={t("colType")}     sortKey="unitType"      currentKey={sortKey} currentDir={sortDir} onSort={toggleSort} className="hidden md:table-cell" />
+              <SortTh label={t("colFloor")}    sortKey="floor"         currentKey={sortKey} currentDir={sortDir} onSort={toggleSort} className="hidden lg:table-cell" />
+              <SortTh label={t("colBedsBaths")} sortKey="bedrooms"     currentKey={sortKey} currentDir={sortDir} onSort={toggleSort} className="hidden lg:table-cell" />
+              <SortTh label={t("colPrice")}    sortKey="basePrice"     currentKey={sortKey} currentDir={sortDir} onSort={toggleSort} className="hidden xl:table-cell" />
+              <SortTh label={t("colStatus")}   sortKey="displayStatus" currentKey={sortKey} currentDir={sortDir} onSort={toggleSort} />
+              <th className="px-3 py-3 text-end text-xs font-semibold uppercase tracking-wide text-gray-500">{t("colActions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 bg-white">
@@ -379,7 +406,7 @@ export default function UnitsView({
               <tr>
                 <td colSpan={9} className="py-16 text-center text-sm text-gray-400">
                   <HomeModernIcon className="mx-auto mb-3 h-10 w-10 text-gray-200" />
-                  No units match your filters.
+                  {t("noMatch")}
                 </td>
               </tr>
             ) : (
@@ -398,7 +425,7 @@ export default function UnitsView({
       {/* Footer */}
       {sorted.length > 0 && (
         <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-2.5 text-xs text-gray-500">
-          Showing {sorted.length} unit{sorted.length !== 1 ? "s" : ""}
+          {t("showingCount", { count: sorted.length })}
         </div>
       )}
     </div>

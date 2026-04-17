@@ -19,6 +19,9 @@ import {
   deleteUnitPrice,
   toggleUnitPrice,
 } from "@/app/dashboard/units/[unitId]/actions";
+import { useTranslations, useLocale } from "next-intl";
+import { format } from "date-fns";
+import { ar, enGB } from "date-fns/locale";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -49,14 +52,19 @@ function fmt(v: string | null) {
   return `${Number(v).toFixed(3)} OMR`;
 }
 
-function fmtDate(d: string | null) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+function useFmtDate() {
+  const locale = useLocale();
+  const dfLocale = locale === "ar" ? ar : enGB;
+  return (d: string | null) => {
+    if (!d) return "—";
+    return format(new Date(d), "dd MMM yyyy", { locale: dfLocale });
+  };
 }
 
 // ── 30-Day Price Calendar ─────────────────────────────────────────────────────
 
 function PriceCalendar({ prices }: { prices: UnitPrice[] }) {
+  const t = useTranslations("units.pricing");
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -69,19 +77,18 @@ function PriceCalendar({ prices }: { prices: UnitPrice[] }) {
   return (
     <div>
       <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
-        30-Day Price Preview
+        {t("title30Day")}
       </h4>
       <div className="grid grid-cols-6 gap-1 sm:grid-cols-10">
         {days.map((day) => {
           const ds = day.toISOString().slice(0, 10);
           const resolved = resolveClientPrice(prices, ds);
-          const isDefault  = !resolved || resolved.priceType === "DEFAULT";
           const isSeasonal = resolved?.priceType === "SEASONAL";
 
           return (
             <div
               key={ds}
-              title={`${ds}${resolved ? ` · ${resolved.rate.toFixed(3)} OMR${isSeasonal ? ` (${resolved.name})` : ""}` : " · No price"}`}
+              title={`${ds}${resolved ? ` · ${resolved.rate.toFixed(3)} OMR${isSeasonal ? ` (${resolved.name})` : ""}` : ` · ${t("noPriceTip")}`}`}
               className={`rounded-md p-1 text-center text-[10px] leading-tight cursor-default ${
                 isSeasonal
                   ? "bg-violet-100 text-violet-800"
@@ -90,10 +97,10 @@ function PriceCalendar({ prices }: { prices: UnitPrice[] }) {
                   : "bg-gray-100 text-gray-400"
               }`}
             >
-              <div className="font-semibold">
+              <div className="font-semibold ltr-numbers">
                 {day.getDate()}
               </div>
-              <div className="truncate">
+              <div className="truncate ltr-numbers">
                 {resolved ? `${resolved.rate.toFixed(1)}` : "—"}
               </div>
             </div>
@@ -102,13 +109,13 @@ function PriceCalendar({ prices }: { prices: UnitPrice[] }) {
       </div>
       <div className="mt-2 flex items-center gap-4 text-xs text-gray-500">
         <span className="flex items-center gap-1">
-          <span className="h-2.5 w-2.5 rounded bg-blue-100" /> Default
+          <span className="h-2.5 w-2.5 rounded bg-blue-100" /> {t("legendDefault")}
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-2.5 w-2.5 rounded bg-violet-100" /> Seasonal
+          <span className="h-2.5 w-2.5 rounded bg-violet-100" /> {t("legendSeasonal")}
         </span>
         <span className="flex items-center gap-1">
-          <span className="h-2.5 w-2.5 rounded bg-gray-100" /> No price
+          <span className="h-2.5 w-2.5 rounded bg-gray-100" /> {t("legendNoPrice")}
         </span>
       </div>
     </div>
@@ -119,21 +126,21 @@ function PriceCalendar({ prices }: { prices: UnitPrice[] }) {
 
 function DefaultPriceCard({
   price,
-  unitId,
   onEdit,
 }: {
   price: UnitPrice | undefined;
   unitId: string;
   onEdit: () => void;
 }) {
+  const t = useTranslations("units.pricing");
   return (
     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CurrencyDollarIcon className="h-5 w-5 text-blue-600" />
-          <span className="text-sm font-semibold text-blue-900">Default Price</span>
+          <span className="text-sm font-semibold text-blue-900">{t("defaultPrice")}</span>
           <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
-            Always active
+            {t("alwaysActive")}
           </span>
         </div>
         <button
@@ -141,27 +148,25 @@ function DefaultPriceCard({
           className="flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
         >
           <PencilSquareIcon className="h-3.5 w-3.5" />
-          {price ? "Edit" : "Set price"}
+          {price ? t("editLabel") : t("setPrice")}
         </button>
       </div>
 
       {price ? (
         <div className="mt-3 grid grid-cols-3 gap-3">
           {[
-            { label: "Daily",   val: fmt(price.dailyRate) },
-            { label: "Weekly",  val: fmt(price.weeklyRate) },
-            { label: "Monthly", val: fmt(price.monthlyRate) },
-          ].map(({ label, val }) => (
-            <div key={label} className="rounded-lg bg-white px-3 py-2 shadow-sm">
-              <p className="text-xs text-gray-500">{label}</p>
-              <p className="text-sm font-bold text-gray-900">{val}</p>
+            { labelKey: "daily",   val: fmt(price.dailyRate) },
+            { labelKey: "weekly",  val: fmt(price.weeklyRate) },
+            { labelKey: "monthly", val: fmt(price.monthlyRate) },
+          ].map(({ labelKey, val }) => (
+            <div key={labelKey} className="rounded-lg bg-white px-3 py-2 shadow-sm">
+              <p className="text-xs text-gray-500">{t(labelKey as never)}</p>
+              <p className="text-sm font-bold text-gray-900 ltr-numbers">{val}</p>
             </div>
           ))}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-blue-700/70">
-          No default price set. Click "Set price" to add one.
-        </p>
+        <p className="mt-3 text-sm text-blue-700/70">{t("noDefault")}</p>
       )}
     </div>
   );
@@ -172,14 +177,14 @@ function DefaultPriceCard({
 function SeasonalRow({
   price,
   onEdit,
-  onDelete,
-  onToggle,
 }: {
   price: UnitPrice;
   onEdit:   () => void;
   onDelete: () => void;
   onToggle: () => void;
 }) {
+  const t = useTranslations("units.pricing");
+  const fmtDate = useFmtDate();
   const [deletePending, startDelete] = useTransition();
   const [togglePending, startToggle] = useTransition();
 
@@ -192,13 +197,13 @@ function SeasonalRow({
             <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
               price.isActive ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-500"
             }`}>
-              {price.isActive ? "Active" : "Inactive"}
+              {price.isActive ? t("active") : t("inactive")}
             </span>
             <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-xs text-violet-700">
-              Priority {price.priority}
+              {t("priorityLabel", { n: price.priority })}
             </span>
           </div>
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500 ltr-numbers">
             <CalendarDaysIcon className="h-3.5 w-3.5" />
             {fmtDate(price.startDate)} → {fmtDate(price.endDate)}
           </div>
@@ -212,7 +217,7 @@ function SeasonalRow({
             })}
             disabled={togglePending}
             className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-            title={price.isActive ? "Deactivate" : "Activate"}
+            title={price.isActive ? t("deactivate") : t("activate")}
           >
             {price.isActive
               ? <XCircleIcon className="h-4 w-4" />
@@ -221,7 +226,7 @@ function SeasonalRow({
           <button
             onClick={onEdit}
             className="rounded-lg p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-            title="Edit"
+            title={t("edit")}
           >
             <PencilSquareIcon className="h-4 w-4" />
           </button>
@@ -229,11 +234,11 @@ function SeasonalRow({
             onClick={() => startDelete(async () => {
               const res = await deleteUnitPrice(price.id);
               if (res.error) toast.error(res.error);
-              else toast.success("Seasonal price deleted.");
+              else toast.success(t("deletedToast"));
             })}
             disabled={deletePending}
             className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 transition-colors"
-            title="Delete"
+            title={t("delete")}
           >
             <TrashIcon className="h-4 w-4" />
           </button>
@@ -242,13 +247,13 @@ function SeasonalRow({
 
       <div className="mt-3 grid grid-cols-3 gap-2">
         {[
-          { label: "Daily",   val: fmt(price.dailyRate) },
-          { label: "Weekly",  val: fmt(price.weeklyRate) },
-          { label: "Monthly", val: fmt(price.monthlyRate) },
-        ].map(({ label, val }) => (
-          <div key={label} className="rounded-lg bg-gray-50 px-2 py-1.5">
-            <p className="text-xs text-gray-400">{label}</p>
-            <p className="text-xs font-semibold text-gray-800">{val}</p>
+          { labelKey: "daily",   val: fmt(price.dailyRate) },
+          { labelKey: "weekly",  val: fmt(price.weeklyRate) },
+          { labelKey: "monthly", val: fmt(price.monthlyRate) },
+        ].map(({ labelKey, val }) => (
+          <div key={labelKey} className="rounded-lg bg-gray-50 px-2 py-1.5">
+            <p className="text-xs text-gray-400">{t(labelKey as never)}</p>
+            <p className="text-xs font-semibold text-gray-800 ltr-numbers">{val}</p>
           </div>
         ))}
       </div>
@@ -272,12 +277,13 @@ function PriceModal({
   const isEdit     = mode === "edit-seasonal";
   const isSeasonal = mode === "seasonal" || isEdit;
   const [pending, startTransition] = useTransition();
+  const tM = useTranslations("units.pricing.modal");
 
   const title = mode === "default"
-    ? (editPrice ? "Edit Default Price" : "Set Default Price")
+    ? (editPrice ? tM("editDefaultTitle") : tM("setDefaultTitle"))
     : isEdit
-    ? "Edit Seasonal Price"
-    : "Add Seasonal Price";
+    ? tM("editSeasonalTitle")
+    : tM("addSeasonalTitle");
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -294,7 +300,7 @@ function PriceModal({
       if (res.error) {
         toast.error(res.error);
       } else {
-        toast.success(mode === "default" ? "Default price saved." : isEdit ? "Price updated." : "Seasonal price added.");
+        toast.success(mode === "default" ? tM("defaultSavedToast") : isEdit ? tM("priceUpdatedToast") : tM("seasonalAddedToast"));
         onClose();
       }
     });
@@ -324,18 +330,18 @@ function PriceModal({
           {isSeasonal && (
             <>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-700">Season Name *</label>
+                <label className="mb-1 block text-xs font-medium text-gray-700">{tM("seasonName")}</label>
                 <input
                   name="name"
                   defaultValue={editPrice?.name ?? ""}
                   required
-                  placeholder="e.g. Khareef 2026"
+                  placeholder={tM("seasonNamePlaceholder")}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">Start Date *</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">{tM("startDate")}</label>
                   <input
                     type="date"
                     name="startDate"
@@ -345,7 +351,7 @@ function PriceModal({
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">End Date *</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">{tM("endDate")}</label>
                   <input
                     type="date"
                     name="endDate"
@@ -357,7 +363,7 @@ function PriceModal({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">Priority</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">{tM("priority")}</label>
                   <input
                     type="number"
                     name="priority"
@@ -366,17 +372,17 @@ function PriceModal({
                     max={100}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                   />
-                  <p className="mt-1 text-xs text-gray-400">Higher = wins overlap</p>
+                  <p className="mt-1 text-xs text-gray-400">{tM("priorityHelp")}</p>
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-700">Status</label>
+                  <label className="mb-1 block text-xs font-medium text-gray-700">{tM("statusLabel")}</label>
                   <select
                     name="isActive"
                     defaultValue={editPrice?.isActive === false ? "false" : "true"}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                   >
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
+                    <option value="true">{tM("active")}</option>
+                    <option value="false">{tM("inactive")}</option>
                   </select>
                 </div>
               </div>
@@ -386,7 +392,7 @@ function PriceModal({
           {/* Rates */}
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Daily Rate * (OMR)</label>
+              <label className="mb-1 block text-xs font-medium text-gray-700">{tM("dailyRate")}</label>
               <input
                 type="number"
                 name="dailyRate"
@@ -394,24 +400,24 @@ function PriceModal({
                 min="0"
                 defaultValue={editPrice?.dailyRate ?? ""}
                 required
-                placeholder="0.000"
+                placeholder={tM("ratePlaceholder")}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Weekly (OMR)</label>
+              <label className="mb-1 block text-xs font-medium text-gray-700">{tM("weeklyRate")}</label>
               <input
                 type="number"
                 name="weeklyRate"
                 step="0.001"
                 min="0"
                 defaultValue={editPrice?.weeklyRate ?? ""}
-                placeholder="optional"
+                placeholder={tM("rateOptional")}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-700">Monthly * (OMR)</label>
+              <label className="mb-1 block text-xs font-medium text-gray-700">{tM("monthlyRate")}</label>
               <input
                 type="number"
                 name="monthlyRate"
@@ -419,7 +425,7 @@ function PriceModal({
                 min="0"
                 defaultValue={editPrice?.monthlyRate ?? ""}
                 required
-                placeholder="0.000"
+                placeholder={tM("ratePlaceholder")}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               />
             </div>
@@ -432,14 +438,14 @@ function PriceModal({
               onClick={onClose}
               className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
             >
-              Cancel
+              {tM("cancel")}
             </button>
             <button
               type="submit"
               disabled={pending}
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
             >
-              {pending ? "Saving…" : "Save"}
+              {pending ? tM("saving") : tM("save")}
             </button>
           </div>
         </form>
@@ -451,6 +457,7 @@ function PriceModal({
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function UnitPricingSection({ unitId, prices }: Props) {
+  const t = useTranslations("units.pricing");
   const defaultPrice   = prices.find((p) => p.priceType === "DEFAULT");
   const seasonalPrices = prices.filter((p) => p.priceType === "SEASONAL")
     .sort((a, b) => {
@@ -477,21 +484,21 @@ export default function UnitPricingSection({ unitId, prices }: Props) {
       {/* Seasonal Prices */}
       <div>
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-800">Seasonal Prices</h3>
+          <h3 className="text-sm font-semibold text-gray-800">{t("seasonalPrices")}</h3>
           <button
             onClick={openAddSeasonal}
             className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 transition-colors"
           >
             <PlusIcon className="h-3.5 w-3.5" />
-            Add Season
+            {t("addSeason")}
           </button>
         </div>
 
         {seasonalPrices.length === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 py-8 text-center">
             <CalendarDaysIcon className="mx-auto mb-2 h-8 w-8 text-gray-300" />
-            <p className="text-sm text-gray-400">No seasonal prices yet.</p>
-            <p className="text-xs text-gray-400">Add a season to override the default for specific dates.</p>
+            <p className="text-sm text-gray-400">{t("noSeasonalTitle")}</p>
+            <p className="text-xs text-gray-400">{t("noSeasonalBody")}</p>
           </div>
         ) : (
           <div className="space-y-2">

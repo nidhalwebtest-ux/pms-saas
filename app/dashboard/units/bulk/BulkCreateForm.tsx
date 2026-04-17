@@ -19,27 +19,19 @@ import {
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { bulkCreateUnits } from "@/app/dashboard/units/actions";
+import { useTranslations } from "next-intl";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const UNIT_TYPES = [
-  { value: "STUDIO",   label: "Studio", sub: "0 bed",  bedrooms: 0, bathrooms: 1 },
-  { value: "ONE_BR",   label: "1 BR",   sub: "1 bed",  bedrooms: 1, bathrooms: 1 },
-  { value: "TWO_BR",   label: "2 BR",   sub: "2 bed",  bedrooms: 2, bathrooms: 1 },
-  { value: "THREE_BR", label: "3 BR",   sub: "3 bed",  bedrooms: 3, bathrooms: 2 },
-  { value: "SUITE",    label: "Suite",  sub: "Luxury", bedrooms: 2, bathrooms: 2 },
+  { value: "STUDIO",   subKey: "zeroBed",  bedrooms: 0, bathrooms: 1 },
+  { value: "ONE_BR",   subKey: "oneBed",   bedrooms: 1, bathrooms: 1 },
+  { value: "TWO_BR",   subKey: "twoBed",   bedrooms: 2, bathrooms: 1 },
+  { value: "THREE_BR", subKey: "threeBed", bedrooms: 3, bathrooms: 2 },
+  { value: "SUITE",    subKey: "luxury",   bedrooms: 2, bathrooms: 2 },
 ] as const;
 
-const AMENITIES = [
-  { value: "AC",        label: "A/C"       },
-  { value: "FURNISHED", label: "Furnished" },
-  { value: "KITCHEN",   label: "Kitchen"   },
-  { value: "PARKING",   label: "Parking"   },
-  { value: "WIFI",      label: "Wi-Fi"     },
-  { value: "TV",        label: "TV"        },
-  { value: "BALCONY",   label: "Balcony"   },
-  { value: "POOL",      label: "Pool"      },
-];
+const AMENITY_VALUES = ["AC", "FURNISHED", "KITCHEN", "PARKING", "WIFI", "TV", "BALCONY", "POOL"] as const;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -114,6 +106,10 @@ interface Props {
 export default function BulkCreateForm({ properties, defaultPropertyId }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations("units.bulk");
+  const tTypes = useTranslations("units.types");
+  const tSub = useTranslations("units.typesSub");
+  const tAmen = useTranslations("units.amenities");
 
   // Config state
   const [propertyId, setPropertyId] = useState(defaultPropertyId ?? properties[0]?.id ?? "");
@@ -197,15 +193,15 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
   const canSubmit   = activeCount > 0 && propertyId && basePrice && (!createPrice || (dailyRate && monthlyRate));
 
   const rangeError = startNum > endNum
-    ? "Start must be ≤ End"
+    ? t("rangeErrorOrder")
     : endNum - startNum + 1 > 200
-    ? "Max 200 units per batch"
+    ? t("rangeErrorMax")
     : null;
 
   function handleSubmit() {
     if (!canSubmit) return;
     const bp = parseFloat(basePrice);
-    if (isNaN(bp) || bp < 0) { toast.error("Enter a valid base price."); return; }
+    if (isNaN(bp) || bp < 0) { toast.error(t("invalidBasePrice")); return; }
 
     startTransition(async () => {
       const res = await bulkCreateUnits({
@@ -227,7 +223,7 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
       if (res.error) {
         toast.error(res.error);
       } else {
-        toast.success(`${res.created} unit${res.created !== 1 ? "s" : ""} created!`);
+        toast.success(t("unitsCreatedToast", { count: res.created ?? 0 }));
         router.push(propertyId
           ? `/dashboard/properties/${propertyId}`
           : "/dashboard/units");
@@ -242,25 +238,25 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
       <div className="space-y-5">
 
         {/* Property & Floor */}
-        <Section icon={HomeModernIcon} title="Property & Floor">
+        <Section icon={HomeModernIcon} title={t("propertyAndFloor")}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Property <span className="text-red-500">*</span>
+                {t("property")} <span className="text-red-500">*</span>
               </label>
               <select
                 value={propertyId}
                 onChange={(e) => setPropertyId(e.target.value)}
                 className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               >
-                <option value="">Choose a property…</option>
+                <option value="">{t("propertyPlaceholder")}</option>
                 {properties.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Floor</label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("floor")}</label>
               <input
                 type="number"
                 min="0"
@@ -268,7 +264,7 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
                 onChange={(e) => setFloor(parseInt(e.target.value) || 0)}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
-              <p className="mt-1 text-xs text-gray-400">0 = Ground floor</p>
+              <p className="mt-1 text-xs text-gray-400">{t("floorHelp")}</p>
             </div>
           </div>
         </Section>
@@ -276,52 +272,52 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
         {/* Naming Pattern */}
         <Section
           icon={ListBulletIcon}
-          title="Naming Pattern"
+          title={t("namingPattern")}
           badge={
-            <span className="ml-auto text-xs font-normal text-gray-400">
-              Generates unit names automatically
+            <span className="ms-auto text-xs font-normal text-gray-400">
+              {t("namingPatternHelp")}
             </span>
           }
         >
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div className="sm:col-span-2">
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Prefix</label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("prefix")}</label>
               <input
                 type="text"
                 value={prefix}
                 onChange={(e) => { setPrefix(e.target.value); setHasCustomized(false); }}
-                placeholder="Room, Unit, Apt…"
+                placeholder={t("prefixPlaceholder")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Start #</label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("startNum")}</label>
               <input
                 type="number"
                 value={startNum}
                 onChange={(e) => { setStartNum(parseInt(e.target.value) || 1); setHasCustomized(false); }}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ltr-numbers"
               />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">End #</label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("endNum")}</label>
               <input
                 type="number"
                 value={endNum}
                 onChange={(e) => { setEndNum(parseInt(e.target.value) || 1); setHasCustomized(false); }}
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 ltr-numbers"
               />
             </div>
           </div>
 
           {/* Separator */}
           <div className="mt-4">
-            <p className="mb-2 text-xs font-medium text-gray-500">Separator between prefix and number</p>
+            <p className="mb-2 text-xs font-medium text-gray-500">{t("separator")}</p>
             <div className="flex gap-2">
               {[
-                { value: " ",  label: "Space",   example: "Room 101" },
-                { value: "",   label: "None",    example: "Room101"  },
-                { value: "-",  label: "Dash",    example: "Room-101" },
+                { value: " ", labelKey: "sepSpace" },
+                { value: "",  labelKey: "sepNone"  },
+                { value: "-", labelKey: "sepDash"  },
               ].map((opt) => (
                 <button
                   key={opt.value}
@@ -333,8 +329,8 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
                       : "border-gray-200 bg-white text-gray-600 hover:border-blue-200"
                   }`}
                 >
-                  <span className="font-semibold">{opt.label}</span>
-                  <span className="mt-0.5 text-[10px] text-gray-400">{prefix ? `${prefix}${opt.value}101` : "101"}</span>
+                  <span className="font-semibold">{t(opt.labelKey as never)}</span>
+                  <span className="mt-0.5 text-[10px] text-gray-400 ltr-numbers">{prefix ? `${prefix}${opt.value}101` : "101"}</span>
                 </button>
               ))}
             </div>
@@ -348,13 +344,20 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
           ) : generatedNames.length > 0 && (
             <p className="mt-3 flex items-center gap-1.5 text-xs text-gray-500">
               <InformationCircleIcon className="h-3.5 w-3.5 text-blue-400" />
-              Will generate <strong>{generatedNames.length}</strong> units:{" "}
-              <span className="font-mono text-gray-700">
-                {generatedNames[0]}
-              </span>
-              {generatedNames.length > 1 && (
-                <> … <span className="font-mono text-gray-700">{generatedNames[generatedNames.length - 1]}</span></>
-              )}
+              {generatedNames.length > 1
+                ? t.rich("willGenerateRange", {
+                    count: generatedNames.length,
+                    first: generatedNames[0],
+                    last: generatedNames[generatedNames.length - 1],
+                    b: (chunks) => <strong>{chunks}</strong>,
+                    mono: (chunks) => <span className="font-mono text-gray-700">{chunks}</span>,
+                  })
+                : t.rich("willGenerateSingle", {
+                    count: generatedNames.length,
+                    first: generatedNames[0],
+                    b: (chunks) => <strong>{chunks}</strong>,
+                    mono: (chunks) => <span className="font-mono text-gray-700">{chunks}</span>,
+                  })}
             </p>
           )}
         </Section>
@@ -362,21 +365,21 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
         {/* Unit Type */}
         <Section
           icon={TagIcon}
-          title="Unit Type"
+          title={t("unitType")}
           badge={
-            <span className="ml-auto text-xs font-normal text-gray-400">
-              Applied to all units in this batch
+            <span className="ms-auto text-xs font-normal text-gray-400">
+              {t("unitTypeHelp")}
             </span>
           }
         >
           <div className="grid grid-cols-5 gap-2">
-            {UNIT_TYPES.map((t) => {
-              const active = unitType === t.value;
+            {UNIT_TYPES.map((ut) => {
+              const active = unitType === ut.value;
               return (
                 <button
-                  key={t.value}
+                  key={ut.value}
                   type="button"
-                  onClick={() => handleTypeSelect(t)}
+                  onClick={() => handleTypeSelect(ut)}
                   className={`flex flex-col items-center gap-0.5 rounded-xl border-2 px-2 py-3.5 text-center transition-all focus:outline-none ${
                     active
                       ? "border-blue-500 bg-blue-50 shadow-sm"
@@ -384,10 +387,10 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
                   }`}
                 >
                   <span className={`text-sm font-bold leading-none ${active ? "text-blue-600" : "text-gray-700"}`}>
-                    {t.label}
+                    {tTypes(ut.value as never)}
                   </span>
                   <span className={`mt-1 text-[11px] leading-none ${active ? "text-blue-400" : "text-gray-400"}`}>
-                    {t.sub}
+                    {tSub(ut.subKey as never)}
                   </span>
                   {active && <CheckCircleIcon className="mt-1.5 h-3.5 w-3.5 text-blue-500" />}
                 </button>
@@ -396,23 +399,23 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
           </div>
 
           <div className="mt-5 grid grid-cols-2 gap-6 sm:grid-cols-4">
-            <Counter label="Bedrooms"  value={bedrooms}  onChange={setBedrooms}  />
-            <Counter label="Bathrooms" value={bathrooms} onChange={setBathrooms} />
+            <Counter label={t("bedrooms")}  value={bedrooms}  onChange={setBedrooms}  />
+            <Counter label={t("bathrooms")} value={bathrooms} onChange={setBathrooms} />
             <div>
-              <label className="mb-2 block text-xs font-medium text-gray-500">Area (m²)</label>
+              <label className="mb-2 block text-xs font-medium text-gray-500">{t("areaLabel")}</label>
               <input
                 type="number"
                 min="0"
                 step="0.1"
                 value={area}
                 onChange={(e) => setArea(e.target.value)}
-                placeholder="optional"
+                placeholder={t("areaOptional")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none"
               />
             </div>
             <div>
               <label className="mb-2 block text-xs font-medium text-gray-500">
-                Base Price (OMR) <span className="text-red-500">*</span>
+                {t("basePrice")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -420,7 +423,7 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
                 step="0.001"
                 value={basePrice}
                 onChange={(e) => setBasePrice(e.target.value)}
-                placeholder="0.000"
+                placeholder={t("basePricePlaceholder")}
                 required
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-blue-500 focus:outline-none"
               />
@@ -429,7 +432,7 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
         </Section>
 
         {/* Default Pricing */}
-        <Section icon={CurrencyDollarIcon} title="Default Pricing">
+        <Section icon={CurrencyDollarIcon} title={t("defaultPricing")}>
           <div className="mb-4 flex items-center gap-3">
             <button
               type="button"
@@ -443,31 +446,31 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
               <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${createPrice ? "translate-x-5" : "translate-x-0"}`} />
             </button>
             <div>
-              <p className="text-sm font-medium text-gray-700">Also create default pricing for all units</p>
-              <p className="text-xs text-gray-400">Set daily + monthly rates applied to every unit in this batch</p>
+              <p className="text-sm font-medium text-gray-700">{t("defaultPricingLabel")}</p>
+              <p className="text-xs text-gray-400">{t("defaultPricingHelp")}</p>
             </div>
           </div>
 
           {createPrice && (
             <div className="grid grid-cols-3 gap-4 rounded-xl bg-blue-50 p-4">
               {[
-                { label: "Daily Rate *",   key: "daily",   value: dailyRate,   set: setDailyRate,   required: true  },
-                { label: "Weekly Rate",    key: "weekly",  value: weeklyRate,  set: setWeeklyRate,  required: false },
-                { label: "Monthly Rate *", key: "monthly", value: monthlyRate, set: setMonthlyRate, required: true  },
-              ].map(({ label, key, value, set, required }) => (
+                { labelKey: "dailyRateReq",   key: "daily",   value: dailyRate,   set: setDailyRate,   required: true  },
+                { labelKey: "weeklyRate",     key: "weekly",  value: weeklyRate,  set: setWeeklyRate,  required: false },
+                { labelKey: "monthlyRateReq", key: "monthly", value: monthlyRate, set: setMonthlyRate, required: true  },
+              ].map(({ labelKey, key, value, set, required }) => (
                 <div key={key}>
-                  <label className="mb-1.5 block text-xs font-medium text-gray-600">{label}</label>
+                  <label className="mb-1.5 block text-xs font-medium text-gray-600">{t(labelKey as never)}</label>
                   <div className="relative">
-                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">OMR</span>
+                    <span className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">OMR</span>
                     <input
                       type="number"
                       min="0"
                       step="0.001"
                       value={value}
                       onChange={(e) => set(e.target.value)}
-                      placeholder="0.000"
+                      placeholder={t("ratePlaceholder")}
                       required={required}
-                      className="block w-full rounded-lg border border-blue-200 bg-white py-2 pl-12 pr-3 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
+                      className="block w-full rounded-lg border border-blue-200 bg-white py-2 ps-12 pe-3 text-sm text-gray-900 focus:border-blue-500 focus:outline-none"
                     />
                   </div>
                 </div>
@@ -479,23 +482,24 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
         {/* Amenities */}
         <Section
           icon={SparklesIcon}
-          title="Amenities"
+          title={t("amenitiesTitle")}
           badge={
             amenities.size > 0 ? (
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white ltr-numbers">
                 {amenities.size}
               </span>
             ) : null
           }
         >
           <div className="flex flex-wrap gap-2">
-            {AMENITIES.map((a) => {
-              const on = amenities.has(a.value);
+            {AMENITY_VALUES.map((v) => {
+              const on = amenities.has(v);
+              const label = v === "AC" ? tAmen("acShort") : tAmen(v as never);
               return (
                 <button
-                  key={a.value}
+                  key={v}
                   type="button"
-                  onClick={() => toggleAmenity(a.value)}
+                  onClick={() => toggleAmenity(v)}
                   className={`flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-all ${
                     on
                       ? "border-blue-500 bg-blue-600 text-white shadow-sm"
@@ -503,7 +507,7 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
                   }`}
                 >
                   {on && <CheckIcon className="h-3.5 w-3.5" />}
-                  {a.label}
+                  {label}
                 </button>
               );
             })}
@@ -518,23 +522,23 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
           <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50 px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-gray-800">
-                Preview
+                {t("preview")}
                 {activeCount > 0 && (
-                  <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-bold text-white">
+                  <span className="ms-2 rounded-full bg-blue-600 px-2 py-0.5 text-xs font-bold text-white ltr-numbers">
                     {activeCount}
                   </span>
                 )}
               </p>
-              <p className="text-xs text-gray-400">Edit names or remove units before creating</p>
+              <p className="text-xs text-gray-400">{t("previewHelp")}</p>
             </div>
             <button
               type="button"
               onClick={regenerate}
-              title="Regenerate from pattern"
+              title={t("regenerateTitle")}
               className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
             >
               <ArrowPathIcon className="h-3.5 w-3.5" />
-              Regenerate
+              {t("regenerate")}
             </button>
           </div>
 
@@ -543,24 +547,24 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
             {previewNames.length === 0 ? (
               <div className="py-10 text-center">
                 <HomeModernIcon className="mx-auto mb-2 h-8 w-8 text-gray-200" />
-                <p className="text-sm text-gray-400">Set a naming pattern to preview units</p>
+                <p className="text-sm text-gray-400">{t("emptyPreviewTitle")}</p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-1.5">
                 {previewNames.map((name, i) => (
                   <div key={i} className="group flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1.5 focus-within:border-blue-400 focus-within:bg-white transition-colors">
-                    <span className="shrink-0 w-5 text-[10px] font-medium text-gray-400 text-right">{i + 1}.</span>
+                    <span className="shrink-0 w-5 text-[10px] font-medium text-gray-400 text-end ltr-numbers">{i + 1}.</span>
                     <input
                       type="text"
                       value={name}
                       onChange={(e) => updateName(i, e.target.value)}
                       className="min-w-0 flex-1 bg-transparent text-xs font-medium text-gray-800 focus:outline-none"
-                      placeholder="Unit name…"
+                      placeholder={t("namePlaceholder")}
                     />
                     <button
                       type="button"
                       onClick={() => removeUnit(i)}
-                      className="ml-auto shrink-0 opacity-0 group-hover:opacity-100 rounded p-0.5 text-gray-300 hover:text-red-400 transition-all"
+                      className="ms-auto shrink-0 opacity-0 group-hover:opacity-100 rounded p-0.5 text-gray-300 hover:text-red-400 transition-all"
                     >
                       <XMarkIcon className="h-3.5 w-3.5" />
                     </button>
@@ -578,7 +582,7 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
               className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-gray-300 py-2 text-xs font-medium text-gray-500 hover:border-blue-300 hover:text-blue-600 transition-colors"
             >
               <PlusCircleIcon className="h-4 w-4" />
-              Add blank unit
+              {t("addBlank")}
             </button>
             <button
               type="button"
@@ -589,12 +593,12 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
               {isPending ? (
                 <>
                   <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                  Creating…
+                  {t("creating")}
                 </>
               ) : (
                 <>
                   <CheckCircleIcon className="h-4 w-4" />
-                  Create {activeCount > 0 ? activeCount : ""} Unit{activeCount !== 1 ? "s" : ""}
+                  {activeCount > 0 ? t("createCount", { count: activeCount }) : t("createCountZero")}
                 </>
               )}
             </button>
@@ -603,7 +607,7 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
               className="flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-medium text-gray-500 hover:text-gray-700 transition-colors"
             >
               <ArrowLeftIcon className="h-3.5 w-3.5" />
-              Cancel
+              {t("cancel")}
             </Link>
           </div>
         </div>

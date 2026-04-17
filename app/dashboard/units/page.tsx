@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { Prisma } from "@prisma/client";
 import { HomeModernIcon, PlusIcon, Squares2X2Icon } from "@heroicons/react/24/outline";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { getUnitDisplayStatus, type UnitDisplayStatus } from "@/lib/unit-status";
 import { getSelectedPropertyId } from "@/lib/selected-property";
@@ -148,6 +149,9 @@ export default async function UnitsPage({
     prisma.unit.count({ where: { ...countBase, status: "MAINTENANCE" } }),
   ]);
 
+  const t = await getTranslations("units.list");
+  const total = vacantCount + occupiedCount + reservedCount + maintenanceCount;
+
   return (
     <div className="space-y-5">
 
@@ -158,14 +162,14 @@ export default async function UnitsPage({
             <HomeModernIcon className="h-5 w-5 text-blue-700" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Units &amp; Rooms</h1>
+            <h1 className="text-xl font-bold text-gray-900">{t("title")}</h1>
             <p className="text-xs text-gray-500">
-              {vacantCount + occupiedCount + reservedCount + maintenanceCount} total ·{" "}
-              <span className="text-emerald-600 font-medium">{vacantCount} vacant</span> ·{" "}
-              <span className="text-blue-600 font-medium">{occupiedCount} occupied</span> ·{" "}
-              <span className="text-violet-600 font-medium">{reservedCount} reserved</span>
+              <span className="ltr-numbers">{total}</span> {t("totalLabel")} ·{" "}
+              <span className="text-emerald-600 font-medium"><span className="ltr-numbers">{vacantCount}</span> {t("vacantLabel")}</span> ·{" "}
+              <span className="text-blue-600 font-medium"><span className="ltr-numbers">{occupiedCount}</span> {t("occupiedLabel")}</span> ·{" "}
+              <span className="text-violet-600 font-medium"><span className="ltr-numbers">{reservedCount}</span> {t("reservedLabel")}</span>
               {maintenanceCount > 0 && (
-                <> · <span className="text-amber-600 font-medium">{maintenanceCount} maintenance</span></>
+                <> · <span className="text-amber-600 font-medium"><span className="ltr-numbers">{maintenanceCount}</span> {t("maintenanceLabel")}</span></>
               )}
             </p>
           </div>
@@ -176,14 +180,14 @@ export default async function UnitsPage({
             className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
           >
             <Squares2X2Icon className="h-4 w-4" />
-            Bulk Add
+            {t("bulkAdd")}
           </Link>
           <Link
             href="/dashboard/units/new"
             className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
           >
             <PlusIcon className="h-4 w-4" />
-            New Unit
+            {t("newUnit")}
           </Link>
         </div>
       </div>

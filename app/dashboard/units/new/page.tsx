@@ -3,6 +3,7 @@ import UnitForm from "@/components/dashboard/UnitForm";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 export default async function NewUnitPage({
   searchParams,
@@ -28,11 +29,13 @@ export default async function NewUnitPage({
     orderBy: { name: "asc" },
   });
 
+  const t = await getTranslations("units.newPage");
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <PageHeader
-        title="Add New Unit / Room"
-        description="Add a rentable unit to your inventory."
+        title={t("title")}
+        description={t("description")}
         listHref="/dashboard/units"
       />
       <UnitForm properties={properties} defaultPropertyId={propertyId} />

@@ -8,6 +8,9 @@ import {
   PaperAirplaneIcon,
 } from "@heroicons/react/24/outline";
 import { addUnitNote, deleteUnitNote } from "@/app/dashboard/units/[unitId]/actions";
+import { useTranslations, useLocale } from "next-intl";
+import { format } from "date-fns";
+import { ar, enGB } from "date-fns/locale";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -30,17 +33,22 @@ interface Props {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function relativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins  = Math.floor(diff / 60_000);
-  const hours = Math.floor(diff / 3_600_000);
-  const days  = Math.floor(diff / 86_400_000);
+function useRelativeTime() {
+  const t = useTranslations("units.notes");
+  const locale = useLocale();
+  const dfLocale = locale === "ar" ? ar : enGB;
+  return (dateStr: string): string => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins  = Math.floor(diff / 60_000);
+    const hours = Math.floor(diff / 3_600_000);
+    const days  = Math.floor(diff / 86_400_000);
 
-  if (mins < 1)   return "Just now";
-  if (mins < 60)  return `${mins}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7)   return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+    if (mins < 1)   return t("justNow");
+    if (mins < 60)  return t("minsAgo",  { n: mins });
+    if (hours < 24) return t("hoursAgo", { n: hours });
+    if (days < 7)   return t("daysAgo",  { n: days });
+    return format(new Date(dateStr), "dd MMM", { locale: dfLocale });
+  };
 }
 
 function initials(firstName: string | null, lastName: string | null) {
@@ -56,6 +64,8 @@ function NoteRow({
   note:      Note;
   canDelete: boolean;
 }) {
+  const t = useTranslations("units.notes");
+  const relativeTime = useRelativeTime();
   const [pending, startDelete] = useTransition();
 
   return (
@@ -69,7 +79,7 @@ function NoteRow({
       <div className="flex-1 rounded-xl bg-gray-50 px-3 py-2">
         <div className="flex items-center justify-between gap-2">
           <span className="text-xs font-semibold text-gray-700">
-            {[note.user.firstName, note.user.lastName].filter(Boolean).join(" ") || "User"}
+            {[note.user.firstName, note.user.lastName].filter(Boolean).join(" ") || t("userFallback")}
           </span>
           <div className="flex items-center gap-1">
             <span className="text-xs text-gray-400">{relativeTime(note.createdAt)}</span>
@@ -79,12 +89,12 @@ function NoteRow({
                   startDelete(async () => {
                     const res = await deleteUnitNote(note.id);
                     if (res.error) toast.error(res.error);
-                    else toast.success("Note deleted.");
+                    else toast.success(t("deletedToast"));
                   })
                 }
                 disabled={pending}
-                className="ml-1 rounded p-0.5 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-400"
-                title="Delete note"
+                className="ms-1 rounded p-0.5 text-gray-300 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-50 hover:text-red-400"
+                title={t("deleteTitle")}
               >
                 <TrashIcon className="h-3.5 w-3.5" />
               </button>
@@ -100,6 +110,7 @@ function NoteRow({
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function UnitNotesSection({ unitId, notes, currentUserId }: Props) {
+  const t = useTranslations("units.notes");
   const [text, setText] = useState("");
   const [pending, startAdd] = useTransition();
 
@@ -115,7 +126,7 @@ export default function UnitNotesSection({ unitId, notes, currentUserId }: Props
         toast.error(res.error);
       } else {
         setText("");
-        toast.success("Note added.");
+        toast.success(t("addedToast"));
       }
     });
   }
@@ -126,8 +137,8 @@ export default function UnitNotesSection({ unitId, notes, currentUserId }: Props
       {notes.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 py-8 text-center">
           <ChatBubbleLeftIcon className="mx-auto mb-2 h-8 w-8 text-gray-300" />
-          <p className="text-sm text-gray-400">No notes yet.</p>
-          <p className="text-xs text-gray-400">Internal notes are only visible to your team.</p>
+          <p className="text-sm text-gray-400">{t("emptyTitle")}</p>
+          <p className="text-xs text-gray-400">{t("emptyBody")}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -146,7 +157,7 @@ export default function UnitNotesSection({ unitId, notes, currentUserId }: Props
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Add an internal note…"
+          placeholder={t("addPlaceholder")}
           rows={2}
           className="flex-1 resize-none rounded-xl border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
           onKeyDown={(e) => {
@@ -159,12 +170,12 @@ export default function UnitNotesSection({ unitId, notes, currentUserId }: Props
           type="submit"
           disabled={pending || !text.trim()}
           className="self-end rounded-xl bg-blue-600 p-2.5 text-white hover:bg-blue-500 disabled:opacity-40 transition-colors"
-          title="Add note (⌘+Enter)"
+          title={t("submitTitle")}
         >
           <PaperAirplaneIcon className="h-4 w-4" />
         </button>
       </form>
-      <p className="text-xs text-gray-400">⌘+Enter to submit quickly.</p>
+      <p className="text-xs text-gray-400">{t("submitHint")}</p>
     </div>
   );
 }

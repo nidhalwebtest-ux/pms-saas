@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
+import { useTranslations, useLocale } from "next-intl";
+import { ar as arLocale, enUS as enLocale } from "date-fns/locale";
 import type { Role } from "@/lib/permissions";
 import { TodayView } from "./views/TodayView";
 import { ReceptionistView } from "./views/ReceptionistView";
@@ -27,22 +29,27 @@ function defaultTab(role: Role): Tab {
   return "today";
 }
 
-const TAB_LABELS: Record<Tab, string> = {
-  today:        "Today's Dashboard",
-  receptionist: "Receptionist View",
-  manager:      "Manager View",
+const TAB_KEYS: Record<Tab, string> = {
+  today:        "todaysDashboard",
+  receptionist: "receptionistView",
+  manager:      "managerView",
 };
 
-function greeting(hour: number, name: string) {
-  const g = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  return `${g}, ${name}`;
-}
-
 export function DashboardShell({ user, propertyId, properties }: Props) {
+  const t      = useTranslations("dashboard");
+  const locale = useLocale();
+  const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
+
   const tabs = visibleTabs(user.role);
 
   const [activeTab, setActiveTab] = useState<Tab>(() => defaultTab(user.role));
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  function greeting(hour: number, name: string) {
+    if (hour < 12)  return t("goodMorning",   { name });
+    if (hour < 17)  return t("goodAfternoon", { name });
+    return t("goodEvening", { name });
+  }
 
   // Restore tab from localStorage (after hydration)
   useEffect(() => {
@@ -63,7 +70,7 @@ export function DashboardShell({ user, propertyId, properties }: Props) {
   }
 
   const propertyLabel =
-    properties.find((p) => p.id === propertyId)?.name ?? "All Properties";
+    properties.find((p) => p.id === propertyId)?.name ?? t("allProperties");
 
   return (
     <div className="space-y-5">
@@ -74,11 +81,11 @@ export function DashboardShell({ user, propertyId, properties }: Props) {
             {greeting(currentTime.getHours(), user.firstName)}
           </h1>
           <p className="mt-0.5 text-sm text-gray-500">
-            {format(currentTime, "EEEE, d MMMM yyyy")} —{" "}
-            {format(currentTime, "hh:mm a")}
+            {format(currentTime, "EEEE, d MMMM yyyy", { locale: dateFnsLocale })} —{" "}
+            <span className="ltr-numbers">{format(currentTime, "hh:mm a", { locale: dateFnsLocale })}</span>
           </p>
           <p className="mt-0.5 text-xs text-gray-400">
-            Viewing:{" "}
+            {t("viewing")}{" "}
             <span className="font-medium text-gray-600">{propertyLabel}</span>
           </p>
         </div>
@@ -86,7 +93,7 @@ export function DashboardShell({ user, propertyId, properties }: Props) {
         {/* View switcher */}
         <nav
           className="flex gap-1 rounded-xl bg-gray-100 p-1 self-start"
-          aria-label="Dashboard views"
+          aria-label={t("viewSwitcher")}
         >
           {tabs.map((tab) => (
             <button
@@ -98,7 +105,7 @@ export function DashboardShell({ user, propertyId, properties }: Props) {
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              {TAB_LABELS[tab]}
+              {t(TAB_KEYS[tab])}
             </button>
           ))}
         </nav>

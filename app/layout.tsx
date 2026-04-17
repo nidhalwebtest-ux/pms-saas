@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Cairo } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 import { Toaster } from "sonner";
+import { dirFor, type Locale } from "@/i18n/config";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -27,18 +30,24 @@ export const metadata: Metadata = {
     "Manage properties, tenants, reservations, and payments in one modern platform. Built for property managers in Oman.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = (await getLocale()) as Locale;
+  const messages = await getMessages();
+  const dir = dirFor(locale);
+
   return (
-    <html lang="en">
+    <html lang={locale} dir={dir}>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${cairo.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${cairo.variable} antialiased ${locale === "ar" ? "font-arabic" : ""}`}
       >
-        {children}
-        <Toaster position="top-center" richColors />
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          {children}
+          <Toaster position="top-center" richColors dir={dir} />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

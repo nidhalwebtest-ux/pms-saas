@@ -3,22 +3,23 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
 import { NAV_ACCESS, type Role } from "@/lib/permissions";
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 
-type SubItem = { name: string; href: string };
+type SubItem = { labelKey: string; href: string };
 
 type DropdownItem = {
-  name: string;
+  labelKey: string;
   href: string;
   children?: SubItem[];
 };
 
 type NavItem = {
   key:             string;
-  name:            string;
+  labelKey:        string;
   href:            string;
   /** Extra path prefixes that make this tab active (e.g. child pages not under href). */
   activePatterns?: string[];
@@ -26,56 +27,56 @@ type NavItem = {
 };
 
 const navigationConfig: NavItem[] = [
-  { key: "dashboard",    name: "Dashboard",    href: "/dashboard" },
+  { key: "dashboard",    labelKey: "dashboard",    href: "/dashboard" },
   {
     key:             "properties",
-    name:            "Properties",
+    labelKey:        "properties",
     href:            "/dashboard/properties",
     activePatterns:  ["/dashboard/units"],
     children: [
-      { name: "Buildings",     href: "/dashboard/properties" },
-      { name: "Units & Rooms", href: "/dashboard/units"      },
+      { labelKey: "buildings",  href: "/dashboard/properties" },
+      { labelKey: "unitsRooms", href: "/dashboard/units"      },
     ],
   },
   {
     key:            "tenants",
-    name:           "Tenants",
+    labelKey:       "tenants",
     href:           "/dashboard/tenants",
     activePatterns: ["/dashboard/tenants"],
     children: [
-      { name: "Tenant List",   href: "/dashboard/tenants" },
-      { name: "New Tenant",    href: "/dashboard/tenants/new" },
-      { name: "Tenant Ledger", href: "/dashboard/tenants/ledger" },
+      { labelKey: "tenantList",   href: "/dashboard/tenants" },
+      { labelKey: "newTenant",    href: "/dashboard/tenants/new" },
+      { labelKey: "tenantLedger", href: "/dashboard/tenants/ledger" },
     ],
   },
-  { key: "reservations", name: "Reservations", href: "/dashboard/reservations" },
-  { key: "invoices",     name: "Invoices",     href: "/dashboard/invoices" },
-  { key: "payments",     name: "Payments",     href: "/dashboard/payments" },
+  { key: "reservations", labelKey: "reservations", href: "/dashboard/reservations" },
+  { key: "invoices",     labelKey: "invoices",     href: "/dashboard/invoices" },
+  { key: "payments",     labelKey: "payments",     href: "/dashboard/payments" },
   {
     key:            "expenses",
-    name:           "Expenses",
+    labelKey:       "expenses",
     href:           "/dashboard/expenses",
     activePatterns: ["/dashboard/settings/expense-categories"],
     children: [
-      { name: "All Expenses",     href: "/dashboard/expenses" },
-      { name: "Submit Expense",   href: "/dashboard/expenses/new" },
-      { name: "Manage Categories", href: "/dashboard/settings/expense-categories" },
+      { labelKey: "allExpenses",      href: "/dashboard/expenses" },
+      { labelKey: "submitExpense",    href: "/dashboard/expenses/new" },
+      { labelKey: "manageCategories", href: "/dashboard/settings/expense-categories" },
     ],
   },
   {
-    key:  "settings",
-    name: "Settings",
-    href: "/dashboard/settings",
+    key:      "settings",
+    labelKey: "settings",
+    href:     "/dashboard/settings",
     children: [
       {
-        name: "Team Management",
-        href: "/dashboard/settings/team",
+        labelKey: "teamManagement",
+        href:     "/dashboard/settings/team",
         children: [
-          { name: "Staff Accounts", href: "/dashboard/settings/team" },
+          { labelKey: "staffAccounts", href: "/dashboard/settings/team" },
         ],
       },
-      { name: "My Profile",    href: "/dashboard/settings/profile" },
-      { name: "Organization",  href: "/dashboard/settings/organization" },
+      { labelKey: "myProfile",   href: "/dashboard/settings/profile" },
+      { labelKey: "organization", href: "/dashboard/settings/organization" },
     ],
   },
 ];
@@ -89,12 +90,23 @@ function cn(...c: (string | false | undefined)[]) {
 export default function Navigation({ role }: { role: Role }) {
   const pathname = usePathname();
   const navRef   = useRef<HTMLElement>(null);
+  const t        = useTranslations("nav");
 
   // Track which top-level dropdown and which sub-dropdown is open
   const [openKey, setOpenKey]   = useState<string | null>(null);
   const [openSub, setOpenSub]   = useState<string | null>(null);
-  // Left offset (px) of the active dropdown panel, relative to nav
-  const [panelLeft, setPanelLeft] = useState(0);
+  // Inline-start offset (px) of the active dropdown panel, relative to nav.
+  // Stored in logical (start) units; rendered as `left` in LTR and `right` in RTL.
+  const [panelStart, setPanelStart] = useState(0);
+  const [isRTL, setIsRTL] = useState(false);
+
+  useEffect(() => {
+    const update = () => setIsRTL(document.documentElement.dir === "rtl");
+    update();
+    const obs = new MutationObserver(update);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["dir"] });
+    return () => obs.disconnect();
+  }, []);
 
   const visible = navigationConfig.filter(
     (item) => (NAV_ACCESS[item.key] ?? []).includes(role),
@@ -117,7 +129,11 @@ export default function Navigation({ role }: { role: Role }) {
     if (navEl) {
       const btnRect = btn.getBoundingClientRect();
       const navRect = navEl.getBoundingClientRect();
-      setPanelLeft(btnRect.left - navRect.left);
+      // In RTL the inline-start edge of the panel is the right edge of the trigger.
+      const offset = isRTL
+        ? navRect.right - btnRect.right
+        : btnRect.left - navRect.left;
+      setPanelStart(offset);
     }
     setOpenKey(key);
     setOpenSub(null);
@@ -164,7 +180,7 @@ export default function Navigation({ role }: { role: Role }) {
                   onMouseEnter={() => { setOpenKey(null); setOpenSub(null); }}
                   className={baseTabCls}
                 >
-                  {item.name}
+                  {t(item.labelKey)}
                 </Link>
               );
             }
@@ -176,7 +192,7 @@ export default function Navigation({ role }: { role: Role }) {
                 onMouseEnter={(e) => handleTriggerEnter(item.key, e.currentTarget)}
                 className={baseTabCls}
               >
-                {item.name}
+                {t(item.labelKey)}
                 <ChevronDownIcon
                   className={cn(
                     "h-4 w-4 flex-shrink-0 transition-transform duration-200",
@@ -195,7 +211,7 @@ export default function Navigation({ role }: { role: Role }) {
       {openKey && activeItem?.children && (
         <div
           className="absolute top-full z-50 mt-px min-w-[200px] overflow-hidden rounded-b-xl bg-white shadow-xl ring-1 ring-black/10"
-          style={{ left: `${panelLeft}px` }}
+          style={isRTL ? { right: `${panelStart}px` } : { left: `${panelStart}px` }}
         >
           {activeItem.children.map((child) => {
             const childActive =
@@ -206,7 +222,7 @@ export default function Navigation({ role }: { role: Role }) {
               <div
                 key={child.href}
                 className="relative"
-                onMouseEnter={() => setOpenSub(child.children ? child.name : null)}
+                onMouseEnter={() => setOpenSub(child.children ? child.labelKey : null)}
               >
                 <Link
                   href={child.href}
@@ -218,15 +234,15 @@ export default function Navigation({ role }: { role: Role }) {
                       : "text-gray-700 hover:bg-gray-50 hover:text-blue-600",
                   )}
                 >
-                  {child.name}
+                  {t(child.labelKey)}
                   {child.children && (
                     <ChevronRightIcon className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
                   )}
                 </Link>
 
                 {/* ── Sub-dropdown panel (3rd level) ───────────────────── */}
-                {child.children && openSub === child.name && (
-                  <div className="absolute left-full top-0 z-50 ml-px min-w-[180px] overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-black/10">
+                {child.children && openSub === child.labelKey && (
+                  <div className="absolute start-full top-0 z-50 ms-px min-w-[180px] overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-black/10">
                     {child.children.map((sub) => (
                       <Link
                         key={sub.href}
@@ -239,7 +255,7 @@ export default function Navigation({ role }: { role: Role }) {
                             : "text-gray-700 hover:bg-gray-50 hover:text-blue-600",
                         )}
                       >
-                        {sub.name}
+                        {t(sub.labelKey)}
                       </Link>
                     ))}
                   </div>

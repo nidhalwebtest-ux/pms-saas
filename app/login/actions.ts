@@ -7,6 +7,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { sendVerificationEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
+import { LOCALE_COOKIE } from "@/i18n/config";
 
 // ─── Rate-limit constants ──────────────────────────────────────────────────────
 const WINDOW_MS    = 15 * 60 * 1000; // 15 minutes
@@ -81,6 +82,26 @@ export async function login(formData: FormData) {
 
   // ── Success — clear attempts ──────────────────────────────────────────────────
   await prisma.loginAttempt.deleteMany({ where: { email } }).catch(() => {});
+
+  // ── Honor stored language preference ─────────────────────────────────────────
+  // After login, override the locale cookie with the user's saved preference
+  // so the choice follows them across devices.
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const dbUser = await prisma.user.findUnique({
+        where: { id: user.id },
+        select: { preferredLanguage: true },
+      });
+      if (dbUser?.preferredLanguage) {
+        cookieStore.set(LOCALE_COOKIE, dbUser.preferredLanguage, {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 365,
+          sameSite: "lax",
+        });
+      }
+    }
+  } catch { /* best-effort — fall back to existing cookie */ }
 
   // ── Remember Me ───────────────────────────────────────────────────────────────
   // Supabase SSR sets sb-* cookies with maxAge = access-token lifetime (~1 h).

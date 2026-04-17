@@ -65,8 +65,22 @@ textarea {
 }
 
 /* ── Arabic font ─────────────────────────────────────────────────────────── */
-.font-cairo {
+.font-cairo,
+.font-arabic {
   font-family: var(--font-cairo), "Cairo", system-ui, sans-serif;
+}
+
+/* When the document is RTL (Arabic), apply Cairo to the entire document and
+   keep numeric/currency inputs left-to-right. */
+html[dir="rtl"] body {
+  font-family: var(--font-cairo), "Cairo", system-ui, sans-serif;
+}
+html[dir="rtl"] input[type="number"],
+html[dir="rtl"] input[inputmode="decimal"],
+html[dir="rtl"] input[inputmode="numeric"],
+html[dir="rtl"] .ltr-numbers {
+  direction: ltr;
+  text-align: end; /* keeps visual placement on the start side of the field */
 }
 
 /* ── Hero entrance & float animations ───────────────────────────────────── */

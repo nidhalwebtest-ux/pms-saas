@@ -5,6 +5,9 @@ import ExtendStayModal from "@/components/reservations/ExtendStayModal";
 import MoveUnitModal from "@/components/reservations/MoveUnitModal";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useTranslations, useLocale } from "next-intl";
+import { format as fmtDateFns } from "date-fns";
+import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import {
   ArrowLeftIcon,
   PrinterIcon,
@@ -140,43 +143,6 @@ type ModalType = "check-in" | "check-out" | "cancel" | "payment" | "charge" | "n
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
-function fmtDate(iso: string, opts?: Intl.DateTimeFormatOptions): string {
-  return new Date(iso).toLocaleDateString("en-GB", opts ?? { day: "numeric", month: "short", year: "numeric" });
-}
-
-function fmtDateFull(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-GB", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric",
-  });
-}
-
-function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-}
-
-function fmtMethod(m: string) {
-  const map: Record<string, string> = {
-    CASH: "Cash", CARD: "Card", BANK_TRANSFER: "Bank Transfer", CHEQUE: "Cheque", OTHER: "Other",
-  };
-  return map[m] ?? m;
-}
-
-function fmtSource(s: string) {
-  const map: Record<string, string> = {
-    walk_in: "Walk-in", phone: "Phone", whatsapp: "WhatsApp",
-    website: "Website", agent: "Agent", online: "Online",
-  };
-  return map[s] ?? s;
-}
-
-function fmtUnitType(t: string) {
-  const map: Record<string, string> = {
-    STUDIO: "Studio", ONE_BR: "1 BR", TWO_BR: "2 BR", THREE_BR: "3 BR",
-    FOUR_BR: "4 BR", SUITE: "Suite", PENTHOUSE: "Penthouse", VILLA: "Villa",
-  };
-  return map[t] ?? t;
-}
-
 function isToday(iso: string) {
   const d = new Date(iso);
   const t = new Date();
@@ -188,13 +154,77 @@ function diffDays(a: string, b: string) {
   return Math.round(ms / 86400000);
 }
 
+function useDateFnsLocale() {
+  const locale = useLocale();
+  return locale === "ar" ? arLocale : enLocale;
+}
+
+function useFmtDate() {
+  const dl = useDateFnsLocale();
+  return (iso: string, opts?: { day?: string; month?: string; year?: string; weekday?: string }) => {
+    if (!opts) return fmtDateFns(new Date(iso), "d MMM yyyy", { locale: dl });
+    let pattern = "";
+    if (opts.weekday === "long") pattern += "EEEE, ";
+    if (opts.day === "numeric") pattern += "d ";
+    if (opts.month === "short") pattern += "MMM ";
+    else if (opts.month === "long") pattern += "MMMM ";
+    if (opts.year === "numeric") pattern += "yyyy";
+    return fmtDateFns(new Date(iso), pattern.trim(), { locale: dl });
+  };
+}
+
+function useFmtDateFull() {
+  const dl = useDateFnsLocale();
+  return (iso: string) =>
+    fmtDateFns(new Date(iso), "EEEE, d MMMM yyyy", { locale: dl });
+}
+
+function useFmtTime() {
+  const dl = useDateFnsLocale();
+  return (iso: string) => fmtDateFns(new Date(iso), "HH:mm", { locale: dl });
+}
+
+function useFmtMethod() {
+  const t = useTranslations("reservations.detail.paymentMethods");
+  return (m: string) => {
+    try {
+      return t(m as "CASH" | "CARD" | "BANK_TRANSFER" | "CHEQUE" | "OTHER");
+    } catch {
+      return m;
+    }
+  };
+}
+
+function useFmtSource() {
+  const t = useTranslations("reservations.detail.sourcesMap");
+  return (s: string) => {
+    try {
+      return t(s as "walk_in" | "phone" | "whatsapp" | "website" | "agent" | "online");
+    } catch {
+      return s;
+    }
+  };
+}
+
+function useFmtUnitType() {
+  const t = useTranslations("reservations.detail.unitTypes");
+  return (k: string) => {
+    try {
+      return t(k as "STUDIO" | "ONE_BR" | "TWO_BR" | "THREE_BR" | "FOUR_BR" | "SUITE" | "PENTHOUSE" | "VILLA");
+    } catch {
+      return k;
+    }
+  };
+}
+
 // ── Small UI helpers ───────────────────────────────────────────────────────────
 
 function ClassBadge({ c }: { c: string | null }) {
+  const t = useTranslations("reservations.detail.guest");
   if (c === "vip")
-    return <span className="inline-flex items-center gap-0.5 text-xs font-medium text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full"><StarIcon className="h-3 w-3" /> VIP</span>;
+    return <span className="inline-flex items-center gap-0.5 text-xs font-medium text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full"><StarIcon className="h-3 w-3" /> {t("vip")}</span>;
   if (c === "blacklisted")
-    return <span className="inline-flex items-center gap-0.5 text-xs font-medium text-red-700 bg-red-100 px-2 py-0.5 rounded-full"><ShieldExclamationIcon className="h-3 w-3" /> Blacklisted</span>;
+    return <span className="inline-flex items-center gap-0.5 text-xs font-medium text-red-700 bg-red-100 px-2 py-0.5 rounded-full"><ShieldExclamationIcon className="h-3 w-3" /> {t("blacklisted")}</span>;
   return null;
 }
 
@@ -255,40 +285,42 @@ function PaymentForm({
   value: { amount: string; method: string; reference: string };
   onChange: (v: typeof value) => void;
 }) {
+  const t = useTranslations("reservations.detail.paymentForm");
+  const tm = useTranslations("reservations.detail.paymentMethods");
   return (
     <div className="space-y-3 border border-gray-200 rounded-lg p-4 bg-gray-50">
-      <p className="text-sm font-medium text-gray-700">Collect Payment (optional)</p>
+      <p className="text-sm font-medium text-gray-700">{t("title")}</p>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Amount (OMR)</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t("amount")}</label>
           <input
             type="number" step="0.001" min="0"
             value={value.amount}
             onChange={(e) => onChange({ ...value, amount: e.target.value })}
             placeholder={balanceDue}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ltr-numbers"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-gray-600 mb-1">Method</label>
+          <label className="block text-xs font-medium text-gray-600 mb-1">{t("method")}</label>
           <select
             value={value.method}
             onChange={(e) => onChange({ ...value, method: e.target.value })}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
           >
-            <option value="CASH">Cash</option>
-            <option value="CARD">Card</option>
-            <option value="BANK_TRANSFER">Bank Transfer</option>
-            <option value="CHEQUE">Cheque</option>
+            <option value="CASH">{tm("CASH")}</option>
+            <option value="CARD">{tm("CARD")}</option>
+            <option value="BANK_TRANSFER">{tm("BANK_TRANSFER")}</option>
+            <option value="CHEQUE">{tm("CHEQUE")}</option>
           </select>
         </div>
       </div>
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Reference (optional)</label>
+        <label className="block text-xs font-medium text-gray-600 mb-1">{t("reference")}</label>
         <input
           type="text" value={value.reference}
           onChange={(e) => onChange({ ...value, reference: e.target.value })}
-          placeholder="Receipt #, transaction ID..."
+          placeholder={t("referencePlaceholder")}
           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
         />
       </div>
@@ -301,6 +333,7 @@ function PaymentForm({
 function CheckInModal({ res, onSuccess, onClose }: {
   res: ReservationData; onSuccess: () => void; onClose: () => void;
 }) {
+  const t = useTranslations("reservations.detail.checkInModal");
   const [loading, setLoading] = useState(false);
 
   const checkInDate = res.startDate;
@@ -315,13 +348,16 @@ function CheckInModal({ res, onSuccess, onClose }: {
     });
     const data = await r.json();
     setLoading(false);
-    if (!r.ok) { toast.error(data.error ?? "Check-in failed"); return; }
-    toast.success(data.message ?? "Checked in successfully");
+    if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
+    toast.success(data.message ?? t("successDefault"));
     onSuccess();
   }
 
+  const ref = res.reservationNumber ?? res.id.slice(0, 8);
+  const whenText = daysUntil === 1 ? t("tomorrow") : t("inDays", { count: daysUntil });
+
   return (
-    <Modal title={`Check In — ${res.reservationNumber ?? res.id.slice(0, 8)}`} onClose={onClose}>
+    <Modal title={t("title", { ref })} onClose={onClose}>
       <div className="space-y-5">
         {/* Guest */}
         <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl">
@@ -330,7 +366,7 @@ function CheckInModal({ res, onSuccess, onClose }: {
           </div>
           <div>
             <p className="font-semibold text-gray-900">{res.tenant.firstName} {res.tenant.lastName}</p>
-            <p className="text-sm text-gray-500">{res.tenant.phone}</p>
+            <p className="text-sm text-gray-500 ltr-numbers">{res.tenant.phone}</p>
           </div>
         </div>
 
@@ -338,13 +374,13 @@ function CheckInModal({ res, onSuccess, onClose }: {
         {daysUntil > 0 && (
           <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
             <ExclamationTriangleIcon className="h-4 w-4 shrink-0" />
-            <span>Check-in date is {daysUntil === 1 ? "tomorrow" : `in ${daysUntil} days`}. Check in early?</span>
+            <span>{t("earlyCheckInQuestion", { when: whenText })}</span>
           </div>
         )}
 
         {/* Units */}
         <div>
-          <p className="text-sm font-medium text-gray-600 mb-2">Units being assigned:</p>
+          <p className="text-sm font-medium text-gray-600 mb-2">{t("unitsBeingAssigned")}</p>
           <div className="flex flex-wrap gap-2">
             {res.units.map((u) => (
               <span key={u.id} className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-100 text-sm font-medium text-gray-800">
@@ -357,7 +393,7 @@ function CheckInModal({ res, onSuccess, onClose }: {
         {res.invoicesGenerated && (
           <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
             <BanknotesIcon className="h-4 w-4 shrink-0" />
-            <span>{res.invoices.length} invoice(s) exist — due dates will be set to today.</span>
+            <span>{t("invoicesExist", { count: res.invoices.length })}</span>
           </div>
         )}
 
@@ -366,7 +402,7 @@ function CheckInModal({ res, onSuccess, onClose }: {
           disabled={loading}
           className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
         >
-          {loading ? "Checking In…" : "✓ Confirm Check In"}
+          {loading ? t("checking") : t("confirm")}
         </button>
       </div>
     </Modal>
@@ -378,6 +414,9 @@ function CheckInModal({ res, onSuccess, onClose }: {
 function CheckOutModal({ res, onSuccess, onClose }: {
   res: ReservationData; onSuccess: () => void; onClose: () => void;
 }) {
+  const t = useTranslations("reservations.detail.checkOutModal");
+  const td = useTranslations("reservations.detail.returnModal");
+  const fmtDate = useFmtDate();
   const today = new Date();
   const todayIso = today.toISOString();
   const extraDays = diffDays(res.endDate, todayIso);   // positive = overstay, negative = early
@@ -414,31 +453,39 @@ function CheckOutModal({ res, onSuccess, onClose }: {
     });
     const data = await r.json();
     setLoading(false);
-    if (!r.ok) { toast.error(data.error ?? "Check-out failed"); return; }
-    toast.success(data.message ?? "Checked out successfully");
+    if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
+    toast.success(data.message ?? t("successDefault"));
     onSuccess();
   }
 
+  const ref = res.reservationNumber ?? res.id.slice(0, 8);
+
+  const conditionEntries: { key: "inspected" | "keysReturned" | "noDamage"; label: string }[] = [
+    { key: "inspected",    label: t("inspected") },
+    { key: "keysReturned", label: t("keysReturned") },
+    { key: "noDamage",     label: t("noDamage") },
+  ];
+
   return (
-    <Modal title={`Check Out — ${res.reservationNumber ?? res.id.slice(0, 8)}`} onClose={onClose}>
+    <Modal title={t("title", { ref })} onClose={onClose}>
       <div className="space-y-5">
         {/* Stay summary */}
         <div className={`p-4 rounded-xl ${isOverstay ? "bg-red-50 border border-red-200" : isEarly ? "bg-blue-50 border border-blue-200" : "bg-green-50 border border-green-200"}`}>
           <div className="grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="text-gray-500">Planned checkout</p>
+              <p className="text-gray-500">{t("plannedCheckout")}</p>
               <p className="font-semibold text-gray-900">{fmtDate(res.endDate)}</p>
             </div>
             <div>
-              <p className="text-gray-500">Today</p>
+              <p className="text-gray-500">{t("today")}</p>
               <p className="font-semibold text-gray-900">{fmtDate(today.toISOString())}</p>
             </div>
           </div>
           {isOverstay && (
-            <p className="mt-2 text-sm font-medium text-red-700">⚠ Guest has stayed {extraDays} extra night{extraDays > 1 ? "s" : ""} past planned checkout</p>
+            <p className="mt-2 text-sm font-medium text-red-700">{t("overstayWarning", { count: extraDays })}</p>
           )}
           {isEarly && (
-            <p className="mt-2 text-sm font-medium text-blue-700">Checking out {Math.abs(extraDays)} day{Math.abs(extraDays) > 1 ? "s" : ""} early</p>
+            <p className="mt-2 text-sm font-medium text-blue-700">{t("earlyWarning", { count: Math.abs(extraDays) })}</p>
           )}
         </div>
 
@@ -455,8 +502,13 @@ function CheckOutModal({ res, onSuccess, onClose }: {
             />
             <label htmlFor="adjust" className="text-sm text-gray-700 cursor-pointer">
               {isEarly
-                ? `Recalculate charges for actual stay? (reduce by ${estimatedAdjustment.toFixed(3)} OMR)`
-                : `Add overstay charges? (${Math.abs(extraDays)} night${Math.abs(extraDays) > 1 ? "s" : ""} × ${nightlyRate.toFixed(3)} OMR = ${estimatedAdjustment.toFixed(3)} OMR)`}
+                ? t("earlyToggle", { amount: estimatedAdjustment.toFixed(3) })
+                : t("overstayToggle", {
+                    nights: Math.abs(extraDays),
+                    nightsLabel: td("nightsLabel"),
+                    rate: nightlyRate.toFixed(3),
+                    total: estimatedAdjustment.toFixed(3),
+                  })}
             </label>
           </div>
         )}
@@ -464,22 +516,22 @@ function CheckOutModal({ res, onSuccess, onClose }: {
         {/* Financial summary */}
         <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
           <div className="flex justify-between text-gray-600">
-            <span>Original Total</span>
-            <span>{res.grandTotal} OMR</span>
+            <span>{t("originalTotal")}</span>
+            <span><span className="ltr-numbers">{res.grandTotal}</span> OMR</span>
           </div>
           {adjustToggle && estimatedAdjustment > 0 && (
             <div className={`flex justify-between ${isEarly ? "text-blue-600" : "text-red-600"}`}>
-              <span>{isEarly ? "Early Checkout Reduction" : "Overstay Charges"}</span>
-              <span>{isEarly ? "-" : "+"}{estimatedAdjustment.toFixed(3)} OMR</span>
+              <span>{isEarly ? t("earlyReduction") : t("overstayCharges")}</span>
+              <span><span className="ltr-numbers">{isEarly ? "-" : "+"}{estimatedAdjustment.toFixed(3)}</span> OMR</span>
             </div>
           )}
           <div className="flex justify-between text-gray-600 border-t pt-2">
-            <span>Already Paid</span>
-            <span>-{res.amountPaid} OMR</span>
+            <span>{t("alreadyPaid")}</span>
+            <span><span className="ltr-numbers">-{res.amountPaid}</span> OMR</span>
           </div>
           <div className={`flex justify-between font-bold text-base pt-1 ${Number(adjustedBalance) > 0 ? "text-red-600" : "text-green-600"}`}>
-            <span>Balance Due</span>
-            <span>{adjustedBalance} OMR</span>
+            <span>{t("balanceDue")}</span>
+            <span><span className="ltr-numbers">{adjustedBalance}</span> OMR</span>
           </div>
         </div>
 
@@ -492,23 +544,18 @@ function CheckOutModal({ res, onSuccess, onClose }: {
 
         {/* Condition checklist */}
         <div className="space-y-2">
-          <p className="text-sm font-medium text-gray-600">Unit Condition (optional)</p>
-          {(["inspected", "keysReturned", "noDamage"] as const).map((key) => {
-            const labels: Record<string, string> = {
-              inspected: "Unit inspected", keysReturned: "Keys returned", noDamage: "No damage observed",
-            };
-            return (
-              <label key={key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={condition[key]}
-                  onChange={(e) => setCondition((c) => ({ ...c, [key]: e.target.checked }))}
-                  className="h-4 w-4 rounded text-blue-600"
-                />
-                {labels[key]}
-              </label>
-            );
-          })}
+          <p className="text-sm font-medium text-gray-600">{t("conditionTitle")}</p>
+          {conditionEntries.map(({ key, label }) => (
+            <label key={key} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={condition[key]}
+                onChange={(e) => setCondition((c) => ({ ...c, [key]: e.target.checked }))}
+                className="h-4 w-4 rounded text-blue-600"
+              />
+              {label}
+            </label>
+          ))}
         </div>
 
         <button
@@ -516,7 +563,7 @@ function CheckOutModal({ res, onSuccess, onClose }: {
           disabled={loading}
           className={`w-full py-3 font-semibold rounded-xl transition-colors disabled:opacity-50 text-white ${isOverstay ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"}`}
         >
-          {loading ? "Processing…" : "Complete Check Out"}
+          {loading ? t("processing") : t("confirm")}
         </button>
       </div>
     </Modal>
@@ -528,13 +575,14 @@ function CheckOutModal({ res, onSuccess, onClose }: {
 function CancelModal({ res, onSuccess, onClose }: {
   res: ReservationData; onSuccess: () => void; onClose: () => void;
 }) {
+  const t = useTranslations("reservations.detail.cancelModal");
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const totalPaid = Number(res.amountPaid);
 
   async function handleConfirm() {
-    if (!reason) { toast.error("Please select a cancellation reason"); return; }
+    if (!reason) { toast.error(t("selectReasonError")); return; }
     setLoading(true);
     const r = await fetch(`/api/reservations/${res.id}/cancel`, {
       method: "PATCH",
@@ -543,45 +591,50 @@ function CancelModal({ res, onSuccess, onClose }: {
     });
     const data = await r.json();
     setLoading(false);
-    if (!r.ok) { toast.error(data.error ?? "Cancel failed"); return; }
-    toast.success(`Reservation ${res.reservationNumber ?? ""} cancelled`);
+    if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
+    toast.success(t("successDefault", { ref: res.reservationNumber ?? "" }));
     onSuccess();
   }
 
   return (
-    <Modal title="Cancel Reservation" onClose={onClose}>
+    <Modal title={t("title")} onClose={onClose}>
       <div className="space-y-4">
         <div className="p-4 bg-red-50 rounded-xl text-sm text-red-700 border border-red-200">
-          This action cannot be undone. The reservation will be permanently cancelled.
+          {t("warning")}
         </div>
         {totalPaid > 0 && (
           <div className="p-4 bg-yellow-50 rounded-xl text-sm text-yellow-800 border border-yellow-200">
-            ⚠ Guest has paid <strong>{res.amountPaid} OMR</strong>. A refund may be required.
+            {t.rich("refundWarning", {
+              amount: res.amountPaid,
+              b: (chunks) => <strong>{chunks}</strong>,
+            })}
           </div>
         )}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("reasonLabel")}</label>
           <select
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500"
           >
-            <option value="">Select reason…</option>
-            <option value="Guest Cancelled">Guest Cancelled</option>
-            <option value="No Show">No Show</option>
-            <option value="Overbooking">Overbooking</option>
-            <option value="Duplicate Booking">Duplicate Booking</option>
-            <option value="Other">Other</option>
+            <option value="">{t("selectReason")}</option>
+            <option value="Guest Cancelled">{t("reasons.guestCancelled")}</option>
+            <option value="No Show">{t("reasons.noShow")}</option>
+            <option value="Overbooking">{t("reasons.overbooking")}</option>
+            <option value="Duplicate Booking">{t("reasons.duplicateBooking")}</option>
+            <option value="Other">{t("reasons.other")}</option>
           </select>
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notes {reason === "Other" ? "*" : "(optional)"}</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {reason === "Other" ? t("notesLabelRequired") : t("notesLabelOptional")}
+          </label>
           <textarea
             rows={3}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500"
-            placeholder="Additional details…"
+            placeholder={t("notesPlaceholder")}
           />
         </div>
         <button
@@ -589,7 +642,7 @@ function CancelModal({ res, onSuccess, onClose }: {
           disabled={loading || !reason || (reason === "Other" && !notes.trim())}
           className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
         >
-          {loading ? "Cancelling…" : "Confirm Cancellation"}
+          {loading ? t("cancelling") : t("confirm")}
         </button>
       </div>
     </Modal>
@@ -601,6 +654,8 @@ function CancelModal({ res, onSuccess, onClose }: {
 function PaymentModal({ res, onSuccess, onClose }: {
   res: ReservationData; onSuccess: () => void; onClose: () => void;
 }) {
+  const t = useTranslations("reservations.detail.paymentModal");
+  const fmtDate = useFmtDate();
   // Outstanding invoices (not cancelled/paid) sorted by due date
   const outstandingInvoices = res.invoices.filter(
     (inv) => !["CANCELLED", "VOID", "PAID"].includes(inv.status) && Number(inv.balanceDue) > 0,
@@ -635,12 +690,12 @@ function PaymentModal({ res, onSuccess, onClose }: {
 
   async function handleSubmit() {
     const amt = Number(form.amount);
-    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
+    if (!amt || amt <= 0) { toast.error(t("invalidAmount")); return; }
 
     if (allocationMode === "manual" && hasInvoices) {
-      if (manualTotal <= 0) { toast.error("Allocate at least one invoice"); return; }
+      if (manualTotal <= 0) { toast.error(t("allocateAtLeastOne")); return; }
       if (Math.abs(manualTotal - amt) > 0.001) {
-        toast.error(`Allocated ${manualTotal.toFixed(3)} OMR but payment amount is ${amt.toFixed(3)} OMR — they must match`);
+        toast.error(t("mismatch", { allocated: manualTotal.toFixed(3), amount: amt.toFixed(3) }));
         return;
       }
     }
@@ -670,21 +725,21 @@ function PaymentModal({ res, onSuccess, onClose }: {
     });
     const data = await r.json();
     setLoading(false);
-    if (!r.ok) { toast.error(data.error ?? "Payment failed"); return; }
-    toast.success("Payment recorded");
+    if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
+    toast.success(t("success"));
     onSuccess();
   }
 
   const fmtInvStatus = (s: string) => {
-    if (s === "PARTIALLY_PAID" || s === "PARTIAL") return "Partial";
-    if (s === "PENDING" || s === "DRAFT" || s === "DUE" || s === "ISSUED") return "Pending";
+    if (s === "PARTIALLY_PAID" || s === "PARTIAL") return t("invStatus.partial");
+    if (s === "PENDING" || s === "DRAFT" || s === "DUE" || s === "ISSUED") return t("invStatus.pending");
     return s;
   };
   const isOverdue = (inv: InvoiceRow) =>
     new Date(inv.dueDate) < new Date() && !["PAID", "CANCELLED", "VOID"].includes(inv.status);
 
   return (
-    <Modal title="Record Payment" onClose={onClose}>
+    <Modal title={t("title")} onClose={onClose}>
       <div className="space-y-4">
         {/* Amount + method */}
         <PaymentForm balanceDue={res.balanceDue} value={form} onChange={setForm} />
@@ -693,19 +748,19 @@ function PaymentModal({ res, onSuccess, onClose }: {
         {hasInvoices && (
           <div className="border border-gray-200 rounded-xl overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-200">
-              <span className="text-sm font-medium text-gray-700">Apply to invoices</span>
+              <span className="text-sm font-medium text-gray-700">{t("applyToInvoices")}</span>
               <div className="flex gap-1 bg-white border border-gray-200 rounded-lg p-0.5">
                 <button
                   onClick={() => setAllocationMode("auto")}
                   className={`text-xs px-3 py-1 rounded-md font-medium transition-colors ${allocationMode === "auto" ? "bg-blue-600 text-white" : "text-gray-500 hover:text-gray-700"}`}
                 >
-                  Auto
+                  {t("auto")}
                 </button>
                 <button
                   onClick={() => setAllocationMode("manual")}
                   className={`text-xs px-3 py-1 rounded-md font-medium transition-colors ${allocationMode === "manual" ? "bg-blue-600 text-white" : "text-gray-500 hover:text-gray-700"}`}
                 >
-                  Manual
+                  {t("manual")}
                 </button>
               </div>
             </div>
@@ -717,9 +772,9 @@ function PaymentModal({ res, onSuccess, onClose }: {
                   <div key={inv.id} className="flex items-center gap-3 px-4 py-3 text-sm">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs text-gray-600">{inv.invoiceNumber}</span>
+                        <span className="font-mono text-xs text-gray-600 ltr-numbers">{inv.invoiceNumber}</span>
                         {isOverdue(inv) && (
-                          <span className="text-xs text-red-600 font-medium">Overdue</span>
+                          <span className="text-xs text-red-600 font-medium">{t("overdue")}</span>
                         )}
                       </div>
                       <div className="text-xs text-gray-400 mt-0.5">
@@ -734,7 +789,7 @@ function PaymentModal({ res, onSuccess, onClose }: {
                     </div>
                     <div className="text-right shrink-0">
                       <div className="text-xs text-gray-400 mb-1">
-                        Due: {Number(inv.balanceDue).toFixed(3)} OMR
+                        {t("due", { amount: Number(inv.balanceDue).toFixed(3) })}
                       </div>
                       {allocationMode === "auto" ? (
                         <span className={`text-xs font-semibold ${(autoAlloc?.amount ?? 0) > 0 ? "text-blue-600" : "text-gray-300"}`}>
@@ -753,7 +808,7 @@ function PaymentModal({ res, onSuccess, onClose }: {
                             setManualAmounts((m) => ({ ...m, [inv.id]: e.target.value }))
                           }
                           placeholder="0.000"
-                          className="w-24 text-right rounded-md border border-gray-300 px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500"
+                          className="w-24 text-end rounded-md border border-gray-300 px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 ltr-numbers"
                         />
                       )}
                     </div>
@@ -764,12 +819,12 @@ function PaymentModal({ res, onSuccess, onClose }: {
 
             {allocationMode === "manual" && (
               <div className="flex justify-between items-center px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs">
-                <span className="text-gray-500">Total allocated</span>
+                <span className="text-gray-500">{t("totalAllocated")}</span>
                 <span className={`font-semibold ${Math.abs(manualTotal - Number(form.amount)) > 0.001 ? "text-red-600" : "text-green-600"}`}>
-                  {manualTotal.toFixed(3)} OMR
+                  <span className="ltr-numbers">{manualTotal.toFixed(3)}</span> OMR
                   {Math.abs(manualTotal - Number(form.amount)) > 0.001 && (
-                    <span className="text-red-500 ml-1">
-                      (must equal {Number(form.amount).toFixed(3)})
+                    <span className="text-red-500 ms-1">
+                      {t("mustEqual", { amount: Number(form.amount).toFixed(3) })}
                     </span>
                   )}
                 </span>
@@ -783,7 +838,7 @@ function PaymentModal({ res, onSuccess, onClose }: {
           disabled={loading}
           className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
         >
-          {loading ? "Recording…" : "Record Payment"}
+          {loading ? t("recording") : t("confirm")}
         </button>
       </div>
     </Modal>
@@ -795,12 +850,13 @@ function PaymentModal({ res, onSuccess, onClose }: {
 function ChargeModal({ res, onSuccess, onClose }: {
   res: ReservationData; onSuccess: () => void; onClose: () => void;
 }) {
+  const t = useTranslations("reservations.detail.chargeModal");
   const [form, setForm] = useState({ description: "", amount: "", category: "other" });
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
     if (!form.description.trim() || !form.amount || Number(form.amount) <= 0) {
-      toast.error("Description and amount are required"); return;
+      toast.error(t("validation")); return;
     }
     setLoading(true);
     const r = await fetch(`/api/reservations/${res.id}/charges`, {
@@ -810,47 +866,47 @@ function ChargeModal({ res, onSuccess, onClose }: {
     });
     const data = await r.json();
     setLoading(false);
-    if (!r.ok) { toast.error(data.error ?? "Failed to add charge"); return; }
-    toast.success("Charge added");
+    if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
+    toast.success(t("success"));
     onSuccess();
   }
 
   return (
-    <Modal title="Add Extra Charge" onClose={onClose}>
+    <Modal title={t("title")} onClose={onClose}>
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("description")}</label>
           <input
             type="text"
             value={form.description}
             onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            placeholder="Cleaning fee, minibar, damage repair…"
+            placeholder={t("descriptionPlaceholder")}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Amount (OMR) *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("amount")}</label>
             <input
               type="number" step="0.001" min="0"
               value={form.amount}
               onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 ltr-numbers"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("category")}</label>
             <select
               value={form.category}
               onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
             >
-              <option value="other">Other</option>
-              <option value="cleaning">Cleaning</option>
-              <option value="damage">Damage</option>
-              <option value="minibar">Minibar</option>
-              <option value="service">Room Service</option>
-              <option value="parking">Parking</option>
+              <option value="other">{t("categories.other")}</option>
+              <option value="cleaning">{t("categories.cleaning")}</option>
+              <option value="damage">{t("categories.damage")}</option>
+              <option value="minibar">{t("categories.minibar")}</option>
+              <option value="service">{t("categories.service")}</option>
+              <option value="parking">{t("categories.parking")}</option>
             </select>
           </div>
         </div>
@@ -859,7 +915,7 @@ function ChargeModal({ res, onSuccess, onClose }: {
           disabled={loading}
           className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
         >
-          {loading ? "Adding…" : "Add Charge"}
+          {loading ? t("adding") : t("confirm")}
         </button>
       </div>
     </Modal>
@@ -871,11 +927,12 @@ function ChargeModal({ res, onSuccess, onClose }: {
 function NoteModal({ res, onSuccess, onClose }: {
   res: ReservationData; onSuccess: () => void; onClose: () => void;
 }) {
+  const t = useTranslations("reservations.detail.noteModal");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
-    if (!content.trim()) { toast.error("Note cannot be empty"); return; }
+    if (!content.trim()) { toast.error(t("empty")); return; }
     setLoading(true);
     const r = await fetch(`/api/reservations/${res.id}/notes`, {
       method: "POST",
@@ -884,19 +941,19 @@ function NoteModal({ res, onSuccess, onClose }: {
     });
     const data = await r.json();
     setLoading(false);
-    if (!r.ok) { toast.error(data.error ?? "Failed to add note"); return; }
-    toast.success("Note added");
+    if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
+    toast.success(t("success"));
     onSuccess();
   }
 
   return (
-    <Modal title="Add Note" onClose={onClose}>
+    <Modal title={t("title")} onClose={onClose}>
       <div className="space-y-4">
         <textarea
           rows={4}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="Add a note about this reservation…"
+          placeholder={t("placeholder")}
           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
           autoFocus
         />
@@ -905,7 +962,7 @@ function NoteModal({ res, onSuccess, onClose }: {
           disabled={loading}
           className="w-full py-3 bg-gray-800 hover:bg-gray-900 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
         >
-          {loading ? "Saving…" : "Save Note"}
+          {loading ? t("saving") : t("confirm")}
         </button>
       </div>
     </Modal>
@@ -917,6 +974,7 @@ function NoteModal({ res, onSuccess, onClose }: {
 function GenerateInvoicesModal({ res, onSuccess, onClose }: {
   res: ReservationData; onSuccess: () => void; onClose: () => void;
 }) {
+  const t = useTranslations("reservations.detail.generateInvoicesModal");
   const [loading, setLoading] = useState(false);
 
   async function handleConfirm() {
@@ -927,30 +985,36 @@ function GenerateInvoicesModal({ res, onSuccess, onClose }: {
     });
     const data = await r.json();
     setLoading(false);
-    if (!r.ok) { toast.error(data.error ?? "Failed to generate invoices"); return; }
-    toast.success(data.message ?? `${data.invoiceCount} invoice(s) generated`);
+    if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
+    toast.success(data.message ?? t("successFallback", { count: data.invoiceCount ?? 0 }));
     onSuccess();
   }
 
+  const isMonthly = res.rateType === "monthly";
+  const months = Math.round(res.totalNights / 30);
+
   return (
-    <Modal title="Generate Invoices" onClose={onClose}>
+    <Modal title={t("title")} onClose={onClose}>
       <div className="space-y-4">
         <div className="p-4 bg-blue-50 rounded-xl text-sm text-blue-800 border border-blue-200">
-          This will generate invoice(s) for this reservation based on the rate type and stay duration.
-          Once generated, invoices cannot be duplicated.
+          {t("body")}
         </div>
         <div className="bg-gray-50 rounded-xl p-4 space-y-1 text-sm text-gray-700">
           <div className="flex justify-between">
-            <span>Grand Total</span>
-            <span className="font-semibold">{res.grandTotal} OMR</span>
+            <span>{t("grandTotal")}</span>
+            <span className="font-semibold ltr-numbers">{res.grandTotal} OMR</span>
           </div>
           <div className="flex justify-between">
-            <span>Rate Type</span>
-            <span>{res.rateType === "monthly" ? "Monthly" : "Daily"}</span>
+            <span>{t("rateType")}</span>
+            <span>{isMonthly ? t("monthly") : t("daily")}</span>
           </div>
           <div className="flex justify-between">
-            <span>Duration</span>
-            <span>{res.rateType === "monthly" ? `${Math.round(res.totalNights / 30)} month(s)` : `${res.totalNights} night(s)`}</span>
+            <span>{t("duration")}</span>
+            <span className="ltr-numbers">
+              {isMonthly
+                ? t("durationMonths", { count: months })
+                : t("durationNights", { count: res.totalNights })}
+            </span>
           </div>
         </div>
         <button
@@ -958,7 +1022,7 @@ function GenerateInvoicesModal({ res, onSuccess, onClose }: {
           disabled={loading}
           className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
         >
-          {loading ? "Generating…" : "Generate Invoices"}
+          {loading ? t("generating") : t("confirm")}
         </button>
       </div>
     </Modal>
@@ -973,6 +1037,8 @@ function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
   onSuccess: () => void;
   onClose: () => void;
 }) {
+  const t = useTranslations("reservations.detail.invoicePayModal");
+  const tStatus = useTranslations("reservations.detail.paymentModal.invStatus");
   const [form, setForm] = useState({
     amount: Number(invoice.balanceDue).toFixed(3),
     method: "CASH",
@@ -982,7 +1048,7 @@ function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
 
   async function handleSubmit() {
     const amt = Number(form.amount);
-    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
+    if (!amt || amt <= 0) { toast.error(t("invalidAmount")); return; }
     setLoading(true);
     const r = await fetch(`/api/reservations/${res.id}/payments`, {
       method: "POST",
@@ -996,8 +1062,8 @@ function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
     });
     const data = await r.json();
     setLoading(false);
-    if (!r.ok) { toast.error(data.error ?? "Payment failed"); return; }
-    toast.success("Payment recorded");
+    if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
+    toast.success(t("success"));
     onSuccess();
   }
 
@@ -1008,31 +1074,37 @@ function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
     return "bg-orange-100 text-orange-700";
   };
 
+  function statusLabel(s: string) {
+    if (s === "PARTIALLY_PAID" || s === "PARTIAL") return tStatus("partial");
+    if (s === "PENDING") return tStatus("pending");
+    return s.replace("_", " ");
+  }
+
   return (
-    <Modal title={`Pay Invoice ${invoice.invoiceNumber}`} onClose={onClose}>
+    <Modal title={t("title", { invoice: invoice.invoiceNumber })} onClose={onClose}>
       <div className="space-y-4">
         <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
           <div className="flex items-center justify-between">
-            <span className="text-gray-500">Invoice</span>
-            <span className="font-mono font-semibold">{invoice.invoiceNumber}</span>
+            <span className="text-gray-500">{t("invoice")}</span>
+            <span className="font-mono font-semibold ltr-numbers">{invoice.invoiceNumber}</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-gray-500">Status</span>
+            <span className="text-gray-500">{t("status")}</span>
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${invoiceStatusClass(invoice.status)}`}>
-              {invoice.status.replace("_", " ")}
+              {statusLabel(invoice.status)}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-gray-500">Total</span>
-            <span>{Number(invoice.totalAmount).toFixed(3)} OMR</span>
+            <span className="text-gray-500">{t("total")}</span>
+            <span className="ltr-numbers">{Number(invoice.totalAmount).toFixed(3)} OMR</span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-gray-500">Already Paid</span>
-            <span className="text-green-600">{Number(invoice.amountPaid).toFixed(3)} OMR</span>
+            <span className="text-gray-500">{t("alreadyPaid")}</span>
+            <span className="text-green-600 ltr-numbers">{Number(invoice.amountPaid).toFixed(3)} OMR</span>
           </div>
           <div className="flex items-center justify-between font-bold border-t pt-2">
-            <span>Balance Due</span>
-            <span className="text-red-600">{Number(invoice.balanceDue).toFixed(3)} OMR</span>
+            <span>{t("balanceDue")}</span>
+            <span className="text-red-600 ltr-numbers">{Number(invoice.balanceDue).toFixed(3)} OMR</span>
           </div>
         </div>
 
@@ -1043,7 +1115,7 @@ function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
           disabled={loading}
           className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
         >
-          {loading ? "Recording…" : "Record Payment"}
+          {loading ? t("recording") : t("confirm")}
         </button>
       </div>
     </Modal>
@@ -1052,19 +1124,21 @@ function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
 
 // ── Return Modal ───────────────────────────────────────────────────────────────
 
-const RETURN_REASONS = [
-  "Early departure",
-  "Family emergency",
-  "Travel change",
-  "Dissatisfied with unit",
-  "Found alternative accommodation",
-  "Work / business reason",
-  "Other",
+const RETURN_REASONS: { key: string; value: string }[] = [
+  { key: "earlyDeparture",   value: "Early departure" },
+  { key: "familyEmergency",  value: "Family emergency" },
+  { key: "travelChange",     value: "Travel change" },
+  { key: "dissatisfied",     value: "Dissatisfied with unit" },
+  { key: "foundAlternative", value: "Found alternative accommodation" },
+  { key: "workReason",       value: "Work / business reason" },
+  { key: "other",            value: "Other" },
 ];
 
 function ReturnModal({ res, onSuccess, onClose }: {
   res: ReservationData; onSuccess: () => void; onClose: () => void;
 }) {
+  const t = useTranslations("reservations.detail.returnModal");
+  const fmtDate = useFmtDate();
   const isMonthly = res.rateType === "monthly" || res.rateType === "MONTHLY";
 
   // Default new checkout = tomorrow
@@ -1108,14 +1182,15 @@ function ReturnModal({ res, onSuccess, onClose }: {
         if (data.error) { setPreviewError(data.error); setPreview(null); }
         else setPreview(data.preview);
       })
-      .catch((e) => { if (e.name !== "AbortError") setPreviewError("Failed to calculate return"); })
+      .catch((e) => { if (e.name !== "AbortError") setPreviewError(t("calcFailed")); })
       .finally(() => setPreviewLoading(false));
     return () => ctrl.abort();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newCheckout, res.id]);
 
   async function handleConfirm() {
-    if (!reason) { toast.error("Please select a reason"); return; }
-    if (!preview) { toast.error("No valid return preview"); return; }
+    if (!reason) { toast.error(t("reasonRequired")); return; }
+    if (!preview) { toast.error(t("noPreview")); return; }
     setLoading(true);
     const r = await fetch(`/api/reservations/${res.id}/return`, {
       method:  "POST",
@@ -1124,14 +1199,13 @@ function ReturnModal({ res, onSuccess, onClose }: {
     });
     const data = await r.json();
     setLoading(false);
-    if (!r.ok) { toast.error(data.error ?? "Return failed"); return; }
-    toast.success(`Return ${data.return?.returnNumber} processed. Reservation checked out.`);
+    if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
+    toast.success(t("successDefault", { number: data.return?.returnNumber ?? "" }));
     onSuccess();
   }
 
-  const title = isMonthly
-    ? `Return Months — ${res.reservationNumber ?? res.id.slice(0, 8)}`
-    : `Return Days — ${res.reservationNumber ?? res.id.slice(0, 8)}`;
+  const ref = res.reservationNumber ?? res.id.slice(0, 8);
+  const title = isMonthly ? t("titleMonthly", { ref }) : t("titleDaily", { ref });
 
   return (
     <Modal title={title} onClose={onClose}>
@@ -1139,23 +1213,25 @@ function ReturnModal({ res, onSuccess, onClose }: {
         {/* Current stay summary */}
         <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-1">
           <div className="flex justify-between text-gray-600">
-            <span>Check-in</span>
+            <span>{t("checkIn")}</span>
             <span className="font-medium text-gray-900">{fmtDate(res.startDate)}</span>
           </div>
           <div className="flex justify-between text-gray-600">
-            <span>Current checkout</span>
+            <span>{t("currentCheckout")}</span>
             <span className="font-medium text-gray-900">{fmtDate(res.endDate)}</span>
           </div>
           <div className="flex justify-between text-gray-600">
-            <span>Rate type</span>
-            <span className="font-medium text-gray-900">{isMonthly ? "Monthly" : `Daily (${res.totalNights} nights)`}</span>
+            <span>{t("rateType")}</span>
+            <span className="font-medium text-gray-900">
+              {isMonthly ? t("monthly") : t("dailyWithNights", { count: res.totalNights })}
+            </span>
           </div>
         </div>
 
         {/* New checkout date */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            New Checkout Date <span className="text-red-500">*</span>
+            {t("newCheckoutDate")} <span className="text-red-500">*</span>
           </label>
           <input
             type="date"
@@ -1167,15 +1243,14 @@ function ReturnModal({ res, onSuccess, onClose }: {
           />
           {isMonthly && (
             <p className="mt-1 text-xs text-gray-500">
-              For monthly reservations, the current billing period cannot be returned.
-              Only future periods are eligible.
+              {t("monthlyHint")}
             </p>
           )}
         </div>
 
         {/* Preview */}
         {previewLoading && (
-          <div className="text-sm text-gray-400 text-center py-2">Calculating return…</div>
+          <div className="text-sm text-gray-400 text-center py-2">{t("calculating")}</div>
         )}
         {previewError && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
@@ -1187,19 +1262,23 @@ function ReturnModal({ res, onSuccess, onClose }: {
             {/* Return period */}
             <div className="p-3 bg-purple-50 border border-purple-200 rounded-xl text-sm">
               <p className="font-semibold text-purple-800 mb-2">
-                Returning: {fmtDate(preview.returnFrom)} → {fmtDate(preview.returnTo)}
-                {" "}({preview.returnDays} {preview.returnType === "MONTHLY" ? "month(s)" : "night(s)"})
+                {t("returningHeader", {
+                  from:  fmtDate(preview.returnFrom),
+                  to:    fmtDate(preview.returnTo),
+                  count: preview.returnDays,
+                  unit:  preview.returnType === "MONTHLY" ? t("monthsLabel") : t("nightsLabel"),
+                })}
               </p>
               <div className="space-y-1">
                 {preview.lineItems.map((li, i) => (
                   <div key={i} className="flex justify-between text-gray-700">
                     <span>{li.description}</span>
-                    <span className="font-medium">{li.lineTotal} OMR</span>
+                    <span className="font-medium ltr-numbers">{li.lineTotal} OMR</span>
                   </div>
                 ))}
                 <div className="flex justify-between font-bold text-purple-800 border-t border-purple-200 pt-1 mt-1">
-                  <span>Total Return</span>
-                  <span>{preview.returnAmount} OMR</span>
+                  <span>{t("totalReturn")}</span>
+                  <span className="ltr-numbers">{preview.returnAmount} OMR</span>
                 </div>
               </div>
             </div>
@@ -1207,11 +1286,11 @@ function ReturnModal({ res, onSuccess, onClose }: {
             {/* Invoice impact */}
             {preview.affectedInvoices.length > 0 && (
               <div className="text-sm space-y-2">
-                <p className="font-medium text-gray-700">Invoice Impact:</p>
+                <p className="font-medium text-gray-700">{t("invoiceImpact")}</p>
                 {preview.affectedInvoices.map((inv: Preview["affectedInvoices"][0]) => (
                   <div key={inv.id} className="p-3 bg-gray-50 rounded-lg border border-gray-200 text-xs space-y-1">
                     <div className="flex justify-between font-medium">
-                      <span>{inv.invoiceNumber}</span>
+                      <span className="ltr-numbers">{inv.invoiceNumber}</span>
                       <span className={`px-1.5 py-0.5 rounded-full ${
                         inv.status === "PAID" ? "bg-green-100 text-green-700" :
                         inv.status === "PARTIALLY_PAID" ? "bg-yellow-100 text-yellow-700" :
@@ -1219,13 +1298,13 @@ function ReturnModal({ res, onSuccess, onClose }: {
                       }`}>{inv.status}</span>
                     </div>
                     {(inv.status === "PENDING" || inv.status === "DRAFT") && Number(inv.returnAmount) > 0 && (
-                      <p className="text-green-700">→ Invoice total will be reduced by {inv.returnAmount} OMR</p>
+                      <p className="text-green-700">{t("reductionMsg", { amount: inv.returnAmount })}</p>
                     )}
                     {inv.status === "PAID" && (
-                      <p className="text-orange-700">→ Invoice stays PAID. Refund of {Number(inv.returnAmount).toFixed(3)} OMR required.</p>
+                      <p className="text-orange-700">{t("paidRefundMsg", { amount: Number(inv.returnAmount).toFixed(3) })}</p>
                     )}
                     {preview.invoicesToCancel.includes(inv.id) && (
-                      <p className="text-red-700 font-medium">→ This invoice will be CANCELLED (unpaid, full period returned)</p>
+                      <p className="text-red-700 font-medium">{t("cancelMsg")}</p>
                     )}
                   </div>
                 ))}
@@ -1236,12 +1315,17 @@ function ReturnModal({ res, onSuccess, onClose }: {
             {preview.refundRequired ? (
               <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-xl text-sm text-orange-800">
                 <ExclamationTriangleIcon className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>Refund of <strong>{preview.refundAmount} OMR</strong> is required. You can process it after the return.</span>
+                <span>
+                  {t.rich("refundRequiredMsg", {
+                    amount: preview.refundAmount,
+                    b: (chunks) => <strong>{chunks}</strong>,
+                  })}
+                </span>
               </div>
             ) : (
               <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800">
                 <CheckIcon className="h-4 w-4 shrink-0" />
-                <span>No refund required — invoice was not paid.</span>
+                <span>{t("noRefundMsg")}</span>
               </div>
             )}
           </div>
@@ -1250,34 +1334,34 @@ function ReturnModal({ res, onSuccess, onClose }: {
         {/* Reason */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Reason <span className="text-red-500">*</span>
+            {t("reasonLabel")} <span className="text-red-500">*</span>
           </label>
           <select
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500"
           >
-            <option value="">Select reason…</option>
+            <option value="">{t("selectReason")}</option>
             {RETURN_REASONS.map((r) => (
-              <option key={r} value={r}>{r}</option>
+              <option key={r.key} value={r.value}>{t(`reasons.${r.key}` as never)}</option>
             ))}
           </select>
         </div>
 
         {/* Notes */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">{t("notesLabel")}</label>
           <textarea
             rows={2}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Additional details…"
+            placeholder={t("notesPlaceholder")}
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500"
           />
         </div>
 
         <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
-          ⚠ This will immediately check out the reservation and cannot be undone.
+          {t("warning")}
         </div>
 
         <button
@@ -1285,7 +1369,7 @@ function ReturnModal({ res, onSuccess, onClose }: {
           disabled={loading || !preview || !!previewError || !reason}
           className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
         >
-          {loading ? "Processing…" : "Process Return & Checkout"}
+          {loading ? t("processing") : t("confirm")}
         </button>
       </div>
     </Modal>
@@ -1297,6 +1381,7 @@ function ReturnModal({ res, onSuccess, onClose }: {
 function ProcessRefundModal({ ret, onSuccess, onClose }: {
   ret: ReturnRow; onSuccess: () => void; onClose: () => void;
 }) {
+  const t = useTranslations("reservations.detail.refundModal");
   const [form, setForm] = useState({
     amount:    ret.refundAmount,
     method:    "CASH",
@@ -1307,7 +1392,7 @@ function ProcessRefundModal({ ret, onSuccess, onClose }: {
 
   async function handleSubmit() {
     const amt = Number(form.amount);
-    if (!amt || amt <= 0) { toast.error("Enter a valid refund amount"); return; }
+    if (!amt || amt <= 0) { toast.error(t("invalidAmount")); return; }
     setLoading(true);
     const r = await fetch(`/api/returns/${ret.id}/refund`, {
       method:  "POST",
@@ -1321,45 +1406,51 @@ function ProcessRefundModal({ ret, onSuccess, onClose }: {
     });
     const data = await r.json();
     setLoading(false);
-    if (!r.ok) { toast.error(data.error ?? "Refund failed"); return; }
-    toast.success("Refund processed successfully");
+    if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
+    toast.success(t("success"));
     onSuccess();
   }
 
+  function methodLabel(m: "CASH" | "CARD" | "BANK_TRANSFER") {
+    if (m === "CASH") return t("cash");
+    if (m === "CARD") return t("cardReversal");
+    return t("bankTransfer");
+  }
+
   return (
-    <Modal title={`Process Refund — ${ret.returnNumber}`} onClose={onClose}>
+    <Modal title={t("title", { ref: ret.returnNumber })} onClose={onClose}>
       <div className="space-y-4">
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm space-y-1">
           <div className="flex justify-between">
-            <span className="text-gray-600">Return</span>
-            <span className="font-mono font-semibold">{ret.returnNumber}</span>
+            <span className="text-gray-600">{t("return")}</span>
+            <span className="font-mono font-semibold ltr-numbers">{ret.returnNumber}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-gray-600">Return Amount</span>
-            <span>{ret.returnAmount} OMR</span>
+            <span className="text-gray-600">{t("returnAmount")}</span>
+            <span className="ltr-numbers">{ret.returnAmount} OMR</span>
           </div>
           <div className="flex justify-between font-bold border-t border-orange-200 pt-1 mt-1">
-            <span>Refund Required</span>
-            <span className="text-orange-700">{ret.refundAmount} OMR</span>
+            <span>{t("refundRequired")}</span>
+            <span className="text-orange-700 ltr-numbers">{ret.refundAmount} OMR</span>
           </div>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Refund Amount (OMR) <span className="text-red-500">*</span>
+            {t("amountLabel")} <span className="text-red-500">*</span>
           </label>
           <input
             type="number" step="0.001" min="0.001"
             value={form.amount}
             onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500"
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 ltr-numbers"
           />
-          <p className="text-xs text-gray-400 mt-1">Pre-filled with refund amount. You may reduce this if needed.</p>
+          <p className="text-xs text-gray-400 mt-1">{t("amountHint")}</p>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Refund Method <span className="text-red-500">*</span>
+            {t("methodLabel")} <span className="text-red-500">*</span>
           </label>
           <div className="flex flex-wrap gap-2">
             {(["CASH", "CARD", "BANK_TRANSFER"] as const).map((m) => (
@@ -1377,7 +1468,7 @@ function ProcessRefundModal({ ret, onSuccess, onClose }: {
                   onChange={() => setForm((f) => ({ ...f, method: m }))}
                   className="sr-only"
                 />
-                {m === "CASH" ? "Cash" : m === "CARD" ? "Card Reversal" : "Bank Transfer"}
+                {methodLabel(m)}
               </label>
             ))}
           </div>
@@ -1385,22 +1476,22 @@ function ProcessRefundModal({ ret, onSuccess, onClose }: {
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Reference (optional)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("referenceLabel")}</label>
             <input
               type="text"
               value={form.reference}
               onChange={(e) => setForm((f) => ({ ...f, reference: e.target.value }))}
-              placeholder="Transaction ref…"
+              placeholder={t("referencePlaceholder")}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Notes (optional)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("notesLabel")}</label>
             <input
               type="text"
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              placeholder="Internal notes…"
+              placeholder={t("notesPlaceholder")}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500"
             />
           </div>
@@ -1411,7 +1502,7 @@ function ProcessRefundModal({ ret, onSuccess, onClose }: {
           disabled={loading}
           className="w-full py-3 bg-orange-600 hover:bg-orange-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
         >
-          {loading ? "Processing Refund…" : "Complete Refund"}
+          {loading ? t("processing") : t("confirm")}
         </button>
       </div>
     </Modal>
@@ -1426,6 +1517,7 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
   reservationId: string;
   rateType: string;
 }) {
+  const t = useTranslations("reservations.detail.actions");
   const openPrint = () => window.open(`/api/reservations/${reservationId}/pdf`, "_blank");
 
   switch (ds) {
@@ -1433,13 +1525,13 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
       return (
         <>
           <Link href="edit" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PencilSquareIcon className="h-4 w-4" /> Edit
+            <PencilSquareIcon className="h-4 w-4" /> {t("edit")}
           </Link>
           <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> Print
+            <PrinterIcon className="h-4 w-4" /> {t("print")}
           </button>
           <button onClick={() => onAction("cancel")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-300 bg-white text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
-            <XMarkIcon className="h-4 w-4" /> Cancel
+            <XMarkIcon className="h-4 w-4" /> {t("cancel")}
           </button>
         </>
       );
@@ -1448,21 +1540,21 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
       return (
         <>
           <button onClick={() => onAction("check-in")} className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-colors shadow-sm">
-            <CheckIcon className="h-4 w-4" /> Check In
+            <CheckIcon className="h-4 w-4" /> {t("checkIn")}
           </button>
           {ds === "Overdue Arrival" && (
             <button onClick={() => onAction("cancel")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">
-              No Show
+              {t("noShow")}
             </button>
           )}
           <Link href="edit" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PencilSquareIcon className="h-4 w-4" /> Edit
+            <PencilSquareIcon className="h-4 w-4" /> {t("edit")}
           </Link>
           <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> Print
+            <PrinterIcon className="h-4 w-4" /> {t("print")}
           </button>
           <button onClick={() => onAction("cancel")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-300 bg-white text-sm font-medium text-red-600 hover:bg-red-50">
-            <XMarkIcon className="h-4 w-4" /> Cancel
+            <XMarkIcon className="h-4 w-4" /> {t("cancel")}
           </button>
         </>
       );
@@ -1476,19 +1568,19 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
               ds === "Due Checkout" ? "bg-orange-500 hover:bg-orange-600" : "bg-blue-600 hover:bg-blue-700"
             }`}
           >
-            Check Out
+            {t("checkOut")}
           </button>
           <button onClick={() => onAction("return")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-purple-300 bg-white text-sm font-medium text-purple-700 hover:bg-purple-50 transition-colors">
-            {rateType === "monthly" ? "Return Months" : "Return Days"}
+            {rateType === "monthly" ? t("returnMonths") : t("returnDays")}
           </button>
           <button onClick={() => onAction("extend-stay")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-300 bg-white text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors">
-            Extend Stay
+            {t("extendStay")}
           </button>
           <button onClick={() => onAction("move-unit")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            Move Unit
+            {t("moveUnit")}
           </button>
           <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> Print
+            <PrinterIcon className="h-4 w-4" /> {t("print")}
           </button>
         </>
       );
@@ -1499,10 +1591,10 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
             onClick={() => onAction("check-out")}
             className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg text-white text-sm font-semibold transition-colors shadow-sm bg-red-600 hover:bg-red-700 animate-pulse"
           >
-            Check Out
+            {t("checkOut")}
           </button>
           <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> Print
+            <PrinterIcon className="h-4 w-4" /> {t("print")}
           </button>
         </>
       );
@@ -1510,14 +1602,14 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
       return (
         <>
           <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> Print
+            <PrinterIcon className="h-4 w-4" /> {t("print")}
           </button>
         </>
       );
     default:
       return (
         <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-          <PrinterIcon className="h-4 w-4" /> Print
+          <PrinterIcon className="h-4 w-4" /> {t("print")}
         </button>
       );
   }
@@ -1547,6 +1639,22 @@ function ActivityIcon({ action }: { action: string }) {
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export default function ReservationDetail({ id }: { id: string }) {
+  const t           = useTranslations("reservations.detail");
+  const tGuest      = useTranslations("reservations.detail.guest");
+  const tStay       = useTranslations("reservations.detail.stay");
+  const tInvoices   = useTranslations("reservations.detail.invoicesSection");
+  const tPricing    = useTranslations("reservations.detail.pricingBreakdown");
+  const tFinancial  = useTranslations("reservations.detail.financial");
+  const tReturns    = useTranslations("reservations.detail.returnsSection");
+  const tActivity   = useTranslations("reservations.detail.activitySection");
+  const tBanners    = useTranslations("reservations.detail.banners");
+  const fmtDate     = useFmtDate();
+  const fmtDateFull = useFmtDateFull();
+  const fmtTime     = useFmtTime();
+  const fmtMethod   = useFmtMethod();
+  const fmtSource   = useFmtSource();
+  const fmtUnitType = useFmtUnitType();
+
   const [res, setRes] = useState<ReservationData | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeModal, setActiveModal] = useState<ModalType>(null);
@@ -1573,7 +1681,7 @@ export default function ReservationDetail({ id }: { id: string }) {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center text-gray-400">
           <CalendarDaysIcon className="h-10 w-10 mx-auto mb-3 opacity-40" />
-          <p>Loading reservation…</p>
+          <p>{t("loading")}</p>
         </div>
       </div>
     );
@@ -1583,9 +1691,9 @@ export default function ReservationDetail({ id }: { id: string }) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center text-gray-500">
-          <p className="text-lg font-medium">Reservation not found</p>
+          <p className="text-lg font-medium">{t("notFound")}</p>
           <Link href="/dashboard/reservations" className="text-blue-600 hover:underline text-sm mt-2 block">
-            ← Back to reservations
+            {t("backLink")}
           </Link>
         </div>
       </div>
@@ -1626,7 +1734,9 @@ export default function ReservationDetail({ id }: { id: string }) {
                   />
                 </div>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Created {fmtDate(res.createdAt)}{res.createdByName ? ` by ${res.createdByName}` : ""}
+                  {res.createdByName
+                    ? t("createdBy", { date: fmtDate(res.createdAt), name: res.createdByName })
+                    : t("createdOn", { date: fmtDate(res.createdAt) })}
                 </p>
               </div>
             </div>
@@ -1643,8 +1753,8 @@ export default function ReservationDetail({ id }: { id: string }) {
       {(res.displayStatus === "Overstay" || res.displayStatus === "Due Checkout") && (
         <div className={`${res.displayStatus === "Overstay" ? "bg-red-600" : "bg-orange-500"} text-white text-center py-2 text-sm font-medium`}>
           {res.displayStatus === "Overstay"
-            ? `⚠ OVERSTAY — Guest should have checked out ${Math.abs(diffDays(today, res.endDate))} day(s) ago`
-            : "⏰ CHECKOUT DUE TODAY — Guest must check out today"}
+            ? tBanners("overstay", { count: Math.abs(diffDays(today, res.endDate)) })
+            : tBanners("dueCheckoutToday")}
         </div>
       )}
 
@@ -1654,10 +1764,13 @@ export default function ReservationDetail({ id }: { id: string }) {
           <div className="max-w-7xl mx-auto flex items-center gap-3">
             <BanknotesIcon className="h-5 w-5 shrink-0" />
             <div className="flex-1">
-              <span className="font-semibold">Refund Required — </span>
-              <span>This reservation was cancelled after payment of </span>
-              <span className="font-bold">{res.amountPaid} OMR</span>
-              <span>. Please process the refund and mark this reservation accordingly.</span>
+              <span className="font-semibold">{tBanners("refundLabel")} </span>
+              <span>
+                {tBanners.rich("refundBody", {
+                  amount: res.amountPaid,
+                  b: (chunks) => <strong>{chunks}</strong>,
+                })}
+              </span>
             </div>
           </div>
         </div>
@@ -1697,7 +1810,7 @@ export default function ReservationDetail({ id }: { id: string }) {
                 </div>
                 <Link href={`/dashboard/tenants/${res.tenant.id}`}
                   className="text-xs text-blue-600 hover:underline shrink-0">
-                  View Full Profile →
+                  {tGuest("viewProfile")}
                 </Link>
               </div>
 
@@ -1705,28 +1818,28 @@ export default function ReservationDetail({ id }: { id: string }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                 <a href={`tel:${res.tenant.phone}`} className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600 transition-colors">
                   <PhoneIcon className="h-4 w-4 text-gray-400 shrink-0" />
-                  {res.tenant.phone}
+                  <span className="ltr-numbers">{res.tenant.phone}</span>
                 </a>
                 {res.tenant.whatsappNumber && (
                   <a href={`https://wa.me/${res.tenant.whatsappNumber.replace(/\D/g, "")}`}
                     target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-2 text-sm text-green-600 hover:underline">
-                    <span className="text-base">📱</span> WhatsApp
+                    <span className="text-base">📱</span> {tGuest("whatsapp")}
                   </a>
                 )}
                 {res.tenant.email && (
                   <a href={`mailto:${res.tenant.email}`} className="flex items-center gap-2 text-sm text-gray-700 hover:text-blue-600">
                     <EnvelopeIcon className="h-4 w-4 text-gray-400 shrink-0" />
-                    {res.tenant.email}
+                    <span className="ltr-numbers">{res.tenant.email}</span>
                   </a>
                 )}
                 {res.tenant.idNumber && (
                   <div className="flex items-center gap-2 text-sm text-gray-700">
                     <IdentificationIcon className="h-4 w-4 text-gray-400 shrink-0" />
                     <span className="text-xs text-gray-400">{res.tenant.idType ?? "ID"}: </span>
-                    {res.tenant.idNumber}
+                    <span className="ltr-numbers">{res.tenant.idNumber}</span>
                     {res.tenant.idExpiryDate && new Date(res.tenant.idExpiryDate) < new Date() && (
-                      <span className="text-xs text-red-600 font-medium ml-1">⚠ Expired</span>
+                      <span className="text-xs text-red-600 font-medium ms-1">{tGuest("idExpired")}</span>
                     )}
                   </div>
                 )}
@@ -1734,10 +1847,10 @@ export default function ReservationDetail({ id }: { id: string }) {
 
               {/* CRM stats */}
               <div className="flex items-center gap-4 py-3 border-t border-gray-100 text-xs text-gray-500">
-                <span>{res.tenant.totalStays}th stay</span>
-                <span>Total spent: {Number(res.tenant.totalSpent).toFixed(3)} OMR</span>
+                <span>{tGuest("nthStay", { n: res.tenant.totalStays })}</span>
+                <span className="ltr-numbers">{tGuest("totalSpent", { amount: Number(res.tenant.totalSpent).toFixed(3) })}</span>
                 {res.tenant.firstStayDate && (
-                  <span>First visit: {fmtDate(res.tenant.firstStayDate, { month: "short", year: "numeric" })}</span>
+                  <span>{tGuest("firstVisit", { date: fmtDate(res.tenant.firstStayDate, { month: "short", year: "numeric" }) })}</span>
                 )}
                 {res.tenant.corporateName && (
                   <span className="font-medium text-gray-700">🏢 {res.tenant.corporateName}</span>
@@ -1747,58 +1860,58 @@ export default function ReservationDetail({ id }: { id: string }) {
               {/* Special requests + internal notes */}
               {res.tenant.specialRequests && (
                 <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                  <span className="font-medium">Special Requests: </span>{res.tenant.specialRequests}
+                  <span className="font-medium">{tGuest("specialRequests")} </span>{res.tenant.specialRequests}
                 </div>
               )}
               {res.tenant.internalNotes && (
                 <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                  <span className="font-medium">Staff Notes: </span>{res.tenant.internalNotes}
+                  <span className="font-medium">{tGuest("staffNotes")} </span>{res.tenant.internalNotes}
                 </div>
               )}
             </div>
 
             {/* Section 2: Stay Details */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-              <h3 className="font-semibold text-gray-800 mb-4">Stay Details</h3>
+              <h3 className="font-semibold text-gray-800 mb-4">{tStay("title")}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 {/* Dates */}
                 <div className="space-y-4">
                   <div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Check-in</p>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">{tStay("checkIn")}</p>
                     <p className="text-sm font-semibold text-gray-900">{fmtDateFull(res.startDate)}</p>
                     {res.actualCheckIn && (
                       <p className="text-xs text-green-600 mt-0.5">
-                        ✓ Checked in at {fmtTime(res.actualCheckIn)}
+                        {tStay("checkedInAt", { time: fmtTime(res.actualCheckIn) })}
                       </p>
                     )}
                     {!res.actualCheckIn && isToday(res.startDate) && (
-                      <p className="text-xs text-orange-600 font-medium mt-0.5">Today</p>
+                      <p className="text-xs text-orange-600 font-medium mt-0.5">{tStay("today")}</p>
                     )}
                   </div>
                   <div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Check-out</p>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">{tStay("checkOut")}</p>
                     <p className={`text-sm font-semibold ${!res.actualCheckOut && diffDays(today, res.endDate) > 0 ? "text-red-600" : "text-gray-900"}`}>
                       {fmtDateFull(res.endDate)}
                     </p>
                     {res.actualCheckOut && (
                       <p className="text-xs text-blue-600 mt-0.5">
-                        ✓ Checked out at {fmtTime(res.actualCheckOut)}
+                        {tStay("checkedOutAt", { time: fmtTime(res.actualCheckOut) })}
                       </p>
                     )}
                     {!res.actualCheckOut && res.displayStatus === "Overstay" && (
                       <p className="text-xs text-red-600 font-medium mt-0.5">
-                        ⚠ Checkout was due {Math.abs(diffDays(today, res.endDate))} day(s) ago
+                        {tStay("overdueBy", { count: Math.abs(diffDays(today, res.endDate)) })}
                       </p>
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 ltr-numbers">
                       {res.rateType === "monthly"
-                        ? `${Math.round(res.totalNights / 30)} month(s)`
-                        : `${res.totalNights} night${res.totalNights !== 1 ? "s" : ""}`}
+                        ? t("generateInvoicesModal.durationMonths", { count: Math.round(res.totalNights / 30) })
+                        : t("generateInvoicesModal.durationNights", { count: res.totalNights })}
                     </span>
                     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                      {res.rateType === "monthly" ? "Monthly Rate" : "Daily Rate"}
+                      {res.rateType === "monthly" ? tStay("monthlyRate") : tStay("dailyRate")}
                     </span>
                     <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
                       {fmtSource(res.source)}
@@ -1808,23 +1921,25 @@ export default function ReservationDetail({ id }: { id: string }) {
 
                 {/* Units */}
                 <div>
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Units</p>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">{tStay("units")}</p>
                   <div className="space-y-2">
                     {res.units.map((u) => (
                       <div key={u.id} className="p-3 rounded-lg bg-gray-50 border border-gray-100">
                         <div className="flex items-start justify-between">
                           <div>
                             <p className="font-semibold text-gray-900 text-sm">{u.name}</p>
-                            <p className="text-xs text-gray-500">{u.propertyName} — Floor {u.floor} — {fmtUnitType(u.unitType)}</p>
+                            <p className="text-xs text-gray-500">
+                              {u.propertyName} — {tStay("floor", { n: u.floor })} — {fmtUnitType(u.unitType)}
+                            </p>
                           </div>
-                          <p className="text-xs font-medium text-gray-700 shrink-0 ml-2">
+                          <p className="text-xs font-medium text-gray-700 shrink-0 ms-2 ltr-numbers">
                             {Number(u.subtotal).toFixed(3)} OMR
                           </p>
                         </div>
                         <p className="text-xs text-gray-400 mt-1">
-                          {Number(u.rateAmount).toFixed(3)} OMR/{u.rateType === "monthly" ? "month" : "night"}
-                          {u.seasonalPriceName && <span className="text-orange-600 ml-1">({u.seasonalPriceName})</span>}
-                          {u.rateSource === "manual_override" && <span className="text-purple-600 ml-1">(Manual rate)</span>}
+                          <span className="ltr-numbers">{Number(u.rateAmount).toFixed(3)} OMR</span>/{u.rateType === "monthly" ? tStay("perMonth") : tStay("perNight")}
+                          {u.seasonalPriceName && <span className="text-orange-600 ms-1">({u.seasonalPriceName})</span>}
+                          {u.rateSource === "manual_override" && <span className="text-purple-600 ms-1">({tStay("manualRate")})</span>}
                         </p>
                       </div>
                     ))}
@@ -1835,7 +1950,7 @@ export default function ReservationDetail({ id }: { id: string }) {
               {/* Reservation notes */}
               {res.notes && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">Notes</p>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1">{tStay("notes")}</p>
                   <p className="text-sm text-gray-700">{res.notes}</p>
                 </div>
               )}
@@ -1843,10 +1958,10 @@ export default function ReservationDetail({ id }: { id: string }) {
               {/* Cancellation info */}
               {res.status === "CANCELLED" && res.cancelledReason && (
                 <div className="mt-4 pt-4 border-t border-gray-100">
-                  <p className="text-xs font-medium text-red-500 uppercase tracking-wide mb-1">Cancellation Reason</p>
+                  <p className="text-xs font-medium text-red-500 uppercase tracking-wide mb-1">{tStay("cancellationReason")}</p>
                   <p className="text-sm text-gray-700">{res.cancelledReason}</p>
                   {res.cancelledAt && (
-                    <p className="text-xs text-gray-400 mt-0.5">Cancelled on {fmtDate(res.cancelledAt)}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{tStay("cancelledOn", { date: fmtDate(res.cancelledAt) })}</p>
                   )}
                 </div>
               )}
@@ -1854,33 +1969,33 @@ export default function ReservationDetail({ id }: { id: string }) {
 
             {/* Section 3b: Related Invoices */}
             <Collapsible
-              title={`Invoices (${res.invoices.filter((i) => i.status !== "CANCELLED" && i.status !== "VOID").length})`}
+              title={tInvoices("title", { count: res.invoices.filter((i) => i.status !== "CANCELLED" && i.status !== "VOID").length })}
               defaultOpen={true}
             >
               {!res.invoicesGenerated ? (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-400 text-center py-2">No invoices generated yet.</p>
+                  <p className="text-sm text-gray-400 text-center py-2">{tInvoices("noneGenerated")}</p>
                   {["PENDING", "CONFIRMED", "CHECKED_IN"].includes(res.status) && (
                     <button
                       onClick={() => setActiveModal("generate-invoices")}
                       className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
                     >
-                      Generate Invoices
+                      {tInvoices("generateButton")}
                     </button>
                   )}
                 </div>
               ) : res.invoices.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-2">No invoices found.</p>
+                <p className="text-sm text-gray-400 text-center py-2">{tInvoices("noneFound")}</p>
               ) : (
                 <div>
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="text-xs text-gray-400 border-b border-gray-100">
-                        <th className="text-left pb-2 font-medium">Invoice</th>
-                        <th className="text-left pb-2 font-medium">Period</th>
-                        <th className="text-right pb-2 font-medium">Total</th>
-                        <th className="text-right pb-2 font-medium">Due</th>
-                        <th className="text-center pb-2 font-medium">Status</th>
+                        <th className="text-start pb-2 font-medium">{tInvoices("table.invoice")}</th>
+                        <th className="text-start pb-2 font-medium">{tInvoices("table.period")}</th>
+                        <th className="text-end pb-2 font-medium">{tInvoices("table.total")}</th>
+                        <th className="text-end pb-2 font-medium">{tInvoices("table.due")}</th>
+                        <th className="text-center pb-2 font-medium">{tInvoices("table.status")}</th>
                         <th className="pb-2"></th>
                       </tr>
                     </thead>
@@ -1900,31 +2015,31 @@ export default function ReservationDetail({ id }: { id: string }) {
                           ? "bg-red-100 text-red-700"
                           : "bg-orange-100 text-orange-700";
                         const statusLabel = isPaid
-                          ? "Paid"
+                          ? tInvoices("statuses.paid")
                           : isPartial
-                          ? "Partial"
+                          ? tInvoices("statuses.partial")
                           : isCancelled
-                          ? "Cancelled"
+                          ? tInvoices("statuses.cancelled")
                           : isOverdue
-                          ? "Overdue"
-                          : "Pending";
+                          ? tInvoices("statuses.overdue")
+                          : tInvoices("statuses.pending");
 
                         return (
                           <tr key={inv.id} className={isCancelled ? "opacity-40" : ""}>
-                            <td className="py-2 font-mono text-xs text-gray-700 pr-2">
+                            <td className="py-2 font-mono text-xs text-gray-700 pe-2 ltr-numbers">
                               <Link href={`/dashboard/invoices/${inv.id}`} className="hover:text-blue-600 hover:underline">
                                 {inv.invoiceNumber}
                               </Link>
                             </td>
-                            <td className="py-2 text-xs text-gray-500 pr-2">
+                            <td className="py-2 text-xs text-gray-500 pe-2 ltr-numbers">
                               {fmtDate(inv.periodStart, { day: "numeric", month: "short" })}
                               {" — "}
                               {fmtDate(inv.periodEnd, { day: "numeric", month: "short" })}
                             </td>
-                            <td className="py-2 text-right font-medium text-gray-800 pr-2">
+                            <td className="py-2 text-end font-medium text-gray-800 pe-2 ltr-numbers">
                               {Number(inv.totalAmount).toFixed(3)}
                             </td>
-                            <td className={`py-2 text-right text-xs pr-2 ${isOverdue && !isCancelled ? "text-red-600 font-medium" : "text-gray-400"}`}>
+                            <td className={`py-2 text-end text-xs pe-2 ltr-numbers ${isOverdue && !isCancelled ? "text-red-600 font-medium" : "text-gray-400"}`}>
                               {fmtDate(inv.dueDate, { day: "numeric", month: "short" })}
                             </td>
                             <td className="py-2 text-center">
@@ -1932,13 +2047,13 @@ export default function ReservationDetail({ id }: { id: string }) {
                                 {statusLabel}
                               </span>
                             </td>
-                            <td className="py-2 text-right pl-1">
+                            <td className="py-2 text-end ps-1">
                               {!isPaid && !isCancelled && (
                                 <button
                                   onClick={() => setActiveInvoice(inv)}
                                   className="text-xs text-blue-600 hover:underline font-medium"
                                 >
-                                  Pay
+                                  {tInvoices("pay")}
                                 </button>
                               )}
                             </td>
@@ -1948,8 +2063,8 @@ export default function ReservationDetail({ id }: { id: string }) {
                     </tbody>
                   </table>
                   <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between text-sm font-medium text-gray-700">
-                    <span>Total Outstanding</span>
-                    <span className="text-red-600">
+                    <span>{tInvoices("totalOutstanding")}</span>
+                    <span className="text-red-600 ltr-numbers">
                       {res.invoices
                         .filter((i) => i.status !== "CANCELLED" && i.status !== "VOID")
                         .reduce((s, i) => s + Number(i.balanceDue), 0)
@@ -1961,43 +2076,49 @@ export default function ReservationDetail({ id }: { id: string }) {
             </Collapsible>
 
             {/* Section 4: Pricing Breakdown */}
-            <Collapsible title="Pricing Breakdown" defaultOpen={false}>
+            <Collapsible title={tPricing("title")} defaultOpen={false}>
               {res.units.length === 0 ? (
-                <p className="text-sm text-gray-400">No unit pricing data.</p>
+                <p className="text-sm text-gray-400">{tPricing("none")}</p>
               ) : (
                 <div className="space-y-4">
                   {res.units.map((u) => (
                     <div key={u.id}>
                       <p className="font-medium text-sm text-gray-800 mb-2">{u.name} — {u.propertyName}</p>
-                      <div className="flex justify-between text-sm text-gray-700 pl-4">
+                      <div className="flex justify-between text-sm text-gray-700 ps-4">
                         <span>
-                          {u.nights} {u.rateType === "monthly" ? "month(s)" : "night(s)"} × {Number(u.rateAmount).toFixed(3)} OMR
-                          {u.seasonalPriceName && <span className="text-orange-600 ml-1">({u.seasonalPriceName})</span>}
+                          <span className="ltr-numbers">
+                            {u.rateType === "monthly"
+                              ? t("generateInvoicesModal.durationMonths", { count: u.nights })
+                              : t("generateInvoicesModal.durationNights", { count: u.nights })}
+                            {" × "}
+                            {Number(u.rateAmount).toFixed(3)} OMR
+                          </span>
+                          {u.seasonalPriceName && <span className="text-orange-600 ms-1">({u.seasonalPriceName})</span>}
                         </span>
-                        <span className="font-medium">{Number(u.subtotal).toFixed(3)} OMR</span>
+                        <span className="font-medium ltr-numbers">{Number(u.subtotal).toFixed(3)} OMR</span>
                       </div>
                     </div>
                   ))}
                   {res.charges.length > 0 && (
                     <div className="pt-3 border-t border-gray-100 space-y-1">
-                      <p className="font-medium text-sm text-gray-800 mb-2">Extra Charges</p>
+                      <p className="font-medium text-sm text-gray-800 mb-2">{tPricing("extraCharges")}</p>
                       {res.charges.map((c) => (
-                        <div key={c.id} className="flex justify-between text-sm text-gray-700 pl-4">
+                        <div key={c.id} className="flex justify-between text-sm text-gray-700 ps-4">
                           <span>{c.description}</span>
-                          <span className="font-medium text-orange-600">+{Number(c.amount).toFixed(3)} OMR</span>
+                          <span className="font-medium text-orange-600 ltr-numbers">+{Number(c.amount).toFixed(3)} OMR</span>
                         </div>
                       ))}
                     </div>
                   )}
                   {Number(res.discountAmount) > 0 && (
                     <div className="flex justify-between text-sm text-gray-700 pt-2 border-t border-dashed">
-                      <span>Discount</span>
-                      <span className="font-medium text-green-600">-{Number(res.discountAmount).toFixed(3)} OMR</span>
+                      <span>{tPricing("discount")}</span>
+                      <span className="font-medium text-green-600 ltr-numbers">-{Number(res.discountAmount).toFixed(3)} OMR</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
-                    <span>Grand Total</span>
-                    <span>{Number(res.grandTotal).toFixed(3)} OMR</span>
+                    <span>{tPricing("grandTotal")}</span>
+                    <span className="ltr-numbers">{Number(res.grandTotal).toFixed(3)} OMR</span>
                   </div>
                 </div>
               )}
@@ -2011,49 +2132,51 @@ export default function ReservationDetail({ id }: { id: string }) {
             {/* Section 3: Financial Summary */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="px-5 py-4 bg-gray-50 border-b border-gray-100">
-                <h3 className="font-semibold text-gray-800">Financial Summary</h3>
+                <h3 className="font-semibold text-gray-800">{tFinancial("title")}</h3>
               </div>
               <div className="p-5 space-y-3">
                 {/* Charges breakdown */}
                 {res.units.map((u) => (
                   <div key={u.id} className="flex justify-between text-sm text-gray-700">
-                    <span className="text-gray-500">{u.name}: {u.nights} × {Number(u.rateAmount).toFixed(3)}</span>
-                    <span>{Number(u.subtotal).toFixed(3)}</span>
+                    <span className="text-gray-500">
+                      {u.name}: <span className="ltr-numbers">{u.nights} × {Number(u.rateAmount).toFixed(3)}</span>
+                    </span>
+                    <span className="ltr-numbers">{Number(u.subtotal).toFixed(3)}</span>
                   </div>
                 ))}
                 {res.charges.map((c) => (
                   <div key={c.id} className="flex justify-between text-sm text-gray-700">
                     <span className="text-orange-500">{c.description}</span>
-                    <span className="text-orange-600">+{Number(c.amount).toFixed(3)}</span>
+                    <span className="text-orange-600 ltr-numbers">+{Number(c.amount).toFixed(3)}</span>
                   </div>
                 ))}
                 {Number(res.discountAmount) > 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Discount</span>
-                    <span className="text-green-600">-{Number(res.discountAmount).toFixed(3)}</span>
+                    <span className="text-gray-500">{tFinancial("discount")}</span>
+                    <span className="text-green-600 ltr-numbers">-{Number(res.discountAmount).toFixed(3)}</span>
                   </div>
                 )}
                 <div className="flex justify-between font-semibold text-gray-900 pt-2 border-t border-gray-200">
-                  <span>Grand Total</span>
-                  <span>{Number(res.grandTotal).toFixed(3)} OMR</span>
+                  <span>{tFinancial("grandTotal")}</span>
+                  <span className="ltr-numbers">{Number(res.grandTotal).toFixed(3)} OMR</span>
                 </div>
 
                 {/* Payments */}
                 {res.payments.length > 0 && (
                   <div className="pt-3 border-t border-gray-100">
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">Payments</p>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">{tFinancial("payments")}</p>
                     {res.payments.map((p) => (
                       <div key={p.id} className="flex justify-between text-sm text-gray-700 mb-1">
                         <span className="text-gray-500">
-                          {fmtDate(p.date)} — {fmtMethod(p.method)}
-                          {p.reference && <span className="text-gray-400 ml-1">({p.reference})</span>}
+                          <span className="ltr-numbers">{fmtDate(p.date)}</span> — {fmtMethod(p.method)}
+                          {p.reference && <span className="text-gray-400 ms-1 ltr-numbers">({p.reference})</span>}
                         </span>
-                        <span>{Number(p.amount).toFixed(3)}</span>
+                        <span className="ltr-numbers">{Number(p.amount).toFixed(3)}</span>
                       </div>
                     ))}
                     <div className="flex justify-between text-sm font-medium text-gray-700 pt-1 border-t border-dashed mt-2">
-                      <span>Total Paid</span>
-                      <span>{Number(res.amountPaid).toFixed(3)}</span>
+                      <span>{tFinancial("totalPaid")}</span>
+                      <span className="ltr-numbers">{Number(res.amountPaid).toFixed(3)}</span>
                     </div>
                   </div>
                 )}
@@ -2066,14 +2189,14 @@ export default function ReservationDetail({ id }: { id: string }) {
                 }`}>
                   {isPaid ? (
                     <p className="font-bold text-green-700 flex items-center justify-center gap-2">
-                      <CheckIcon className="h-5 w-5" /> FULLY PAID
+                      <CheckIcon className="h-5 w-5" /> {tFinancial("fullyPaid")}
                     </p>
                   ) : isOverpaid ? (
-                    <p className="font-bold text-blue-700">CREDIT: {Math.abs(balanceDue).toFixed(3)} OMR</p>
+                    <p className="font-bold text-blue-700 ltr-numbers">{tFinancial("credit", { amount: Math.abs(balanceDue).toFixed(3) })}</p>
                   ) : (
                     <>
-                      <p className="text-xs text-red-500 font-medium mb-0.5">BALANCE DUE</p>
-                      <p className="text-2xl font-bold text-red-600">{balanceDue.toFixed(3)} OMR</p>
+                      <p className="text-xs text-red-500 font-medium mb-0.5">{tFinancial("balanceDueLabel")}</p>
+                      <p className="text-2xl font-bold text-red-600 ltr-numbers">{balanceDue.toFixed(3)} OMR</p>
                     </>
                   )}
                 </div>
@@ -2085,14 +2208,14 @@ export default function ReservationDetail({ id }: { id: string }) {
                       onClick={() => setActiveModal("payment")}
                       className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
                     >
-                      Record Payment
+                      {tFinancial("recordPayment")}
                     </button>
                   )}
                   <button
                     onClick={() => setActiveModal("charge")}
                     className="w-full py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
                   >
-                    <PlusIcon className="h-4 w-4" /> Add Charge
+                    <PlusIcon className="h-4 w-4" /> {tFinancial("addCharge")}
                   </button>
                 </div>
               </div>
@@ -2100,24 +2223,26 @@ export default function ReservationDetail({ id }: { id: string }) {
 
             {/* Section 4b: Returns */}
             {res.returns.length > 0 && (
-              <Collapsible title={`Returns / المرتجعات (${res.returns.length})`} defaultOpen={true}>
+              <Collapsible title={tReturns("title", { count: res.returns.length })} defaultOpen={true}>
                 <div className="space-y-4">
                   {res.returns.map((ret) => (
                     <div key={ret.id} className="border border-purple-200 rounded-xl bg-purple-50 p-4 space-y-3">
                       {/* Header row */}
                       <div className="flex items-start justify-between gap-2 flex-wrap">
                         <div>
-                          <span className="font-mono font-bold text-purple-800 text-sm">{ret.returnNumber}</span>
-                          <span className="ml-2 text-sm text-gray-600">
+                          <span className="font-mono font-bold text-purple-800 text-sm ltr-numbers">{ret.returnNumber}</span>
+                          <span className="ms-2 text-sm text-gray-600 ltr-numbers">
                             {fmtDate(ret.returnFrom)} → {fmtDate(ret.returnTo)}
-                            {" "}({ret.returnDays} {ret.returnType === "MONTHLY" ? "month(s)" : "night(s)"})
+                            {" "}({ret.returnDays} {ret.returnType === "MONTHLY" ? t("returnModal.monthsLabel") : t("returnModal.nightsLabel")})
                           </span>
                         </div>
-                        <span className="text-sm font-semibold text-purple-800">{ret.returnAmount} OMR returned</span>
+                        <span className="text-sm font-semibold text-purple-800 ltr-numbers">
+                          {tReturns("returned", { amount: ret.returnAmount })}
+                        </span>
                       </div>
 
                       {/* Reason */}
-                      <p className="text-xs text-gray-500">Reason: <span className="text-gray-700">{ret.reason}</span></p>
+                      <p className="text-xs text-gray-500">{tReturns("reason")} <span className="text-gray-700">{ret.reason}</span></p>
 
                       {/* Line items */}
                       {ret.lineItems.length > 0 && (
@@ -2125,7 +2250,7 @@ export default function ReservationDetail({ id }: { id: string }) {
                           {ret.lineItems.map((li) => (
                             <div key={li.id} className="flex justify-between">
                               <span>{li.description}</span>
-                              <span className="font-medium">{li.lineTotal} OMR</span>
+                              <span className="font-medium ltr-numbers">{li.lineTotal} OMR</span>
                             </div>
                           ))}
                         </div>
@@ -2135,28 +2260,28 @@ export default function ReservationDetail({ id }: { id: string }) {
                       <div className="flex items-center justify-between flex-wrap gap-2">
                         {ret.refundStatus === "NOT_REQUIRED" && (
                           <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full">
-                            <CheckIcon className="h-3 w-3" /> No refund required
+                            <CheckIcon className="h-3 w-3" /> {tReturns("noRefund")}
                           </span>
                         )}
                         {ret.refundStatus === "PENDING" && (
                           <>
-                            <span className="inline-flex items-center gap-1 text-xs text-orange-700 bg-orange-100 px-2 py-1 rounded-full">
-                              <ExclamationTriangleIcon className="h-3 w-3" /> Refund {ret.refundAmount} OMR — PENDING
+                            <span className="inline-flex items-center gap-1 text-xs text-orange-700 bg-orange-100 px-2 py-1 rounded-full ltr-numbers">
+                              <ExclamationTriangleIcon className="h-3 w-3" /> {tReturns("refundPending", { amount: ret.refundAmount })}
                             </span>
                             <button
                               onClick={() => setActiveReturn(ret)}
                               className="text-xs px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors"
                             >
-                              Process Refund
+                              {tReturns("processRefund")}
                             </button>
                           </>
                         )}
                         {ret.refundStatus === "COMPLETED" && (
                           <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full">
                             <CheckIcon className="h-3 w-3" />
-                            Refund {ret.refundAmount} OMR — COMPLETED
+                            <span className="ltr-numbers">{tReturns("refundCompleted", { amount: ret.refundAmount })}</span>
                             {ret.refundMethod && ` (${fmtMethod(ret.refundMethod)})`}
-                            {ret.refundDate && `, ${fmtDate(ret.refundDate)}`}
+                            {ret.refundDate && <span className="ltr-numbers">{`, ${fmtDate(ret.refundDate)}`}</span>}
                           </span>
                         )}
                       </div>
@@ -2167,9 +2292,9 @@ export default function ReservationDetail({ id }: { id: string }) {
             )}
 
             {/* Section 5: Activity Timeline */}
-            <Collapsible title={`Activity (${res.activities.length})`} defaultOpen={true}>
+            <Collapsible title={tActivity("title", { count: res.activities.length })} defaultOpen={true}>
               {res.activities.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-2">No activity yet.</p>
+                <p className="text-sm text-gray-400 text-center py-2">{tActivity("none")}</p>
               ) : (
                 <div className="space-y-3">
                   {res.activities.map((a) => (
@@ -2178,8 +2303,8 @@ export default function ReservationDetail({ id }: { id: string }) {
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-700 leading-snug">{a.description}</p>
                         <p className="text-xs text-gray-400 mt-0.5">
-                          {fmtDate(a.createdAt)} {fmtTime(a.createdAt)}
-                          {a.performedByName && <span className="ml-1">— {a.performedByName}</span>}
+                          <span className="ltr-numbers">{fmtDate(a.createdAt)} {fmtTime(a.createdAt)}</span>
+                          {a.performedByName && <span className="ms-1">— {a.performedByName}</span>}
                         </p>
                       </div>
                     </div>
@@ -2190,7 +2315,7 @@ export default function ReservationDetail({ id }: { id: string }) {
                 onClick={() => setActiveModal("note")}
                 className="mt-4 w-full py-2 border border-dashed border-gray-300 hover:border-gray-400 text-sm text-gray-500 hover:text-gray-700 rounded-lg transition-colors flex items-center justify-center gap-1.5"
               >
-                <PlusIcon className="h-4 w-4" /> Add Note
+                <PlusIcon className="h-4 w-4" /> {tActivity("addNote")}
               </button>
             </Collapsible>
 

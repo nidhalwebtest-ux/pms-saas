@@ -51,7 +51,17 @@ const navigationConfig: NavItem[] = [
   { key: "reservations", name: "Reservations", href: "/dashboard/reservations" },
   { key: "invoices",     name: "Invoices",     href: "/dashboard/invoices" },
   { key: "payments",     name: "Payments",     href: "/dashboard/payments" },
-  { key: "expenses",     name: "Expenses",     href: "/dashboard/expenses" },
+  {
+    key:            "expenses",
+    name:           "Expenses",
+    href:           "/dashboard/expenses",
+    activePatterns: ["/dashboard/settings/expense-categories"],
+    children: [
+      { name: "All Expenses",     href: "/dashboard/expenses" },
+      { name: "Submit Expense",   href: "/dashboard/expenses/new" },
+      { name: "Manage Categories", href: "/dashboard/settings/expense-categories" },
+    ],
+  },
   {
     key:  "settings",
     name: "Settings",

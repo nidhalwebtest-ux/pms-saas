@@ -179,15 +179,16 @@ export async function GET(req: NextRequest) {
       select: { method: true, amount: true },
     }),
 
-    // Today's expenses
+    // Today's expenses (submitted today, excluding rejected)
     prisma.expense.aggregate({
       where: {
-        property: { organizationId: orgId },
+        organizationId: orgId,
         ...(propertyId ? { propertyId } : {}),
-        date: { gte: todayStart, lt: todayEnd },
+        status: { not: "REJECTED" },
+        submittedAt: { gte: todayStart, lt: todayEnd },
       },
       _sum: { amount: true },
-      _count: { id: true },
+      _count: { _all: true },
     }),
 
     // Recent activity (last 24 h)
@@ -226,8 +227,8 @@ export async function GET(req: NextRequest) {
     inHouseCount,
     paymentsToday: { ...paymentsByMethod, total: totalPayments },
     expensesToday: {
-      total: Number(expensesTodayAgg._sum.amount ?? 0),
-      count: expensesTodayAgg._count.id,
+      total: Number(expensesTodayAgg._sum?.amount ?? 0),
+      count: expensesTodayAgg._count?._all ?? 0,
     },
     recentActivities: recentActivities.map((a) => ({
       id: a.id,

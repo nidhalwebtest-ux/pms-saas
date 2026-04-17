@@ -136,6 +136,13 @@ enum ExpenseCategory {
   OTHER
 }
 
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  PROCESSED
+}
+
 // 3. Organization
 model Organization {
   id                 String   @id @default(uuid())
@@ -160,6 +167,8 @@ model Organization {
   tenants            Tenant[]
   invitations        Invitation[]
   invoices           Invoice[]
+  expenseCategories  ExpenseCat[]
+  expenses           Expense[]
 }
 
 // 4. Users
@@ -186,6 +195,9 @@ model User {
   invoicesGeneratedReservations Reservation[]  @relation("InvoicesGeneratedBy")
   createdReturns                Return[]        @relation("ReturnCreatedBy")
   processedRefunds              Return[]        @relation("ReturnRefundProcessedBy")
+  submittedExpenses             Expense[]       @relation("ExpenseSubmittedBy")
+  reviewedExpenses              Expense[]       @relation("ExpenseReviewedBy")
+  processedExpenses             Expense[]       @relation("ExpenseProcessedBy")
 
   createdAt      DateTime     @default(now())
 }
@@ -692,23 +704,84 @@ model ReturnLineItem {
   createdAt      DateTime @default(now())
 }
 
+// ── Expense Categories ────────────────────────────────────────────────────────
+
+model ExpenseCat {
+  id             String       @id @default(uuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name           String
+  nameAr         String?
+  icon           String?       // emoji e.g. "🧹"
+  isSystem       Boolean       @default(false)
+  isActive       Boolean       @default(true)
+  sortOrder      Int           @default(0)
+
+  expenses       Expense[]
+
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId])
+}
+
 // ── Expenses ──────────────────────────────────────────────────────────────────
 
 model Expense {
   id             String          @id @default(uuid())
-  title          String
+
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  expenseNumber  String          // "EXP-2026-00001"
+
+  // --- What ---
+  categoryId     String
+  category       ExpenseCat      @relation(fields: [categoryId], references: [id])
+  description    String
   amount         Decimal         @db.Decimal(10, 3)
-  date           DateTime        @default(now())
 
-  category       ExpenseCategory @default(MAINTENANCE)
-
+  // --- Where ---
   propertyId     String
-  property       Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  property       Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
-  unitId         String?
+  // --- Receipt ---
+  receiptImage   String          // file URL
+  receiptImage2  String?         // second receipt image
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  // --- Workflow ---
+  status         ExpenseStatus   @default(PENDING)
+
+  // Submission
+  submittedById  String
+  submittedBy    User            @relation("ExpenseSubmittedBy", fields: [submittedById], references: [id])
+  submittedAt    DateTime        @default(now())
+
+  // Approval / Rejection
+  reviewedById   String?
+  reviewedBy     User?           @relation("ExpenseReviewedBy", fields: [reviewedById], references: [id])
+  reviewedAt     DateTime?
+  rejectionReason String?
+
+  // Processing (accountant)
+  processedById  String?
+  processedBy    User?           @relation("ExpenseProcessedBy", fields: [processedById], references: [id])
+  processedAt    DateTime?
+  paymentMethod  String?         // "petty_cash" | "bank_transfer" | "already_paid"
+  bankReference  String?
+  processingNotes String?
+
+  // Meta
+  notes          String?
+
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([organizationId, expenseNumber])
+  @@index([organizationId, status])
+  @@index([submittedById])
+  @@index([propertyId])
 }
 
 // ── Auth & Team ───────────────────────────────────────────────────────────────

@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 export interface OrgUser {
   userId: string;
   organizationId: string;
+  role?: string;
 }
 
 /**
@@ -26,12 +27,12 @@ export async function requireOrgUser(): Promise<OrgUser> {
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
-    select: { organizationId: true },
+    select: { organizationId: true, role: true },
   });
 
   if (!dbUser?.organizationId) throw { error: "No organization found" };
 
-  return { userId: user.id, organizationId: dbUser.organizationId };
+  return { userId: user.id, organizationId: dbUser.organizationId, role: dbUser.role };
 }
 
 /**

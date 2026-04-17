@@ -60,7 +60,8 @@ export async function GET(req: NextRequest) {
   const resBase   = { tenant: { organizationId: orgId }, ...propResFilter(propertyId) };
   const payBase   = { reservation: { tenant: { organizationId: orgId } } };
   const expBase   = {
-    property: { organizationId: orgId },
+    organizationId: orgId,
+    status: { not: "REJECTED" as const },
     ...(propertyId ? { propertyId } : {}),
   };
 
@@ -92,11 +93,11 @@ export async function GET(req: NextRequest) {
       _sum: { amount: true },
     }),
     prisma.expense.aggregate({
-      where: { ...expBase, date: { gte: monthStart, lt: todayStart } },
+      where: { ...expBase, submittedAt: { gte: monthStart, lt: todayStart } },
       _sum: { amount: true },
     }),
     prisma.expense.aggregate({
-      where: { ...expBase, date: { gte: prevStart, lt: prevSameDay } },
+      where: { ...expBase, submittedAt: { gte: prevStart, lt: prevSameDay } },
       _sum: { amount: true },
     }),
     prisma.unit.count({
@@ -122,8 +123,8 @@ export async function GET(req: NextRequest) {
     }),
     // All expenses this month (for category breakdown)
     prisma.expense.findMany({
-      where: { ...expBase, date: { gte: monthStart } },
-      select: { category: true, amount: true },
+      where: { ...expBase, submittedAt: { gte: monthStart } },
+      select: { amount: true, category: { select: { name: true } } },
     }),
     // All reservations with potential balance (for aging)
     prisma.reservation.findMany({
@@ -177,8 +178,8 @@ export async function GET(req: NextRequest) {
   // ── KPIs ──────────────────────────────────────────────────────────────────
   const revMTD  = Number(revCurrent._sum.amount ?? 0);
   const revPrevN = Number(revPrev._sum.amount ?? 0);
-  const expMTD  = Number(expCurrent._sum.amount ?? 0);
-  const expPrevN = Number(expPrev._sum.amount ?? 0);
+  const expMTD  = Number(expCurrent._sum?.amount ?? 0);
+  const expPrevN = Number(expPrev._sum?.amount ?? 0);
   const noi     = revMTD - expMTD;
   const noiPrev = revPrevN - expPrevN;
   const occupancyRate =
@@ -212,7 +213,8 @@ export async function GET(req: NextRequest) {
   let totalExpMonth = 0;
   for (const e of expensesMonth) {
     const amt = Number(e.amount);
-    expByCat.set(e.category, (expByCat.get(e.category) ?? 0) + amt);
+    const catName = e.category?.name ?? "Uncategorized";
+    expByCat.set(catName, (expByCat.get(catName) ?? 0) + amt);
     totalExpMonth += amt;
   }
   const expenseBreakdown = Array.from(expByCat.entries())
@@ -334,7 +336,7 @@ export async function GET(req: NextRequest) {
         },
       }),
       prisma.expense.findMany({
-        where: { ...expBase, date: { gte: monthStart } },
+        where: { ...expBase, submittedAt: { gte: monthStart } },
         select: { amount: true, propertyId: true },
       }),
       prisma.unit.findMany({

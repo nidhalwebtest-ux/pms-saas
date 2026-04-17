@@ -26,9 +26,9 @@ export const NAV_ACCESS: Record<string, Role[]> = {
   properties:   ["OWNER", "MANAGER", "STAFF"],
   tenants:      ["OWNER", "MANAGER", "STAFF"],
   reservations: ["OWNER", "MANAGER", "STAFF"],
-  invoices:     ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],  // All roles can view/manage invoices
-  payments:     ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],  // Receptionist can record payments
-  expenses:     ["OWNER", "MANAGER", "ACCOUNTANT"],           // Receptionist cannot see expenses
+  invoices:     ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],
+  payments:     ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],
+  expenses:     ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],  // All roles — receptionist submits, manager approves, accountant processes
   settings:     ["OWNER", "MANAGER"],
 };
 
@@ -43,6 +43,10 @@ export const ACTION_ACCESS: Record<string, Role[]> = {
   manageExpenses:     ["OWNER", "MANAGER", "ACCOUNTANT"],
   manageTenants:      ["OWNER", "MANAGER", "STAFF"],
   manageReservations: ["OWNER", "MANAGER", "STAFF"],
+  submitExpense:      ["OWNER", "STAFF"],              // Receptionist + Owner can submit
+  approveExpense:     ["OWNER", "MANAGER"],            // Manager/Owner can approve or reject
+  processExpense:     ["OWNER", "ACCOUNTANT"],         // Accountant/Owner can process
+  manageExpenseCategories: ["OWNER", "MANAGER"],       // Admin-level
 };
 
 // ── Helper ────────────────────────────────────────────────────────────────────

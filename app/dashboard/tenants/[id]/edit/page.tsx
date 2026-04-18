@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/FormComponents";
 import TenantForm from "@/components/dashboard/TenantForm";
 
@@ -38,11 +39,13 @@ export default async function EditTenantPage({
     totalSpent:    tenant.totalSpent?.toString() ?? "0",
   };
 
+  const t = await getTranslations("tenants.editPage");
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <PageHeader
-        title="Edit Tenant"
-        description="Update contact or identity information."
+        title={t("title")}
+        description={t("description")}
         listHref={`/dashboard/tenants/${id}`}
       />
       <TenantForm initialData={initialData as any} />

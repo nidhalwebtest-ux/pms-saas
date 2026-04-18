@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { UserGroupIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import TenantFilters from "./TenantFilters";
 import TenantsView from "./TenantsView";
 
@@ -48,6 +49,8 @@ export default async function TenantsPage({
   const classification = params.classification || "";
   const tenantType     = params.tenantType     || "";
   const source         = params.source         || "";
+
+  const t = await getTranslations("tenants");
 
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
@@ -129,8 +132,8 @@ export default async function TenantsPage({
             <UserGroupIcon className="h-6 w-6 text-blue-700" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Tenants & Guests</h1>
-            <p className="text-sm text-gray-500">{tenants.length} record{tenants.length !== 1 ? "s" : ""}</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
+            <p className="text-sm text-gray-500">{t("recordsCount", { count: tenants.length })}</p>
           </div>
         </div>
         <Link
@@ -138,7 +141,7 @@ export default async function TenantsPage({
           className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
         >
           <PlusIcon className="h-4 w-4" />
-          New Tenant
+          {t("newTenantBtn")}
         </Link>
       </div>
 

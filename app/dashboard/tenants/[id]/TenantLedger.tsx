@@ -3,13 +3,15 @@
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useTranslations, useLocale } from "next-intl";
+import { format } from "date-fns";
+import { ar, enGB } from "date-fns/locale";
 import {
   BanknotesIcon,
   DocumentTextIcon,
   ArrowDownTrayIcon,
   PrinterIcon,
   ArrowPathIcon,
-  ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
   ScaleIcon,
   FunnelIcon,
@@ -48,38 +50,14 @@ interface Props {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fmtDate(d: string) {
-  return new Date(d).toLocaleDateString("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
-  });
-}
-
 function fmtOMR(n: number) {
   return n.toFixed(3);
 }
 
-const TYPE_CONFIG = {
-  invoice: {
-    label: "Invoice",
-    labelAr: "فاتورة",
-    bg: "bg-blue-100",
-    text: "text-blue-800",
-    dot: "bg-blue-500",
-  },
-  payment: {
-    label: "Payment",
-    labelAr: "دفعة",
-    bg: "bg-emerald-100",
-    text: "text-emerald-800",
-    dot: "bg-emerald-500",
-  },
-  return: {
-    label: "Refund",
-    labelAr: "استرداد",
-    bg: "bg-amber-100",
-    text: "text-amber-800",
-    dot: "bg-amber-500",
-  },
+const TYPE_STYLE = {
+  invoice: { bg: "bg-blue-100",    text: "text-blue-800",    dot: "bg-blue-500" },
+  payment: { bg: "bg-emerald-100", text: "text-emerald-800", dot: "bg-emerald-500" },
+  return:  { bg: "bg-amber-100",   text: "text-amber-800",   dot: "bg-amber-500" },
 } as const;
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
@@ -87,12 +65,12 @@ const TYPE_CONFIG = {
 function SkeletonRow() {
   return (
     <tr className="animate-pulse">
-      <td className="py-3 pl-4 pr-3"><div className="h-4 bg-gray-100 rounded w-24" /></td>
+      <td className="py-3 ps-4 pe-3"><div className="h-4 bg-gray-100 rounded w-24" /></td>
       <td className="px-3 py-3"><div className="h-5 bg-gray-100 rounded-full w-16" /></td>
       <td className="px-3 py-3"><div className="h-4 bg-gray-100 rounded w-48" /></td>
-      <td className="px-3 py-3"><div className="h-4 bg-gray-100 rounded w-20 ml-auto" /></td>
-      <td className="px-3 py-3"><div className="h-4 bg-gray-100 rounded w-20 ml-auto" /></td>
-      <td className="px-3 py-3"><div className="h-4 bg-gray-100 rounded w-20 ml-auto" /></td>
+      <td className="px-3 py-3"><div className="h-4 bg-gray-100 rounded w-20 ms-auto" /></td>
+      <td className="px-3 py-3"><div className="h-4 bg-gray-100 rounded w-20 ms-auto" /></td>
+      <td className="px-3 py-3"><div className="h-4 bg-gray-100 rounded w-20 ms-auto" /></td>
     </tr>
   );
 }
@@ -100,6 +78,19 @@ function SkeletonRow() {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function TenantLedger({ tenantId, tenantName }: Props) {
+  const tSum     = useTranslations("tenants.ledger.summary");
+  const tTabsL   = useTranslations("tenants.ledger.tabs");
+  const tAct     = useTranslations("tenants.ledger.actions");
+  const tFil     = useTranslations("tenants.ledger.filters");
+  const tTbl     = useTranslations("tenants.ledger.table");
+  const tTypes   = useTranslations("tenants.ledger.types");
+  const tEmp     = useTranslations("tenants.ledger.empty");
+  const tErr     = useTranslations("tenants.ledger.errors");
+  const locale   = useLocale();
+  const dfLocale = locale === "ar" ? ar : enGB;
+  const fmtDate  = (d: string) =>
+    format(new Date(d), "dd MMM yyyy", { locale: dfLocale });
+
   const [transactions, setTransactions] = useState<LedgerEntry[]>([]);
   const [summary, setSummary]           = useState<LedgerSummary | null>(null);
   const [loading, setLoading]           = useState(true);
@@ -116,11 +107,11 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
     try {
       const res  = await fetch(`/api/tenants/${tenantId}/ledger`);
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to load ledger"); return; }
+      if (!res.ok) { toast.error(data.error ?? tErr("loadFailed")); return; }
       setTransactions(data.transactions ?? []);
       setSummary(data.summary ?? null);
     } catch {
-      toast.error("Network error loading ledger");
+      toast.error(tErr("networkError"));
     } finally {
       setLoading(false);
     }
@@ -179,19 +170,19 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
                 <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
                   <DocumentTextIcon className="h-4 w-4 text-blue-600" />
                 </div>
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Charged</span>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{tSum("charged")}</span>
               </div>
             </div>
             {loading ? (
               <div className="h-7 bg-gray-100 rounded animate-pulse w-28 mb-1" />
             ) : (
-              <p className="text-2xl font-bold text-gray-900 tabular-nums">
+              <p className="text-2xl font-bold text-gray-900 tabular-nums ltr-numbers">
                 {fmtOMR(summary!.totalCharged)}
-                <span className="text-sm font-medium text-gray-400 ml-1">OMR</span>
+                <span className="text-sm font-medium text-gray-400 ms-1">OMR</span>
               </p>
             )}
             <p className="text-xs text-gray-400 mt-1">
-              {loading ? "…" : `${summary!.invoiceCount} invoice${summary!.invoiceCount !== 1 ? "s" : ""}`}
+              {loading ? "…" : tSum("invoiceCount", { count: summary!.invoiceCount })}
             </p>
           </div>
 
@@ -202,19 +193,19 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
                 <div className="h-8 w-8 rounded-lg bg-emerald-100 flex items-center justify-center">
                   <ArrowTrendingDownIcon className="h-4 w-4 text-emerald-600" />
                 </div>
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Paid</span>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{tSum("paid")}</span>
               </div>
             </div>
             {loading ? (
               <div className="h-7 bg-gray-100 rounded animate-pulse w-28 mb-1" />
             ) : (
-              <p className="text-2xl font-bold text-emerald-700 tabular-nums">
+              <p className="text-2xl font-bold text-emerald-700 tabular-nums ltr-numbers">
                 {fmtOMR(summary!.totalPaid)}
-                <span className="text-sm font-medium text-emerald-400 ml-1">OMR</span>
+                <span className="text-sm font-medium text-emerald-400 ms-1">OMR</span>
               </p>
             )}
             <p className="text-xs text-gray-400 mt-1">
-              {loading ? "…" : `${summary!.paymentCount} payment${summary!.paymentCount !== 1 ? "s" : ""}`}
+              {loading ? "…" : tSum("paymentCount", { count: summary!.paymentCount })}
             </p>
           </div>
 
@@ -225,18 +216,18 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
                 <div className="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center">
                   <ReceiptRefundIcon className="h-4 w-4 text-amber-600" />
                 </div>
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Returned</span>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{tSum("returned")}</span>
               </div>
             </div>
             {loading ? (
               <div className="h-7 bg-gray-100 rounded animate-pulse w-28 mb-1" />
             ) : (
-              <p className="text-2xl font-bold text-amber-700 tabular-nums">
+              <p className="text-2xl font-bold text-amber-700 tabular-nums ltr-numbers">
                 {fmtOMR(summary!.totalReturned)}
-                <span className="text-sm font-medium text-amber-400 ml-1">OMR</span>
+                <span className="text-sm font-medium text-amber-400 ms-1">OMR</span>
               </p>
             )}
-            <p className="text-xs text-gray-400 mt-1">Refunds &amp; returns</p>
+            <p className="text-xs text-gray-400 mt-1">{tSum("refundsAndReturns")}</p>
           </div>
 
           {/* Current Balance */}
@@ -252,13 +243,13 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
                 }`}>
                   <ScaleIcon className={`h-4 w-4 ${finalBalance > 0 ? "text-red-600" : "text-emerald-600"}`} />
                 </div>
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Balance Due</span>
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{tSum("balanceDue")}</span>
               </div>
               <button
                 onClick={fetchLedger}
                 disabled={loading}
                 className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-white/60 transition-colors disabled:opacity-40"
-                title="Refresh"
+                title={tSum("refresh")}
               >
                 <ArrowPathIcon className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
               </button>
@@ -266,13 +257,13 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
             {loading ? (
               <div className="h-7 bg-gray-200 rounded animate-pulse w-28 mb-1" />
             ) : (
-              <p className={`text-2xl font-bold tabular-nums ${finalBalance > 0 ? "text-red-700" : "text-emerald-700"}`}>
+              <p className={`text-2xl font-bold tabular-nums ltr-numbers ${finalBalance > 0 ? "text-red-700" : "text-emerald-700"}`}>
                 {fmtOMR(Math.abs(finalBalance))}
-                <span className="text-sm font-medium ml-1 opacity-60">OMR</span>
+                <span className="text-sm font-medium ms-1 opacity-60">OMR</span>
               </p>
             )}
             <p className={`text-xs mt-1 font-medium ${finalBalance > 0 ? "text-red-500" : "text-emerald-500"}`}>
-              {loading ? "…" : finalBalance > 0 ? "Outstanding" : finalBalance < 0 ? "Overpaid / Credit" : "Fully settled"}
+              {loading ? "…" : finalBalance > 0 ? tSum("outstanding") : finalBalance < 0 ? tSum("overpaid") : tSum("fullySettled")}
             </p>
           </div>
         </div>
@@ -282,21 +273,20 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
       <div className="bg-white rounded-xl shadow-sm ring-1 ring-gray-200 px-4 py-3 flex flex-wrap items-center gap-3">
         {/* Type filter pills */}
         <div className="flex items-center gap-1 flex-wrap">
-          {(["all", "invoices", "payments", "returns"] as const).map((t) => {
-            const labels = { all: "All", invoices: "Invoices", payments: "Payments", returns: "Refunds" };
-            const countVal = counts[t];
+          {(["all", "invoices", "payments", "returns"] as const).map((tk) => {
+            const countVal = counts[tk];
             return (
               <button
-                key={t}
-                onClick={() => setTypeFilter(t)}
+                key={tk}
+                onClick={() => setTypeFilter(tk)}
                 className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full transition-all ${
-                  typeFilter === t
+                  typeFilter === tk
                     ? "bg-blue-600 text-white shadow-sm"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                {labels[t]}
-                <span className={`text-xs font-bold ${typeFilter === t ? "text-blue-200" : "text-gray-400"}`}>
+                {tTabsL(tk)}
+                <span className={`text-xs font-bold ltr-numbers ${typeFilter === tk ? "text-blue-200" : "text-gray-400"}`}>
                   {countVal}
                 </span>
               </button>
@@ -304,7 +294,7 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
           })}
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ms-auto flex items-center gap-2">
           {/* Date filter toggle */}
           <button
             onClick={() => setShowFilters((v) => !v)}
@@ -315,7 +305,7 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
             }`}
           >
             <FunnelIcon className="h-3.5 w-3.5" />
-            Date Range
+            {tAct("dateRange")}
             {(dateFrom || dateTo) && (
               <span className="h-2 w-2 rounded-full bg-blue-500" />
             )}
@@ -327,7 +317,7 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
           >
             <ArrowDownTrayIcon className="h-3.5 w-3.5" />
-            Excel
+            {tAct("excel")}
           </a>
           <a
             href={`/api/tenants/${tenantId}/ledger/export-pdf`}
@@ -336,14 +326,14 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors"
           >
             <PrinterIcon className="h-3.5 w-3.5" />
-            PDF
+            {tAct("pdf")}
           </a>
           <Link
             href={`/dashboard/payments/new?tenantId=${tenantId}`}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors shadow-sm"
           >
             <BanknotesIcon className="h-3.5 w-3.5" />
-            Record Payment
+            {tAct("recordPayment")}
           </Link>
         </div>
       </div>
@@ -351,9 +341,9 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
       {/* ── Date Range Picker (collapsible) ─────────────────────────────── */}
       {showFilters && (
         <div className="bg-blue-50 rounded-xl ring-1 ring-blue-200 px-4 py-3 flex flex-wrap items-center gap-4">
-          <span className="text-xs font-semibold text-blue-700">Filter by date:</span>
+          <span className="text-xs font-semibold text-blue-700">{tFil("filterByDate")}</span>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-blue-600 font-medium">From</label>
+            <label className="text-xs text-blue-600 font-medium">{tFil("from")}</label>
             <input
               type="date"
               value={dateFrom}
@@ -362,7 +352,7 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
             />
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-xs text-blue-600 font-medium">To</label>
+            <label className="text-xs text-blue-600 font-medium">{tFil("to")}</label>
             <input
               type="date"
               value={dateTo}
@@ -376,12 +366,12 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
               className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-red-600 font-semibold transition-colors"
             >
               <XMarkIcon className="h-3.5 w-3.5" />
-              Clear dates
+              {tFil("clearDates")}
             </button>
           )}
           {filtered.length !== transactions.length && (
-            <span className="ml-auto text-xs text-blue-500">
-              Showing {filtered.length} of {transactions.length} entries
+            <span className="ms-auto text-xs text-blue-500">
+              {tFil("showingFiltered", { shown: filtered.length, total: transactions.length })}
             </span>
           )}
         </div>
@@ -392,10 +382,10 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
         {/* Table header */}
         <div className="px-5 py-3.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-700">
-            Transaction History
+            {tTbl("title")}
             {hasFilters && (
-              <span className="ml-2 text-xs font-normal text-gray-400">
-                — {filtered.length} entr{filtered.length !== 1 ? "ies" : "y"} shown
+              <span className="ms-2 text-xs font-normal text-gray-400">
+                {tTbl("entriesShown", { count: filtered.length })}
               </span>
             )}
           </h3>
@@ -405,7 +395,7 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
               className="text-xs text-gray-400 hover:text-red-600 flex items-center gap-1 transition-colors"
             >
               <XMarkIcon className="h-3.5 w-3.5" />
-              Clear all filters
+              {tTbl("clearAll")}
             </button>
           )}
         </div>
@@ -415,12 +405,12 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="py-3 pl-4 pr-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Description</th>
-                  <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Charge (Dr)</th>
-                  <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Payment (Cr)</th>
-                  <th className="px-3 py-3 pr-5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Balance</th>
+                  <th className="py-3 ps-4 pe-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide">{tTbl("date")}</th>
+                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide">{tTbl("type")}</th>
+                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide">{tTbl("description")}</th>
+                  <th className="px-3 py-3 text-end text-xs font-semibold text-gray-500 uppercase tracking-wide">{tTbl("charge")}</th>
+                  <th className="px-3 py-3 text-end text-xs font-semibold text-gray-500 uppercase tracking-wide">{tTbl("payment")}</th>
+                  <th className="px-3 py-3 pe-5 text-end text-xs font-semibold text-gray-500 uppercase tracking-wide">{tTbl("balance")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -433,16 +423,16 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
             <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
               <DocumentTextIcon className="h-6 w-6 text-gray-300" />
             </div>
-            <p className="text-sm font-medium text-gray-400">No transactions found</p>
+            <p className="text-sm font-medium text-gray-400">{tEmp("title")}</p>
             <p className="text-xs text-gray-300 mt-1">
-              {hasFilters ? "Try adjusting your filters" : `${tenantName} has no recorded transactions yet`}
+              {hasFilters ? tEmp("tryFilters") : tEmp("noneForTenant", { name: tenantName })}
             </p>
             {hasFilters && (
               <button
                 onClick={() => { setTypeFilter("all"); setDateFrom(""); setDateTo(""); }}
                 className="mt-3 text-xs text-blue-600 hover:underline"
               >
-                Clear filters
+                {tEmp("clearFilters")}
               </button>
             )}
           </div>
@@ -451,28 +441,28 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="py-3 pl-5 pr-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Type</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Description</th>
-                  <th className="px-3 py-3 text-right text-xs font-semibold text-red-500 uppercase tracking-wide">
-                    <span title="Amount charged to tenant">Charge (Dr)</span>
+                  <th className="py-3 ps-5 pe-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide">{tTbl("date")}</th>
+                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide">{tTbl("type")}</th>
+                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide">{tTbl("description")}</th>
+                  <th className="px-3 py-3 text-end text-xs font-semibold text-red-500 uppercase tracking-wide">
+                    <span title={tTbl("chargeTitle")}>{tTbl("charge")}</span>
                   </th>
-                  <th className="px-3 py-3 text-right text-xs font-semibold text-emerald-600 uppercase tracking-wide">
-                    <span title="Amount paid by tenant">Payment (Cr)</span>
+                  <th className="px-3 py-3 text-end text-xs font-semibold text-emerald-600 uppercase tracking-wide">
+                    <span title={tTbl("paymentTitle")}>{tTbl("payment")}</span>
                   </th>
-                  <th className="px-3 py-3 pr-5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Balance</th>
+                  <th className="px-3 py-3 pe-5 text-end text-xs font-semibold text-gray-500 uppercase tracking-wide">{tTbl("balance")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {filtered.map((row, idx) => {
-                  const cfg = TYPE_CONFIG[row.type];
+                  const cfg = TYPE_STYLE[row.type];
                   return (
                     <tr
                       key={row.id}
                       className={`transition-colors hover:bg-gray-50/70 ${idx % 2 === 0 ? "" : "bg-gray-50/30"}`}
                     >
                       {/* Date */}
-                      <td className="whitespace-nowrap py-3.5 pl-5 pr-3 text-sm text-gray-600">
+                      <td className="whitespace-nowrap py-3.5 ps-5 pe-3 text-sm text-gray-600 ltr-numbers">
                         {fmtDate(row.date)}
                       </td>
 
@@ -480,7 +470,7 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
                       <td className="whitespace-nowrap px-3 py-3.5">
                         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.bg} ${cfg.text}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-                          {cfg.label}
+                          {tTypes(row.type)}
                         </span>
                       </td>
 
@@ -501,33 +491,33 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
                             href={`/dashboard/reservations/${row.reservationId}`}
                             className="block text-xs text-gray-400 hover:text-blue-500 mt-0.5 transition-colors"
                           >
-                            View reservation →
+                            {tTbl("viewReservation")}
                           </Link>
                         )}
                       </td>
 
                       {/* Debit */}
-                      <td className="whitespace-nowrap px-3 py-3.5 text-right">
+                      <td className="whitespace-nowrap px-3 py-3.5 text-end">
                         {row.debit > 0 ? (
-                          <span className="font-semibold text-red-600 tabular-nums">{fmtOMR(row.debit)}</span>
+                          <span className="font-semibold text-red-600 tabular-nums ltr-numbers">{fmtOMR(row.debit)}</span>
                         ) : (
                           <span className="text-gray-200 select-none">—</span>
                         )}
                       </td>
 
                       {/* Credit */}
-                      <td className="whitespace-nowrap px-3 py-3.5 text-right">
+                      <td className="whitespace-nowrap px-3 py-3.5 text-end">
                         {row.credit > 0 ? (
-                          <span className="font-semibold text-emerald-700 tabular-nums">{fmtOMR(row.credit)}</span>
+                          <span className="font-semibold text-emerald-700 tabular-nums ltr-numbers">{fmtOMR(row.credit)}</span>
                         ) : (
                           <span className="text-gray-200 select-none">—</span>
                         )}
                       </td>
 
                       {/* Running balance */}
-                      <td className="whitespace-nowrap px-3 py-3.5 pr-5 text-right">
+                      <td className="whitespace-nowrap px-3 py-3.5 pe-5 text-end">
                         <span
-                          className={`font-bold tabular-nums text-sm ${
+                          className={`font-bold tabular-nums ltr-numbers text-sm ${
                             row.runningBalance > 0.001
                               ? "text-red-600"
                               : row.runningBalance < -0.001
@@ -546,18 +536,18 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
               {/* Footer totals */}
               <tfoot>
                 <tr className="border-t-2 border-gray-200 bg-gray-50">
-                  <td colSpan={3} className="py-3.5 pl-5 text-sm font-semibold text-gray-700">
-                    Totals — {filtered.length} entr{filtered.length !== 1 ? "ies" : "y"}
+                  <td colSpan={3} className="py-3.5 ps-5 text-sm font-semibold text-gray-700">
+                    {tTbl("totalsRow", { count: filtered.length })}
                   </td>
-                  <td className="px-3 py-3.5 text-right text-sm font-bold text-red-600 tabular-nums">
+                  <td className="px-3 py-3.5 text-end text-sm font-bold text-red-600 tabular-nums ltr-numbers">
                     {fmtOMR(footerTotals.charges)}
                   </td>
-                  <td className="px-3 py-3.5 text-right text-sm font-bold text-emerald-700 tabular-nums">
+                  <td className="px-3 py-3.5 text-end text-sm font-bold text-emerald-700 tabular-nums ltr-numbers">
                     {fmtOMR(footerTotals.paid)}
                   </td>
-                  <td className="px-3 py-3.5 pr-5 text-right">
+                  <td className="px-3 py-3.5 pe-5 text-end">
                     <div className="inline-flex items-center gap-1.5">
-                      <span className={`text-sm font-bold tabular-nums ${finalBalance > 0 ? "text-red-600" : "text-emerald-700"}`}>
+                      <span className={`text-sm font-bold tabular-nums ltr-numbers ${finalBalance > 0 ? "text-red-600" : "text-emerald-700"}`}>
                         {fmtOMR(Math.abs(finalBalance))}
                       </span>
                       <span className="text-xs text-gray-400 font-medium">OMR</span>
@@ -573,7 +563,7 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
       {/* ── Balance indicator note ─────────────────────────────────────────── */}
       {!loading && transactions.length > 0 && (
         <p className="text-xs text-gray-400 text-center">
-          Dr = amount charged to tenant &nbsp;·&nbsp; Cr = amount paid by tenant &nbsp;·&nbsp; Balance = outstanding amount owed
+          {tTbl("legend")}
         </p>
       )}
     </div>

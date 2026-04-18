@@ -378,37 +378,379 @@
     }
   },
   "tenants": {
-    "title": "Tenants",
-    "addTenant": "Add Tenant",
-    "firstName": "First Name",
-    "lastName": "Last Name",
-    "fullNameArabic": "Full Name (Arabic)",
-    "nationality": "Nationality",
-    "phone": "Phone",
-    "whatsapp": "WhatsApp",
-    "email": "Email",
-    "idType": "ID Type",
-    "nationalId": "National ID",
-    "passport": "Passport",
-    "residentCard": "Resident Card",
-    "idNumber": "ID Number",
-    "idExpiry": "ID Expiry Date",
-    "tenantType": "Guest Type",
-    "individual": "Individual",
-    "family": "Family",
-    "corporate": "Corporate",
-    "government": "Government",
-    "source": "Source",
-    "walkIn": "Walk-in",
-    "referral": "Referral",
-    "returningGuest": "Returning Guest",
-    "vip": "VIP",
-    "regular": "Regular",
-    "blacklisted": "Blacklisted",
-    "emergencyContact": "Emergency Contact",
-    "specialRequests": "Special Requests",
-    "quickAdd": "Quick Add",
-    "fullForm": "Full Form"
+    "title": "Tenants & Guests",
+    "recordsCount": "{count, plural, =0 {No records} one {# record} other {# records}}",
+    "newTenantBtn": "New Tenant",
+    "filters": {
+      "filtersBtn": "Filters",
+      "searchPlaceholder": "Search name, phone, email, ID…",
+      "all": "All",
+      "regular": "Regular",
+      "vip": "⭐ VIP",
+      "blacklisted": "🚫 Blacklisted",
+      "allTypes": "All Types",
+      "sourceLabel": "Source:",
+      "clearAll": "Clear all"
+    },
+    "types": {
+      "individual": "Individual",
+      "family": "Family",
+      "corporate": "Corporate",
+      "government": "Government"
+    },
+    "sources": {
+      "walk_in": "Walk-In",
+      "phone": "Phone",
+      "whatsapp": "WhatsApp",
+      "website": "Website",
+      "booking_com": "Booking.com",
+      "airbnb": "Airbnb",
+      "referral": "Referral",
+      "returning": "Returning",
+      "returning_guest": "Returning",
+      "corporate_contract": "Corporate",
+      "online": "Online",
+      "agent": "Agent",
+      "other": "Other"
+    },
+    "classifications": {
+      "regular": "Regular",
+      "vip": "VIP",
+      "blacklisted": "Blacklisted",
+      "vipBadge": "⭐ VIP",
+      "blacklistedBadge": "🚫 Blacklisted",
+      "vipFull": "VIP Guest"
+    },
+    "idTypes": {
+      "national_id": "National ID",
+      "passport": "Passport",
+      "resident_card": "Resident Card",
+      "driving_license": "Driving License"
+    },
+    "paymentMethods": {
+      "cash": "Cash",
+      "bank_transfer": "Bank Transfer",
+      "card": "Card",
+      "cheque": "Cheque"
+    },
+    "list": {
+      "stats": {
+        "total": "Total Tenants",
+        "vip": "VIP Guests",
+        "blacklisted": "Blacklisted",
+        "active": "Active"
+      },
+      "toolbar": {
+        "csv": "CSV",
+        "print": "Print",
+        "inlineEdit": "Inline Edit",
+        "exitEdit": "Exit Edit",
+        "tenantsCount": "{count, plural, one {# tenant} other {# tenants}}",
+        "tableViewTitle": "Table view",
+        "cardViewTitle": "Card view",
+        "summaryViewTitle": "Summary view"
+      },
+      "table": {
+        "name": "Name",
+        "contact": "Contact",
+        "type": "Type",
+        "class": "Class",
+        "source": "Source",
+        "stays": "Stays",
+        "actions": "Actions"
+      },
+      "row": {
+        "viewProfile": "View profile",
+        "quickEdit": "Quick edit",
+        "edit": "Edit",
+        "save": "Save",
+        "cancel": "Cancel",
+        "saved": "Saved",
+        "cycleClassTitle": "Click to cycle classification",
+        "firstNamePlaceholder": "First name",
+        "lastNamePlaceholder": "Last name"
+      },
+      "card": {
+        "stays": "Stays",
+        "active": "Active",
+        "view": "View",
+        "edit": "Edit",
+        "via": "via {source}"
+      },
+      "summary": {
+        "totalStays": "Total Stays",
+        "reservations": "reservations",
+        "activeNow": "Active Now",
+        "currentlyStaying": "currently staying",
+        "noActiveRes": "no active res.",
+        "totalSpent": "Total Spent"
+      },
+      "empty": "No tenants match your filters.",
+      "showing": "{count, plural, one {Showing # tenant} other {Showing # tenants}}"
+    },
+    "detail": {
+      "back": "Back to Tenants",
+      "since": "Since {date}",
+      "inactive": "Inactive",
+      "blacklistTitle": "This tenant is blacklisted.",
+      "editProfile": "Edit Profile",
+      "acceptPayment": "Accept Payment",
+      "tabs": {
+        "overview": "Overview",
+        "ledger": "Financial Ledger"
+      },
+      "kpi": {
+        "openBalance": "Open Balance",
+        "totalStays": "Total Stays",
+        "totalSpent": "Total Spent",
+        "source": "Source"
+      },
+      "sections": {
+        "contact": "Contact",
+        "identification": "Identification",
+        "address": "Address",
+        "emergency": "Emergency Contact",
+        "organisation": "Organisation",
+        "preferences": "Preferences",
+        "internalNotes": "Internal Notes",
+        "leases": "Lease / Reservation History",
+        "payments": "Recent Payments"
+      },
+      "fields": {
+        "phone": "Phone",
+        "secondary": "Secondary",
+        "whatsapp": "WhatsApp",
+        "email": "Email",
+        "idType": "ID Type",
+        "idNumber": "ID Number",
+        "expiry": "Expiry",
+        "gender": "Gender",
+        "dateOfBirth": "Date of Birth",
+        "country": "Country",
+        "city": "City",
+        "address": "Address",
+        "name": "Name",
+        "relation": "Relation",
+        "company": "Company",
+        "contact": "Contact",
+        "floor": "Floor",
+        "unitType": "Unit Type",
+        "payment": "Payment",
+        "requests": "Requests"
+      },
+      "gender": {
+        "male": "Male",
+        "female": "Female"
+      },
+      "history": {
+        "recordsCount": "{count, plural, one {# record} other {# records}}",
+        "noLeases": "No reservations yet.",
+        "noPayments": "No payments recorded.",
+        "multipleUnits": "Multiple Units",
+        "inProperty": "in {property}"
+      }
+    },
+    "ledger": {
+      "summary": {
+        "charged": "Charged",
+        "paid": "Paid",
+        "returned": "Returned",
+        "balanceDue": "Balance Due",
+        "refundsAndReturns": "Refunds & returns",
+        "outstanding": "Outstanding",
+        "overpaid": "Overpaid / Credit",
+        "fullySettled": "Fully settled",
+        "invoiceCount": "{count, plural, one {# invoice} other {# invoices}}",
+        "paymentCount": "{count, plural, one {# payment} other {# payments}}",
+        "refresh": "Refresh"
+      },
+      "tabs": {
+        "all": "All",
+        "invoices": "Invoices",
+        "payments": "Payments",
+        "returns": "Refunds"
+      },
+      "actions": {
+        "dateRange": "Date Range",
+        "excel": "Excel",
+        "pdf": "PDF",
+        "recordPayment": "Record Payment"
+      },
+      "filters": {
+        "filterByDate": "Filter by date:",
+        "from": "From",
+        "to": "To",
+        "clearDates": "Clear dates",
+        "showingFiltered": "Showing {shown} of {total} entries"
+      },
+      "table": {
+        "title": "Transaction History",
+        "entriesShown": "— {count, plural, one {# entry shown} other {# entries shown}}",
+        "clearAll": "Clear all filters",
+        "date": "Date",
+        "type": "Type",
+        "description": "Description",
+        "charge": "Charge (Dr)",
+        "payment": "Payment (Cr)",
+        "balance": "Balance",
+        "chargeTitle": "Amount charged to tenant",
+        "paymentTitle": "Amount paid by tenant",
+        "viewReservation": "View reservation →",
+        "totalsRow": "Totals — {count, plural, one {# entry} other {# entries}}",
+        "legend": "Dr = amount charged to tenant · Cr = amount paid by tenant · Balance = outstanding amount owed"
+      },
+      "types": {
+        "invoice": "Invoice",
+        "payment": "Payment",
+        "return": "Refund"
+      },
+      "empty": {
+        "title": "No transactions found",
+        "tryFilters": "Try adjusting your filters",
+        "noneForTenant": "{name} has no recorded transactions yet",
+        "clearFilters": "Clear filters"
+      },
+      "errors": {
+        "loadFailed": "Failed to load ledger",
+        "networkError": "Network error loading ledger"
+      }
+    },
+    "ledgerPage": {
+      "title": "Tenant Ledger",
+      "description": "Per-tenant running balance — all charges, payments and returns",
+      "selectTenant": "Select Tenant",
+      "searchPlaceholder": "Search tenant by name or phone…",
+      "change": "Change",
+      "selectPrompt": "Select a tenant to view their ledger",
+      "selectHelp": "Search by name or phone number above"
+    },
+    "newPage": {
+      "title": "Add New Tenant",
+      "description": "Add a new resident or guest to your directory."
+    },
+    "editPage": {
+      "title": "Edit Tenant",
+      "description": "Update contact or identity information."
+    },
+    "form": {
+      "modeQuickAdd": "⚡ Quick Add",
+      "modeFullForm": "Full Form",
+      "quickAddTagline": "Fastest for walk-in guests during busy hours",
+      "fullFormTagline": "Complete guest profile with all details",
+      "quickAdd": {
+        "createGuest": "Create Guest",
+        "creating": "Creating…",
+        "switchFull": "Need more fields? Switch to Full Form →"
+      },
+      "sections": {
+        "personal": "Personal Information",
+        "identification": "Identification",
+        "contact": "Contact Information",
+        "address": "Address",
+        "emergency": "Emergency Contact",
+        "classification": "Guest Classification",
+        "preferences": "Preferences & Notes"
+      },
+      "fields": {
+        "firstName": "First Name",
+        "lastName": "Last Name",
+        "fullNameArabic": "Full Name in Arabic",
+        "fullNameArabicHint": "(optional — for official documents)",
+        "gender": "Gender",
+        "male": "♂ Male",
+        "female": "♀ Female",
+        "dateOfBirth": "Date of Birth",
+        "optional": "(optional)",
+        "nationality": "Nationality",
+        "nationalityHint": "— GCC & Asia at top",
+        "idType": "ID Type",
+        "idNumber": "ID Number",
+        "idExpiry": "ID Expiry Date",
+        "expired": "⚠ Expired",
+        "expiredBadge": "Expired ID",
+        "expiryWarning": "Warning shown if expired, but submission still allowed",
+        "frontSide": "Front Side",
+        "backSide": "Back Side",
+        "phone": "Phone",
+        "secondaryPhone": "Secondary Phone",
+        "whatsapp": "WhatsApp",
+        "whatsappHint": "(primary in Oman)",
+        "sameAsPhone": "Same as phone",
+        "email": "Email",
+        "country": "Country",
+        "city": "City",
+        "addressLine": "Address Line",
+        "name": "Name",
+        "relation": "Relation",
+        "guestType": "Guest Type",
+        "companyName": "Company Name",
+        "contactPerson": "Contact Person",
+        "source": "Source",
+        "classification": "Classification",
+        "adminOnly": "Admin only",
+        "blacklistDocReason": "Please document the reason in Internal Notes below",
+        "preferredFloor": "Preferred Floor",
+        "preferredUnitType": "Preferred Unit Type",
+        "preferredPayment": "Preferred Payment",
+        "noPreference": "No preference",
+        "specialRequests": "Special Requests",
+        "internalNotes": "Internal Notes",
+        "internalNotesHint": "Staff only — not visible to guest",
+        "tags": "Tags"
+      },
+      "placeholders": {
+        "firstName": "Ahmed",
+        "lastName": "Al-Said",
+        "fullNameArabic": "أحمد السعيد",
+        "phone": "9000 0000",
+        "phoneFull": "+968 9000 0000",
+        "email": "guest@email.com",
+        "nationalityQuick": "Omani",
+        "nationalityFull": "Type or select nationality…",
+        "idNumberQuick": "Enter ID / passport number",
+        "idNumberFull": "Enter number exactly as on document",
+        "country": "Oman",
+        "city": "Salalah",
+        "addressLine": "Street, building…",
+        "contactName": "Contact name",
+        "companyName": "e.g. Dhofar Tourism LLC",
+        "contactPerson": "Name of contact person",
+        "preferredFloor": "Ground floor, High floor…",
+        "specialRequests": "e.g. Extra bed needed, Late check-in, Quiet unit, Baby cot…",
+        "internalNotes": "e.g. Always pays late. VIP — give best available unit. Blacklisted reason…",
+        "relation": "Spouse, Brother, Friend…",
+        "tag": "Type a tag and press Enter (e.g. khareef-regular, vip-client)"
+      },
+      "tags": {
+        "noTags": "No tags yet",
+        "hint": "Press Enter or comma to add a tag"
+      },
+      "upload": {
+        "uploading": "Uploading…",
+        "prompt": "Upload or capture",
+        "failed": "Upload failed"
+      },
+      "duplicate": {
+        "checking": "Checking…",
+        "checkingFull": "Checking for duplicate…",
+        "found": "This guest has stayed before!",
+        "returning": "Returning guest — {name}",
+        "viewProfile": "View Profile →",
+        "viewShort": "View →",
+        "newGuest": "New guest"
+      },
+      "actions": {
+        "cancel": "← Cancel",
+        "save": "Save Changes",
+        "create": "Create Tenant",
+        "saving": "Saving…",
+        "creating": "Creating…"
+      },
+      "toasts": {
+        "created": "Tenant created!",
+        "updated": "Tenant updated!"
+      }
+    }
   },
   "reservations": {
     "title": "Reservations",

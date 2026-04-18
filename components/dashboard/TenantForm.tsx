@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/utils/supabase/client";
 import {
   UserIcon,
@@ -23,7 +24,6 @@ import {
   CheckCircleIcon,
   StarIcon,
   ShieldExclamationIcon,
-  GlobeAltIcon,
 } from "@heroicons/react/24/outline";
 import { createTenant, updateTenant } from "@/app/dashboard/tenants/actions";
 
@@ -47,45 +47,19 @@ const ALL_NATIONALITIES = [
   "Uzbek","Vietnamese","Yemeni",
 ].sort();
 
-const ID_TYPES = [
-  { value: "national_id",     label: "National ID"     },
-  { value: "passport",        label: "Passport"        },
-  { value: "resident_card",   label: "Resident Card"   },
-  { value: "driving_license", label: "Driving License" },
-];
+const ID_TYPE_VALUES = ["national_id", "passport", "resident_card", "driving_license"] as const;
+const TENANT_TYPE_VALUES = ["individual", "family", "corporate", "government"] as const;
+const SOURCE_VALUES = [
+  "walk_in", "phone", "whatsapp", "website", "booking_com", "airbnb",
+  "referral", "returning_guest", "corporate_contract", "other",
+] as const;
+const PAYMENT_METHOD_VALUES = ["cash", "bank_transfer", "card", "cheque"] as const;
 
-const TENANT_TYPES = [
-  { value: "individual",  label: "Individual" },
-  { value: "family",      label: "Family"     },
-  { value: "corporate",   label: "Corporate"  },
-  { value: "government",  label: "Government" },
-];
-
-const SOURCES = [
-  { value: "walk_in",           label: "Walk-in"          },
-  { value: "phone",             label: "Phone"            },
-  { value: "whatsapp",          label: "WhatsApp"         },
-  { value: "website",           label: "Website"          },
-  { value: "booking_com",       label: "Booking.com"      },
-  { value: "airbnb",            label: "Airbnb"           },
-  { value: "referral",          label: "Referral"         },
-  { value: "returning_guest",   label: "Returning Guest"  },
-  { value: "corporate_contract",label: "Corporate Contract"},
-  { value: "other",             label: "Other"            },
-];
-
-const PAYMENT_METHODS = [
-  { value: "cash",          label: "Cash"          },
-  { value: "bank_transfer", label: "Bank Transfer" },
-  { value: "card",          label: "Card"          },
-  { value: "cheque",        label: "Cheque"        },
-];
-
-const CLASSIFICATIONS = [
-  { value: "regular",    label: "Regular",    Icon: CheckCircleIcon, active: "border-gray-400 bg-gray-100 text-gray-800"       },
-  { value: "vip",        label: "VIP",        Icon: StarIcon,        active: "border-amber-400 bg-amber-50 text-amber-800"      },
-  { value: "blacklisted",label: "Blacklisted",Icon: ShieldExclamationIcon, active: "border-red-400 bg-red-50 text-red-800" },
-];
+const CLASSIFICATION_STYLES = {
+  regular:     { Icon: CheckCircleIcon,        active: "border-gray-400 bg-gray-100 text-gray-800" },
+  vip:         { Icon: StarIcon,               active: "border-amber-400 bg-amber-50 text-amber-800" },
+  blacklisted: { Icon: ShieldExclamationIcon,  active: "border-red-400 bg-red-50 text-red-800" },
+} as const;
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -144,7 +118,7 @@ function Section({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors"
+        className="flex w-full items-center justify-between px-5 py-4 text-start hover:bg-gray-50 transition-colors"
       >
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4 text-blue-500" />
@@ -167,6 +141,8 @@ function Section({
 // ── Tag Input ─────────────────────────────────────────────────────────────────
 
 function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) => void }) {
+  const tTags = useTranslations("tenants.form.tags");
+  const tPh   = useTranslations("tenants.form.placeholders");
   const [input, setInput] = useState("");
   const add = (val: string) => {
     const t = val.trim().toLowerCase().replace(/\s+/g, "-");
@@ -177,7 +153,7 @@ function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) 
     <div>
       <div className="mb-2 flex min-h-8 flex-wrap gap-1.5">
         {tags.length === 0
-          ? <span className="py-1 text-xs text-gray-400">No tags yet</span>
+          ? <span className="py-1 text-xs text-gray-400">{tTags("noTags")}</span>
           : tags.map((tag) => (
             <span key={tag} className="flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-medium text-blue-700">
               {tag}
@@ -195,10 +171,10 @@ function TagInput({ tags, onChange }: { tags: string[]; onChange: (t: string[]) 
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === "," ) { e.preventDefault(); add(input); }
         }}
-        placeholder="Type a tag and press Enter (e.g. khareef-regular, vip-client)"
+        placeholder={tPh("tag")}
         className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
       />
-      <p className="mt-1 text-xs text-gray-400">Press Enter or comma to add a tag</p>
+      <p className="mt-1 text-xs text-gray-400">{tTags("hint")}</p>
     </div>
   );
 }
@@ -210,6 +186,7 @@ function IDDocUpload({
 }: {
   name: string; label: string; defaultUrl: string | null;
 }) {
+  const tUp = useTranslations("tenants.form.upload");
   const [url, setUrl]           = useState<string | null>(defaultUrl);
   const [uploading, setUploading] = useState(false);
   const inputRef                  = useRef<HTMLInputElement>(null);
@@ -220,7 +197,7 @@ function IDDocUpload({
     setUploading(true);
     const path = `id-documents/${Date.now()}-${file.name.replace(/\s/g, "_")}`;
     const { data, error } = await supabase.storage.from("pms-media").upload(path, file, { upsert: true });
-    if (error) { toast.error("Upload failed"); setUploading(false); return; }
+    if (error) { toast.error(tUp("failed")); setUploading(false); return; }
     const { data: { publicUrl } } = supabase.storage.from("pms-media").getPublicUrl(data.path);
     setUrl(publicUrl);
     setUploading(false);
@@ -236,7 +213,7 @@ function IDDocUpload({
           <button
             type="button"
             onClick={() => setUrl(null)}
-            className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100"
+            className="absolute end-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100"
           >
             <XMarkIcon className="h-3.5 w-3.5" />
           </button>
@@ -249,7 +226,7 @@ function IDDocUpload({
           className="flex h-28 w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 text-gray-400 hover:border-blue-400 hover:bg-blue-50 hover:text-blue-600 transition-all disabled:opacity-60"
         >
           <ArrowUpTrayIcon className="h-6 w-6" />
-          <span className="text-xs font-medium">{uploading ? "Uploading…" : "Upload or capture"}</span>
+          <span className="text-xs font-medium">{uploading ? tUp("uploading") : tUp("prompt")}</span>
         </button>
       )}
       <input
@@ -304,32 +281,40 @@ function QuickAddForm({
   dupCheck:        DupState;
   isPending:       boolean;
 }) {
+  const tFld   = useTranslations("tenants.form.fields");
+  const tPh    = useTranslations("tenants.form.placeholders");
+  const tDup   = useTranslations("tenants.form.duplicate");
+  const tQ     = useTranslations("tenants.form.quickAdd");
+  const tIdT   = useTranslations("tenants.idTypes");
+  const tType  = useTranslations("tenants.types");
+  const tSrc   = useTranslations("tenants.sources");
+
   return (
     <div className="rounded-xl border border-blue-200 bg-white p-5 shadow-sm">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">First Name <span className="text-red-500">*</span></label>
-          <input autoFocus name="firstName" required placeholder="Ahmed"
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("firstName")} <span className="text-red-500">*</span></label>
+          <input autoFocus name="firstName" required placeholder={tPh("firstName")}
             className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Last Name <span className="text-red-500">*</span></label>
-          <input name="lastName" required placeholder="Al-Said"
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("lastName")} <span className="text-red-500">*</span></label>
+          <input name="lastName" required placeholder={tPh("lastName")}
             className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Phone <span className="text-red-500">*</span></label>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("phone")} <span className="text-red-500">*</span></label>
           <div className="flex">
-            <span className="flex items-center rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-500">+968</span>
+            <span className="flex items-center rounded-s-lg border border-e-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-500 ltr-numbers">+968</span>
             <input type="tel" name="phone" required value={phone} onChange={(e) => setPhone(e.target.value)}
-              placeholder="9000 0000"
-              className="flex-1 rounded-r-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+              placeholder={tPh("phone")}
+              className="flex-1 rounded-e-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
           </div>
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Nationality <span className="text-red-500">*</span></label>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("nationality")} <span className="text-red-500">*</span></label>
           <input value={nationality} onChange={(e) => setNationality(e.target.value)}
-            list="nat-quick" placeholder="Omani" required
+            list="nat-quick" placeholder={tPh("nationalityQuick")} required
             className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
           <datalist id="nat-quick">
             {[...PRIORITY_NATIONALITIES, ...ALL_NATIONALITIES.filter((n) => !PRIORITY_NATIONALITIES.includes(n))].map((n) => (
@@ -338,58 +323,58 @@ function QuickAddForm({
           </datalist>
         </div>
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">ID Type <span className="text-red-500">*</span></label>
+          <label className="mb-2 block text-sm font-medium text-gray-700">{tFld("idType")} <span className="text-red-500">*</span></label>
           <div className="flex flex-wrap gap-1.5">
-            {ID_TYPES.map((t) => (
-              <button key={t.value} type="button" onClick={() => setIdType(t.value)}
-                className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all ${idType === t.value ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 bg-white text-gray-600 hover:border-blue-200"}`}>
-                {t.label}
+            {ID_TYPE_VALUES.map((v) => (
+              <button key={v} type="button" onClick={() => setIdType(v)}
+                className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all ${idType === v ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 bg-white text-gray-600 hover:border-blue-200"}`}>
+                {tIdT(v)}
               </button>
             ))}
           </div>
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">ID Number <span className="text-red-500">*</span></label>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("idNumber")} <span className="text-red-500">*</span></label>
           <input value={idNumber} onChange={(e) => setIdNumber(e.target.value)} required
-            placeholder="Enter ID / passport number"
+            placeholder={tPh("idNumberQuick")}
             className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-          {dupCheck.status === "checking" && <p className="mt-1 text-xs text-gray-400">Checking…</p>}
+          {dupCheck.status === "checking" && <p className="mt-1 text-xs text-gray-400">{tDup("checking")}</p>}
           {dupCheck.status === "found" && (
             <div className="mt-2 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
               <ExclamationTriangleIcon className="h-4 w-4 shrink-0 text-amber-600" />
-              <p className="flex-1 text-xs font-medium text-amber-800">Returning guest — {dupCheck.name}</p>
+              <p className="flex-1 text-xs font-medium text-amber-800">{tDup("returning", { name: dupCheck.name ?? "" })}</p>
               <Link href={`/dashboard/tenants/${dupCheck.tenantId}`} target="_blank"
-                className="shrink-0 text-xs font-semibold text-blue-600 hover:underline">View →</Link>
+                className="shrink-0 text-xs font-semibold text-blue-600 hover:underline">{tDup("viewShort")}</Link>
             </div>
           )}
         </div>
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-700">Guest Type <span className="text-red-500">*</span></label>
+          <label className="mb-2 block text-sm font-medium text-gray-700">{tFld("guestType")} <span className="text-red-500">*</span></label>
           <div className="flex flex-wrap gap-1.5">
-            {TENANT_TYPES.map((t) => (
-              <button key={t.value} type="button" onClick={() => setTenantType(t.value)}
-                className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all ${tenantType === t.value ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 bg-white text-gray-600 hover:border-blue-200"}`}>
-                {t.label}
+            {TENANT_TYPE_VALUES.map((v) => (
+              <button key={v} type="button" onClick={() => setTenantType(v)}
+                className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-all ${tenantType === v ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 bg-white text-gray-600 hover:border-blue-200"}`}>
+                {tType(v)}
               </button>
             ))}
           </div>
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">Source <span className="text-red-500">*</span></label>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("source")} <span className="text-red-500">*</span></label>
           <select value={source} onChange={(e) => setSource(e.target.value)}
             className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-            {SOURCES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            {SOURCE_VALUES.map((v) => <option key={v} value={v}>{tSrc(v)}</option>)}
           </select>
         </div>
       </div>
       <div className="mt-5 flex items-center justify-between border-t border-gray-100 pt-4">
         <button type="button" onClick={onSwitchFull}
           className="text-xs font-medium text-blue-600 hover:underline">
-          Need more fields? Switch to Full Form →
+          {tQ("switchFull")}
         </button>
         <button type="submit" disabled={isPending}
           className="rounded-lg bg-blue-600 px-6 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 transition-colors shadow-sm">
-          {isPending ? "Creating…" : "Create Guest"}
+          {isPending ? tQ("creating") : tQ("createGuest")}
         </button>
       </div>
     </div>
@@ -406,6 +391,19 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const isEdit = !!initialData;
+
+  const tForm  = useTranslations("tenants.form");
+  const tSec   = useTranslations("tenants.form.sections");
+  const tFld   = useTranslations("tenants.form.fields");
+  const tPh    = useTranslations("tenants.form.placeholders");
+  const tDup   = useTranslations("tenants.form.duplicate");
+  const tAct   = useTranslations("tenants.form.actions");
+  const tToast = useTranslations("tenants.form.toasts");
+  const tIdT   = useTranslations("tenants.idTypes");
+  const tType  = useTranslations("tenants.types");
+  const tSrc   = useTranslations("tenants.sources");
+  const tCls   = useTranslations("tenants.classifications");
+  const tPay   = useTranslations("tenants.paymentMethods");
 
   // Mode (only relevant when creating)
   const [quickMode, setQuickMode] = useState(!isEdit);
@@ -480,7 +478,7 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
     startTransition(async () => {
       const res = isEdit ? await updateTenant(fd) : await createTenant(fd);
       if (res?.error) { toast.error(res.error); return; }
-      toast.success(isEdit ? "Tenant updated!" : "Tenant created!");
+      toast.success(isEdit ? tToast("updated") : tToast("created"));
       if (!isEdit && res.id) {
         if (onSuccess) {
           onSuccess({ id: res.id, firstName, lastName });
@@ -498,13 +496,13 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
         {/* Mode toggle */}
         <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3">
           <div className="flex overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-sm">
-            <span className="rounded-md bg-blue-600 px-4 py-1.5 font-semibold text-white shadow-sm">⚡ Quick Add</span>
+            <span className="rounded-md bg-blue-600 px-4 py-1.5 font-semibold text-white shadow-sm">{tForm("modeQuickAdd")}</span>
             <button type="button" onClick={() => setQuickMode(false)}
               className="rounded-md px-4 py-1.5 font-medium text-gray-500 hover:text-gray-800 transition-colors">
-              Full Form
+              {tForm("modeFullForm")}
             </button>
           </div>
-          <p className="text-xs text-gray-400">Fastest for walk-in guests during busy hours</p>
+          <p className="text-xs text-gray-400">{tForm("quickAddTagline")}</p>
         </div>
         <form onSubmit={handleSubmit}>
           {/* hidden fields needed by action */}
@@ -542,11 +540,11 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
           <div className="flex overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-sm">
             <button type="button" onClick={() => setQuickMode(true)}
               className="rounded-md px-4 py-1.5 font-medium text-gray-500 hover:text-gray-800 transition-colors">
-              ⚡ Quick Add
+              {tForm("modeQuickAdd")}
             </button>
-            <span className="rounded-md bg-blue-600 px-4 py-1.5 font-semibold text-white shadow-sm">Full Form</span>
+            <span className="rounded-md bg-blue-600 px-4 py-1.5 font-semibold text-white shadow-sm">{tForm("modeFullForm")}</span>
           </div>
-          <p className="text-xs text-gray-400">Complete guest profile with all details</p>
+          <p className="text-xs text-gray-400">{tForm("fullFormTagline")}</p>
         </div>
       )}
 
@@ -554,55 +552,55 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
         {isEdit && <input type="hidden" name="id" value={initialData!.id} />}
 
         {/* ── Section 1: Personal ─────────────────────────────────────── */}
-        <Section title="Personal Information" icon={UserIcon} isOpen={open.personal} onToggle={() => tog("personal")}>
+        <Section title={tSec("personal")} icon={UserIcon} isOpen={open.personal} onToggle={() => tog("personal")}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">First Name <span className="text-red-500">*</span></label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("firstName")} <span className="text-red-500">*</span></label>
               <input autoFocus={!isEdit} name="firstName" required defaultValue={initialData?.firstName}
-                placeholder="Ahmed"
+                placeholder={tPh("firstName")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Last Name <span className="text-red-500">*</span></label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("lastName")} <span className="text-red-500">*</span></label>
               <input name="lastName" required defaultValue={initialData?.lastName}
-                placeholder="Al-Said"
+                placeholder={tPh("lastName")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
             </div>
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Full Name in Arabic <span className="text-xs font-normal text-gray-400">(optional — for official documents)</span>
+                {tFld("fullNameArabic")} <span className="text-xs font-normal text-gray-400">{tFld("fullNameArabicHint")}</span>
               </label>
               <input name="fullNameArabic" defaultValue={initialData?.fullNameArabic ?? ""} dir="rtl"
-                placeholder="أحمد السعيد"
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-right text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                placeholder={tPh("fullNameArabic")}
+                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-end text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
             </div>
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Gender</label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">{tFld("gender")}</label>
               <div className="flex gap-3">
-                {["male", "female"].map((g) => (
+                {(["male", "female"] as const).map((g) => (
                   <label key={g}
                     className={`flex flex-1 cursor-pointer items-center gap-2 rounded-lg border-2 px-4 py-3 transition-all ${gender === g ? "border-blue-500 bg-blue-50" : "border-gray-200 bg-white hover:border-blue-200"}`}>
                     <input type="radio" className="sr-only" checked={gender === g} onChange={() => setGender(g)} />
                     <span className={`text-sm font-medium ${gender === g ? "text-blue-700" : "text-gray-600"}`}>
-                      {g === "male" ? "♂ Male" : "♀ Female"}
+                      {g === "male" ? tFld("male") : tFld("female")}
                     </span>
                   </label>
                 ))}
               </div>
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Date of Birth <span className="text-xs font-normal text-gray-400">(optional)</span></label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("dateOfBirth")} <span className="text-xs font-normal text-gray-400">{tFld("optional")}</span></label>
               <input type="date" name="dateOfBirth"
                 defaultValue={initialData?.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().slice(0, 10) : ""}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
             </div>
             <div className="sm:col-span-2">
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Nationality <span className="text-red-500">*</span>
-                <span className="ml-2 text-xs font-normal text-gray-400">— GCC &amp; Asia at top</span>
+                {tFld("nationality")} <span className="text-red-500">*</span>
+                <span className="ms-2 text-xs font-normal text-gray-400">{tFld("nationalityHint")}</span>
               </label>
               <input value={nationality} onChange={(e) => setNationality(e.target.value)}
-                list="nat-full" placeholder="Type or select nationality…" required
+                list="nat-full" placeholder={tPh("nationalityFull")} required
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
               <datalist id="nat-full">
                 {PRIORITY_NATIONALITIES.map((n) => <option key={`p-${n}`} value={n}>{n} ⭐</option>)}
@@ -614,23 +612,23 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
 
         {/* ── Section 2: Identification ────────────────────────────────── */}
         <Section
-          title="Identification"
+          title={tSec("identification")}
           icon={IdentificationIcon}
           isOpen={open.identification}
           onToggle={() => tog("identification")}
           badge={isIdExpired ? (
             <span className="flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
-              <ExclamationTriangleIcon className="h-3 w-3" /> Expired ID
+              <ExclamationTriangleIcon className="h-3 w-3" /> {tFld("expiredBadge")}
             </span>
           ) : undefined}
         >
           {/* ID Type selector */}
           <div className="mb-4">
-            <label className="mb-2 block text-sm font-medium text-gray-700">ID Type <span className="text-red-500">*</span></label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">{tFld("idType")} <span className="text-red-500">*</span></label>
             <div className="flex flex-wrap gap-2">
-              {ID_TYPES.map((t) => (
-                <SegBtn key={t.value} active={idType === t.value} onClick={() => setIdType(t.value)}>
-                  {t.label}
+              {ID_TYPE_VALUES.map((v) => (
+                <SegBtn key={v} active={idType === v} onClick={() => setIdType(v)}>
+                  {tIdT(v)}
                 </SegBtn>
               ))}
             </div>
@@ -638,37 +636,37 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">ID Number <span className="text-red-500">*</span></label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("idNumber")} <span className="text-red-500">*</span></label>
               <input value={idNumber} onChange={(e) => setIdNumber(e.target.value)} required
-                placeholder="Enter number exactly as on document"
+                placeholder={tPh("idNumberFull")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
               {/* Duplicate detection feedback */}
               {dupCheck.status === "checking" && (
-                <p className="mt-1.5 text-xs text-gray-400">Checking for duplicate…</p>
+                <p className="mt-1.5 text-xs text-gray-400">{tDup("checkingFull")}</p>
               )}
               {dupCheck.status === "found" && (
                 <div className="mt-2 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2">
                   <ExclamationTriangleIcon className="h-4 w-4 shrink-0 text-amber-600" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-amber-800">This guest has stayed before!</p>
+                    <p className="text-xs font-semibold text-amber-800">{tDup("found")}</p>
                     <p className="text-xs text-amber-700">{dupCheck.name}</p>
                   </div>
                   <Link href={`/dashboard/tenants/${dupCheck.tenantId}`} target="_blank"
                     className="shrink-0 whitespace-nowrap text-xs font-semibold text-blue-600 hover:underline">
-                    View Profile →
+                    {tDup("viewProfile")}
                   </Link>
                 </div>
               )}
               {dupCheck.status === "clear" && (
                 <p className="mt-1.5 flex items-center gap-1 text-xs text-emerald-600">
-                  <CheckIcon className="h-3.5 w-3.5" /> New guest
+                  <CheckIcon className="h-3.5 w-3.5" /> {tDup("newGuest")}
                 </p>
               )}
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                ID Expiry Date
-                {isIdExpired && <span className="ml-2 text-xs font-semibold text-red-600">⚠ Expired</span>}
+                {tFld("idExpiry")}
+                {isIdExpired && <span className="ms-2 text-xs font-semibold text-red-600">{tFld("expired")}</span>}
               </label>
               <input type="date" value={idExpiryDate} onChange={(e) => setIdExpiryDate(e.target.value)}
                 className={`block w-full rounded-lg border px-3 py-2.5 text-sm focus:outline-none focus:ring-2 ${
@@ -676,67 +674,67 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
                     ? "border-red-300 bg-red-50 focus:border-red-400 focus:ring-red-400/20"
                     : "border-gray-300 focus:border-blue-500 focus:ring-blue-500/20"
                 }`} />
-              <p className="mt-1 text-xs text-gray-400">Warning shown if expired, but submission still allowed</p>
+              <p className="mt-1 text-xs text-gray-400">{tFld("expiryWarning")}</p>
             </div>
           </div>
 
           {/* ID Document Upload */}
           <div className="mt-4 grid grid-cols-2 gap-3">
-            <IDDocUpload name="idDocumentFront" label="Front Side" defaultUrl={initialData?.idDocumentFront ?? null} />
-            <IDDocUpload name="idDocumentBack"  label="Back Side"  defaultUrl={initialData?.idDocumentBack  ?? null} />
+            <IDDocUpload name="idDocumentFront" label={tFld("frontSide")} defaultUrl={initialData?.idDocumentFront ?? null} />
+            <IDDocUpload name="idDocumentBack"  label={tFld("backSide")}  defaultUrl={initialData?.idDocumentBack  ?? null} />
           </div>
         </Section>
 
         {/* ── Section 3: Contact ───────────────────────────────────────── */}
-        <Section title="Contact Information" icon={PhoneIcon} isOpen={open.contact} onToggle={() => tog("contact")}>
+        <Section title={tSec("contact")} icon={PhoneIcon} isOpen={open.contact} onToggle={() => tog("contact")}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Phone <span className="text-red-500">*</span></label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("phone")} <span className="text-red-500">*</span></label>
               <div className="flex">
-                <span className="flex items-center rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-500">+968</span>
+                <span className="flex items-center rounded-s-lg border border-e-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-500 ltr-numbers">+968</span>
                 <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)}
-                  placeholder="9000 0000"
-                  className="flex-1 rounded-r-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                  placeholder={tPh("phone")}
+                  className="flex-1 rounded-e-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
               </div>
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Secondary Phone <span className="text-xs font-normal text-gray-400">(optional)</span></label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("secondaryPhone")} <span className="text-xs font-normal text-gray-400">{tFld("optional")}</span></label>
               <input type="tel" name="phoneSecondary" defaultValue={initialData?.phoneSecondary ?? ""}
-                placeholder="+968 9000 0000"
+                placeholder={tPh("phoneFull")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
             </div>
             <div>
               <label className="mb-1.5 flex items-center justify-between text-sm font-medium text-gray-700">
-                <span>WhatsApp <span className="text-xs font-normal text-gray-400">(primary in Oman)</span></span>
+                <span>{tFld("whatsapp")} <span className="text-xs font-normal text-gray-400">{tFld("whatsappHint")}</span></span>
                 <label className="flex cursor-pointer items-center gap-1.5 text-xs font-normal text-gray-500">
                   <input type="checkbox" checked={sameAsPhone} onChange={(e) => setSameAsPhone(e.target.checked)}
                     className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600" />
-                  Same as phone
+                  {tFld("sameAsPhone")}
                 </label>
               </label>
               <div className="flex">
-                <span className="flex items-center rounded-l-lg border border-r-0 border-gray-300 bg-green-50 px-3 text-xs font-bold text-green-700">WA</span>
+                <span className="flex items-center rounded-s-lg border border-e-0 border-gray-300 bg-green-50 px-3 text-xs font-bold text-green-700">WA</span>
                 <input type="tel" value={whatsapp}
                   onChange={(e) => { setSameAsPhone(false); setWhatsapp(e.target.value); }}
-                  placeholder="+968 9000 0000"
-                  className="flex-1 rounded-r-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
+                  placeholder={tPh("phoneFull")}
+                  className="flex-1 rounded-e-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
               </div>
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Email <span className="text-xs font-normal text-gray-400">(optional)</span></label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("email")} <span className="text-xs font-normal text-gray-400">{tFld("optional")}</span></label>
               <input type="email" name="email" defaultValue={initialData?.email ?? ""}
-                placeholder="guest@email.com"
+                placeholder={tPh("email")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
             </div>
           </div>
         </Section>
 
         {/* ── Section 4: Address (collapsed) ──────────────────────────── */}
-        <Section title="Address" icon={HomeIcon} isOpen={open.address} onToggle={() => tog("address")}>
+        <Section title={tSec("address")} icon={HomeIcon} isOpen={open.address} onToggle={() => tog("address")}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Country</label>
-              <input name="country" defaultValue={initialData?.country ?? ""} list="country-list" placeholder="Oman"
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("country")}</label>
+              <input name="country" defaultValue={initialData?.country ?? ""} list="country-list" placeholder={tPh("country")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
               <datalist id="country-list">
                 {["Oman","UAE","Saudi Arabia","Bahrain","Kuwait","Qatar","India","Pakistan","Bangladesh","Philippines","Egypt"].map((c) => (
@@ -745,35 +743,35 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
               </datalist>
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">City</label>
-              <input name="city" defaultValue={initialData?.city ?? ""} placeholder="Salalah"
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("city")}</label>
+              <input name="city" defaultValue={initialData?.city ?? ""} placeholder={tPh("city")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Address Line</label>
-              <input name="addressLine" defaultValue={initialData?.addressLine ?? ""} placeholder="Street, building…"
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("addressLine")}</label>
+              <input name="addressLine" defaultValue={initialData?.addressLine ?? ""} placeholder={tPh("addressLine")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
             </div>
           </div>
         </Section>
 
         {/* ── Section 5: Emergency Contact (collapsed) ─────────────────── */}
-        <Section title="Emergency Contact" icon={BoltIcon} isOpen={open.emergency} onToggle={() => tog("emergency")}>
+        <Section title={tSec("emergency")} icon={BoltIcon} isOpen={open.emergency} onToggle={() => tog("emergency")}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Name</label>
-              <input name="emergencyContactName" defaultValue={initialData?.emergencyContactName ?? ""} placeholder="Contact name"
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("name")}</label>
+              <input name="emergencyContactName" defaultValue={initialData?.emergencyContactName ?? ""} placeholder={tPh("contactName")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Phone</label>
-              <input type="tel" name="emergencyContactPhone" defaultValue={initialData?.emergencyContactPhone ?? ""} placeholder="+968 9000 0000"
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("phone")}</label>
+              <input type="tel" name="emergencyContactPhone" defaultValue={initialData?.emergencyContactPhone ?? ""} placeholder={tPh("phoneFull")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Relation</label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("relation")}</label>
               <input name="emergencyContactRelation" defaultValue={initialData?.emergencyContactRelation ?? ""}
-                placeholder="Spouse, Brother, Friend…" list="relation-list"
+                placeholder={tPh("relation")} list="relation-list"
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
               <datalist id="relation-list">
                 {["Spouse","Brother","Sister","Father","Mother","Son","Daughter","Friend","Colleague"].map((r) => (
@@ -785,15 +783,15 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
         </Section>
 
         {/* ── Section 6: Classification ─────────────────────────────────── */}
-        <Section title="Guest Classification" icon={TagIcon} isOpen={open.classification} onToggle={() => tog("classification")}>
+        <Section title={tSec("classification")} icon={TagIcon} isOpen={open.classification} onToggle={() => tog("classification")}>
           <div className="space-y-4">
             {/* Tenant Type */}
             <div>
-              <label className="mb-2 block text-sm font-medium text-gray-700">Guest Type <span className="text-red-500">*</span></label>
+              <label className="mb-2 block text-sm font-medium text-gray-700">{tFld("guestType")} <span className="text-red-500">*</span></label>
               <div className="flex flex-wrap gap-2">
-                {TENANT_TYPES.map((t) => (
-                  <SegBtn key={t.value} active={tenantType === t.value} onClick={() => setTenantType(t.value)}>
-                    {t.label}
+                {TENANT_TYPE_VALUES.map((v) => (
+                  <SegBtn key={v} active={tenantType === v} onClick={() => setTenantType(v)}>
+                    {tType(v)}
                   </SegBtn>
                 ))}
               </div>
@@ -802,46 +800,49 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
             {isCorporate && (
               <div className="grid grid-cols-1 gap-4 rounded-xl bg-blue-50 p-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Company Name</label>
-                  <input name="corporateName" defaultValue={initialData?.corporateName ?? ""} placeholder="e.g. Dhofar Tourism LLC"
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("companyName")}</label>
+                  <input name="corporateName" defaultValue={initialData?.corporateName ?? ""} placeholder={tPh("companyName")}
                     className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none" />
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Contact Person</label>
-                  <input name="corporateContact" defaultValue={initialData?.corporateContact ?? ""} placeholder="Name of contact person"
+                  <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("contactPerson")}</label>
+                  <input name="corporateContact" defaultValue={initialData?.corporateContact ?? ""} placeholder={tPh("contactPerson")}
                     className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none" />
                 </div>
               </div>
             )}
             {/* Source */}
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Source <span className="text-red-500">*</span></label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("source")} <span className="text-red-500">*</span></label>
               <select value={source} onChange={(e) => setSource(e.target.value)}
                 className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                {SOURCES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                {SOURCE_VALUES.map((v) => <option key={v} value={v}>{tSrc(v)}</option>)}
               </select>
             </div>
             {/* Classification (admin) */}
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">
-                Classification
-                <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">Admin only</span>
+                {tFld("classification")}
+                <span className="ms-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">{tFld("adminOnly")}</span>
               </label>
               <div className="flex flex-wrap gap-2">
-                {CLASSIFICATIONS.map((c) => (
-                  <button key={c.value} type="button" onClick={() => setClassification(c.value)}
-                    className={`flex items-center gap-1.5 rounded-lg border-2 px-4 py-2 text-sm font-medium transition-all ${
-                      classification === c.value ? c.active : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
-                    }`}>
-                    <c.Icon className="h-4 w-4" />
-                    {c.label}
-                  </button>
-                ))}
+                {(["regular", "vip", "blacklisted"] as const).map((v) => {
+                  const cfg = CLASSIFICATION_STYLES[v];
+                  return (
+                    <button key={v} type="button" onClick={() => setClassification(v)}
+                      className={`flex items-center gap-1.5 rounded-lg border-2 px-4 py-2 text-sm font-medium transition-all ${
+                        classification === v ? cfg.active : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                      }`}>
+                      <cfg.Icon className="h-4 w-4" />
+                      {tCls(v)}
+                    </button>
+                  );
+                })}
               </div>
               {classification === "blacklisted" && (
                 <div className="mt-2 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
                   <ShieldExclamationIcon className="h-4 w-4 shrink-0 text-red-600" />
-                  <p className="text-xs text-red-700">Please document the reason in Internal Notes below</p>
+                  <p className="text-xs text-red-700">{tFld("blacklistDocReason")}</p>
                 </div>
               )}
             </div>
@@ -849,47 +850,47 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
         </Section>
 
         {/* ── Section 7: Preferences & Notes (collapsed) ───────────────── */}
-        <Section title="Preferences & Notes" icon={SparklesIcon} isOpen={open.preferences} onToggle={() => tog("preferences")}>
+        <Section title={tSec("preferences")} icon={SparklesIcon} isOpen={open.preferences} onToggle={() => tog("preferences")}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Preferred Floor</label>
-              <input name="preferredFloor" defaultValue={initialData?.preferredFloor ?? ""} placeholder="Ground floor, High floor…"
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("preferredFloor")}</label>
+              <input name="preferredFloor" defaultValue={initialData?.preferredFloor ?? ""} placeholder={tPh("preferredFloor")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none" />
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Preferred Unit Type</label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("preferredUnitType")}</label>
               <select name="preferredUnitType" defaultValue={initialData?.preferredUnitType ?? ""}
                 className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none">
-                <option value="">No preference</option>
+                <option value="">{tFld("noPreference")}</option>
                 {["Studio","1BR","2BR","3BR","Suite"].map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">Preferred Payment</label>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("preferredPayment")}</label>
               <select name="preferredPaymentMethod" defaultValue={initialData?.preferredPaymentMethod ?? ""}
                 className="block w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none">
-                <option value="">No preference</option>
-                {PAYMENT_METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
+                <option value="">{tFld("noPreference")}</option>
+                {PAYMENT_METHOD_VALUES.map((v) => <option key={v} value={v}>{tPay(v)}</option>)}
               </select>
             </div>
           </div>
           <div className="mt-4">
-            <label className="mb-1.5 block text-sm font-medium text-gray-700">Special Requests</label>
+            <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("specialRequests")}</label>
             <textarea name="specialRequests" rows={2} defaultValue={initialData?.specialRequests ?? ""}
-              placeholder="e.g. Extra bed needed, Late check-in, Quiet unit, Baby cot…"
+              placeholder={tPh("specialRequests")}
               className="block w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
           </div>
           <div className="mt-4">
             <label className="mb-1.5 flex items-center gap-2 text-sm font-medium text-gray-700">
-              Internal Notes
-              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">Staff only — not visible to guest</span>
+              {tFld("internalNotes")}
+              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">{tFld("internalNotesHint")}</span>
             </label>
             <textarea name="internalNotes" rows={3} defaultValue={initialData?.internalNotes ?? ""}
-              placeholder="e.g. Always pays late. VIP — give best available unit. Blacklisted reason…"
+              placeholder={tPh("internalNotes")}
               className="block w-full resize-none rounded-lg border border-amber-200 bg-amber-50/40 px-3 py-2.5 text-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-400/20" />
           </div>
           <div className="mt-4">
-            <label className="mb-2 block text-sm font-medium text-gray-700">Tags</label>
+            <label className="mb-2 block text-sm font-medium text-gray-700">{tFld("tags")}</label>
             <TagInput tags={tags} onChange={setTags} />
             <input type="hidden" name="tags_json" value={JSON.stringify(tags)} />
           </div>
@@ -901,7 +902,7 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
             href={isEdit ? `/dashboard/tenants/${initialData!.id}` : "/dashboard/tenants"}
             className="text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
           >
-            ← Cancel
+            {tAct("cancel")}
           </Link>
           <button
             type="submit"
@@ -909,8 +910,8 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
             className="rounded-lg bg-blue-600 px-8 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50 transition-colors"
           >
             {isPending
-              ? (isEdit ? "Saving…" : "Creating…")
-              : (isEdit ? "Save Changes" : "Create Tenant")}
+              ? (isEdit ? tAct("saving") : tAct("creating"))
+              : (isEdit ? tAct("save") : tAct("create"))}
           </button>
         </div>
       </form>

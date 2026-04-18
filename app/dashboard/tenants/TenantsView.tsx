@@ -4,6 +4,7 @@ import { useState, useTransition, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   ListBulletIcon,
   Squares2X2Icon,
@@ -17,8 +18,6 @@ import {
   ChevronUpIcon,
   ChevronDownIcon,
   ChevronUpDownIcon,
-  StarIcon,
-  ShieldExclamationIcon,
   UserGroupIcon,
   PhoneIcon,
   EnvelopeIcon,
@@ -30,19 +29,6 @@ import type { TenantRow, TenantStats } from "./page";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const SOURCE_LABELS: Record<string, string> = {
-  walk_in:          "Walk-In",
-  phone:            "Phone",
-  whatsapp:         "WhatsApp",
-  website:          "Website",
-  booking_com:      "Booking.com",
-  airbnb:           "Airbnb",
-  referral:         "Referral",
-  returning_guest:  "Returning",
-  corporate_contract: "Corporate",
-  other:            "Other",
-};
-
 const TYPE_BADGE: Record<string, string> = {
   individual: "bg-blue-50 text-blue-700",
   family:     "bg-purple-50 text-purple-700",
@@ -50,17 +36,16 @@ const TYPE_BADGE: Record<string, string> = {
   government: "bg-teal-50 text-teal-700",
 };
 
-const TYPE_LABEL: Record<string, string> = {
-  individual: "Individual",
-  family:     "Family",
-  corporate:  "Corporate",
-  government: "Government",
+const CLASS_BORDER: Record<string, string> = {
+  vip:         "border-l-yellow-400",
+  blacklisted: "border-l-red-400",
+  regular:     "border-l-blue-200",
 };
 
-const CLASS_CONFIG: Record<string, { bg: string; text: string; border: string; avatar: string; label: string }> = {
-  vip:         { bg: "bg-yellow-50",  text: "text-yellow-800", border: "border-l-yellow-400", avatar: "bg-yellow-100 text-yellow-800", label: "⭐ VIP" },
-  blacklisted: { bg: "bg-red-50",     text: "text-red-700",    border: "border-l-red-400",    avatar: "bg-red-100 text-red-700",       label: "🚫 Blacklisted" },
-  regular:     { bg: "bg-gray-50",    text: "text-gray-600",   border: "border-l-blue-200",   avatar: "bg-blue-100 text-blue-700",     label: "Regular" },
+const CLASS_AVATAR: Record<string, string> = {
+  vip:         "bg-yellow-100 text-yellow-800",
+  blacklisted: "bg-red-100 text-red-700",
+  regular:     "bg-blue-100 text-blue-700",
 };
 
 type SortKey = "name" | "tenantType" | "classification" | "source" | "totalStays" | "totalSpent" | "createdAt" | "activeReservations";
@@ -104,9 +89,9 @@ function exportCSV(rows: TenantRow[]) {
     t.nationality ?? "",
     t.idType ?? "",
     t.idNumber ?? "",
-    TYPE_LABEL[t.tenantType ?? ""] ?? t.tenantType ?? "",
+    t.tenantType ?? "",
     t.classification ?? "regular",
-    SOURCE_LABELS[t.source ?? ""] ?? t.source ?? "",
+    t.source ?? "",
     t.totalStays,
     parseFloat(t.totalSpent).toFixed(3),
     t.activeReservations,
@@ -123,10 +108,26 @@ function exportCSV(rows: TenantRow[]) {
   URL.revokeObjectURL(url);
 }
 
+function useTypeLabel() {
+  const tTypes = useTranslations("tenants.types");
+  return (v: string | null) => {
+    if (!v) return "—";
+    try { return tTypes(v as never); } catch { return v; }
+  };
+}
+
+function useSourceLabel() {
+  const tSrc = useTranslations("tenants.sources");
+  return (v: string | null) => {
+    if (!v) return "—";
+    try { return tSrc(v as never); } catch { return v; }
+  };
+}
+
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
 function Avatar({ t, size = "sm" }: { t: TenantRow; size?: "sm" | "lg" }) {
-  const cls  = CLASS_CONFIG[t.classification ?? "regular"]?.avatar ?? CLASS_CONFIG.regular.avatar;
+  const cls  = CLASS_AVATAR[t.classification ?? "regular"] ?? CLASS_AVATAR.regular;
   const dim  = size === "lg" ? "h-14 w-14 text-lg" : "h-8 w-8 text-xs";
   return (
     <div className={`${dim} rounded-full flex items-center justify-center flex-shrink-0 font-bold ${cls}`}>
@@ -136,18 +137,20 @@ function Avatar({ t, size = "sm" }: { t: TenantRow; size?: "sm" | "lg" }) {
 }
 
 function ClassBadge({ value }: { value: string | null }) {
+  const tCls = useTranslations("tenants.classifications");
   if (value === "vip")
-    return <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800">⭐ VIP</span>;
+    return <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800">{tCls("vipBadge")}</span>;
   if (value === "blacklisted")
-    return <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">🚫 Blacklisted</span>;
-  return <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">Regular</span>;
+    return <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">{tCls("blacklistedBadge")}</span>;
+  return <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{tCls("regular")}</span>;
 }
 
 function TypeBadge({ value }: { value: string | null }) {
+  const typeLabel = useTypeLabel();
   const cls = TYPE_BADGE[value ?? ""] ?? "bg-gray-100 text-gray-600";
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium capitalize ${cls}`}>
-      {TYPE_LABEL[value ?? ""] ?? value ?? "—"}
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
+      {typeLabel(value)}
     </span>
   );
 }
@@ -193,6 +196,8 @@ function SortTh({
 const CLASS_CYCLE = ["regular", "vip", "blacklisted"];
 
 function EditableRow({ tenant, onDone }: { tenant: TenantRow; onDone: () => void }) {
+  const tRow = useTranslations("tenants.list.row");
+  const tCls = useTranslations("tenants.classifications");
   const [firstName,      setFirstName]      = useState(tenant.firstName);
   const [lastName,       setLastName]       = useState(tenant.lastName);
   const [phone,          setPhone]          = useState(tenant.phone);
@@ -215,7 +220,7 @@ function EditableRow({ tenant, onDone }: { tenant: TenantRow; onDone: () => void
     startTransition(async () => {
       const res = await quickUpdateTenant(fd);
       if (res?.error) { toast.error(res.error); return; }
-      toast.success("Saved");
+      toast.success(tRow("saved"));
       router.refresh();
       onDone();
     });
@@ -234,7 +239,7 @@ function EditableRow({ tenant, onDone }: { tenant: TenantRow; onDone: () => void
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") onDone(); }}
-            placeholder="First name"
+            placeholder={tRow("firstNamePlaceholder")}
             className="w-1/2 rounded-md border border-blue-400 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
             autoFocus
           />
@@ -242,7 +247,7 @@ function EditableRow({ tenant, onDone }: { tenant: TenantRow; onDone: () => void
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") onDone(); }}
-            placeholder="Last name"
+            placeholder={tRow("lastNamePlaceholder")}
             className="w-1/2 rounded-md border border-blue-400 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -265,18 +270,18 @@ function EditableRow({ tenant, onDone }: { tenant: TenantRow; onDone: () => void
         <button
           type="button"
           onClick={cycleClass}
-          title="Click to cycle classification"
+          title={tRow("cycleClassTitle")}
           className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
             classification === "vip"         ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
             : classification === "blacklisted" ? "bg-red-100 text-red-700 hover:bg-red-200"
             : "bg-gray-100 text-gray-600 hover:bg-gray-200"
           }`}
         >
-          {classification === "vip" ? "⭐ VIP" : classification === "blacklisted" ? "🚫 Blacklisted" : "Regular"}
+          {classification === "vip" ? tCls("vipBadge") : classification === "blacklisted" ? tCls("blacklistedBadge") : tCls("regular")}
         </button>
       </td>
       {/* Stays */}
-      <td className="hidden px-3 py-2 text-sm text-center text-gray-700 xl:table-cell">{tenant.totalStays}</td>
+      <td className="hidden px-3 py-2 text-sm text-center text-gray-700 xl:table-cell ltr-numbers">{tenant.totalStays}</td>
       {/* Actions */}
       <td className="px-3 py-2">
         <div className="flex items-center gap-2">
@@ -285,13 +290,13 @@ function EditableRow({ tenant, onDone }: { tenant: TenantRow; onDone: () => void
             disabled={isPending}
             className="flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-60 transition-colors"
           >
-            <CheckIcon className="h-3.5 w-3.5" /> Save
+            <CheckIcon className="h-3.5 w-3.5" /> {tRow("save")}
           </button>
           <button
             onClick={onDone}
             className="flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
           >
-            <XMarkIcon className="h-3.5 w-3.5" /> Cancel
+            <XMarkIcon className="h-3.5 w-3.5" /> {tRow("cancel")}
           </button>
         </div>
       </td>
@@ -302,10 +307,12 @@ function EditableRow({ tenant, onDone }: { tenant: TenantRow; onDone: () => void
 // ── Normal Table Row ──────────────────────────────────────────────────────────
 
 function TenantTableRow({ tenant, onEdit, editMode }: { tenant: TenantRow; onEdit: () => void; editMode: boolean }) {
+  const tRow    = useTranslations("tenants.list.row");
+  const sourceLabel = useSourceLabel();
   return (
     <tr className="group hover:bg-blue-50/40 transition-colors">
       {/* Avatar */}
-      <td className="py-2.5 pl-4 pr-2">
+      <td className="py-2.5 ps-4 pe-2">
         <Avatar t={tenant} />
       </td>
 
@@ -320,7 +327,7 @@ function TenantTableRow({ tenant, onEdit, editMode }: { tenant: TenantRow; onEdi
 
       {/* Contact */}
       <td className="hidden px-3 py-2.5 text-sm sm:table-cell">
-        <div className="text-gray-800">{tenant.phone}</div>
+        <div className="text-gray-800 ltr-numbers">{tenant.phone}</div>
         {tenant.email && <div className="text-xs text-gray-400 truncate max-w-[150px]">{tenant.email}</div>}
       </td>
 
@@ -336,21 +343,21 @@ function TenantTableRow({ tenant, onEdit, editMode }: { tenant: TenantRow; onEdi
 
       {/* Source */}
       <td className="hidden px-3 py-2.5 text-xs text-gray-500 lg:table-cell">
-        {SOURCE_LABELS[tenant.source ?? ""] ?? tenant.source ?? "—"}
+        {sourceLabel(tenant.source)}
       </td>
 
       {/* Stays */}
-      <td className="hidden px-3 py-2.5 text-sm text-center text-gray-700 xl:table-cell">
+      <td className="hidden px-3 py-2.5 text-sm text-center text-gray-700 xl:table-cell ltr-numbers">
         {tenant.totalStays}
       </td>
 
       {/* Actions */}
-      <td className="px-3 py-2.5 text-right">
+      <td className="px-3 py-2.5 text-end">
         <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
           <Link
             href={`/dashboard/tenants/${tenant.id}`}
             className="rounded-lg p-1.5 text-gray-500 hover:bg-blue-100 hover:text-blue-700 transition-colors"
-            title="View profile"
+            title={tRow("viewProfile")}
           >
             <EyeIcon className="h-4 w-4" />
           </Link>
@@ -358,7 +365,7 @@ function TenantTableRow({ tenant, onEdit, editMode }: { tenant: TenantRow; onEdi
             <button
               onClick={onEdit}
               className="rounded-lg p-1.5 text-gray-500 hover:bg-blue-100 hover:text-blue-700 transition-colors"
-              title="Quick edit"
+              title={tRow("quickEdit")}
             >
               <PencilSquareIcon className="h-4 w-4" />
             </button>
@@ -367,7 +374,7 @@ function TenantTableRow({ tenant, onEdit, editMode }: { tenant: TenantRow; onEdi
             href={`/dashboard/tenants/${tenant.id}/edit`}
             className="rounded-lg px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100 transition-colors"
           >
-            Edit
+            {tRow("edit")}
           </Link>
         </div>
       </td>
@@ -378,7 +385,8 @@ function TenantTableRow({ tenant, onEdit, editMode }: { tenant: TenantRow; onEdi
 // ── Compact Card ──────────────────────────────────────────────────────────────
 
 function TenantCard({ tenant }: { tenant: TenantRow }) {
-  const cls = CLASS_CONFIG[tenant.classification ?? "regular"] ?? CLASS_CONFIG.regular;
+  const tCard = useTranslations("tenants.list.card");
+  const sourceLabel = useSourceLabel();
 
   return (
     <div className={`flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-150 group`}>
@@ -410,17 +418,17 @@ function TenantCard({ tenant }: { tenant: TenantRow }) {
         {/* Stats grid */}
         <div className="grid grid-cols-3 gap-2 rounded-lg bg-gray-50 px-3 py-2 text-center text-xs">
           <div>
-            <p className="text-base font-bold text-gray-800">{tenant.totalStays}</p>
-            <p className="text-gray-400">Stays</p>
+            <p className="text-base font-bold text-gray-800 ltr-numbers">{tenant.totalStays}</p>
+            <p className="text-gray-400">{tCard("stays")}</p>
           </div>
           <div>
-            <p className={`text-base font-bold ${tenant.activeReservations > 0 ? "text-green-600" : "text-gray-400"}`}>
+            <p className={`text-base font-bold ltr-numbers ${tenant.activeReservations > 0 ? "text-green-600" : "text-gray-400"}`}>
               {tenant.activeReservations}
             </p>
-            <p className="text-gray-400">Active</p>
+            <p className="text-gray-400">{tCard("active")}</p>
           </div>
           <div>
-            <p className="text-sm font-bold text-purple-700">{parseFloat(tenant.totalSpent).toFixed(0)}</p>
+            <p className="text-sm font-bold text-purple-700 ltr-numbers">{parseFloat(tenant.totalSpent).toFixed(0)}</p>
             <p className="text-gray-400">OMR</p>
           </div>
         </div>
@@ -429,7 +437,7 @@ function TenantCard({ tenant }: { tenant: TenantRow }) {
         <div className="space-y-1">
           <div className="flex items-center gap-1.5 text-xs text-gray-600">
             <PhoneIcon className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
-            {tenant.phone}
+            <span className="ltr-numbers">{tenant.phone}</span>
           </div>
           {tenant.email && (
             <div className="flex items-center gap-1.5 text-xs text-gray-500 truncate">
@@ -445,7 +453,7 @@ function TenantCard({ tenant }: { tenant: TenantRow }) {
         {/* Source */}
         {tenant.source && (
           <div className="text-[10px] text-gray-400 uppercase tracking-wide">
-            via {SOURCE_LABELS[tenant.source] ?? tenant.source}
+            {tCard("via", { source: sourceLabel(tenant.source) })}
           </div>
         )}
 
@@ -455,13 +463,13 @@ function TenantCard({ tenant }: { tenant: TenantRow }) {
             href={`/dashboard/tenants/${tenant.id}`}
             className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-gray-200 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            <EyeIcon className="h-3.5 w-3.5" /> View
+            <EyeIcon className="h-3.5 w-3.5" /> {tCard("view")}
           </Link>
           <Link
             href={`/dashboard/tenants/${tenant.id}/edit`}
             className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-blue-600 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition-colors"
           >
-            <PencilSquareIcon className="h-3.5 w-3.5" /> Edit
+            <PencilSquareIcon className="h-3.5 w-3.5" /> {tCard("edit")}
           </Link>
         </div>
       </div>
@@ -472,18 +480,20 @@ function TenantCard({ tenant }: { tenant: TenantRow }) {
 // ── Summary Card ──────────────────────────────────────────────────────────────
 
 function TenantSummaryCard({ tenant }: { tenant: TenantRow }) {
-  const cls = CLASS_CONFIG[tenant.classification ?? "regular"] ?? CLASS_CONFIG.regular;
+  const tSummary = useTranslations("tenants.list.summary");
+  const sourceLabel = useSourceLabel();
+  const border = CLASS_BORDER[tenant.classification ?? "regular"] ?? CLASS_BORDER.regular;
 
   const stats = [
-    { label: "Total Stays",    value: tenant.totalStays,                    sub: "reservations",          color: "text-blue-700",   iconCls: "bg-blue-50 text-blue-500",   Icon: CalendarDaysIcon },
-    { label: "Active Now",     value: tenant.activeReservations,             sub: tenant.activeReservations > 0 ? "currently staying" : "no active res.", color: tenant.activeReservations > 0 ? "text-green-700" : "text-gray-400", iconCls: "bg-green-50 text-green-500", Icon: UserGroupIcon },
-    { label: "Total Spent",    value: `${parseFloat(tenant.totalSpent).toFixed(3)}`, sub: "OMR",          color: "text-purple-700", iconCls: "bg-purple-50 text-purple-500", Icon: BanknotesIcon },
+    { label: tSummary("totalStays"), value: tenant.totalStays,                    sub: tSummary("reservations"),          color: "text-blue-700",   iconCls: "bg-blue-50 text-blue-500",   Icon: CalendarDaysIcon },
+    { label: tSummary("activeNow"),  value: tenant.activeReservations,             sub: tenant.activeReservations > 0 ? tSummary("currentlyStaying") : tSummary("noActiveRes"), color: tenant.activeReservations > 0 ? "text-green-700" : "text-gray-400", iconCls: "bg-green-50 text-green-500", Icon: UserGroupIcon },
+    { label: tSummary("totalSpent"), value: `${parseFloat(tenant.totalSpent).toFixed(3)}`, sub: "OMR",          color: "text-purple-700", iconCls: "bg-purple-50 text-purple-500", Icon: BanknotesIcon },
   ];
 
   return (
     <Link
       href={`/dashboard/tenants/${tenant.id}`}
-      className={`group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border-l-4 ${cls.border}`}
+      className={`group flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 border-l-4 ${border}`}
     >
       {/* Header */}
       <div className="flex items-center gap-3 px-5 pt-5 pb-3 border-b border-gray-100">
@@ -512,7 +522,7 @@ function TenantSummaryCard({ tenant }: { tenant: TenantRow }) {
             <div className={`mb-1.5 rounded-lg p-1.5 ${iconCls}`}>
               <Icon className="h-4 w-4" />
             </div>
-            <p className={`text-lg font-bold leading-tight ${color}`}>{value}</p>
+            <p className={`text-lg font-bold leading-tight ltr-numbers ${color}`}>{value}</p>
             <p className="text-[10px] text-gray-400 mt-0.5 font-medium uppercase tracking-wide">{label}</p>
             <p className="text-[10px] text-gray-400">{sub}</p>
           </div>
@@ -523,12 +533,12 @@ function TenantSummaryCard({ tenant }: { tenant: TenantRow }) {
       <div className="border-t border-gray-100 bg-gray-50/60 px-4 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-1.5 text-xs text-gray-600">
           <PhoneIcon className="h-3.5 w-3.5 text-gray-400" />
-          {tenant.phone}
+          <span className="ltr-numbers">{tenant.phone}</span>
           {tenant.email && <span className="text-gray-300 mx-1">·</span>}
           {tenant.email && <span className="text-gray-400 truncate max-w-[140px]">{tenant.email}</span>}
         </div>
         <div className="text-xs text-gray-400">
-          {SOURCE_LABELS[tenant.source ?? ""] ?? tenant.source ?? ""}
+          {tenant.source ? sourceLabel(tenant.source) : ""}
         </div>
       </div>
     </Link>
@@ -544,6 +554,10 @@ export default function TenantsView({
   tenants: TenantRow[];
   stats: TenantStats;
 }) {
+  const tStats   = useTranslations("tenants.list.stats");
+  const tBar     = useTranslations("tenants.list.toolbar");
+  const tTable   = useTranslations("tenants.list.table");
+  const tList    = useTranslations("tenants.list");
   const [viewMode,     setViewMode]     = useState<"table" | "card" | "summary">("table");
   const [sortKey,      setSortKey]      = useState<SortKey>("createdAt");
   const [sortDir,      setSortDir]      = useState<SortDir>("desc");
@@ -557,20 +571,26 @@ export default function TenantsView({
 
   const sorted = useMemo(() => sortTenants(tenants, sortKey, sortDir), [tenants, sortKey, sortDir]);
 
+  const viewTitles: Record<"table" | "card" | "summary", string> = {
+    table:   tBar("tableViewTitle"),
+    card:    tBar("cardViewTitle"),
+    summary: tBar("summaryViewTitle"),
+  };
+
   return (
     <div className="space-y-3">
 
       {/* ── Stats bar ───────────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Total Tenants", value: stats.total,       color: "border-l-blue-400",   val: "text-blue-700" },
-          { label: "VIP Guests",    value: stats.vip,         color: "border-l-yellow-400", val: "text-yellow-700" },
-          { label: "Blacklisted",   value: stats.blacklisted, color: "border-l-red-400",    val: "text-red-600" },
-          { label: "Active",        value: stats.active,      color: "border-l-green-400",  val: "text-green-700" },
+          { label: tStats("total"),       value: stats.total,       color: "border-l-blue-400",   val: "text-blue-700" },
+          { label: tStats("vip"),         value: stats.vip,         color: "border-l-yellow-400", val: "text-yellow-700" },
+          { label: tStats("blacklisted"), value: stats.blacklisted, color: "border-l-red-400",    val: "text-red-600" },
+          { label: tStats("active"),      value: stats.active,      color: "border-l-green-400",  val: "text-green-700" },
         ].map(({ label, value, color, val }) => (
           <div key={label} className={`bg-white rounded-xl border border-gray-200 border-l-4 ${color} px-4 py-3 shadow-sm`}>
             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
-            <p className={`text-2xl font-bold mt-0.5 ${val}`}>{value}</p>
+            <p className={`text-2xl font-bold mt-0.5 ltr-numbers ${val}`}>{value}</p>
           </div>
         ))}
       </div>
@@ -583,13 +603,13 @@ export default function TenantsView({
             onClick={() => exportCSV(sorted)}
             className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-green-300 hover:bg-green-50 hover:text-green-700 transition-colors"
           >
-            <DocumentArrowDownIcon className="h-3.5 w-3.5" /> CSV
+            <DocumentArrowDownIcon className="h-3.5 w-3.5" /> {tBar("csv")}
           </button>
           <button
             onClick={() => window.print()}
             className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 transition-colors"
           >
-            <PrinterIcon className="h-3.5 w-3.5" /> Print
+            <PrinterIcon className="h-3.5 w-3.5" /> {tBar("print")}
           </button>
           {viewMode === "table" && (
             <>
@@ -603,7 +623,7 @@ export default function TenantsView({
                 }`}
               >
                 <PencilSquareIcon className="h-3.5 w-3.5" />
-                {editMode ? "Exit Edit" : "Inline Edit"}
+                {editMode ? tBar("exitEdit") : tBar("inlineEdit")}
               </button>
             </>
           )}
@@ -612,7 +632,7 @@ export default function TenantsView({
         {/* Right: count + view toggle */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-gray-400 hidden sm:block">
-            {sorted.length} tenant{sorted.length !== 1 ? "s" : ""}
+            {tBar("tenantsCount", { count: sorted.length })}
           </span>
           <div className="flex rounded-lg border border-gray-200 overflow-hidden">
             {([["table", ListBulletIcon], ["card", Squares2X2Icon], ["summary", RectangleGroupIcon]] as const).map(([mode, Icon]) => (
@@ -622,7 +642,7 @@ export default function TenantsView({
                 className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
                   viewMode === mode ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50"
                 }`}
-                title={`${mode.charAt(0).toUpperCase() + mode.slice(1)} view`}
+                title={viewTitles[mode]}
               >
                 <Icon className="h-4 w-4" />
               </button>
@@ -638,14 +658,14 @@ export default function TenantsView({
             <table className="min-w-full divide-y divide-gray-200 print:text-xs">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="py-3 pl-4 pr-2 w-12" />
-                  <SortTh label="Name"   sortKey="name"           currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="min-w-[160px]" />
-                  <th className="hidden px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell">Contact</th>
-                  <SortTh label="Type"   sortKey="tenantType"     currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden md:table-cell" />
-                  <SortTh label="Class"  sortKey="classification" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                  <SortTh label="Source" sortKey="source"         currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden lg:table-cell" />
-                  <SortTh label="Stays"  sortKey="totalStays"     currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden xl:table-cell text-center" />
-                  <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 print:hidden">Actions</th>
+                  <th className="py-3 ps-4 pe-2 w-12" />
+                  <SortTh label={tTable("name")}    sortKey="name"           currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="min-w-[160px]" />
+                  <th className="hidden px-3 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell">{tTable("contact")}</th>
+                  <SortTh label={tTable("type")}    sortKey="tenantType"     currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden md:table-cell" />
+                  <SortTh label={tTable("class")}   sortKey="classification" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
+                  <SortTh label={tTable("source")}  sortKey="source"         currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden lg:table-cell" />
+                  <SortTh label={tTable("stays")}   sortKey="totalStays"     currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden xl:table-cell text-center" />
+                  <th className="px-3 py-3 text-end text-xs font-semibold uppercase tracking-wide text-gray-500 print:hidden">{tTable("actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
@@ -653,7 +673,7 @@ export default function TenantsView({
                   <tr>
                     <td colSpan={8} className="py-16 text-center">
                       <UserGroupIcon className="mx-auto mb-3 h-10 w-10 text-gray-200" />
-                      <p className="text-sm text-gray-400">No tenants match your filters.</p>
+                      <p className="text-sm text-gray-400">{tList("empty")}</p>
                     </td>
                   </tr>
                 ) : (
@@ -675,7 +695,7 @@ export default function TenantsView({
           </div>
           {sorted.length > 0 && (
             <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-2.5 text-xs text-gray-500">
-              Showing {sorted.length} tenant{sorted.length !== 1 ? "s" : ""}
+              {tList("showing", { count: sorted.length })}
             </div>
           )}
         </div>
@@ -686,7 +706,7 @@ export default function TenantsView({
         sorted.length === 0 ? (
           <div className="py-20 text-center">
             <UserGroupIcon className="mx-auto mb-3 h-12 w-12 text-gray-200" />
-            <p className="text-sm text-gray-400">No tenants match your filters.</p>
+            <p className="text-sm text-gray-400">{tList("empty")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -700,7 +720,7 @@ export default function TenantsView({
         sorted.length === 0 ? (
           <div className="py-20 text-center">
             <UserGroupIcon className="mx-auto mb-3 h-12 w-12 text-gray-200" />
-            <p className="text-sm text-gray-400">No tenants match your filters.</p>
+            <p className="text-sm text-gray-400">{tList("empty")}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">

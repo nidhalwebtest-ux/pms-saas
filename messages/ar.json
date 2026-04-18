@@ -378,37 +378,379 @@
     }
   },
   "tenants": {
-    "title": "المستأجرون",
-    "addTenant": "إضافة مستأجر",
-    "firstName": "الاسم الأول",
-    "lastName": "اسم العائلة",
-    "fullNameArabic": "الاسم الكامل (عربي)",
-    "nationality": "الجنسية",
-    "phone": "الهاتف",
-    "whatsapp": "واتساب",
-    "email": "البريد الإلكتروني",
-    "idType": "نوع الهوية",
-    "nationalId": "البطاقة الشخصية",
-    "passport": "جواز السفر",
-    "residentCard": "بطاقة الإقامة",
-    "idNumber": "رقم الهوية",
-    "idExpiry": "تاريخ انتهاء الهوية",
-    "tenantType": "نوع الضيف",
-    "individual": "فرد",
-    "family": "عائلة",
-    "corporate": "شركة",
-    "government": "حكومي",
-    "source": "المصدر",
-    "walkIn": "حضور مباشر",
-    "referral": "إحالة",
-    "returningGuest": "ضيف عائد",
-    "vip": "مميز",
-    "regular": "عادي",
-    "blacklisted": "محظور",
-    "emergencyContact": "جهة اتصال للطوارئ",
-    "specialRequests": "طلبات خاصة",
-    "quickAdd": "إضافة سريعة",
-    "fullForm": "النموذج الكامل"
+    "title": "المستأجرون والضيوف",
+    "recordsCount": "{count, plural, =0 {لا توجد سجلات} one {سجل واحد} two {سجلان} few {# سجلات} many {# سجلاً} other {# سجل}}",
+    "newTenantBtn": "مستأجر جديد",
+    "filters": {
+      "filtersBtn": "التصفية",
+      "searchPlaceholder": "ابحث بالاسم أو الهاتف أو البريد أو الهوية…",
+      "all": "الكل",
+      "regular": "عادي",
+      "vip": "⭐ مميز",
+      "blacklisted": "🚫 محظور",
+      "allTypes": "كل الأنواع",
+      "sourceLabel": "المصدر:",
+      "clearAll": "مسح الكل"
+    },
+    "types": {
+      "individual": "فرد",
+      "family": "عائلة",
+      "corporate": "شركة",
+      "government": "حكومي"
+    },
+    "sources": {
+      "walk_in": "حضور مباشر",
+      "phone": "هاتف",
+      "whatsapp": "واتساب",
+      "website": "موقع إلكتروني",
+      "booking_com": "Booking.com",
+      "airbnb": "Airbnb",
+      "referral": "إحالة",
+      "returning": "عائد",
+      "returning_guest": "ضيف عائد",
+      "corporate_contract": "عقد شركة",
+      "online": "إنترنت",
+      "agent": "وكيل",
+      "other": "أخرى"
+    },
+    "classifications": {
+      "regular": "عادي",
+      "vip": "مميز",
+      "blacklisted": "محظور",
+      "vipBadge": "⭐ مميز",
+      "blacklistedBadge": "🚫 محظور",
+      "vipFull": "ضيف مميز"
+    },
+    "idTypes": {
+      "national_id": "البطاقة الشخصية",
+      "passport": "جواز السفر",
+      "resident_card": "بطاقة الإقامة",
+      "driving_license": "رخصة القيادة"
+    },
+    "paymentMethods": {
+      "cash": "نقداً",
+      "bank_transfer": "تحويل بنكي",
+      "card": "بطاقة",
+      "cheque": "شيك"
+    },
+    "list": {
+      "stats": {
+        "total": "إجمالي المستأجرين",
+        "vip": "ضيوف مميزون",
+        "blacklisted": "محظورون",
+        "active": "نشط"
+      },
+      "toolbar": {
+        "csv": "CSV",
+        "print": "طباعة",
+        "inlineEdit": "تعديل سريع",
+        "exitEdit": "إنهاء التعديل",
+        "tenantsCount": "{count, plural, =0 {لا يوجد مستأجرون} one {مستأجر واحد} two {مستأجران} few {# مستأجرين} many {# مستأجراً} other {# مستأجر}}",
+        "tableViewTitle": "عرض الجدول",
+        "cardViewTitle": "عرض البطاقات",
+        "summaryViewTitle": "عرض الملخص"
+      },
+      "table": {
+        "name": "الاسم",
+        "contact": "الاتصال",
+        "type": "النوع",
+        "class": "التصنيف",
+        "source": "المصدر",
+        "stays": "إقامات",
+        "actions": "إجراءات"
+      },
+      "row": {
+        "viewProfile": "عرض الملف الشخصي",
+        "quickEdit": "تعديل سريع",
+        "edit": "تعديل",
+        "save": "حفظ",
+        "cancel": "إلغاء",
+        "saved": "تم الحفظ",
+        "cycleClassTitle": "اضغط لتغيير التصنيف",
+        "firstNamePlaceholder": "الاسم الأول",
+        "lastNamePlaceholder": "اسم العائلة"
+      },
+      "card": {
+        "stays": "إقامات",
+        "active": "نشط",
+        "view": "عرض",
+        "edit": "تعديل",
+        "via": "عبر {source}"
+      },
+      "summary": {
+        "totalStays": "إجمالي الإقامات",
+        "reservations": "حجوزات",
+        "activeNow": "نشط الآن",
+        "currentlyStaying": "مقيم حالياً",
+        "noActiveRes": "لا حجوزات نشطة",
+        "totalSpent": "إجمالي الإنفاق"
+      },
+      "empty": "لا يوجد مستأجرون يطابقون التصفية.",
+      "showing": "{count, plural, =0 {لا يوجد مستأجرون} one {عرض مستأجر واحد} two {عرض مستأجرين} few {عرض # مستأجرين} many {عرض # مستأجراً} other {عرض # مستأجر}}"
+    },
+    "detail": {
+      "back": "العودة للمستأجرين",
+      "since": "منذ {date}",
+      "inactive": "غير نشط",
+      "blacklistTitle": "هذا المستأجر محظور.",
+      "editProfile": "تعديل الملف الشخصي",
+      "acceptPayment": "استلام دفعة",
+      "tabs": {
+        "overview": "نظرة عامة",
+        "ledger": "السجل المالي"
+      },
+      "kpi": {
+        "openBalance": "الرصيد المفتوح",
+        "totalStays": "إجمالي الإقامات",
+        "totalSpent": "إجمالي الإنفاق",
+        "source": "المصدر"
+      },
+      "sections": {
+        "contact": "الاتصال",
+        "identification": "الهوية",
+        "address": "العنوان",
+        "emergency": "جهة اتصال للطوارئ",
+        "organisation": "المؤسسة",
+        "preferences": "التفضيلات",
+        "internalNotes": "ملاحظات داخلية",
+        "leases": "سجل الحجوزات",
+        "payments": "المدفوعات الأخيرة"
+      },
+      "fields": {
+        "phone": "الهاتف",
+        "secondary": "هاتف إضافي",
+        "whatsapp": "واتساب",
+        "email": "البريد الإلكتروني",
+        "idType": "نوع الهوية",
+        "idNumber": "رقم الهوية",
+        "expiry": "تاريخ الانتهاء",
+        "gender": "الجنس",
+        "dateOfBirth": "تاريخ الميلاد",
+        "country": "البلد",
+        "city": "المدينة",
+        "address": "العنوان",
+        "name": "الاسم",
+        "relation": "صلة القرابة",
+        "company": "الشركة",
+        "contact": "جهة الاتصال",
+        "floor": "الطابق",
+        "unitType": "نوع الوحدة",
+        "payment": "الدفع",
+        "requests": "الطلبات"
+      },
+      "gender": {
+        "male": "ذكر",
+        "female": "أنثى"
+      },
+      "history": {
+        "recordsCount": "{count, plural, =0 {لا سجلات} one {سجل واحد} two {سجلان} few {# سجلات} many {# سجلاً} other {# سجل}}",
+        "noLeases": "لا توجد حجوزات بعد.",
+        "noPayments": "لم تُسجَّل مدفوعات.",
+        "multipleUnits": "وحدات متعددة",
+        "inProperty": "في {property}"
+      }
+    },
+    "ledger": {
+      "summary": {
+        "charged": "مفوتر",
+        "paid": "مدفوع",
+        "returned": "مرتجع",
+        "balanceDue": "الرصيد المستحق",
+        "refundsAndReturns": "الاسترداد والإرجاع",
+        "outstanding": "مستحق",
+        "overpaid": "دفع زائد / رصيد",
+        "fullySettled": "تمت التسوية",
+        "invoiceCount": "{count, plural, =0 {لا فواتير} one {فاتورة واحدة} two {فاتورتان} few {# فواتير} many {# فاتورة} other {# فاتورة}}",
+        "paymentCount": "{count, plural, =0 {لا دفعات} one {دفعة واحدة} two {دفعتان} few {# دفعات} many {# دفعة} other {# دفعة}}",
+        "refresh": "تحديث"
+      },
+      "tabs": {
+        "all": "الكل",
+        "invoices": "الفواتير",
+        "payments": "المدفوعات",
+        "returns": "المرتجعات"
+      },
+      "actions": {
+        "dateRange": "نطاق التاريخ",
+        "excel": "Excel",
+        "pdf": "PDF",
+        "recordPayment": "تسجيل دفعة"
+      },
+      "filters": {
+        "filterByDate": "تصفية حسب التاريخ:",
+        "from": "من",
+        "to": "إلى",
+        "clearDates": "مسح التواريخ",
+        "showingFiltered": "عرض {shown} من {total} إدخالاً"
+      },
+      "table": {
+        "title": "سجل المعاملات",
+        "entriesShown": "— {count, plural, =0 {لا إدخالات معروضة} one {إدخال واحد معروض} two {إدخالان معروضان} few {# إدخالات معروضة} many {# إدخالاً معروضاً} other {# إدخال معروض}}",
+        "clearAll": "مسح كل التصفيات",
+        "date": "التاريخ",
+        "type": "النوع",
+        "description": "الوصف",
+        "charge": "مدين (Dr)",
+        "payment": "دائن (Cr)",
+        "balance": "الرصيد",
+        "chargeTitle": "المبلغ المحمَّل على المستأجر",
+        "paymentTitle": "المبلغ المدفوع من المستأجر",
+        "viewReservation": "عرض الحجز ←",
+        "totalsRow": "الإجماليات — {count, plural, =0 {لا إدخالات} one {إدخال واحد} two {إدخالان} few {# إدخالات} many {# إدخالاً} other {# إدخال}}",
+        "legend": "Dr = المبلغ المحمَّل · Cr = المبلغ المدفوع · الرصيد = المتبقي المستحق"
+      },
+      "types": {
+        "invoice": "فاتورة",
+        "payment": "دفعة",
+        "return": "استرداد"
+      },
+      "empty": {
+        "title": "لا توجد معاملات",
+        "tryFilters": "جرّب تعديل التصفيات",
+        "noneForTenant": "لا توجد معاملات مسجَّلة لـ {name} بعد",
+        "clearFilters": "مسح التصفيات"
+      },
+      "errors": {
+        "loadFailed": "فشل تحميل السجل",
+        "networkError": "خطأ في الشبكة عند تحميل السجل"
+      }
+    },
+    "ledgerPage": {
+      "title": "سجل المستأجر",
+      "description": "رصيد المستأجر الجاري — جميع الرسوم والمدفوعات والمرتجعات",
+      "selectTenant": "اختر مستأجراً",
+      "searchPlaceholder": "ابحث عن مستأجر بالاسم أو الهاتف…",
+      "change": "تغيير",
+      "selectPrompt": "اختر مستأجراً لعرض سجله",
+      "selectHelp": "ابحث بالاسم أو رقم الهاتف أعلاه"
+    },
+    "newPage": {
+      "title": "إضافة مستأجر جديد",
+      "description": "أضف مقيماً أو ضيفاً جديداً إلى الدليل."
+    },
+    "editPage": {
+      "title": "تعديل المستأجر",
+      "description": "حدِّث معلومات الاتصال أو الهوية."
+    },
+    "form": {
+      "modeQuickAdd": "⚡ إضافة سريعة",
+      "modeFullForm": "النموذج الكامل",
+      "quickAddTagline": "الأسرع للضيوف الحاضرين خلال أوقات الذروة",
+      "fullFormTagline": "ملف ضيف كامل بكافة التفاصيل",
+      "quickAdd": {
+        "createGuest": "إنشاء ضيف",
+        "creating": "جارٍ الإنشاء…",
+        "switchFull": "تحتاج حقولاً أكثر؟ التبديل للنموذج الكامل ←"
+      },
+      "sections": {
+        "personal": "المعلومات الشخصية",
+        "identification": "الهوية",
+        "contact": "معلومات الاتصال",
+        "address": "العنوان",
+        "emergency": "جهة اتصال للطوارئ",
+        "classification": "تصنيف الضيف",
+        "preferences": "التفضيلات والملاحظات"
+      },
+      "fields": {
+        "firstName": "الاسم الأول",
+        "lastName": "اسم العائلة",
+        "fullNameArabic": "الاسم الكامل بالعربية",
+        "fullNameArabicHint": "(اختياري — للوثائق الرسمية)",
+        "gender": "الجنس",
+        "male": "♂ ذكر",
+        "female": "♀ أنثى",
+        "dateOfBirth": "تاريخ الميلاد",
+        "optional": "(اختياري)",
+        "nationality": "الجنسية",
+        "nationalityHint": "— الخليج وآسيا في الأعلى",
+        "idType": "نوع الهوية",
+        "idNumber": "رقم الهوية",
+        "idExpiry": "تاريخ انتهاء الهوية",
+        "expired": "⚠ منتهية",
+        "expiredBadge": "هوية منتهية",
+        "expiryWarning": "يظهر تنبيه عند الانتهاء، لكن يُسمح بالحفظ",
+        "frontSide": "الوجه الأمامي",
+        "backSide": "الوجه الخلفي",
+        "phone": "الهاتف",
+        "secondaryPhone": "هاتف إضافي",
+        "whatsapp": "واتساب",
+        "whatsappHint": "(الأساسي في عُمان)",
+        "sameAsPhone": "نفس الهاتف",
+        "email": "البريد الإلكتروني",
+        "country": "البلد",
+        "city": "المدينة",
+        "addressLine": "العنوان",
+        "name": "الاسم",
+        "relation": "صلة القرابة",
+        "guestType": "نوع الضيف",
+        "companyName": "اسم الشركة",
+        "contactPerson": "جهة الاتصال",
+        "source": "المصدر",
+        "classification": "التصنيف",
+        "adminOnly": "للمسؤولين فقط",
+        "blacklistDocReason": "يُرجى توثيق السبب في الملاحظات الداخلية أدناه",
+        "preferredFloor": "الطابق المفضل",
+        "preferredUnitType": "نوع الوحدة المفضل",
+        "preferredPayment": "طريقة الدفع المفضلة",
+        "noPreference": "لا تفضيل",
+        "specialRequests": "طلبات خاصة",
+        "internalNotes": "ملاحظات داخلية",
+        "internalNotesHint": "للموظفين فقط — غير مرئية للضيف",
+        "tags": "العلامات"
+      },
+      "placeholders": {
+        "firstName": "أحمد",
+        "lastName": "السعيد",
+        "fullNameArabic": "أحمد السعيد",
+        "phone": "9000 0000",
+        "phoneFull": "+968 9000 0000",
+        "email": "guest@email.com",
+        "nationalityQuick": "عُماني",
+        "nationalityFull": "اكتب أو اختر الجنسية…",
+        "idNumberQuick": "أدخل رقم الهوية / جواز السفر",
+        "idNumberFull": "أدخل الرقم كما هو في الوثيقة بالضبط",
+        "country": "عُمان",
+        "city": "صلالة",
+        "addressLine": "الشارع، المبنى…",
+        "contactName": "اسم جهة الاتصال",
+        "companyName": "مثال: شركة ظفار للسياحة",
+        "contactPerson": "اسم الشخص المسؤول",
+        "preferredFloor": "الطابق الأرضي، طابق علوي…",
+        "specialRequests": "مثال: سرير إضافي، تسجيل دخول متأخر، وحدة هادئة، سرير أطفال…",
+        "internalNotes": "مثال: يدفع متأخراً دائماً. مميز — أعطِ أفضل وحدة. سبب الحظر…",
+        "relation": "زوج/زوجة، أخ، صديق…",
+        "tag": "اكتب علامة واضغط Enter (مثلاً: khareef-regular, vip-client)"
+      },
+      "tags": {
+        "noTags": "لا توجد علامات بعد",
+        "hint": "اضغط Enter أو فاصلة لإضافة علامة"
+      },
+      "upload": {
+        "uploading": "جارٍ الرفع…",
+        "prompt": "ارفع أو التقط صورة",
+        "failed": "فشل الرفع"
+      },
+      "duplicate": {
+        "checking": "جارٍ التحقق…",
+        "checkingFull": "جارٍ التحقق من التكرار…",
+        "found": "هذا الضيف أقام لدينا من قبل!",
+        "returning": "ضيف عائد — {name}",
+        "viewProfile": "عرض الملف الشخصي ←",
+        "viewShort": "عرض ←",
+        "newGuest": "ضيف جديد"
+      },
+      "actions": {
+        "cancel": "← إلغاء",
+        "save": "حفظ التغييرات",
+        "create": "إنشاء مستأجر",
+        "saving": "جارٍ الحفظ…",
+        "creating": "جارٍ الإنشاء…"
+      },
+      "toasts": {
+        "created": "تم إنشاء المستأجر!",
+        "updated": "تم تحديث المستأجر!"
+      }
+    }
   },
   "reservations": {
     "title": "الحجوزات",

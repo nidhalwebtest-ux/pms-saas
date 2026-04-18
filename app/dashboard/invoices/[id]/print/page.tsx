@@ -1,5 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { format } from "date-fns";
+import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
+import { getTranslations, getLocale } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 
@@ -13,12 +15,6 @@ interface PriceSegment {
   label: string;
   rate?: number;
   subtotal: number;
-}
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-function methodLabel(method: string): string {
-  return method.toLowerCase().replace("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
@@ -70,6 +66,23 @@ export default async function InvoicePrintPage({
     notFound();
   }
 
+  // ── i18n ──────────────────────────────────────────────────────────────────────
+  const locale  = await getLocale();
+  const isAr    = locale === "ar";
+  const dfLoc   = isAr ? arLocale : enLocale;
+  const tPrint  = await getTranslations("invoices.print");
+  const tStatus = await getTranslations("invoices.statuses");
+  const tMethod = await getTranslations("invoices.paymentMethods");
+
+  const fmtDate = (d: Date | string) =>
+    format(new Date(d), "d MMM yyyy", { locale: dfLoc });
+
+  const tryT = (fn: (k: string) => string, key: string, fallback?: string): string => {
+    try { return fn(key); } catch { return fallback ?? key; }
+  };
+
+  const methodLabel = (m: string) => tryT(tMethod, m, m.toLowerCase().replace("_", " "));
+
   const org = invoice.organization;
   const tenant = invoice.tenant;
   const reservation = invoice.reservation;
@@ -92,30 +105,53 @@ export default async function InvoicePrintPage({
     (1000 * 60 * 60 * 24)
   );
 
-  const statusLabel: Record<string, string> = {
-    DRAFT:          "Draft",
-    ISSUED:         "Issued",
-    PARTIALLY_PAID: "Partially Paid",
-    PAID:           "Paid",
-    CANCELLED:      "Cancelled",
+  const statusKey: Record<string, string> = {
+    DRAFT:          "draft",
+    ISSUED:         "issued",
+    PARTIALLY_PAID: "partiallyPaid",
+    PAID:           "paid",
+    CANCELLED:      "cancelled",
   };
+  const statusLabel = tryT(tStatus, statusKey[invoice.status] ?? invoice.status, invoice.status);
+
+  const statusBarKey =
+    isPaid ? "paid" :
+    isOverdue ? "overdue" :
+    invoice.status === "PARTIALLY_PAID" ? "partial" :
+    invoice.status === "ISSUED" ? "issued" :
+    invoice.status === "DRAFT" ? "draft" :
+    invoice.status === "CANCELLED" ? "cancelled" : "issued";
+
+  const statusBarClass =
+    isPaid ? "paid" :
+    isOverdue ? "overdue" :
+    invoice.status === "PARTIALLY_PAID" ? "partial" :
+    invoice.status === "ISSUED" ? "issued" :
+    invoice.status === "DRAFT" ? "draft" :
+    invoice.status === "CANCELLED" ? "cancelled" : "issued";
+
+  const dirAttr = isAr ? "rtl" : "ltr";
 
   return (
-    <html lang="en">
+    <html lang={locale} dir={dirAttr}>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>Invoice {invoice.invoiceNumber}</title>
+        <title>{tPrint("title", { number: invoice.invoiceNumber })}</title>
         <style
           dangerouslySetInnerHTML={{
             __html: `
               * { box-sizing: border-box; margin: 0; padding: 0; }
               body {
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                font-family: ${isAr
+                  ? "'Tajawal','Cairo','Segoe UI',Tahoma,sans-serif"
+                  : "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"};
                 font-size: 13px;
                 color: #1f2937;
                 background: #f9fafb;
+                direction: ${dirAttr};
               }
+              .ltr-numbers { direction: ltr; unicode-bidi: embed; display: inline-block; }
               .page {
                 max-width: 800px;
                 margin: 24px auto;
@@ -152,14 +188,13 @@ export default async function InvoicePrintPage({
                 align-items: flex-start;
               }
               .header h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
-              .header h1 span { font-size: 18px; font-weight: 400; opacity: 0.85; margin-left: 8px; font-family: serif; }
               .org-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
               .org-detail { font-size: 12px; opacity: 0.82; line-height: 1.6; }
-              .inv-meta { text-align: right; }
+              .inv-meta { text-align: ${isAr ? "left" : "right"}; }
               .inv-meta table { border-collapse: collapse; }
-              .inv-meta td { padding: 2px 0 2px 16px; font-size: 12px; }
-              .inv-meta td:first-child { opacity: 0.75; text-align: right; }
-              .inv-meta td:last-child { font-weight: 600; text-align: right; }
+              .inv-meta td { padding: 2px 0; font-size: 12px; }
+              .inv-meta td:first-child { opacity: 0.75; padding-${isAr ? "left" : "right"}: 16px; text-align: ${isAr ? "right" : "left"}; }
+              .inv-meta td:last-child { font-weight: 600; text-align: ${isAr ? "left" : "right"}; }
 
               /* Status banner */
               .status-bar {
@@ -194,7 +229,6 @@ export default async function InvoicePrintPage({
                 padding-bottom: 4px;
                 border-bottom: 1px solid #f3f4f6;
               }
-              .section-label span { font-family: serif; font-size: 11px; font-weight: 400; color: #9ca3af; margin-left: 6px; }
 
               .info-row { display: flex; gap: 8px; margin-bottom: 4px; font-size: 12.5px; }
               .info-row .lbl { color: #6b7280; min-width: 80px; }
@@ -214,7 +248,7 @@ export default async function InvoicePrintPage({
               }
               table.items thead th {
                 padding: 8px 12px;
-                text-align: left;
+                text-align: ${isAr ? "right" : "left"};
                 font-size: 10px;
                 font-weight: 700;
                 text-transform: uppercase;
@@ -222,13 +256,13 @@ export default async function InvoicePrintPage({
                 color: #6b7280;
                 border-bottom: 1px solid #e5e7eb;
               }
-              table.items thead th:not(:first-child) { text-align: right; }
+              table.items thead th:not(:first-child) { text-align: ${isAr ? "left" : "right"}; }
               table.items tbody td {
                 padding: 9px 12px;
                 border-bottom: 1px solid #f3f4f6;
                 color: #374151;
               }
-              table.items tbody td:not(:first-child) { text-align: right; }
+              table.items tbody td:not(:first-child) { text-align: ${isAr ? "left" : "right"}; }
               table.items tbody tr.segment td {
                 padding: 5px 12px 5px 28px;
                 font-size: 11.5px;
@@ -285,7 +319,7 @@ export default async function InvoicePrintPage({
               table.payments thead th {
                 background: #f3f4f6;
                 padding: 7px 12px;
-                text-align: left;
+                text-align: ${isAr ? "right" : "left"};
                 font-size: 10px;
                 font-weight: 700;
                 text-transform: uppercase;
@@ -293,13 +327,13 @@ export default async function InvoicePrintPage({
                 color: #6b7280;
                 border-bottom: 1px solid #e5e7eb;
               }
-              table.payments thead th:last-child { text-align: right; }
+              table.payments thead th:last-child { text-align: ${isAr ? "left" : "right"}; }
               table.payments tbody td {
                 padding: 8px 12px;
                 border-bottom: 1px solid #f3f4f6;
                 color: #374151;
               }
-              table.payments tbody td:last-child { text-align: right; font-weight: 600; color: #16a34a; }
+              table.payments tbody td:last-child { text-align: ${isAr ? "left" : "right"}; font-weight: 600; color: #16a34a; }
               table.payments tbody tr.refund td:last-child { color: #dc2626; }
 
               /* Paid stamp */
@@ -351,7 +385,6 @@ export default async function InvoicePrintPage({
                 font-size: 12px;
               }
               .footer .thank-you { font-size: 14px; font-weight: 600; color: #6b7280; margin-bottom: 4px; }
-              .footer .arabic { font-family: serif; font-size: 15px; color: #9ca3af; margin-bottom: 8px; }
 
               /* Print overrides */
               @media print {
@@ -378,7 +411,7 @@ export default async function InvoicePrintPage({
 
           {/* Print button — screen only */}
           <div className="print-button">
-            <button id="print-btn">Print / Save PDF</button>
+            <button id="print-btn">{tPrint("printBtn")}</button>
           </div>
 
           {/* Header */}
@@ -387,33 +420,33 @@ export default async function InvoicePrintPage({
               <div className="org-name">{org.name}</div>
               {org.address && <div className="org-detail">{org.address}</div>}
               {org.city && <div className="org-detail">{org.city}{org.area ? `, ${org.area}` : ""}</div>}
-              {org.phone && <div className="org-detail">{org.phone}</div>}
+              {org.phone && <div className="org-detail ltr-numbers">{org.phone}</div>}
               <div style={{ marginTop: 16 }}>
-                <h1>INVOICE <span>/ فاتورة</span></h1>
+                <h1>{tPrint("invoiceHeading")}</h1>
               </div>
             </div>
             <div className="inv-meta">
               <table>
                 <tbody>
                   <tr>
-                    <td>Invoice #:</td>
-                    <td>{invoice.invoiceNumber}</td>
+                    <td>{tPrint("invoiceMeta.invoiceNo")}:</td>
+                    <td className="ltr-numbers">{invoice.invoiceNumber}</td>
                   </tr>
                   <tr>
-                    <td>Issue Date:</td>
-                    <td>{format(new Date(invoice.issueDate), "d MMM yyyy")}</td>
+                    <td>{tPrint("invoiceMeta.issueDate")}:</td>
+                    <td className="ltr-numbers">{fmtDate(invoice.issueDate)}</td>
                   </tr>
                   <tr>
-                    <td>Due Date:</td>
-                    <td>{format(new Date(invoice.dueDate), "d MMM yyyy")}</td>
+                    <td>{tPrint("invoiceMeta.dueDate")}:</td>
+                    <td className="ltr-numbers">{fmtDate(invoice.dueDate)}</td>
                   </tr>
                   <tr>
-                    <td>Status:</td>
-                    <td>{statusLabel[invoice.status] || invoice.status}</td>
+                    <td>{tPrint("invoiceMeta.status")}:</td>
+                    <td>{statusLabel}</td>
                   </tr>
                   {invoice.property && (
                     <tr>
-                      <td>Property:</td>
+                      <td>{tPrint("invoiceMeta.property")}:</td>
                       <td>{invoice.property.name}</td>
                     </tr>
                   )}
@@ -423,22 +456,9 @@ export default async function InvoicePrintPage({
           </div>
 
           {/* Status bar */}
-          <div className={`status-bar ${
-            isPaid ? "paid" :
-            isOverdue ? "overdue" :
-            invoice.status === "PARTIALLY_PAID" ? "partial" :
-            invoice.status === "ISSUED" ? "issued" :
-            invoice.status === "DRAFT" ? "draft" :
-            invoice.status === "CANCELLED" ? "cancelled" : "issued"
-          }`}>
+          <div className={`status-bar ${statusBarClass}`}>
             <span className="status-dot" />
-            {isPaid ? "✓ PAID IN FULL" :
-             isOverdue ? "⚠ OVERDUE — PAYMENT REQUIRED" :
-             invoice.status === "PARTIALLY_PAID" ? "PARTIALLY PAID" :
-             invoice.status === "ISSUED" ? "AWAITING PAYMENT" :
-             invoice.status === "DRAFT" ? "DRAFT — NOT ISSUED" :
-             invoice.status === "CANCELLED" ? "CANCELLED / VOID" :
-             invoice.status}
+            {tPrint(`statusBar.${statusBarKey}`)}
           </div>
 
           <div className="body">
@@ -447,17 +467,17 @@ export default async function InvoicePrintPage({
             <div className="two-col">
               {/* Tenant */}
               <div>
-                <div className="section-label">Bill To <span>/ فاتورة إلى</span></div>
+                <div className="section-label">{tPrint("billTo")}</div>
                 <div className="tenant-name">
                   {tenant.firstName} {tenant.lastName}
                 </div>
                 {tenant.fullNameArabic && (
-                  <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4, fontFamily: "serif" }}>
+                  <div style={{ fontSize: 13, color: "#6b7280", marginBottom: 4 }}>
                     {tenant.fullNameArabic}
                   </div>
                 )}
                 <div className="info-row">
-                  <span className="val">{tenant.phone}</span>
+                  <span className="val ltr-numbers">{tenant.phone}</span>
                 </div>
                 {tenant.email && (
                   <div className="info-row">
@@ -469,12 +489,12 @@ export default async function InvoicePrintPage({
                     <span className="lbl" style={{ textTransform: "capitalize" }}>
                       {tenant.idType.replace("_", " ")}:
                     </span>
-                    <span className="val">{tenant.idNumber}</span>
+                    <span className="val ltr-numbers">{tenant.idNumber}</span>
                   </div>
                 )}
                 {tenant.nationality && (
                   <div className="info-row">
-                    <span className="lbl">Nationality:</span>
+                    <span className="lbl">{tPrint("nationality")}:</span>
                     <span className="val">{tenant.nationality}</span>
                   </div>
                 )}
@@ -482,28 +502,28 @@ export default async function InvoicePrintPage({
 
               {/* Reservation info */}
               <div>
-                <div className="section-label">Reservation <span>/ الحجز</span></div>
+                <div className="section-label">{tPrint("reservation")}</div>
                 {reservation.reservationNumber && (
                   <div className="info-row">
-                    <span className="lbl">Ref #:</span>
-                    <span className="val" style={{ fontFamily: "monospace" }}>{reservation.reservationNumber}</span>
+                    <span className="lbl">{tPrint("refNo")}:</span>
+                    <span className="val ltr-numbers" style={{ fontFamily: "monospace" }}>{reservation.reservationNumber}</span>
                   </div>
                 )}
                 <div className="info-row">
-                  <span className="lbl">Check-in:</span>
-                  <span className="val">{format(new Date(reservation.startDate), "d MMM yyyy")}</span>
+                  <span className="lbl">{tPrint("checkIn")}:</span>
+                  <span className="val ltr-numbers">{fmtDate(reservation.startDate)}</span>
                 </div>
                 <div className="info-row">
-                  <span className="lbl">Check-out:</span>
-                  <span className="val">{format(new Date(reservation.endDate), "d MMM yyyy")}</span>
+                  <span className="lbl">{tPrint("checkOut")}:</span>
+                  <span className="val ltr-numbers">{fmtDate(reservation.endDate)}</span>
                 </div>
                 <div className="info-row">
-                  <span className="lbl">Duration:</span>
-                  <span className="val">{nights} night{nights !== 1 ? "s" : ""}</span>
+                  <span className="lbl">{tPrint("duration")}:</span>
+                  <span className="val">{tPrint("nights", { count: nights })}</span>
                 </div>
                 {reservation.reservationUnits.length > 0 && (
                   <div className="info-row" style={{ marginTop: 6 }}>
-                    <span className="lbl">Unit(s):</span>
+                    <span className="lbl">{tPrint("units")}:</span>
                     <span className="val">
                       {reservation.reservationUnits.map((ru) => ru.unit.name).join(", ")}
                     </span>
@@ -511,8 +531,8 @@ export default async function InvoicePrintPage({
                 )}
                 {invoice.invoiceType === "MONTHLY" && invoice.monthNumber && (
                   <div className="info-row">
-                    <span className="lbl">Month:</span>
-                    <span className="val">{invoice.monthNumber}</span>
+                    <span className="lbl">{tPrint("month")}:</span>
+                    <span className="val ltr-numbers">{invoice.monthNumber}</span>
                   </div>
                 )}
               </div>
@@ -520,14 +540,14 @@ export default async function InvoicePrintPage({
 
             {/* Line Items */}
             <div className="items-section">
-              <div className="section-label">Charges <span>/ المستحقات</span></div>
+              <div className="section-label">{tPrint("charges")}</div>
               <table className="items">
                 <thead>
                   <tr>
-                    <th style={{ width: "50%" }}>Description</th>
-                    <th style={{ width: "10%" }}>Qty</th>
-                    <th style={{ width: "20%" }}>Rate</th>
-                    <th style={{ width: "20%" }}>Amount</th>
+                    <th style={{ width: "50%" }}>{tPrint("description")}</th>
+                    <th style={{ width: "10%" }}>{tPrint("qty")}</th>
+                    <th style={{ width: "20%" }}>{tPrint("rate")}</th>
+                    <th style={{ width: "20%" }}>{tPrint("amount")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -547,16 +567,16 @@ export default async function InvoicePrintPage({
                               </span>
                             )}
                           </td>
-                          <td>{breakdown ? "—" : Number(item.quantity).toFixed(0)}</td>
-                          <td>{breakdown ? "—" : `${Number(item.unitPrice).toFixed(3)} OMR`}</td>
-                          <td style={{ fontWeight: 700 }}>{Number(item.lineTotal).toFixed(3)} OMR</td>
+                          <td className="ltr-numbers">{breakdown ? "—" : Number(item.quantity).toFixed(0)}</td>
+                          <td className="ltr-numbers">{breakdown ? "—" : `${Number(item.unitPrice).toFixed(3)} OMR`}</td>
+                          <td className="ltr-numbers" style={{ fontWeight: 700 }}>{Number(item.lineTotal).toFixed(3)} OMR</td>
                         </tr>
                         {breakdown && breakdown.map((seg, si) => (
                           <tr key={`${item.id}-seg-${si}`} className="segment">
                             <td>{seg.label}</td>
-                            <td>{seg.days ?? seg.nights ?? "—"}</td>
-                            <td>{seg.rate !== undefined ? `${Number(seg.rate).toFixed(3)} OMR` : "—"}</td>
-                            <td>{Number(seg.subtotal).toFixed(3)} OMR</td>
+                            <td className="ltr-numbers">{seg.days ?? seg.nights ?? "—"}</td>
+                            <td className="ltr-numbers">{seg.rate !== undefined ? `${Number(seg.rate).toFixed(3)} OMR` : "—"}</td>
+                            <td className="ltr-numbers">{Number(seg.subtotal).toFixed(3)} OMR</td>
                           </tr>
                         ))}
                       </>
@@ -570,43 +590,43 @@ export default async function InvoicePrintPage({
             <div className="totals">
               <div className="totals-box">
                 <div className="totals-row">
-                  <span>Subtotal</span>
-                  <span>{subtotal.toFixed(3)} OMR</span>
+                  <span>{tPrint("subtotal")}</span>
+                  <span className="ltr-numbers">{subtotal.toFixed(3)} OMR</span>
                 </div>
                 {discount > 0 && (
                   <div className="totals-row">
-                    <span>Discount</span>
-                    <span className="discount">−{discount.toFixed(3)} OMR</span>
+                    <span>{tPrint("discount")}</span>
+                    <span className="discount ltr-numbers">−{discount.toFixed(3)} OMR</span>
                   </div>
                 )}
                 {tax > 0 && (
                   <div className="totals-row">
-                    <span>Tax</span>
-                    <span>{tax.toFixed(3)} OMR</span>
+                    <span>{tPrint("tax")}</span>
+                    <span className="ltr-numbers">{tax.toFixed(3)} OMR</span>
                   </div>
                 )}
                 <div className="totals-row grand">
-                  <span>Total</span>
-                  <span>{totalAmount.toFixed(3)} OMR</span>
+                  <span>{tPrint("total")}</span>
+                  <span className="ltr-numbers">{totalAmount.toFixed(3)} OMR</span>
                 </div>
                 {amountPaid > 0 && (
                   <div className="totals-row" style={{ color: "#16a34a" }}>
-                    <span>Total Paid</span>
-                    <span>−{amountPaid.toFixed(3)} OMR</span>
+                    <span>{tPrint("totalPaid")}</span>
+                    <span className="ltr-numbers">−{amountPaid.toFixed(3)} OMR</span>
                   </div>
                 )}
                 <div className={`totals-row balance ${balanceDue <= 0 ? "zero" : ""}`}>
-                  <span>Balance Due</span>
-                  <span>{balanceDue.toFixed(3)} OMR</span>
+                  <span>{tPrint("balanceDue")}</span>
+                  <span className="ltr-numbers">{balanceDue.toFixed(3)} OMR</span>
                 </div>
                 {isPaid && (
-                  <div style={{ textAlign: "right", marginTop: 8 }}>
-                    <span className="paid-stamp">✓ PAID</span>
+                  <div style={{ textAlign: isAr ? "left" : "right", marginTop: 8 }}>
+                    <span className="paid-stamp">{tPrint("paidStamp")}</span>
                   </div>
                 )}
                 {isOverdue && (
-                  <div style={{ textAlign: "right", marginTop: 8 }}>
-                    <span className="overdue-stamp">OVERDUE</span>
+                  <div style={{ textAlign: isAr ? "left" : "right", marginTop: 8 }}>
+                    <span className="overdue-stamp">{tPrint("overdueStamp")}</span>
                   </div>
                 )}
               </div>
@@ -615,23 +635,23 @@ export default async function InvoicePrintPage({
             {/* Payment History */}
             {invoice.allocations.length > 0 && (
               <div className="payments-section">
-                <div className="section-label">Payment History <span>/ سجل الدفع</span></div>
+                <div className="section-label">{tPrint("paymentHistory")}</div>
                 <table className="payments">
                   <thead>
                     <tr>
-                      <th>Date</th>
-                      <th>Method</th>
-                      <th>Reference</th>
-                      <th>Amount</th>
+                      <th>{tPrint("paymentDate")}</th>
+                      <th>{tPrint("paymentMethod")}</th>
+                      <th>{tPrint("paymentReference")}</th>
+                      <th>{tPrint("paymentAmount")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {invoice.allocations.map((alloc) => (
                       <tr key={alloc.id} className={alloc.payment.isRefund ? "refund" : ""}>
-                        <td>{format(new Date(alloc.payment.date), "d MMM yyyy")}</td>
-                        <td>{methodLabel(alloc.payment.method)}{alloc.payment.isRefund ? " (Refund)" : ""}</td>
-                        <td>{alloc.payment.reference || "—"}</td>
-                        <td>
+                        <td className="ltr-numbers">{fmtDate(alloc.payment.date)}</td>
+                        <td>{methodLabel(alloc.payment.method)}{alloc.payment.isRefund ? tPrint("refundSuffix") : ""}</td>
+                        <td className="ltr-numbers">{alloc.payment.reference || "—"}</td>
+                        <td className="ltr-numbers">
                           {alloc.payment.isRefund ? "−" : ""}{Number(alloc.amount).toFixed(3)} OMR
                         </td>
                       </tr>
@@ -644,17 +664,18 @@ export default async function InvoicePrintPage({
             {/* Notes */}
             {invoice.notes && (
               <div className="notes-section">
-                <strong>Notes / ملاحظات:</strong> {invoice.notes}
+                <strong>{tPrint("notesLabel")}:</strong> {invoice.notes}
               </div>
             )}
           </div>
 
           {/* Footer */}
           <div className="footer">
-            <div className="thank-you">Thank you for your stay!</div>
-            <div className="arabic">شكراً لإقامتكم</div>
+            <div className="thank-you">{tPrint("thankYou")}</div>
             <div style={{ fontSize: 11, color: "#d1d5db" }}>
-              {org.name} · {org.city} · {org.phone || ""}
+              <span>{org.name}</span>
+              {org.city && <span> · {org.city}</span>}
+              {org.phone && <span> · <span className="ltr-numbers">{org.phone}</span></span>}
             </div>
           </div>
         </div>

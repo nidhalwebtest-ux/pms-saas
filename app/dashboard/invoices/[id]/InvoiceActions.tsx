@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   PrinterIcon,
   CreditCardIcon,
   CheckCircleIcon,
-  TrashIcon,
 } from "@heroicons/react/24/outline";
 
 interface Props {
@@ -21,6 +21,9 @@ type PaymentMethod = "CASH" | "BANK_TRANSFER" | "CARD" | "CHEQUE" | "ONLINE" | "
 
 export default function InvoiceActions({ invoiceId, status, balanceDue, openPaymentPanel = false }: Props) {
   const router = useRouter();
+  const t       = useTranslations("invoices.actions");
+  const tMethod = useTranslations("invoices.paymentMethods");
+
   const [issuing, setIssuing] = useState(false);
   const [showPayment, setShowPayment] = useState(openPaymentPanel);
   const [paymentLoading, setPaymentLoading] = useState(false);
@@ -37,12 +40,12 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
       const res = await fetch(`/api/invoices/${invoiceId}/issue`, { method: "PATCH" });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to issue invoice");
+        throw new Error(data.error || t("issueFailed"));
       }
-      toast.success("Invoice issued successfully");
+      toast.success(t("issueSuccess"));
       router.refresh();
     } catch (err: any) {
-      toast.error(err.message || "Something went wrong");
+      toast.error(err.message || t("somethingWentWrong"));
     } finally {
       setIssuing(false);
     }
@@ -52,7 +55,7 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
     e.preventDefault();
     const parsed = parseFloat(amount);
     if (isNaN(parsed) || parsed <= 0) {
-      toast.error("Please enter a valid amount");
+      toast.error(t("invalidAmount"));
       return;
     }
     setPaymentLoading(true);
@@ -70,13 +73,13 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to record payment");
+        throw new Error(data.error || t("paymentFailed"));
       }
-      toast.success("Payment recorded");
+      toast.success(t("paymentSuccess"));
       setShowPayment(false);
       router.refresh();
     } catch (err: any) {
-      toast.error(err.message || "Something went wrong");
+      toast.error(err.message || t("somethingWentWrong"));
     } finally {
       setPaymentLoading(false);
     }
@@ -84,7 +87,6 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
 
   const canIssue = status === "DRAFT";
   const canPay = status === "ISSUED" || status === "PARTIALLY_PAID";
-  const isPaid = status === "PAID";
   const isCancelled = status === "CANCELLED";
 
   return (
@@ -98,7 +100,7 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
             className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60 transition-colors"
           >
             <CheckCircleIcon className="h-4 w-4" />
-            {issuing ? "Issuing…" : "Issue Invoice"}
+            {issuing ? t("issuing") : t("issueInvoice")}
           </button>
         )}
         {canPay && (
@@ -107,7 +109,7 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
             className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 transition-colors"
           >
             <CreditCardIcon className="h-4 w-4" />
-            Record Payment
+            {t("recordPayment")}
           </button>
         )}
         {!isCancelled && (
@@ -118,7 +120,7 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
           >
             <PrinterIcon className="h-4 w-4" />
-            Print / PDF
+            {t("printPdf")}
           </a>
         )}
       </div>
@@ -126,12 +128,12 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
       {/* Inline payment form */}
       {showPayment && canPay && (
         <div className="rounded-xl border border-green-200 bg-green-50 p-5 shadow-sm">
-          <h3 className="mb-4 text-sm font-semibold text-green-900">Record Payment</h3>
+          <h3 className="mb-4 text-sm font-semibold text-green-900">{t("inlineTitle")}</h3>
           <form onSubmit={handlePaymentSubmit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {/* Amount */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Amount (OMR)
+                {t("amountLabel")}
               </label>
               <input
                 type="number"
@@ -141,50 +143,52 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
                 required
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 ltr-numbers"
               />
-              <p className="mt-0.5 text-xs text-gray-400">Balance due: {balanceDue.toFixed(3)} OMR</p>
+              <p className="mt-0.5 text-xs text-gray-400 ltr-numbers">
+                {t("balanceDueHint", { amount: balanceDue.toFixed(3) })}
+              </p>
             </div>
 
             {/* Method */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Method</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">{t("method")}</label>
               <select
                 value={method}
                 onChange={(e) => setMethod(e.target.value as PaymentMethod)}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
               >
-                <option value="CASH">Cash</option>
-                <option value="BANK_TRANSFER">Bank Transfer</option>
-                <option value="CARD">Card</option>
-                <option value="CHEQUE">Cheque</option>
-                <option value="ONLINE">Online</option>
-                <option value="OTHER">Other</option>
+                <option value="CASH">{tMethod("CASH")}</option>
+                <option value="BANK_TRANSFER">{tMethod("BANK_TRANSFER")}</option>
+                <option value="CARD">{tMethod("CARD")}</option>
+                <option value="CHEQUE">{tMethod("CHEQUE")}</option>
+                <option value="ONLINE">{tMethod("ONLINE")}</option>
+                <option value="OTHER">{tMethod("OTHER")}</option>
               </select>
             </div>
 
             {/* Date */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Date</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">{t("date")}</label>
               <input
                 type="date"
                 value={paymentDate}
                 onChange={(e) => setPaymentDate(e.target.value)}
                 required
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 ltr-numbers"
               />
             </div>
 
             {/* Reference */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Reference <span className="text-gray-400">(optional)</span>
+                {t("reference")} <span className="text-gray-400">{t("optional")}</span>
               </label>
               <input
                 type="text"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
-                placeholder="TXN-001, cheque #…"
+                placeholder={t("referencePlaceholder")}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
               />
             </div>
@@ -192,7 +196,7 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
             {/* Notes */}
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Notes <span className="text-gray-400">(optional)</span>
+                {t("notes")} <span className="text-gray-400">{t("optional")}</span>
               </label>
               <input
                 type="text"
@@ -210,14 +214,14 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
                 className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-60 transition-colors"
               >
                 <CreditCardIcon className="h-4 w-4" />
-                {paymentLoading ? "Saving…" : "Confirm Payment"}
+                {paymentLoading ? t("saving") : t("confirmPayment")}
               </button>
               <button
                 type="button"
                 onClick={() => setShowPayment(false)}
                 className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                Cancel
+                {t("cancel")}
               </button>
             </div>
           </form>

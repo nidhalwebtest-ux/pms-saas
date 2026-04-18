@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { format } from "date-fns";
+import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import { Prisma } from "@prisma/client";
 import {
   PrinterIcon,
@@ -10,6 +11,7 @@ import {
   PlusIcon,
   EyeIcon,
 } from "@heroicons/react/24/outline";
+import { getTranslations, getLocale } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 
@@ -35,11 +37,13 @@ function isOverdue(status: string, dueDate: Date): boolean {
   );
 }
 
-function getStatusBadge(status: string, dueDate: Date): React.ReactNode {
+type StatusT = (key: string) => string;
+
+function StatusBadge({ status, dueDate, t }: { status: string; dueDate: Date; t: StatusT }) {
   if (isOverdue(status, dueDate)) {
     return (
       <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-600/20">
-        Overdue
+        {t("overdue")}
       </span>
     );
   }
@@ -47,31 +51,31 @@ function getStatusBadge(status: string, dueDate: Date): React.ReactNode {
     case "DRAFT":
       return (
         <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600 ring-1 ring-inset ring-gray-500/20">
-          Draft
+          {t("draft")}
         </span>
       );
     case "ISSUED":
       return (
         <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/20">
-          Issued
+          {t("issued")}
         </span>
       );
     case "PARTIALLY_PAID":
       return (
         <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
-          Partial
+          {t("partial")}
         </span>
       );
     case "PAID":
       return (
         <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">
-          Paid
+          {t("paid")}
         </span>
       );
     case "CANCELLED":
       return (
         <span className="inline-flex items-center rounded-full bg-red-50 px-2.5 py-0.5 text-xs font-semibold text-red-400 ring-1 ring-inset ring-red-400/20">
-          Cancelled
+          {t("cancelled")}
         </span>
       );
     default:
@@ -105,6 +109,20 @@ export default async function InvoicesPage({
   const propertyId = params.propertyId || "";
 
   const today = new Date();
+
+  // ── i18n ──────────────────────────────────────────────────────────────────────
+  const locale  = await getLocale();
+  const dfLoc   = locale === "ar" ? arLocale : enLocale;
+  const t       = await getTranslations("invoices");
+  const tStatus = await getTranslations("invoices.statuses");
+  const tTabs   = await getTranslations("invoices.tabs");
+  const tTbl    = await getTranslations("invoices.table");
+  const tPag    = await getTranslations("invoices.pagination");
+  const tRow    = await getTranslations("invoices.rowActions");
+  const tSearch = await getTranslations("invoices.search");
+
+  const fmtDate = (d: Date | string, fmt = "d MMM yyyy") =>
+    format(new Date(d), fmt, { locale: dfLoc });
 
   // ── Build where clause ────────────────────────────────────────────────────────
 
@@ -183,13 +201,13 @@ export default async function InvoicesPage({
   // ── Tab config ────────────────────────────────────────────────────────────────
 
   const tabs: { key: StatusFilter; label: string; count: number }[] = [
-    { key: "ALL",            label: "All",          count: allCount },
-    { key: "ISSUED",         label: "Outstanding",  count: countMap["ISSUED"] ?? 0 },
-    { key: "OVERDUE",        label: "Overdue",      count: overdueCount },
-    { key: "PARTIALLY_PAID", label: "Partial",      count: countMap["PARTIALLY_PAID"] ?? 0 },
-    { key: "PAID",           label: "Paid",         count: countMap["PAID"] ?? 0 },
-    { key: "DRAFT",          label: "Draft",        count: countMap["DRAFT"] ?? 0 },
-    { key: "CANCELLED",      label: "Cancelled",    count: countMap["CANCELLED"] ?? 0 },
+    { key: "ALL",            label: tTabs("all"),         count: allCount },
+    { key: "ISSUED",         label: tTabs("outstanding"), count: countMap["ISSUED"] ?? 0 },
+    { key: "OVERDUE",        label: tTabs("overdue"),     count: overdueCount },
+    { key: "PARTIALLY_PAID", label: tTabs("partial"),     count: countMap["PARTIALLY_PAID"] ?? 0 },
+    { key: "PAID",           label: tTabs("paid"),        count: countMap["PAID"] ?? 0 },
+    { key: "DRAFT",          label: tTabs("draft"),       count: countMap["DRAFT"] ?? 0 },
+    { key: "CANCELLED",      label: tTabs("cancelled"),   count: countMap["CANCELLED"] ?? 0 },
   ];
 
   // ── Build pagination URL helper ───────────────────────────────────────────────
@@ -224,8 +242,8 @@ export default async function InvoicesPage({
             <DocumentTextIcon className="h-6 w-6 text-indigo-700" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
-            <p className="text-sm text-gray-500">{total} record{total !== 1 ? "s" : ""}</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
+            <p className="text-sm text-gray-500">{t("recordsCount", { count: total })}</p>
           </div>
         </div>
         <Link
@@ -233,7 +251,7 @@ export default async function InvoicesPage({
           className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors"
         >
           <PlusIcon className="h-4 w-4" />
-          New Invoice
+          {t("newInvoice")}
         </Link>
       </div>
 
@@ -256,7 +274,7 @@ export default async function InvoicesPage({
                 {tab.label}
                 {tab.count > 0 && (
                   <span
-                    className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                    className={`ms-2 rounded-full px-2 py-0.5 text-xs font-semibold ltr-numbers ${
                       active
                         ? "bg-indigo-100 text-indigo-700"
                         : "bg-gray-100 text-gray-600"
@@ -277,27 +295,27 @@ export default async function InvoicesPage({
           <input type="hidden" name="status" value={statusFilter} />
         )}
         <div className="relative flex-1 max-w-sm">
-          <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <MagnifyingGlassIcon className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             name="search"
             defaultValue={search}
-            placeholder="Search invoice #, tenant, reservation…"
-            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            placeholder={tSearch("placeholder")}
+            className="w-full rounded-lg border border-gray-300 py-2 ps-9 pe-3 text-sm placeholder-gray-400 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           />
         </div>
         <button
           type="submit"
           className="rounded-lg bg-white border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
         >
-          Search
+          {tSearch("submit")}
         </button>
         {search && (
           <Link
             href={tabUrl(statusFilter)}
             className="rounded-lg bg-white border border-gray-300 px-4 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
           >
-            Clear
+            {tSearch("clear")}
           </Link>
         )}
       </form>
@@ -308,23 +326,23 @@ export default async function InvoicesPage({
           <table className="min-w-full divide-y divide-gray-100">
             <thead>
               <tr className="bg-gray-50">
-                <th className="py-3 pl-4 pr-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 sm:pl-6">Invoice #</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Status</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Tenant</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Reservation</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Period</th>
-                <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Total</th>
-                <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Paid</th>
-                <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">Balance</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Due Date</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">Actions</th>
+                <th className="py-3 ps-4 pe-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500 sm:ps-6">{tTbl("invoiceNumber")}</th>
+                <th className="px-3 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500">{tTbl("status")}</th>
+                <th className="px-3 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500">{tTbl("tenant")}</th>
+                <th className="px-3 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500">{tTbl("reservation")}</th>
+                <th className="px-3 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500">{tTbl("period")}</th>
+                <th className="px-3 py-3 text-end text-xs font-semibold uppercase tracking-wide text-gray-500">{tTbl("total")}</th>
+                <th className="px-3 py-3 text-end text-xs font-semibold uppercase tracking-wide text-gray-500">{tTbl("paid")}</th>
+                <th className="px-3 py-3 text-end text-xs font-semibold uppercase tracking-wide text-gray-500">{tTbl("balance")}</th>
+                <th className="px-3 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500">{tTbl("dueDate")}</th>
+                <th className="px-3 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500">{tTbl("actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
               {invoices.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="py-12 text-center text-sm text-gray-500">
-                    No invoices found matching your criteria.
+                    {tTbl("empty")}
                   </td>
                 </tr>
               ) : (
@@ -336,10 +354,10 @@ export default async function InvoicesPage({
                   return (
                     <tr key={inv.id} className={`transition-colors ${rowClass}`}>
                       {/* Invoice # */}
-                      <td className="whitespace-nowrap py-3.5 pl-4 pr-3 text-sm sm:pl-6">
+                      <td className="whitespace-nowrap py-3.5 ps-4 pe-3 text-sm sm:ps-6">
                         <Link
                           href={`/dashboard/invoices/${inv.id}`}
-                          className="font-mono font-semibold text-indigo-600 hover:text-indigo-900"
+                          className="font-mono font-semibold text-indigo-600 hover:text-indigo-900 ltr-numbers"
                         >
                           {inv.invoiceNumber}
                         </Link>
@@ -347,7 +365,7 @@ export default async function InvoicesPage({
 
                       {/* Status */}
                       <td className="whitespace-nowrap px-3 py-3.5 text-sm">
-                        {getStatusBadge(inv.status, inv.dueDate)}
+                        <StatusBadge status={inv.status} dueDate={inv.dueDate} t={tStatus} />
                       </td>
 
                       {/* Tenant */}
@@ -355,7 +373,7 @@ export default async function InvoicesPage({
                         <div className="font-medium text-gray-900">
                           {inv.tenant.firstName} {inv.tenant.lastName}
                         </div>
-                        <div className="text-xs text-gray-400">{inv.tenant.phone}</div>
+                        <div className="text-xs text-gray-400 ltr-numbers">{inv.tenant.phone}</div>
                       </td>
 
                       {/* Reservation */}
@@ -363,7 +381,7 @@ export default async function InvoicesPage({
                         {inv.reservation.reservationNumber ? (
                           <Link
                             href={`/dashboard/reservations/${inv.reservationId}`}
-                            className="text-xs text-blue-600 hover:underline font-mono"
+                            className="text-xs text-blue-600 hover:underline font-mono ltr-numbers"
                           >
                             {inv.reservation.reservationNumber}
                           </Link>
@@ -373,29 +391,29 @@ export default async function InvoicesPage({
                       </td>
 
                       {/* Period */}
-                      <td className="whitespace-nowrap px-3 py-3.5 text-xs text-gray-500">
-                        {format(new Date(inv.periodStart), "d MMM")} –{" "}
-                        {format(new Date(inv.periodEnd), "d MMM yyyy")}
+                      <td className="whitespace-nowrap px-3 py-3.5 text-xs text-gray-500 ltr-numbers">
+                        {fmtDate(inv.periodStart, "d MMM")} –{" "}
+                        {fmtDate(inv.periodEnd)}
                       </td>
 
                       {/* Total */}
-                      <td className="whitespace-nowrap px-3 py-3.5 text-sm text-right font-semibold text-gray-900">
+                      <td className="whitespace-nowrap px-3 py-3.5 text-sm text-end font-semibold text-gray-900 ltr-numbers">
                         {Number(inv.totalAmount).toFixed(3)} OMR
                       </td>
 
                       {/* Paid */}
-                      <td className="whitespace-nowrap px-3 py-3.5 text-sm text-right text-green-600 font-medium">
+                      <td className="whitespace-nowrap px-3 py-3.5 text-sm text-end text-green-600 font-medium ltr-numbers">
                         {Number(inv.amountPaid).toFixed(3)} OMR
                       </td>
 
                       {/* Balance */}
-                      <td className={`whitespace-nowrap px-3 py-3.5 text-sm text-right font-semibold ${balanceDue > 0 ? "text-red-600" : "text-gray-400"}`}>
+                      <td className={`whitespace-nowrap px-3 py-3.5 text-sm text-end font-semibold ltr-numbers ${balanceDue > 0 ? "text-red-600" : "text-gray-400"}`}>
                         {balanceDue.toFixed(3)} OMR
                       </td>
 
                       {/* Due Date */}
-                      <td className={`whitespace-nowrap px-3 py-3.5 text-xs ${overdue ? "text-red-600 font-semibold" : "text-gray-500"}`}>
-                        {format(new Date(inv.dueDate), "d MMM yyyy")}
+                      <td className={`whitespace-nowrap px-3 py-3.5 text-xs ltr-numbers ${overdue ? "text-red-600 font-semibold" : "text-gray-500"}`}>
+                        {fmtDate(inv.dueDate)}
                       </td>
 
                       {/* Actions */}
@@ -407,7 +425,7 @@ export default async function InvoicesPage({
                               className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 ring-1 ring-inset ring-indigo-700/20 transition-colors"
                             >
                               <CreditCardIcon className="h-3 w-3" />
-                              Pay
+                              {tRow("pay")}
                             </Link>
                           )}
                           {inv.status === "DRAFT" && (
@@ -415,7 +433,7 @@ export default async function InvoicesPage({
                               href={`/dashboard/invoices/${inv.id}`}
                               className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 hover:bg-amber-100 ring-1 ring-inset ring-amber-600/20 transition-colors"
                             >
-                              Issue
+                              {tRow("issue")}
                             </Link>
                           )}
                           {inv.status !== "CANCELLED" && inv.status !== "DRAFT" && (
@@ -424,7 +442,7 @@ export default async function InvoicesPage({
                               className="inline-flex items-center gap-1 rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 ring-1 ring-inset ring-gray-500/20 transition-colors"
                             >
                               <PrinterIcon className="h-3 w-3" />
-                              Print
+                              {tRow("print")}
                             </Link>
                           )}
                           {inv.status === "CANCELLED" && (
@@ -433,7 +451,7 @@ export default async function InvoicesPage({
                               className="inline-flex items-center gap-1 rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-500 hover:bg-gray-100 ring-1 ring-inset ring-gray-400/20 transition-colors"
                             >
                               <EyeIcon className="h-3 w-3" />
-                              View
+                              {tRow("view")}
                             </Link>
                           )}
                         </div>
@@ -450,7 +468,11 @@ export default async function InvoicesPage({
         {totalPages > 1 && (
           <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3 sm:px-6">
             <p className="text-sm text-gray-500">
-              Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, total)} of {total}
+              {tPag("showing", {
+                start: (page - 1) * PAGE_SIZE + 1,
+                end: Math.min(page * PAGE_SIZE, total),
+                total,
+              })}
             </p>
             <div className="flex gap-1">
               {page > 1 && (
@@ -458,7 +480,7 @@ export default async function InvoicesPage({
                   href={pageUrl(page - 1)}
                   className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
-                  Previous
+                  {tPag("previous")}
                 </Link>
               )}
               {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
@@ -467,7 +489,7 @@ export default async function InvoicesPage({
                   <Link
                     key={p}
                     href={pageUrl(p)}
-                    className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    className={`rounded-md border px-3 py-1.5 text-sm font-medium transition-colors ltr-numbers ${
                       p === page
                         ? "border-indigo-500 bg-indigo-50 text-indigo-700"
                         : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
@@ -482,7 +504,7 @@ export default async function InvoicesPage({
                   href={pageUrl(page + 1)}
                   className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
-                  Next
+                  {tPag("next")}
                 </Link>
               )}
             </div>

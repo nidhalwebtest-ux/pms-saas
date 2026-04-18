@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/FormComponents";
 import CustomerPaymentForm from "@/components/dashboard/CustomerPaymentForm";
 import { prisma } from "@/lib/prisma";
@@ -39,11 +40,13 @@ export default async function EditPaymentPage({
     amount: Number(payment.amount), // Convert Decimal to Number
   };
 
+  const t = await getTranslations("payments.edit");
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <PageHeader
-        title="Edit Payment Metadata"
-        description="Update dates, notes, or references. Amount and Tenant are locked for accounting integrity."
+        title={t("title")}
+        description={t("description")}
         listHref="/dashboard/payments"
       />
 

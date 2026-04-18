@@ -3,6 +3,9 @@
 import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations, useLocale } from "next-intl";
+import { format } from "date-fns";
+import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import SearchableSelect, {
   SelectOption,
 } from "@/components/ui/SearchableSelect";
@@ -20,7 +23,6 @@ import {
 import {
   BanknotesIcon,
   DocumentTextIcon,
-  CalendarDaysIcon,
   UserIcon,
 } from "@heroicons/react/24/outline";
 import TenantForm from "@/components/dashboard/TenantForm";
@@ -43,6 +45,10 @@ interface Props {
 export default function CustomerPaymentForm({ tenants, initialData }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const t       = useTranslations("payments.edit");
+  const tMethod = useTranslations("payments.methods");
+  const locale  = useLocale();
+  const dfLoc   = locale === "ar" ? arLocale : enLocale;
 
   const isEditMode = !!initialData;
 
@@ -105,7 +111,7 @@ export default function CustomerPaymentForm({ tenants, initialData }: Props) {
     const formData = new FormData(e.currentTarget);
 
     if (!isEditMode) {
-      if (!selectedTenant?.id) return toast.error("Please select a tenant.");
+      if (!selectedTenant?.id) return toast.error(t("selectTenant"));
       formData.append("tenantId", String(selectedTenant.id));
       formData.append("selectedInvoices", selectedInvoiceIds.join(","));
     }
@@ -119,9 +125,7 @@ export default function CustomerPaymentForm({ tenants, initialData }: Props) {
         toast.error(result.error);
       } else {
         toast.success(
-          isEditMode
-            ? "Payment record updated!"
-            : "Payment successfully recorded!",
+          isEditMode ? t("updated") : t("recorded"),
         );
         setTimeout(() => {
           router.push(`/dashboard/payments/${result?.id || initialData?.id}`);
@@ -139,13 +143,13 @@ export default function CustomerPaymentForm({ tenants, initialData }: Props) {
           {/* Row 1: Primary Info (3 Columns) */}
           <div className="col-span-full mb-2 border-b border-gray-100 pb-2">
             <h3 className="text-sm font-medium text-gray-500 flex items-center gap-2">
-              <UserIcon className="h-4 w-4" /> Payment Details
+              <UserIcon className="h-4 w-4" /> {t("paymentDetails")}
             </h3>
           </div>
 
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium leading-6 text-gray-900 mb-2">
-              Customer / Tenant
+              {t("customer")}
             </label>
             {isEditMode ? (
               <div className="block w-full rounded-md border-0 py-1.5 px-3 bg-gray-50 text-gray-500 ring-1 ring-inset ring-gray-300 sm:text-sm sm:leading-6">
@@ -157,7 +161,7 @@ export default function CustomerPaymentForm({ tenants, initialData }: Props) {
                 options={tenantOptions}
                 value={selectedTenant}
                 onChange={setSelectedTenant}
-                onAdd={() => setIsTenantModalOpen(true)} // <-- 1. ADD THIS PROP
+                onAdd={() => setIsTenantModalOpen(true)}
               />
             )}
           </div>
@@ -165,7 +169,7 @@ export default function CustomerPaymentForm({ tenants, initialData }: Props) {
           <FormInput
             name="amount"
             id="amount"
-            label="Payment Amount"
+            label={t("amount")}
             type="number"
             step="0.001"
             required
@@ -180,28 +184,28 @@ export default function CustomerPaymentForm({ tenants, initialData }: Props) {
 
           <FormSelect
             name="method"
-            label="Payment Method"
+            label={t("method")}
             colSpan="sm:col-span-2"
             disabled={isEditMode} // Locked in edit mode
             defaultValue={initialData?.method || "BANK_TRANSFER"}
             options={[
-              { label: "Bank Transfer", value: "BANK_TRANSFER" },
-              { label: "Cash", value: "CASH" },
-              { label: "Credit Card / POS", value: "CARD" },
-              { label: "Cheque", value: "CHEQUE" },
+              { label: tMethod("BANK_TRANSFER"), value: "BANK_TRANSFER" },
+              { label: tMethod("CASH"),          value: "CASH" },
+              { label: tMethod("CARD_CREDIT"),   value: "CARD" },
+              { label: tMethod("CHEQUE"),        value: "CHEQUE" },
             ]}
           />
 
           {/* Row 2: Metadata (3 Columns) */}
           <div className="col-span-full pt-4 mt-2 border-t border-gray-100">
             <h3 className="text-sm font-medium text-gray-500 mb-4 flex items-center gap-2">
-              <DocumentTextIcon className="h-4 w-4" /> Reference & Dates
+              <DocumentTextIcon className="h-4 w-4" /> {t("referenceDates")}
             </h3>
           </div>
 
           <FormInput
             name="date"
-            label="Payment Date"
+            label={t("date")}
             type="date"
             required
             defaultValue={
@@ -214,22 +218,22 @@ export default function CustomerPaymentForm({ tenants, initialData }: Props) {
 
           <FormInput
             name="reference"
-            label="Reference / Cheque No."
-            placeholder="e.g. TRN-998123"
+            label={t("referenceCheque")}
+            placeholder={t("referencePlaceholder")}
             defaultValue={initialData?.reference || ""}
             colSpan="sm:col-span-2"
           />
 
           <div className="sm:col-span-2">
             <label className="block text-sm font-medium leading-6 text-gray-900 mb-2">
-              Memo / Notes
+              {t("memo")}
             </label>
             <input
               type="text"
               name="notes"
               defaultValue={initialData?.notes || ""}
               className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
-              placeholder="Optional notes..."
+              placeholder={t("memoPlaceholder")}
             />
           </div>
 
@@ -237,19 +241,17 @@ export default function CustomerPaymentForm({ tenants, initialData }: Props) {
           {!isEditMode && selectedTenant && (
             <div className="col-span-full pt-6 mt-4 border-t border-gray-100">
               <h3 className="text-sm font-medium text-gray-500 mb-4 flex items-center gap-2">
-                <BanknotesIcon className="h-4 w-4" /> Open Invoices to Apply
-                Against
+                <BanknotesIcon className="h-4 w-4" /> {t("openInvoices")}
               </h3>
 
               <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
                 {isLoadingInvoices ? (
                   <div className="p-8 text-center text-sm text-gray-500 animate-pulse">
-                    Checking ledgers...
+                    {t("checkingLedgers")}
                   </div>
                 ) : openInvoices.length === 0 ? (
                   <div className="p-8 text-center text-sm text-gray-500">
-                    No open invoices found. This will be recorded as an
-                    unapplied credit.
+                    {t("noOpenInvoicesCredit")}
                   </div>
                 ) : (
                   <table className="min-w-full divide-y divide-gray-200">
@@ -257,27 +259,27 @@ export default function CustomerPaymentForm({ tenants, initialData }: Props) {
                       <tr>
                         <th
                           scope="col"
-                          className="px-4 py-3 text-left text-xs font-semibold text-gray-900 w-12"
+                          className="px-4 py-3 text-start text-xs font-semibold text-gray-900 w-12"
                         >
-                          Apply
+                          {t("apply")}
                         </th>
                         <th
                           scope="col"
-                          className="px-4 py-3 text-left text-xs font-semibold text-gray-900"
+                          className="px-4 py-3 text-start text-xs font-semibold text-gray-900"
                         >
-                          Invoice No.
+                          {t("invoiceNo")}
                         </th>
                         <th
                           scope="col"
-                          className="px-4 py-3 text-left text-xs font-semibold text-gray-900"
+                          className="px-4 py-3 text-start text-xs font-semibold text-gray-900"
                         >
-                          Due Date
+                          {t("dueDate")}
                         </th>
                         <th
                           scope="col"
-                          className="px-4 py-3 text-right text-xs font-semibold text-gray-900"
+                          className="px-4 py-3 text-end text-xs font-semibold text-gray-900"
                         >
-                          Amount Due
+                          {t("amountDue")}
                         </th>
                       </tr>
                     </thead>
@@ -295,13 +297,13 @@ export default function CustomerPaymentForm({ tenants, initialData }: Props) {
                               className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600 cursor-pointer"
                             />
                           </td>
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                          <td className="px-4 py-3 text-sm font-medium text-gray-900 ltr-numbers">
                             {inv.invoiceNumber || `INV-${inv.id.slice(0, 6)}`}
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-500">
-                            {new Date(inv.dueDate).toLocaleDateString()}
+                          <td className="px-4 py-3 text-sm text-gray-500 ltr-numbers">
+                            {format(new Date(inv.dueDate), "dd/MM/yyyy", { locale: dfLoc })}
                           </td>
-                          <td className="px-4 py-3 text-sm font-bold text-gray-900 text-right">
+                          <td className="px-4 py-3 text-sm font-bold text-gray-900 text-end ltr-numbers">
                             {inv.amount.toFixed(3)} OMR
                           </td>
                         </tr>
@@ -316,7 +318,7 @@ export default function CustomerPaymentForm({ tenants, initialData }: Props) {
 
         <FormActions
           cancelHref="/dashboard/payments"
-          submitLabel={isEditMode ? "Update Payment Record" : "Record Payment"}
+          submitLabel={isEditMode ? t("updateBtn") : t("recordBtn")}
           isPending={isPending}
         />
       </form>
@@ -325,7 +327,7 @@ export default function CustomerPaymentForm({ tenants, initialData }: Props) {
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative animate-in zoom-in duration-200">
             <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center z-10">
               <h2 className="text-lg font-bold text-gray-900">
-                Add Quick Tenant
+                {t("addQuickTenant")}
               </h2>
               <button
                 onClick={() => setIsTenantModalOpen(false)}
@@ -342,9 +344,9 @@ export default function CustomerPaymentForm({ tenants, initialData }: Props) {
                     id: newTenant.id,
                     name: `${newTenant.firstName} ${newTenant.lastName}`,
                   };
-                  setTenantOptions((prev) => [...prev, newOption]); // Add to dropdown list
-                  setSelectedTenant(newOption); // Auto-select it
-                  setIsTenantModalOpen(false); // Close the modal
+                  setTenantOptions((prev) => [...prev, newOption]);
+                  setSelectedTenant(newOption);
+                  setIsTenantModalOpen(false);
                 }}
               />
             </div>

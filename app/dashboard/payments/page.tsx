@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations, getLocale } from "next-intl/server";
+import { format } from "date-fns";
+import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
@@ -23,16 +26,13 @@ function methodBadge(method: string) {
   return map[method] ?? "bg-gray-100 text-gray-600";
 }
 
-function methodLabel(method: string) {
-  const map: Record<string, string> = {
-    CASH: "Cash",
-    CARD: "Card",
-    BANK_TRANSFER: "Bank Transfer",
-    CHEQUE: "Cheque",
-    ONLINE: "Online",
-    OTHER: "Other",
-  };
-  return map[method] ?? method;
+type MethodT = (key: string) => string;
+function methodLabel(method: string, t: MethodT) {
+  try {
+    return t(method);
+  } catch {
+    return method;
+  }
 }
 
 function startOfDay(d: Date) {
@@ -69,6 +69,17 @@ export default async function PaymentsListPage({
   if (!dbUser?.organizationId) redirect("/login");
 
   const orgId = dbUser.organizationId;
+
+  const locale  = await getLocale();
+  const dfLoc   = locale === "ar" ? arLocale : enLocale;
+  const t       = await getTranslations("payments");
+  const tList   = await getTranslations("payments.list");
+  const tTabs   = await getTranslations("payments.tabs");
+  const tTbl    = await getTranslations("payments.table");
+  const tMethod = await getTranslations("payments.methods");
+
+  const fmtDate = (d: Date) =>
+    format(new Date(d), "d MMM yyyy", { locale: dfLoc });
 
   // ── Date range for period filter ──────────────────────────────────────────
   const now   = new Date();
@@ -147,10 +158,10 @@ export default async function PaymentsListPage({
   }
 
   const tabs = [
-    { key: "all",   label: "All",        count: allCount   },
-    { key: "today", label: "Today",      count: todayCount },
-    { key: "week",  label: "This Week",  count: weekCount  },
-    { key: "month", label: "This Month", count: monthCount },
+    { key: "all",   label: tTabs("all"),   count: allCount   },
+    { key: "today", label: tTabs("today"), count: todayCount },
+    { key: "week",  label: tTabs("week"),  count: weekCount  },
+    { key: "month", label: tTabs("month"), count: monthCount },
   ];
 
   return (
@@ -163,10 +174,12 @@ export default async function PaymentsListPage({
             <BanknotesIcon className="h-6 w-6 text-green-700" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Payments & Receipts</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t("titleFull")}</h1>
             <p className="mt-0.5 text-sm text-gray-500">
-              {payments.length} records — Total:{" "}
-              <span className="font-bold text-green-700">{totals.all.toFixed(3)} OMR</span>
+              {tList("summary", {
+                count: payments.length,
+                total: totals.all.toFixed(3),
+              })}
             </p>
           </div>
         </div>
@@ -174,13 +187,13 @@ export default async function PaymentsListPage({
           href="/dashboard/payments/new"
           className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
         >
-          + Record Payment
+          {t("newPayment")}
         </Link>
       </div>
 
       {/* ── Quick-filter tabs ── */}
       <div className="border-b border-gray-200 mb-4">
-        <nav className="-mb-px flex space-x-6">
+        <nav className="-mb-px flex gap-x-6">
           {tabs.map((tab) => (
             <Link
               key={tab.key}
@@ -192,7 +205,7 @@ export default async function PaymentsListPage({
               }`}
             >
               {tab.label}
-              <span className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+              <span className={`ms-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ltr-numbers ${
                 period === tab.key ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
               }`}>
                 {tab.count}
@@ -206,13 +219,13 @@ export default async function PaymentsListPage({
       <form method="GET" action="/dashboard/payments" className="flex flex-wrap gap-3 mb-4">
         <input type="hidden" name="period" value={period} />
         <div className="relative flex-1 min-w-[200px]">
-          <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <MagnifyingGlassIcon className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
           <input
             type="text"
             name="q"
             defaultValue={q}
-            placeholder="Search tenant, receipt #, reference…"
-            className="block w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder={tList("searchPlaceholder")}
+            className="block w-full rounded-md border border-gray-300 ps-9 pe-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
         <select
@@ -220,24 +233,24 @@ export default async function PaymentsListPage({
           defaultValue={method}
           className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="">All Methods</option>
-          <option value="CASH">Cash</option>
-          <option value="CARD">Card</option>
-          <option value="BANK_TRANSFER">Bank Transfer</option>
-          <option value="CHEQUE">Cheque</option>
+          <option value="">{tList("allMethods")}</option>
+          <option value="CASH">{tMethod("CASH")}</option>
+          <option value="CARD">{tMethod("CARD")}</option>
+          <option value="BANK_TRANSFER">{tMethod("BANK_TRANSFER")}</option>
+          <option value="CHEQUE">{tMethod("CHEQUE")}</option>
         </select>
         <button
           type="submit"
           className="rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
         >
-          Search
+          {tList("search")}
         </button>
         {(q || method) && (
           <Link
             href={`/dashboard/payments?period=${period}`}
             className="rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
           >
-            Clear
+            {tList("clear")}
           </Link>
         )}
       </form>
@@ -248,22 +261,22 @@ export default async function PaymentsListPage({
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="py-3 pl-4 pr-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Receipt #</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Date</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Tenant</th>
-                <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">Amount</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Method</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Reference</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Applied To</th>
-                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide">Received By</th>
-                <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wide">Actions</th>
+                <th className="py-3 ps-4 pe-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTbl("receiptNumber")}</th>
+                <th className="px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTbl("date")}</th>
+                <th className="px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTbl("tenant")}</th>
+                <th className="px-3 py-3 text-end text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTbl("amount")}</th>
+                <th className="px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTbl("method")}</th>
+                <th className="px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTbl("reference")}</th>
+                <th className="px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTbl("appliedTo")}</th>
+                <th className="px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTbl("receivedBy")}</th>
+                <th className="px-3 py-3 text-end text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTbl("actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
               {payments.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="py-12 text-center text-sm text-gray-400">
-                    No payments found.
+                    {tList("empty")}
                   </td>
                 </tr>
               ) : (
@@ -273,46 +286,48 @@ export default async function PaymentsListPage({
 
                   return (
                     <tr key={payment.id} className="hover:bg-blue-50 transition-colors">
-                      <td className="whitespace-nowrap py-3 pl-4 pr-3 text-sm font-mono text-gray-700 font-semibold">
+                      <td className="whitespace-nowrap py-3 ps-4 pe-3 text-sm font-mono text-gray-700 font-semibold ltr-numbers">
                         <Link href={`/dashboard/payments/${payment.id}`} className="text-blue-600 hover:underline">
                           {receiptNum}
                         </Link>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-600">
-                        {new Date(payment.date).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-600 ltr-numbers">
+                        {fmtDate(payment.date)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm">
                         <Link href={`/dashboard/tenants/${payment.tenant.id}`} className="font-medium text-blue-600 hover:underline">
                           {payment.tenant.firstName} {payment.tenant.lastName}
                         </Link>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-sm text-right font-bold text-green-700">
+                      <td className="whitespace-nowrap px-3 py-3 text-sm text-end font-bold text-green-700 ltr-numbers">
                         {Number(payment.amount).toFixed(3)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm">
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${methodBadge(payment.method)}`}>
-                          {methodLabel(payment.method)}
+                          {methodLabel(payment.method, tMethod)}
                         </span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
                         {payment.reference || "—"}
                       </td>
                       <td className="px-3 py-3 text-sm text-gray-500 max-w-[180px] truncate">
-                        {appliedTo || <span className="italic text-gray-400">Unapplied</span>}
+                        {appliedTo
+                          ? <span className="ltr-numbers">{appliedTo}</span>
+                          : <span className="italic text-gray-400">{tList("unapplied")}</span>}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
                         {payment.receivedBy
                           ? `${payment.receivedBy.firstName ?? ""} ${payment.receivedBy.lastName ?? ""}`.trim()
                           : "—"}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-sm text-right">
+                      <td className="whitespace-nowrap px-3 py-3 text-sm text-end">
                         <div className="flex items-center justify-end gap-2">
-                          <PrintReceiptButton paymentId={payment.id} />
+                          <PrintReceiptButton paymentId={payment.id} label={tList("print")} />
                           <Link
                             href={`/dashboard/payments/${payment.id}`}
                             className="inline-flex items-center rounded px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200"
                           >
-                            View
+                            {tList("view")}
                           </Link>
                         </div>
                       </td>
@@ -324,18 +339,18 @@ export default async function PaymentsListPage({
             {payments.length > 0 && (
               <tfoot className="bg-gray-50 border-t-2 border-gray-200">
                 <tr>
-                  <td colSpan={3} className="py-3 pl-4 text-sm font-semibold text-gray-700">
-                    Totals ({payments.length} payments)
+                  <td colSpan={3} className="py-3 ps-4 text-sm font-semibold text-gray-700">
+                    {tList("totalsLabel", { count: payments.length })}
                   </td>
-                  <td className="px-3 py-3 text-right text-sm font-bold text-green-700">
+                  <td className="px-3 py-3 text-end text-sm font-bold text-green-700 ltr-numbers">
                     {totals.all.toFixed(3)}
                   </td>
                   <td className="px-3 py-3 text-sm text-gray-500">
                     <div className="flex flex-col gap-0.5 text-xs">
-                      <span className="text-green-700">Cash: {totals.CASH.toFixed(3)}</span>
-                      <span className="text-blue-700">Card: {totals.CARD.toFixed(3)}</span>
-                      <span className="text-purple-700">Bank: {totals.BANK_TRANSFER.toFixed(3)}</span>
-                      <span className="text-orange-700">Cheque: {totals.CHEQUE.toFixed(3)}</span>
+                      <span className="text-green-700 ltr-numbers">{tList("cashTotal", { total: totals.CASH.toFixed(3) })}</span>
+                      <span className="text-blue-700 ltr-numbers">{tList("cardTotal", { total: totals.CARD.toFixed(3) })}</span>
+                      <span className="text-purple-700 ltr-numbers">{tList("bankTotal", { total: totals.BANK_TRANSFER.toFixed(3) })}</span>
+                      <span className="text-orange-700 ltr-numbers">{tList("chequeTotal", { total: totals.CHEQUE.toFixed(3) })}</span>
                     </div>
                   </td>
                   <td colSpan={4} />
@@ -351,7 +366,7 @@ export default async function PaymentsListPage({
 
 // ── Client-side print button (inline to avoid extra file) ─────────────────────
 // Note: This is a server component page, so we use a simple link trick for print.
-function PrintReceiptButton({ paymentId }: { paymentId: string }) {
+function PrintReceiptButton({ paymentId, label }: { paymentId: string; label: string }) {
   return (
     <a
       href={`/api/payments/${paymentId}/receipt-pdf`}
@@ -360,7 +375,7 @@ function PrintReceiptButton({ paymentId }: { paymentId: string }) {
       className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100"
     >
       <PrinterIcon className="h-3 w-3" />
-      Print
+      {label}
     </a>
   );
 }

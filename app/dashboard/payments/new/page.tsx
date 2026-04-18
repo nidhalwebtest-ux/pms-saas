@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import SmartPaymentForm from "./SmartPaymentForm";
@@ -17,6 +18,8 @@ export default async function NewPaymentPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const t = await getTranslations("payments.newPage");
+
   return (
     <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6">
       {/* Back nav */}
@@ -25,14 +28,14 @@ export default async function NewPaymentPage({
           href="/dashboard/payments"
           className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800"
         >
-          <ArrowLeftIcon className="h-4 w-4" /> Back to Payments
+          <ArrowLeftIcon className="h-4 w-4 rtl:rotate-180" /> {t("back")}
         </Link>
       </div>
 
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Record Payment</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Search for a tenant and select invoices to pay, or pay a specific invoice.
+          {t("description")}
         </p>
       </div>
 

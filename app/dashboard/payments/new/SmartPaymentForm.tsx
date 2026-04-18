@@ -4,8 +4,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Combobox } from "@headlessui/react";
+import { useTranslations, useLocale } from "next-intl";
+import { format } from "date-fns";
+import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import {
-  MagnifyingGlassIcon,
   UserCircleIcon,
   DocumentTextIcon,
   BanknotesIcon,
@@ -58,13 +60,6 @@ function roundOMR(n: number) {
   return Math.round(n * 1000) / 1000;
 }
 
-function fmtPeriod(start: string | null, end: string | null) {
-  if (!start || !end) return "";
-  const s = new Date(start).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-  const e = new Date(end).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-  return `${s} – ${e}`;
-}
-
 function isOverdue(inv: Invoice): boolean {
   return (
     (inv.status === "PENDING" || inv.status === "PARTIALLY_PAID" || inv.status === "DUE" || inv.status === "ISSUED") &&
@@ -98,10 +93,25 @@ function computeAllocations(invoices: Invoice[], amount: number): AllocationPrev
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoiceId }: Props) {
-  const router = useRouter();
+  const router  = useRouter();
+  const locale  = useLocale();
+  const dfLoc   = locale === "ar" ? arLocale : enLocale;
+  const tForm   = useTranslations("payments.form");
+  const tMethod = useTranslations("payments.methods");
+  const tErr    = useTranslations("payments.form.errors");
+
+  const fmtPeriod = (start: string | null, end: string | null) => {
+    if (!start || !end) return "";
+    const s = format(new Date(start), "d MMM", { locale: dfLoc });
+    const e = format(new Date(end), "d MMM yyyy", { locale: dfLoc });
+    return `${s} – ${e}`;
+  };
+
+  const fmtDateShort = (d: string) =>
+    format(new Date(d), "dd/MM/yyyy", { locale: dfLoc });
 
   // ── State ─────────────────────────────────────────────────────────────────
-  const [mode, setMode]                   = useState<"tenant" | "invoice">(preselectedInvoiceId ? "invoice" : "tenant");
+  const [mode]                            = useState<"tenant" | "invoice">(preselectedInvoiceId ? "invoice" : "tenant");
 
   // Tenant search (Combobox)
   const [tenantQuery, setTenantQuery]     = useState("");
@@ -183,11 +193,11 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
       // Pre-check all
       setSelectedInvoiceIds(new Set(invs.map((i) => i.id)));
     } catch {
-      toast.error("Failed to load invoices");
+      toast.error(tErr("loadInvoices"));
     } finally {
       setLoadingInvoices(false);
     }
-  }, []);
+  }, [tErr]);
 
   useEffect(() => {
     if (selectedTenant) loadInvoices(selectedTenant.id);
@@ -240,15 +250,15 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
     if (submitting) return;
 
     if (mode === "tenant" && !selectedTenant) {
-      toast.error("Please select a tenant");
+      toast.error(tErr("selectTenant"));
       return;
     }
     if (!amount || numAmount <= 0) {
-      toast.error("Please enter a valid amount");
+      toast.error(tErr("validAmount"));
       return;
     }
     if ((paymentMethod === "CARD" || paymentMethod === "BANK_TRANSFER" || paymentMethod === "CHEQUE") && !reference) {
-      toast.error("Reference is required for this payment method");
+      toast.error(tErr("referenceRequired"));
       return;
     }
 
@@ -257,20 +267,18 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
     if (mode === "tenant") {
       effectiveTenantId = selectedTenant!.id;
     } else if (mode === "invoice" && preInvoice) {
-      // Fetch tenantId from invoice details (already loaded in preInvoice via API)
-      // The invoice API returns tenantId; if not available, we retrieve it here
       try {
         const res  = await fetch(`/api/invoices/${preInvoice.id}`);
         const data = await res.json();
         effectiveTenantId = data.invoice?.tenantId ?? data.tenantId;
       } catch {
-        toast.error("Failed to resolve tenant for this invoice");
+        toast.error(tErr("resolveTenant"));
         return;
       }
     }
 
     if (!effectiveTenantId) {
-      toast.error("Could not resolve tenant. Please try again.");
+      toast.error(tErr("couldNotResolve"));
       return;
     }
 
@@ -303,17 +311,17 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Failed to record payment");
+        toast.error(data.error ?? tErr("recordFailed"));
         return;
       }
       const payId = data.payment?.id ?? data.id;
-      toast.success("Payment recorded successfully");
+      toast.success(tErr("recorded"));
       if (printAfter && payId) {
         window.open(`/api/payments/${payId}/receipt-pdf`, "_blank");
       }
       router.push(payId ? `/dashboard/payments/${payId}` : "/dashboard/payments");
     } catch {
-      toast.error("Network error");
+      toast.error(tErr("networkError"));
     } finally {
       setSubmitting(false);
     }
@@ -321,6 +329,10 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
 
   // ── Render helpers ────────────────────────────────────────────────────────
   const needsReference = paymentMethod !== "CASH";
+  const referencePlaceholder =
+    paymentMethod === "CHEQUE" ? tForm("referenceCheque")
+    : paymentMethod === "CARD" ? tForm("referenceCard")
+    : tForm("referenceGeneric");
 
   return (
     <div className="space-y-6">
@@ -330,17 +342,17 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
         <div className="bg-white rounded-lg shadow-sm ring-1 ring-gray-200 overflow-hidden">
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
             <DocumentTextIcon className="h-4 w-4 text-gray-400" />
-            <h2 className="text-sm font-semibold text-gray-700">Invoice</h2>
+            <h2 className="text-sm font-semibold text-gray-700">{tForm("invoiceCard")}</h2>
           </div>
           <div className="px-4 py-4 flex items-center justify-between flex-wrap gap-3">
             <div>
-              <p className="text-sm font-bold text-gray-900 font-mono">{preInvoice.invoiceNumber}</p>
-              <p className="text-xs text-gray-500">{fmtPeriod(preInvoice.periodStart, preInvoice.periodEnd)}</p>
-              <p className="text-xs text-gray-500">Total: {preInvoice.totalAmount.toFixed(3)} OMR</p>
+              <p className="text-sm font-bold text-gray-900 font-mono ltr-numbers">{preInvoice.invoiceNumber}</p>
+              <p className="text-xs text-gray-500 ltr-numbers">{fmtPeriod(preInvoice.periodStart, preInvoice.periodEnd)}</p>
+              <p className="text-xs text-gray-500 ltr-numbers">{tForm("totalLabel", { total: preInvoice.totalAmount.toFixed(3) })}</p>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-gray-500">Balance Due</p>
-              <p className="text-lg font-bold text-red-600">{preInvoice.balanceDue.toFixed(3)} OMR</p>
+            <div className="text-end">
+              <p className="text-xs text-gray-500">{tForm("balanceDueLabel")}</p>
+              <p className="text-lg font-bold text-red-600 ltr-numbers">{preInvoice.balanceDue.toFixed(3)} OMR</p>
             </div>
           </div>
         </div>
@@ -351,7 +363,7 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
         <div className="bg-white rounded-lg shadow-sm ring-1 ring-gray-200 overflow-hidden">
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
             <UserCircleIcon className="h-4 w-4 text-gray-400" />
-            <h2 className="text-sm font-semibold text-gray-700">Step 1 — Select Tenant</h2>
+            <h2 className="text-sm font-semibold text-gray-700">{tForm("step1Tenant")}</h2>
           </div>
           <div className="px-4 py-4">
             <Combobox
@@ -362,14 +374,14 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
               <div className="relative">
                 <div className="relative">
                   <Combobox.Input
-                    className="w-full rounded-md border-0 bg-white py-2 pl-3 pr-10 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
+                    className="w-full rounded-md border-0 bg-white py-2 ps-3 pe-10 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6"
                     displayValue={(t: TenantResult | null) =>
                       t ? `${t.firstName} ${t.lastName}` : ""
                     }
                     onChange={(e) => onTenantQueryChange(e.target.value)}
-                    placeholder="Search by name or phone…"
+                    placeholder={tForm("tenantSearchPlaceholder")}
                   />
-                  <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
+                  <Combobox.Button className="absolute inset-y-0 end-0 flex items-center pe-2">
                     <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
                   </Combobox.Button>
                 </div>
@@ -381,7 +393,7 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
                         key={t.id}
                         value={t}
                         className={({ active }) =>
-                          `relative cursor-pointer select-none py-2 pl-3 pr-9 ${
+                          `relative cursor-pointer select-none py-2 ps-3 pe-9 ${
                             active ? "bg-blue-600 text-white" : "text-gray-900"
                           }`
                         }
@@ -392,12 +404,12 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
                               <span className={`block truncate ${selected ? "font-semibold" : "font-normal"}`}>
                                 {t.firstName} {t.lastName}
                               </span>
-                              <span className={`text-xs ${active ? "text-blue-200" : "text-gray-500"}`}>
+                              <span className={`text-xs ltr-numbers ${active ? "text-blue-200" : "text-gray-500"}`}>
                                 {t.phone}
                               </span>
                             </div>
                             {selected && (
-                              <span className={`absolute inset-y-0 right-0 flex items-center pr-4 ${active ? "text-white" : "text-blue-600"}`}>
+                              <span className={`absolute inset-y-0 end-0 flex items-center pe-4 ${active ? "text-white" : "text-blue-600"}`}>
                                 <CheckIcon className="h-5 w-5" aria-hidden="true" />
                               </span>
                             )}
@@ -419,7 +431,7 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <DocumentTextIcon className="h-4 w-4 text-gray-400" />
-              <h2 className="text-sm font-semibold text-gray-700">Step 2 — Outstanding Invoices</h2>
+              <h2 className="text-sm font-semibold text-gray-700">{tForm("step2Invoices")}</h2>
             </div>
             {invoices.length > 0 && (
               <label className="flex items-center gap-1.5 text-xs text-gray-600 cursor-pointer">
@@ -432,16 +444,16 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
                   }}
                   className="rounded"
                 />
-                Select All
+                {tForm("selectAll")}
               </label>
             )}
           </div>
           {loadingInvoices ? (
-            <div className="px-4 py-8 text-center text-sm text-gray-400">Loading invoices…</div>
+            <div className="px-4 py-8 text-center text-sm text-gray-400">{tForm("loadingInvoices")}</div>
           ) : invoices.length === 0 ? (
             <div className="px-4 py-8 text-center">
               <CheckCircleIcon className="mx-auto h-8 w-8 text-green-400 mb-2" />
-              <p className="text-sm text-gray-500">No outstanding invoices for this tenant.</p>
+              <p className="text-sm text-gray-500">{tForm("noOutstanding")}</p>
             </div>
           ) : (
             <ul className="divide-y divide-gray-100">
@@ -467,19 +479,19 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-mono font-semibold text-gray-900">{inv.invoiceNumber}</span>
+                        <span className="text-sm font-mono font-semibold text-gray-900 ltr-numbers">{inv.invoiceNumber}</span>
                         {overdue && (
                           <span className="inline-flex items-center gap-0.5 rounded-full bg-red-100 px-1.5 py-0.5 text-xs font-medium text-red-700">
-                            <ExclamationTriangleIcon className="h-3 w-3" /> Overdue
+                            <ExclamationTriangleIcon className="h-3 w-3" /> {tForm("overdue")}
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-500">{fmtPeriod(inv.periodStart, inv.periodEnd)}</p>
-                      <p className="text-xs text-gray-400">Due: {new Date(inv.dueDate).toLocaleDateString("en-GB")}</p>
+                      <p className="text-xs text-gray-500 ltr-numbers">{fmtPeriod(inv.periodStart, inv.periodEnd)}</p>
+                      <p className="text-xs text-gray-400 ltr-numbers">{tForm("dueLabel", { date: fmtDateShort(inv.dueDate) })}</p>
                     </div>
-                    <div className="text-right flex-shrink-0">
-                      <p className="text-sm font-bold text-red-600">{Number(inv.balanceDue).toFixed(3)} OMR</p>
-                      <p className="text-xs text-gray-400">of {Number(inv.totalAmount).toFixed(3)}</p>
+                    <div className="text-end flex-shrink-0">
+                      <p className="text-sm font-bold text-red-600 ltr-numbers">{Number(inv.balanceDue).toFixed(3)} OMR</p>
+                      <p className="text-xs text-gray-400 ltr-numbers">{tForm("ofTotal", { total: Number(inv.totalAmount).toFixed(3) })}</p>
                     </div>
                   </li>
                 );
@@ -495,7 +507,7 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
             <BanknotesIcon className="h-4 w-4 text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-700">
-              {mode === "invoice" ? "Step 2" : "Step 3"} — Payment Details
+              {mode === "invoice" ? tForm("step2Details") : tForm("step3Details")}
             </h2>
           </div>
           <div className="px-4 py-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -503,7 +515,7 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
             {/* Amount */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Amount (OMR) <span className="text-red-500">*</span>
+                {tForm("amountLabel")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -511,26 +523,26 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
                 min="0.001"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.000"
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={tForm("amountPlaceholder")}
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ltr-numbers"
               />
             </div>
 
             {/* Date */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Date</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">{tForm("date")}</label>
               <input
                 type="date"
                 value={paymentDate}
                 onChange={(e) => setPaymentDate(e.target.value)}
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ltr-numbers"
               />
             </div>
 
             {/* Method */}
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-700 mb-2">
-                Payment Method <span className="text-red-500">*</span>
+                {tForm("paymentMethod")} <span className="text-red-500">*</span>
               </label>
               <div className="flex flex-wrap gap-3">
                 {(["CASH", "CARD", "BANK_TRANSFER", "CHEQUE"] as const).map((m) => (
@@ -550,7 +562,7 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
                       onChange={() => setPaymentMethod(m)}
                       className="sr-only"
                     />
-                    {m === "CASH" ? "Cash" : m === "CARD" ? "Card" : m === "BANK_TRANSFER" ? "Bank Transfer" : "Cheque"}
+                    {tMethod(m)}
                   </label>
                 ))}
               </div>
@@ -559,13 +571,13 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
             {/* Reference */}
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1">
-                Reference {needsReference && <span className="text-red-500">*</span>}
+                {tForm("reference")} {needsReference && <span className="text-red-500">*</span>}
               </label>
               <input
                 type="text"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
-                placeholder={paymentMethod === "CHEQUE" ? "Cheque number" : paymentMethod === "CARD" ? "Card last 4 digits" : "Reference number"}
+                placeholder={referencePlaceholder}
                 className={`block w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                   needsReference ? "border-gray-400" : "border-gray-300"
                 }`}
@@ -574,12 +586,12 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
 
             {/* Notes */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">Notes (optional)</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">{tForm("notesOptional")}</label>
               <input
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Internal notes…"
+                placeholder={tForm("notesPlaceholder")}
                 className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
@@ -592,30 +604,30 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
       {allocations.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm ring-1 ring-gray-200 overflow-hidden">
           <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
-            <h2 className="text-sm font-semibold text-gray-700">Payment Distribution Preview</h2>
+            <h2 className="text-sm font-semibold text-gray-700">{tForm("distributionPreview")}</h2>
           </div>
           <div className="px-4 py-3 space-y-2">
-            <p className="text-sm text-gray-600">
-              Payment of <span className="font-bold text-gray-900">{numAmount.toFixed(3)} OMR</span> will be distributed as:
+            <p className="text-sm text-gray-600 ltr-numbers">
+              {tForm("distributionLine", { amount: numAmount.toFixed(3) })}
             </p>
             {allocations.map((a) => (
               <div key={a.invoiceId} className="flex items-center justify-between text-sm py-1.5 border-b border-gray-100 last:border-0">
-                <span className="font-mono text-gray-700">{a.invoiceNumber}</span>
-                <span className="text-gray-500 text-xs">({a.balanceDue.toFixed(3)} due)</span>
-                <span className="font-semibold">→ {a.applied.toFixed(3)} applied</span>
+                <span className="font-mono text-gray-700 ltr-numbers">{a.invoiceNumber}</span>
+                <span className="text-gray-500 text-xs ltr-numbers">{tForm("dueShort", { due: a.balanceDue.toFixed(3) })}</span>
+                <span className="font-semibold ltr-numbers">{tForm("appliedShort", { applied: a.applied.toFixed(3) })}</span>
                 <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
                   a.resultingStatus === "PAID"
                     ? "bg-green-100 text-green-700"
                     : "bg-orange-100 text-orange-700"
                 }`}>
-                  {a.resultingStatus === "PAID" ? "PAID ✓" : `Partial (${a.remaining.toFixed(3)} left)`}
+                  {a.resultingStatus === "PAID" ? tForm("paidStatus") : tForm("partialStatus", { remaining: a.remaining.toFixed(3) })}
                 </span>
               </div>
             ))}
             {overpayment > 0 && (
               <div className="mt-2 flex items-center gap-2 text-sm text-amber-700 bg-amber-50 rounded px-3 py-2 border border-amber-200">
                 <ExclamationTriangleIcon className="h-4 w-4 flex-shrink-0" />
-                Overpayment: {overpayment.toFixed(3)} OMR — will be recorded as unapplied credit
+                {tForm("overpaymentNotice", { amount: overpayment.toFixed(3) })}
               </div>
             )}
           </div>
@@ -630,7 +642,7 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
             onClick={() => router.back()}
             className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            Cancel
+            {tForm("cancel")}
           </button>
           <button
             type="button"
@@ -638,7 +650,7 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
             onClick={() => handleSubmit(false)}
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
           >
-            {submitting ? "Recording…" : "Record Payment"}
+            {submitting ? tForm("recording") : tForm("recordPayment")}
           </button>
           <button
             type="button"
@@ -647,7 +659,7 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
             className="inline-flex items-center gap-2 rounded-md bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 disabled:opacity-50"
           >
             <PrinterIcon className="h-4 w-4" />
-            {submitting ? "Recording…" : "Record & Print Receipt"}
+            {submitting ? tForm("recording") : tForm("recordAndPrint")}
           </button>
         </div>
       )}

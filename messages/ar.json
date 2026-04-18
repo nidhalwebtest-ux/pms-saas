@@ -1700,6 +1700,8 @@
   },
   "expenses": {
     "title": "المصروفات",
+    "subtitle": "تتبع المصروفات التشغيلية واعتمادها ومعالجتها",
+    "categoriesBtn": "التصنيفات",
     "submitExpense": "تقديم مصروف",
     "expenseNumber": "رقم المصروف",
     "category": "التصنيف",
@@ -1713,6 +1715,29 @@
     "process": "معالجة",
     "resubmit": "إعادة التقديم",
     "rejectionReason": "سبب الرفض",
+    "tabs": {
+      "ALL": "الكل",
+      "PENDING": "قيد المراجعة",
+      "APPROVED": "معتمد",
+      "REJECTED": "مرفوض",
+      "PROCESSED": "تمت المعالجة"
+    },
+    "statuses": {
+      "pending": "قيد المراجعة",
+      "approved": "معتمد",
+      "rejected": "مرفوض",
+      "processed": "تمت المعالجة",
+      "PENDING": "قيد المراجعة",
+      "APPROVED": "معتمد",
+      "REJECTED": "مرفوض",
+      "PROCESSED": "تمت المعالجة"
+    },
+    "statusFull": {
+      "PENDING": "بانتظار المراجعة",
+      "APPROVED": "معتمد",
+      "REJECTED": "مرفوض",
+      "PROCESSED": "تمت المعالجة (مدفوع)"
+    },
     "categories": {
       "cleaning": "تنظيف",
       "maintenance": "صيانة وإصلاحات",
@@ -1722,11 +1747,197 @@
       "food": "أغذية ومشروبات",
       "miscellaneous": "متفرقات"
     },
-    "statuses": {
-      "pending": "بانتظار الموافقة",
-      "approved": "موافق عليه",
-      "rejected": "مرفوض",
-      "processed": "تمت المعالجة"
+    "list": {
+      "searchPlaceholder": "ابحث برقم المصروف أو الوصف…",
+      "allBuildings": "كل المباني",
+      "allCategories": "كل التصنيفات",
+      "refresh": "تحديث",
+      "loading": "جاري تحميل المصروفات…",
+      "empty": "لا توجد مصروفات",
+      "emptyHint": "حاول تعديل الفلاتر أو قدّم مصروفاً جديداً",
+      "selected": "{count, plural, =0 {لم يتم تحديد أي مصروف} one {تم تحديد مصروف واحد} two {تم تحديد مصروفين} few {تم تحديد # مصروفات} many {تم تحديد # مصروفاً} other {تم تحديد # مصروف}}",
+      "clearSelection": "مسح",
+      "approveSelected": "اعتماد المحدد",
+      "footerCount": "{count, plural, =0 {لا توجد مصروفات} one {مصروف واحد} two {مصروفان} few {# مصروفات} many {# مصروفاً} other {# مصروف}}",
+      "table": {
+        "expenseNumber": "رقم المصروف",
+        "date": "التاريخ",
+        "category": "التصنيف",
+        "description": "الوصف",
+        "building": "المبنى",
+        "receipt": "الإيصال",
+        "submittedBy": "مقدم من",
+        "amount": "المبلغ",
+        "status": "الحالة",
+        "actions": "إجراءات"
+      },
+      "rowActions": {
+        "approve": "اعتماد",
+        "reject": "رفض",
+        "process": "معالجة",
+        "edit": "تعديل",
+        "delete": "حذف",
+        "view": "عرض",
+        "viewReceipt": "عرض الإيصال"
+      },
+      "toasts": {
+        "loadFailed": "تعذر تحميل المصروفات",
+        "networkError": "خطأ في الشبكة أثناء تحميل المصروفات",
+        "approved": "تم اعتماد المصروف",
+        "approveFailed": "تعذر الاعتماد",
+        "bulkApproved": "{count, plural, =0 {لم يتم اعتماد أي مصروف} one {تم اعتماد مصروف واحد} two {تم اعتماد مصروفين} few {تم اعتماد # مصروفات} many {تم اعتماد # مصروفاً} other {تم اعتماد # مصروف}}",
+        "bulkApproveFailed": "تعذر الاعتماد الجماعي",
+        "deleted": "تم حذف المصروف",
+        "deleteFailed": "تعذر الحذف",
+        "deleteConfirm": "هل تريد حذف هذا المصروف قيد المراجعة؟"
+      }
+    },
+    "detail": {
+      "back": "رجوع",
+      "submittedOn": "مُقدّم في {date}",
+      "amountLabel": "المبلغ",
+      "detailsHeading": "التفاصيل",
+      "descriptionLabel": "الوصف",
+      "buildingLabel": "المبنى",
+      "categoryLabel": "التصنيف",
+      "submittedByLabel": "مقدم من",
+      "submittedAtLabel": "تاريخ التقديم",
+      "notesLabel": "ملاحظات",
+      "receiptHeading": "الإيصال",
+      "receiptHeadingPlural": "الإيصالات",
+      "noReceipt": "لم يتم رفع إيصال",
+      "rejectedLabel": "مرفوض: {reason}",
+      "referenceLabel": "المرجع: {ref}",
+      "workflowHeading": "سير العمل",
+      "byUser": "بواسطة {user}",
+      "timeline": {
+        "submitted": "تم التقديم",
+        "rejected": "مرفوض",
+        "awaitingReview": "بانتظار المراجعة",
+        "approved": "معتمد",
+        "awaitingProcessing": "بانتظار المعالجة",
+        "processed": "تمت المعالجة"
+      },
+      "paymentMethods": {
+        "petty_cash": "مدفوع من الصندوق النثري",
+        "bank_transfer": "تحويل بنكي",
+        "already_paid": "مدفوع مسبقاً (تسجيل فقط)"
+      }
+    },
+    "actionPanel": {
+      "title": "الإجراءات",
+      "approveBtn": "اعتماد المصروف",
+      "rejectBtn": "رفض",
+      "processBtn": "وضع علامة كمُعالج",
+      "deleteBtn": "حذف",
+      "noActions": "لا توجد إجراءات متاحة",
+      "deleteConfirm": "هل تريد حذف هذا المصروف قيد المراجعة؟ لا يمكن التراجع عن هذا الإجراء.",
+      "deleted": "تم حذف المصروف",
+      "deleteFailed": "تعذر الحذف",
+      "approved": "تم اعتماد المصروف",
+      "approveFailed": "تعذر الاعتماد"
+    },
+    "submit": {
+      "title": "تقديم مصروف",
+      "subtitle": "قدّم مصروفاً جديداً للاعتماد",
+      "setupTitle": "إعداد مطلوب",
+      "setupHint": "تحتاج إلى إضافة مبنى قبل أن تتمكن من تقديم المصروفات.",
+      "buildingHeading": "المبنى",
+      "buildingPlaceholder": "اختر مبنى…",
+      "categoryHeading": "التصنيف",
+      "categoryEmpty": "لا توجد تصنيفات متاحة.",
+      "detailsHeading": "التفاصيل",
+      "amountLabel": "المبلغ",
+      "amountPlaceholder": "0.000",
+      "descriptionLabel": "الوصف",
+      "descriptionPlaceholder": "مثال: مستلزمات تنظيف للطابق الثالث",
+      "notesLabel": "ملاحظات",
+      "notesOptional": "(اختياري)",
+      "notesPlaceholder": "سياق إضافي للمدير…",
+      "receiptHeading": "صورة الإيصال",
+      "receiptCount": "{count}/{max}",
+      "takePhoto": "التقاط صورة",
+      "uploadFile": "رفع ملف",
+      "uploading": "جاري الرفع…",
+      "fileTypesHint": "JPG أو PNG أو PDF. الحد الأقصى 5 ميجابايت.",
+      "atLeastOne": "مطلوب صورة واحدة على الأقل.",
+      "cancel": "إلغاء",
+      "submitAndAnother": "تقديم وإضافة آخر",
+      "submitBtn": "تقديم المصروف",
+      "submitting": "جاري التقديم…",
+      "errors": {
+        "buildingRequired": "المبنى مطلوب",
+        "categoryRequired": "يرجى اختيار التصنيف",
+        "descriptionRequired": "الوصف مطلوب",
+        "amountInvalid": "يجب أن يكون المبلغ رقماً موجباً",
+        "amountPositive": "يجب أن يكون المبلغ موجباً",
+        "receiptRequired": "مطلوب صورة إيصال واحدة على الأقل",
+        "receiptRequiredShort": "صورة الإيصال مطلوبة",
+        "maxReceipts": "حد أقصى صورتي إيصال",
+        "fileTooLarge": "{name}: يجب أن يكون أقل من 5 ميجابايت",
+        "uploadFailed": "فشل الرفع: {message}",
+        "submitFailed": "تعذر التقديم",
+        "networkError": "خطأ في الشبكة",
+        "loadCategoriesFailed": "تعذر تحميل التصنيفات",
+        "submittedSuccess": "تم تقديم المصروف للاعتماد",
+        "submittedNumber": "تم تقديم المصروف {number}"
+      }
+    },
+    "rejectModal": {
+      "title": "رفض المصروف",
+      "reasonLabel": "سبب الرفض",
+      "reasonPlaceholder": "اختر سبباً…",
+      "notesLabel": "ملاحظات",
+      "notesHint": "(تظهر لمقدّم المصروف)",
+      "notesPlaceholderOther": "يرجى وصف السبب…",
+      "notesPlaceholder": "شرح اختياري…",
+      "cancel": "إلغاء",
+      "rejectBtn": "رفض المصروف",
+      "rejecting": "جاري الرفض…",
+      "reasons": {
+        "insufficient_receipt": "إيصال غير كافٍ",
+        "amount_too_high": "المبلغ مرتفع جداً",
+        "not_authorized": "غير مصرح به",
+        "wrong_category": "تصنيف خاطئ",
+        "duplicate_expense": "مصروف مكرر",
+        "other": "أخرى"
+      },
+      "errors": {
+        "selectReason": "يرجى اختيار سبب",
+        "describeReason": "يرجى وصف السبب في الملاحظات",
+        "rejectFailed": "تعذر الرفض",
+        "networkError": "خطأ في الشبكة",
+        "rejected": "تم رفض المصروف"
+      }
+    },
+    "processModal": {
+      "title": "معالجة المصروف",
+      "methodLabel": "طريقة الدفع",
+      "methods": {
+        "petty_cash": "مدفوع من الصندوق النثري",
+        "bank_transfer": "تحويل بنكي",
+        "already_paid": "مدفوع مسبقاً (تسجيل فقط)"
+      },
+      "bankRefLabel": "المرجع البنكي",
+      "bankRefPlaceholder": "رقم العملية أو المرجع",
+      "notesLabel": "ملاحظات المعالجة",
+      "notesOptional": "(اختياري)",
+      "notesPlaceholder": "ملاحظات داخلية…",
+      "cancel": "إلغاء",
+      "processBtn": "وضع علامة كمُعالج",
+      "processing": "جاري المعالجة…",
+      "errors": {
+        "selectMethod": "يرجى اختيار طريقة الدفع",
+        "bankRefRequired": "المرجع البنكي مطلوب للتحويل البنكي",
+        "processFailed": "تعذرت المعالجة",
+        "networkError": "خطأ في الشبكة",
+        "processed": "تمت معالجة المصروف"
+      }
+    },
+    "lightbox": {
+      "counter": "الإيصال {current} من {total}",
+      "download": "تنزيل",
+      "closeHint": "إغلاق (Esc)"
     }
   },
   "reports": {

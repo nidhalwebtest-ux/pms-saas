@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { XMarkIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
 interface Expense {
@@ -17,27 +18,30 @@ interface Props {
   onDone: () => void;
 }
 
-const REASONS = [
-  "Insufficient receipt",
-  "Amount too high",
-  "Not authorized",
-  "Wrong category",
-  "Duplicate expense",
-  "Other",
+const REASON_KEYS = [
+  "insufficient_receipt",
+  "amount_too_high",
+  "not_authorized",
+  "wrong_category",
+  "duplicate_expense",
+  "other",
 ];
 
 export default function RejectExpenseModal({ expense, onClose, onDone }: Props) {
+  const t = useTranslations("expenses.rejectModal");
+  const tReason = useTranslations("expenses.rejectModal.reasons");
+  const tErr = useTranslations("expenses.rejectModal.errors");
   const [reason, setReason] = useState("");
   const [notes, setNotes]   = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleReject() {
     if (!reason) {
-      toast.error("Please select a reason");
+      toast.error(tErr("selectReason"));
       return;
     }
-    if (reason === "Other" && !notes.trim()) {
-      toast.error("Please describe the reason in notes");
+    if (reason === "other" && !notes.trim()) {
+      toast.error(tErr("describeReason"));
       return;
     }
     setSaving(true);
@@ -45,17 +49,17 @@ export default function RejectExpenseModal({ expense, onClose, onDone }: Props) 
       const res = await fetch(`/api/expenses/${expense.id}/reject`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reason, notes }),
+        body: JSON.stringify({ reason: tReason(reason), notes }),
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Failed to reject");
+        toast.error(data.error ?? tErr("rejectFailed"));
         return;
       }
-      toast.success("Expense rejected");
+      toast.success(tErr("rejected"));
       onDone();
     } catch {
-      toast.error("Network error");
+      toast.error(tErr("networkError"));
     } finally {
       setSaving(false);
     }
@@ -71,8 +75,8 @@ export default function RejectExpenseModal({ expense, onClose, onDone }: Props) 
               <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-gray-900">Reject Expense</h3>
-              <p className="text-xs text-gray-500 mt-0.5">{expense.expenseNumber} · {expense.amount.toFixed(3)} OMR</p>
+              <h3 className="text-base font-semibold text-gray-900">{t("title")}</h3>
+              <p className="text-xs text-gray-500 mt-0.5 ltr-numbers">{expense.expenseNumber} · {expense.amount.toFixed(3)} OMR</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-white/50">
@@ -88,27 +92,27 @@ export default function RejectExpenseModal({ expense, onClose, onDone }: Props) 
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Rejection reason <span className="text-red-500">*</span>
+              {t("reasonLabel")} <span className="text-red-500">*</span>
             </label>
             <select
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:outline-none"
             >
-              <option value="">Select a reason…</option>
-              {REASONS.map((r) => <option key={r} value={r}>{r}</option>)}
+              <option value="">{t("reasonPlaceholder")}</option>
+              {REASON_KEYS.map((r) => <option key={r} value={r}>{tReason(r)}</option>)}
             </select>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Notes {reason === "Other" && <span className="text-red-500">*</span>}
-              <span className="text-gray-400 font-normal"> (visible to submitter)</span>
+              {t("notesLabel")} {reason === "other" && <span className="text-red-500">*</span>}
+              <span className="text-gray-400 font-normal"> {t("notesHint")}</span>
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder={reason === "Other" ? "Please describe the reason…" : "Optional explanation…"}
+              placeholder={reason === "other" ? t("notesPlaceholderOther") : t("notesPlaceholder")}
               rows={3}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:outline-none resize-none"
             />
@@ -122,14 +126,14 @@ export default function RejectExpenseModal({ expense, onClose, onDone }: Props) 
             disabled={saving}
             className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            Cancel
+            {t("cancel")}
           </button>
           <button
             onClick={handleReject}
             disabled={saving || !reason}
             className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-500 disabled:opacity-50 transition-colors"
           >
-            {saving ? "Rejecting…" : "Reject Expense"}
+            {saving ? t("rejecting") : t("rejectBtn")}
           </button>
         </div>
       </div>

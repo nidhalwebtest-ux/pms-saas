@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   XMarkIcon,
   ClipboardDocumentCheckIcon,
@@ -24,12 +25,15 @@ interface Props {
 }
 
 const METHODS = [
-  { key: "petty_cash",   label: "Paid from petty cash",  icon: BanknotesIcon },
-  { key: "bank_transfer", label: "Bank transfer",         icon: BuildingLibraryIcon },
-  { key: "already_paid",  label: "Already paid (record only)", icon: CheckBadgeIcon },
+  { key: "petty_cash",    icon: BanknotesIcon },
+  { key: "bank_transfer", icon: BuildingLibraryIcon },
+  { key: "already_paid",  icon: CheckBadgeIcon },
 ] as const;
 
 export default function ProcessExpenseModal({ expense, onClose, onDone }: Props) {
+  const t = useTranslations("expenses.processModal");
+  const tMethod = useTranslations("expenses.processModal.methods");
+  const tErr = useTranslations("expenses.processModal.errors");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [bankReference, setBankReference] = useState("");
   const [notes, setNotes] = useState("");
@@ -37,11 +41,11 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
 
   async function handleProcess() {
     if (!paymentMethod) {
-      toast.error("Please select a payment method");
+      toast.error(tErr("selectMethod"));
       return;
     }
     if (paymentMethod === "bank_transfer" && !bankReference.trim()) {
-      toast.error("Bank reference is required for bank transfer");
+      toast.error(tErr("bankRefRequired"));
       return;
     }
     setSaving(true);
@@ -53,13 +57,13 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Failed to process");
+        toast.error(data.error ?? tErr("processFailed"));
         return;
       }
-      toast.success("Expense processed");
+      toast.success(tErr("processed"));
       onDone();
     } catch {
-      toast.error("Network error");
+      toast.error(tErr("networkError"));
     } finally {
       setSaving(false);
     }
@@ -75,8 +79,8 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
               <ClipboardDocumentCheckIcon className="h-5 w-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-gray-900">Process Expense</h3>
-              <p className="text-xs text-gray-500 mt-0.5">{expense.expenseNumber} · {expense.amount.toFixed(3)} OMR</p>
+              <h3 className="text-base font-semibold text-gray-900">{t("title")}</h3>
+              <p className="text-xs text-gray-500 mt-0.5 ltr-numbers">{expense.expenseNumber} · {expense.amount.toFixed(3)} OMR</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-white/50">
@@ -90,7 +94,7 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-2">
-              Payment method <span className="text-red-500">*</span>
+              {t("methodLabel")} <span className="text-red-500">*</span>
             </label>
             <div className="space-y-2">
               {METHODS.map((m) => {
@@ -101,7 +105,7 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
                     key={m.key}
                     type="button"
                     onClick={() => setPaymentMethod(m.key)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all text-left ${
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all text-start ${
                       active
                         ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500"
                         : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
@@ -109,7 +113,7 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
                   >
                     <Icon className={`h-5 w-5 ${active ? "text-blue-600" : "text-gray-400"}`} />
                     <span className={`text-sm font-medium ${active ? "text-blue-900" : "text-gray-700"}`}>
-                      {m.label}
+                      {tMethod(m.key)}
                     </span>
                   </button>
                 );
@@ -120,12 +124,12 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
           {paymentMethod === "bank_transfer" && (
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                Bank reference <span className="text-red-500">*</span>
+                {t("bankRefLabel")} <span className="text-red-500">*</span>
               </label>
               <input
                 value={bankReference}
                 onChange={(e) => setBankReference(e.target.value)}
-                placeholder="Transaction ID or reference number"
+                placeholder={t("bankRefPlaceholder")}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
               />
             </div>
@@ -133,12 +137,12 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
 
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Processing notes <span className="text-gray-400 font-normal">(optional)</span>
+              {t("notesLabel")} <span className="text-gray-400 font-normal">{t("notesOptional")}</span>
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Internal notes…"
+              placeholder={t("notesPlaceholder")}
               rows={2}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none resize-none"
             />
@@ -152,14 +156,14 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
             disabled={saving}
             className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            Cancel
+            {t("cancel")}
           </button>
           <button
             onClick={handleProcess}
             disabled={saving || !paymentMethod}
             className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
           >
-            {saving ? "Processing…" : "Mark as Processed"}
+            {saving ? t("processing") : t("processBtn")}
           </button>
         </div>
       </div>

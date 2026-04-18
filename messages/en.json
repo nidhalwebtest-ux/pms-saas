@@ -1700,6 +1700,8 @@
   },
   "expenses": {
     "title": "Expenses",
+    "subtitle": "Track, approve and process operational expenses",
+    "categoriesBtn": "Categories",
     "submitExpense": "Submit Expense",
     "expenseNumber": "Expense #",
     "category": "Category",
@@ -1713,6 +1715,29 @@
     "process": "Process",
     "resubmit": "Resubmit",
     "rejectionReason": "Rejection Reason",
+    "tabs": {
+      "ALL": "All",
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "PROCESSED": "Processed"
+    },
+    "statuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "processed": "Processed",
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "PROCESSED": "Processed"
+    },
+    "statusFull": {
+      "PENDING": "Pending Review",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "PROCESSED": "Processed (Paid)"
+    },
     "categories": {
       "cleaning": "Cleaning",
       "maintenance": "Maintenance & Repairs",
@@ -1722,11 +1747,197 @@
       "food": "Food & Beverages",
       "miscellaneous": "Miscellaneous"
     },
-    "statuses": {
-      "pending": "Pending",
-      "approved": "Approved",
-      "rejected": "Rejected",
-      "processed": "Processed"
+    "list": {
+      "searchPlaceholder": "Search by expense # or description…",
+      "allBuildings": "All buildings",
+      "allCategories": "All categories",
+      "refresh": "Refresh",
+      "loading": "Loading expenses…",
+      "empty": "No expenses found",
+      "emptyHint": "Try adjusting your filters or submit a new expense",
+      "selected": "{count, plural, =0 {No expenses selected} one {# expense selected} other {# expenses selected}}",
+      "clearSelection": "Clear",
+      "approveSelected": "Approve Selected",
+      "footerCount": "{count, plural, =0 {No expenses} one {# expense} other {# expenses}}",
+      "table": {
+        "expenseNumber": "Expense #",
+        "date": "Date",
+        "category": "Category",
+        "description": "Description",
+        "building": "Building",
+        "receipt": "Receipt",
+        "submittedBy": "Submitted by",
+        "amount": "Amount",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "rowActions": {
+        "approve": "Approve",
+        "reject": "Reject",
+        "process": "Process",
+        "edit": "Edit",
+        "delete": "Delete",
+        "view": "View",
+        "viewReceipt": "View receipt"
+      },
+      "toasts": {
+        "loadFailed": "Failed to load expenses",
+        "networkError": "Network error loading expenses",
+        "approved": "Expense approved",
+        "approveFailed": "Failed to approve",
+        "bulkApproved": "{count, plural, =0 {No expenses approved} one {# expense approved} other {# expenses approved}}",
+        "bulkApproveFailed": "Bulk approve failed",
+        "deleted": "Expense deleted",
+        "deleteFailed": "Delete failed",
+        "deleteConfirm": "Delete this pending expense?"
+      }
+    },
+    "detail": {
+      "back": "Back",
+      "submittedOn": "Submitted on {date}",
+      "amountLabel": "Amount",
+      "detailsHeading": "Details",
+      "descriptionLabel": "Description",
+      "buildingLabel": "Building",
+      "categoryLabel": "Category",
+      "submittedByLabel": "Submitted by",
+      "submittedAtLabel": "Submitted at",
+      "notesLabel": "Notes",
+      "receiptHeading": "Receipt",
+      "receiptHeadingPlural": "Receipts",
+      "noReceipt": "No receipt uploaded",
+      "rejectedLabel": "Rejected: {reason}",
+      "referenceLabel": "Reference: {ref}",
+      "workflowHeading": "Workflow",
+      "byUser": "by {user}",
+      "timeline": {
+        "submitted": "Submitted",
+        "rejected": "Rejected",
+        "awaitingReview": "Awaiting Review",
+        "approved": "Approved",
+        "awaitingProcessing": "Awaiting Processing",
+        "processed": "Processed"
+      },
+      "paymentMethods": {
+        "petty_cash": "Paid from petty cash",
+        "bank_transfer": "Bank transfer",
+        "already_paid": "Already paid (record only)"
+      }
+    },
+    "actionPanel": {
+      "title": "Actions",
+      "approveBtn": "Approve Expense",
+      "rejectBtn": "Reject",
+      "processBtn": "Mark as Processed",
+      "deleteBtn": "Delete",
+      "noActions": "No actions available",
+      "deleteConfirm": "Delete this pending expense? This cannot be undone.",
+      "deleted": "Expense deleted",
+      "deleteFailed": "Failed to delete",
+      "approved": "Expense approved",
+      "approveFailed": "Failed to approve"
+    },
+    "submit": {
+      "title": "Submit Expense",
+      "subtitle": "Submit a new expense for approval",
+      "setupTitle": "Setup Required",
+      "setupHint": "You need to add a building before you can submit expenses.",
+      "buildingHeading": "Building",
+      "buildingPlaceholder": "Select a building…",
+      "categoryHeading": "Category",
+      "categoryEmpty": "No categories available.",
+      "detailsHeading": "Details",
+      "amountLabel": "Amount",
+      "amountPlaceholder": "0.000",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "e.g., Cleaning supplies for 3rd floor common area",
+      "notesLabel": "Notes",
+      "notesOptional": "(optional)",
+      "notesPlaceholder": "Additional context for the manager…",
+      "receiptHeading": "Receipt Photo",
+      "receiptCount": "{count}/{max}",
+      "takePhoto": "Take Photo",
+      "uploadFile": "Upload File",
+      "uploading": "Uploading…",
+      "fileTypesHint": "JPG, PNG or PDF. Max 5 MB.",
+      "atLeastOne": "At least one image is required.",
+      "cancel": "Cancel",
+      "submitAndAnother": "Submit & Add Another",
+      "submitBtn": "Submit Expense",
+      "submitting": "Submitting…",
+      "errors": {
+        "buildingRequired": "Building is required",
+        "categoryRequired": "Please select a category",
+        "descriptionRequired": "Description is required",
+        "amountInvalid": "Amount must be a positive number",
+        "amountPositive": "Amount must be positive",
+        "receiptRequired": "At least one receipt photo is required",
+        "receiptRequiredShort": "Receipt photo required",
+        "maxReceipts": "Max 2 receipt images",
+        "fileTooLarge": "{name}: must be under 5 MB",
+        "uploadFailed": "Upload failed: {message}",
+        "submitFailed": "Failed to submit",
+        "networkError": "Network error",
+        "loadCategoriesFailed": "Failed to load categories",
+        "submittedSuccess": "Expense submitted for approval",
+        "submittedNumber": "Expense {number} submitted"
+      }
+    },
+    "rejectModal": {
+      "title": "Reject Expense",
+      "reasonLabel": "Rejection reason",
+      "reasonPlaceholder": "Select a reason…",
+      "notesLabel": "Notes",
+      "notesHint": "(visible to submitter)",
+      "notesPlaceholderOther": "Please describe the reason…",
+      "notesPlaceholder": "Optional explanation…",
+      "cancel": "Cancel",
+      "rejectBtn": "Reject Expense",
+      "rejecting": "Rejecting…",
+      "reasons": {
+        "insufficient_receipt": "Insufficient receipt",
+        "amount_too_high": "Amount too high",
+        "not_authorized": "Not authorized",
+        "wrong_category": "Wrong category",
+        "duplicate_expense": "Duplicate expense",
+        "other": "Other"
+      },
+      "errors": {
+        "selectReason": "Please select a reason",
+        "describeReason": "Please describe the reason in notes",
+        "rejectFailed": "Failed to reject",
+        "networkError": "Network error",
+        "rejected": "Expense rejected"
+      }
+    },
+    "processModal": {
+      "title": "Process Expense",
+      "methodLabel": "Payment method",
+      "methods": {
+        "petty_cash": "Paid from petty cash",
+        "bank_transfer": "Bank transfer",
+        "already_paid": "Already paid (record only)"
+      },
+      "bankRefLabel": "Bank reference",
+      "bankRefPlaceholder": "Transaction ID or reference number",
+      "notesLabel": "Processing notes",
+      "notesOptional": "(optional)",
+      "notesPlaceholder": "Internal notes…",
+      "cancel": "Cancel",
+      "processBtn": "Mark as Processed",
+      "processing": "Processing…",
+      "errors": {
+        "selectMethod": "Please select a payment method",
+        "bankRefRequired": "Bank reference is required for bank transfer",
+        "processFailed": "Failed to process",
+        "networkError": "Network error",
+        "processed": "Expense processed"
+      }
+    },
+    "lightbox": {
+      "counter": "Receipt {current} of {total}",
+      "download": "Download",
+      "closeHint": "Close (Esc)"
     }
   },
   "reports": {

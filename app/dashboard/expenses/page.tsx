@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import {
@@ -51,6 +52,8 @@ export default async function ExpensesPage({
   const canSubmit  = ["OWNER", "STAFF"].includes(dbUser.role);
   const canManage  = ["OWNER", "MANAGER"].includes(dbUser.role);
 
+  const t = await getTranslations("expenses");
+
   return (
     <div className="max-w-7xl mx-auto">
       {/* ── Page header ────────────────────────────────────────────────── */}
@@ -60,9 +63,9 @@ export default async function ExpensesPage({
             <ArrowTrendingDownIcon className="h-6 w-6 text-red-700" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Expenses</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
             <p className="text-sm text-gray-500 mt-0.5">
-              Track, approve and process operational expenses
+              {t("subtitle")}
             </p>
           </div>
         </div>
@@ -73,7 +76,7 @@ export default async function ExpensesPage({
               className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
             >
               <Cog6ToothIcon className="h-4 w-4" />
-              Categories
+              {t("categoriesBtn")}
             </Link>
           )}
           {canSubmit && (
@@ -82,7 +85,7 @@ export default async function ExpensesPage({
               className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white shadow-sm hover:bg-blue-500 transition-colors"
             >
               <PlusIcon className="h-4 w-4" />
-              Submit Expense
+              {t("submitExpense")}
             </Link>
           )}
         </div>

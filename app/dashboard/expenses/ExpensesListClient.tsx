@@ -3,6 +3,9 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useTranslations, useLocale } from "next-intl";
+import { format } from "date-fns";
+import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import {
   MagnifyingGlassIcon,
   CheckIcon,
@@ -52,32 +55,32 @@ interface Props {
   categories: { id: string; name: string; icon: string | null; isActive: boolean }[];
 }
 
-// ── Helpers ──────────────────────────────────────────────────────────────
-
-function fmtDate(d: string | null) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString("en-GB", {
-    day: "2-digit", month: "short", year: "numeric",
-  });
-}
-
-function fullName(u: { firstName: string | null; lastName: string | null } | null) {
-  if (!u) return "—";
-  return [u.firstName, u.lastName].filter(Boolean).join(" ") || "—";
-}
-
-const STATUS_CFG = {
-  PENDING:   { label: "Pending",   bg: "bg-amber-100",    text: "text-amber-800",   dot: "bg-amber-500" },
-  APPROVED:  { label: "Approved",  bg: "bg-blue-100",     text: "text-blue-800",    dot: "bg-blue-500"  },
-  REJECTED:  { label: "Rejected",  bg: "bg-red-100",      text: "text-red-800",     dot: "bg-red-500"   },
-  PROCESSED: { label: "Processed", bg: "bg-emerald-100",  text: "text-emerald-800", dot: "bg-emerald-500" },
+const STATUS_STYLE = {
+  PENDING:   { bg: "bg-amber-100",    text: "text-amber-800",   dot: "bg-amber-500" },
+  APPROVED:  { bg: "bg-blue-100",     text: "text-blue-800",    dot: "bg-blue-500"  },
+  REJECTED:  { bg: "bg-red-100",      text: "text-red-800",     dot: "bg-red-500"   },
+  PROCESSED: { bg: "bg-emerald-100",  text: "text-emerald-800", dot: "bg-emerald-500" },
 } as const;
-
-// ── Component ─────────────────────────────────────────────────────────────
 
 export default function ExpensesListClient({
   role, userId, initialStatus, initialPropertyId, initialCategoryId, properties, categories,
 }: Props) {
+  const tList = useTranslations("expenses.list");
+  const tStatus = useTranslations("expenses.statuses");
+  const tTabs = useTranslations("expenses.tabs");
+  const locale = useLocale();
+  const dfLoc = locale === "ar" ? arLocale : enLocale;
+
+  const fmtDate = (d: string | null) => {
+    if (!d) return "—";
+    return format(new Date(d), "dd MMM yyyy", { locale: dfLoc });
+  };
+
+  const fullName = (u: { firstName: string | null; lastName: string | null } | null) => {
+    if (!u) return "—";
+    return [u.firstName, u.lastName].filter(Boolean).join(" ") || "—";
+  };
+
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [statusCounts, setStatusCounts] = useState<Record<string, { count: number; total: number }>>({});
   const [loading, setLoading] = useState(true);
@@ -119,16 +122,16 @@ export default function ExpensesListClient({
 
       const res = await fetch(`/api/expenses?${params.toString()}`);
       const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? "Failed to load expenses"); return; }
+      if (!res.ok) { toast.error(data.error ?? tList("toasts.loadFailed")); return; }
       setExpenses(data.expenses ?? []);
       setStatusCounts(data.statusCounts ?? {});
       setSelectedIds(new Set()); // reset selection on refilter
     } catch {
-      toast.error("Network error loading expenses");
+      toast.error(tList("toasts.networkError"));
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, propertyId, categoryId, debouncedSearch]);
+  }, [statusFilter, propertyId, categoryId, debouncedSearch, tList]);
 
   useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
 
@@ -144,9 +147,9 @@ export default function ExpensesListClient({
       const res = await fetch(`/api/expenses/${id}/approve`, { method: "PATCH" });
       const d = await res.json();
       if (!res.ok) { toast.error(d.error); return; }
-      toast.success("Expense approved");
+      toast.success(tList("toasts.approved"));
       fetchExpenses();
-    } catch { toast.error("Failed to approve"); }
+    } catch { toast.error(tList("toasts.approveFailed")); }
   }
 
   async function handleBulkApprove() {
@@ -159,20 +162,20 @@ export default function ExpensesListClient({
       });
       const d = await res.json();
       if (!res.ok) { toast.error(d.error); return; }
-      toast.success(`${d.approvedCount} expense${d.approvedCount !== 1 ? "s" : ""} approved`);
+      toast.success(tList("toasts.bulkApproved", { count: d.approvedCount }));
       fetchExpenses();
-    } catch { toast.error("Bulk approve failed"); }
+    } catch { toast.error(tList("toasts.bulkApproveFailed")); }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Delete this pending expense?")) return;
+    if (!confirm(tList("toasts.deleteConfirm"))) return;
     try {
       const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" });
       const d = await res.json();
       if (!res.ok) { toast.error(d.error); return; }
-      toast.success("Expense deleted");
+      toast.success(tList("toasts.deleted"));
       fetchExpenses();
-    } catch { toast.error("Delete failed"); }
+    } catch { toast.error(tList("toasts.deleteFailed")); }
   }
 
   // ── Selection ─────────────────────────────────────────────────────────
@@ -190,12 +193,12 @@ export default function ExpensesListClient({
   }
 
   // ── Tabs ──────────────────────────────────────────────────────────────
-  const tabs: { key: string; label: string }[] = [
-    { key: "ALL",       label: "All" },
-    { key: "PENDING",   label: "Pending" },
-    { key: "APPROVED",  label: "Approved" },
-    { key: "REJECTED",  label: "Rejected" },
-    { key: "PROCESSED", label: "Processed" },
+  const tabs: { key: string }[] = [
+    { key: "ALL" },
+    { key: "PENDING" },
+    { key: "APPROVED" },
+    { key: "REJECTED" },
+    { key: "PROCESSED" },
   ];
 
   const showCheckboxes = canApprove && statusFilter === "PENDING";
@@ -206,28 +209,28 @@ export default function ExpensesListClient({
       {/* ── Status tabs ──────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl shadow-sm ring-1 ring-gray-200 px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
-          {tabs.map((t) => {
-            const active = statusFilter === t.key;
-            const count = statusCounts[t.key]?.count ?? 0;
-            const total = statusCounts[t.key]?.total ?? 0;
+          {tabs.map((tb) => {
+            const active = statusFilter === tb.key;
+            const count = statusCounts[tb.key]?.count ?? 0;
+            const total = statusCounts[tb.key]?.total ?? 0;
             return (
               <button
-                key={t.key}
-                onClick={() => setStatusFilter(t.key)}
+                key={tb.key}
+                onClick={() => setStatusFilter(tb.key)}
                 className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-full transition-all ${
                   active
                     ? "bg-blue-600 text-white shadow-sm"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                 }`}
               >
-                {t.label}
-                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                {tTabs(tb.key)}
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ltr-numbers ${
                   active ? "bg-blue-500/40 text-white" : "bg-white text-gray-500"
                 }`}>
                   {count}
                 </span>
                 {active && total > 0 && (
-                  <span className="text-[10px] font-medium opacity-80">
+                  <span className="text-[10px] font-medium opacity-80 ltr-numbers">
                     · {total.toFixed(3)}
                   </span>
                 )}
@@ -237,8 +240,8 @@ export default function ExpensesListClient({
           <button
             onClick={fetchExpenses}
             disabled={loading}
-            className="ml-auto p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-40"
-            title="Refresh"
+            className="ms-auto p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-40"
+            title={tList("refresh")}
           >
             <ArrowPathIcon className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </button>
@@ -248,12 +251,12 @@ export default function ExpensesListClient({
       {/* ── Filters bar ──────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl shadow-sm ring-1 ring-gray-200 px-4 py-3 grid grid-cols-1 sm:grid-cols-4 gap-3">
         <div className="relative sm:col-span-2">
-          <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <MagnifyingGlassIcon className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by expense # or description…"
-            className="w-full rounded-lg border-0 bg-white py-2 pl-9 pr-3 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600"
+            placeholder={tList("searchPlaceholder")}
+            className="w-full rounded-lg border-0 bg-white py-2 ps-9 pe-3 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600"
           />
         </div>
         <select
@@ -261,7 +264,7 @@ export default function ExpensesListClient({
           onChange={(e) => setPropertyId(e.target.value)}
           className="w-full rounded-lg border-0 bg-white py-2 px-3 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600"
         >
-          <option value="">All buildings</option>
+          <option value="">{tList("allBuildings")}</option>
           {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </select>
         <select
@@ -269,7 +272,7 @@ export default function ExpensesListClient({
           onChange={(e) => setCategoryId(e.target.value)}
           className="w-full rounded-lg border-0 bg-white py-2 px-3 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600"
         >
-          <option value="">All categories</option>
+          <option value="">{tList("allCategories")}</option>
           {categories.filter(c => c.isActive).map((c) => (
             <option key={c.id} value={c.id}>{c.icon ?? ""} {c.name}</option>
           ))}
@@ -280,21 +283,21 @@ export default function ExpensesListClient({
       {showCheckboxes && selectedIds.size > 0 && (
         <div className="bg-blue-50 ring-1 ring-blue-200 rounded-xl px-4 py-3 flex items-center justify-between">
           <p className="text-sm font-semibold text-blue-700">
-            {selectedIds.size} expense{selectedIds.size !== 1 ? "s" : ""} selected
+            {tList("selected", { count: selectedIds.size })}
           </p>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSelectedIds(new Set())}
               className="text-xs text-gray-500 hover:text-gray-700"
             >
-              Clear
+              {tList("clearSelection")}
             </button>
             <button
               onClick={handleBulkApprove}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 transition-colors"
             >
               <CheckIcon className="h-3.5 w-3.5" />
-              Approve Selected
+              {tList("approveSelected")}
             </button>
           </div>
         </div>
@@ -305,15 +308,15 @@ export default function ExpensesListClient({
         {loading ? (
           <div className="py-16 text-center">
             <ArrowPathIcon className="mx-auto h-6 w-6 text-gray-300 animate-spin mb-2" />
-            <p className="text-sm text-gray-400">Loading expenses…</p>
+            <p className="text-sm text-gray-400">{tList("loading")}</p>
           </div>
         ) : expenses.length === 0 ? (
           <div className="py-20 text-center">
             <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
               <ClipboardDocumentCheckIcon className="h-6 w-6 text-gray-300" />
             </div>
-            <p className="text-sm font-medium text-gray-400">No expenses found</p>
-            <p className="text-xs text-gray-300 mt-1">Try adjusting your filters or submit a new expense</p>
+            <p className="text-sm font-medium text-gray-400">{tList("empty")}</p>
+            <p className="text-xs text-gray-300 mt-1">{tList("emptyHint")}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -321,7 +324,7 @@ export default function ExpensesListClient({
               <thead className="bg-gray-50">
                 <tr>
                   {showCheckboxes && (
-                    <th className="py-3 pl-5 pr-2 w-8">
+                    <th className="py-3 ps-5 pe-2 w-8">
                       <input
                         type="checkbox"
                         checked={selectedIds.size > 0 && selectedIds.size === pendingCount}
@@ -330,21 +333,21 @@ export default function ExpensesListClient({
                       />
                     </th>
                   )}
-                  <th className="py-3 px-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Expense #</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Date</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Category</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Description</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Building</th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">Receipt</th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Submitted by</th>
-                  <th className="px-3 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Amount</th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-                  <th className="px-3 py-3 pr-5 text-right text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
+                  <th className="py-3 px-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{tList("table.expenseNumber")}</th>
+                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{tList("table.date")}</th>
+                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{tList("table.category")}</th>
+                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide">{tList("table.description")}</th>
+                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{tList("table.building")}</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">{tList("table.receipt")}</th>
+                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{tList("table.submittedBy")}</th>
+                  <th className="px-3 py-3 text-end text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{tList("table.amount")}</th>
+                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">{tList("table.status")}</th>
+                  <th className="px-3 py-3 pe-5 text-end text-xs font-semibold text-gray-500 uppercase tracking-wide">{tList("table.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {expenses.map((e, idx) => {
-                  const cfg = STATUS_CFG[e.status];
+                  const cfg = STATUS_STYLE[e.status];
                   const isOwn = e.submittedBy.id === userId;
                   const canEdit   = e.status === "PENDING" && isOwn;
                   const canDelete = e.status === "PENDING" && (isOwn || role === "OWNER");
@@ -355,7 +358,7 @@ export default function ExpensesListClient({
                       className={`transition-colors hover:bg-gray-50/70 ${idx % 2 === 0 ? "" : "bg-gray-50/30"}`}
                     >
                       {showCheckboxes && (
-                        <td className="py-3 pl-5 pr-2">
+                        <td className="py-3 ps-5 pe-2">
                           {e.status === "PENDING" && (
                             <input
                               type="checkbox"
@@ -367,11 +370,11 @@ export default function ExpensesListClient({
                         </td>
                       )}
                       <td className="whitespace-nowrap py-3 px-3 text-sm">
-                        <Link href={`/dashboard/expenses/${e.id}`} className="font-mono text-xs font-semibold text-blue-600 hover:underline">
+                        <Link href={`/dashboard/expenses/${e.id}`} className="font-mono text-xs font-semibold text-blue-600 hover:underline ltr-numbers">
                           {e.expenseNumber}
                         </Link>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-600">
+                      <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-600 ltr-numbers">
                         {fmtDate(e.submittedAt)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-700">
@@ -390,11 +393,11 @@ export default function ExpensesListClient({
                         <button
                           onClick={() => setLightboxImages([e.receiptImage, ...(e.receiptImage2 ? [e.receiptImage2] : [])])}
                           className="inline-flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden ring-1 ring-gray-200 hover:ring-blue-400 transition-all bg-gray-50"
-                          title="View receipt"
+                          title={tList("rowActions.viewReceipt")}
                         >
                           {e.receiptImage ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={e.receiptImage} alt="Receipt" className="object-cover w-full h-full" />
+                            <img src={e.receiptImage} alt={tList("table.receipt")} className="object-cover w-full h-full" />
                           ) : (
                             <PhotoIcon className="h-4 w-4 text-gray-300" />
                           )}
@@ -403,19 +406,19 @@ export default function ExpensesListClient({
                       <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-600">
                         {fullName(e.submittedBy)}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right">
-                        <span className="text-sm font-bold text-red-600 tabular-nums">
+                      <td className="whitespace-nowrap px-3 py-3 text-end">
+                        <span className="text-sm font-bold text-red-600 tabular-nums ltr-numbers">
                           {e.amount.toFixed(3)}
                         </span>
-                        <span className="text-[10px] text-gray-400 ml-1">OMR</span>
+                        <span className="text-[10px] text-gray-400 ms-1">OMR</span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-center">
                         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${cfg.bg} ${cfg.text}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot} ${e.status === "PENDING" ? "animate-pulse" : ""}`} />
-                          {cfg.label}
+                          {tStatus(e.status)}
                         </span>
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 pr-5 text-right">
+                      <td className="whitespace-nowrap px-3 py-3 pe-5 text-end">
                         <div className="inline-flex items-center gap-1">
                           {/* Pending + Manager: Approve / Reject inline */}
                           {e.status === "PENDING" && canApprove && (
@@ -423,18 +426,18 @@ export default function ExpensesListClient({
                               <button
                                 onClick={() => handleApprove(e.id)}
                                 className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded text-white bg-emerald-600 hover:bg-emerald-500"
-                                title="Approve"
+                                title={tList("rowActions.approve")}
                               >
                                 <CheckIcon className="h-3 w-3" />
-                                Approve
+                                {tList("rowActions.approve")}
                               </button>
                               <button
                                 onClick={() => setRejectExpense(e)}
                                 className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded text-red-700 bg-white border border-red-200 hover:bg-red-50"
-                                title="Reject"
+                                title={tList("rowActions.reject")}
                               >
                                 <XMarkIcon className="h-3 w-3" />
-                                Reject
+                                {tList("rowActions.reject")}
                               </button>
                             </>
                           )}
@@ -445,7 +448,7 @@ export default function ExpensesListClient({
                               className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded text-white bg-blue-600 hover:bg-blue-500"
                             >
                               <ClipboardDocumentCheckIcon className="h-3 w-3" />
-                              Process
+                              {tList("rowActions.process")}
                             </button>
                           )}
                           {/* Edit pending (own) */}
@@ -453,7 +456,7 @@ export default function ExpensesListClient({
                             <Link
                               href={`/dashboard/expenses/${e.id}`}
                               className="p-1.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                              title="Edit"
+                              title={tList("rowActions.edit")}
                             >
                               <PencilIcon className="h-3.5 w-3.5" />
                             </Link>
@@ -463,7 +466,7 @@ export default function ExpensesListClient({
                             <button
                               onClick={() => handleDelete(e.id)}
                               className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
-                              title="Delete"
+                              title={tList("rowActions.delete")}
                             >
                               <TrashIcon className="h-3.5 w-3.5" />
                             </button>
@@ -472,7 +475,7 @@ export default function ExpensesListClient({
                           <Link
                             href={`/dashboard/expenses/${e.id}`}
                             className="p-1.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                            title="View"
+                            title={tList("rowActions.view")}
                           >
                             <EyeIcon className="h-3.5 w-3.5" />
                           </Link>
@@ -485,13 +488,13 @@ export default function ExpensesListClient({
               <tfoot>
                 <tr className="border-t-2 border-gray-200 bg-gray-50">
                   <td colSpan={showCheckboxes ? 8 : 7} className="px-5 py-3 text-sm font-semibold text-gray-700">
-                    {footer.count} expense{footer.count !== 1 ? "s" : ""}
+                    {tList("footerCount", { count: footer.count })}
                   </td>
-                  <td className="px-3 py-3 text-right">
-                    <span className="text-sm font-bold text-red-600 tabular-nums">
+                  <td className="px-3 py-3 text-end">
+                    <span className="text-sm font-bold text-red-600 tabular-nums ltr-numbers">
                       {footer.total.toFixed(3)}
                     </span>
-                    <span className="text-xs text-gray-400 ml-1">OMR</span>
+                    <span className="text-xs text-gray-400 ms-1">OMR</span>
                   </td>
                   <td colSpan={2} />
                 </tr>

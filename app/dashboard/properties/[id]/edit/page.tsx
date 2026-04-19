@@ -3,6 +3,7 @@ import PropertyForm from "@/components/dashboard/PropertyForm";
 import { prisma } from "@/lib/prisma";
 import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 export default async function EditPropertyPage({
   params,
@@ -30,11 +31,13 @@ export default async function EditPropertyPage({
     notFound();
   }
 
+  const t = await getTranslations("buildings.form");
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <PageHeader
-        title="Edit Property"
-        description="Update the details of the building or compound."
+        title={t("editTitle")}
+        description={t("editDescription")}
       />
 
       {/* Render the form in Edit mode by passing initialData */}

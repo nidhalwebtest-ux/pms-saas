@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   TrashIcon,
   ArchiveBoxIcon,
@@ -31,6 +32,9 @@ export default function PropertyDangerZone({
   unitCount,
   isArchived,
 }: Props) {
+  const tA = useTranslations("buildings.dangerZone.archive");
+  const tR = useTranslations("buildings.dangerZone.restore");
+  const tD = useTranslations("buildings.dangerZone.delete");
   const [confirm, setConfirm]         = useState<ConfirmState>("idle");
   const [isPending, startTransition]  = useTransition();
   const router = useRouter();
@@ -41,7 +45,7 @@ export default function PropertyDangerZone({
     startTransition(async () => {
       const res = await archiveProperty(propertyId);
       if (res?.error) { toast.error(res.error); reset(); }
-      else { toast.success(`"${propertyName}" has been archived.`); router.refresh(); reset(); }
+      else { toast.success(tA("successToast", { name: propertyName })); router.refresh(); reset(); }
     });
   };
 
@@ -49,7 +53,7 @@ export default function PropertyDangerZone({
     startTransition(async () => {
       const res = await restoreProperty(propertyId);
       if (res?.error) { toast.error(res.error); reset(); }
-      else { toast.success(`"${propertyName}" has been restored.`); router.refresh(); reset(); }
+      else { toast.success(tR("successToast", { name: propertyName })); router.refresh(); reset(); }
     });
   };
 
@@ -57,7 +61,7 @@ export default function PropertyDangerZone({
     startTransition(async () => {
       const res = await deleteProperty(propertyId);
       if (res?.error) { toast.error(res.error); reset(); }
-      else { toast.success(`"${propertyName}" has been permanently deleted.`); router.push("/dashboard/properties"); }
+      else { toast.success(tD("successToast", { name: propertyName })); router.push("/dashboard/properties"); }
     });
   };
 
@@ -71,15 +75,14 @@ export default function PropertyDangerZone({
             <ArchiveBoxIcon className="h-5 w-5 text-amber-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-amber-900">Archive this building</p>
+            <p className="text-sm font-semibold text-amber-900">{tA("title")}</p>
             <p className="mt-0.5 text-xs text-amber-700">
-              Hides it from all lists. All units, reservations, and history are fully preserved.
-              You can restore it at any time.
+              {tA("body")}
             </p>
             {confirm === "archive" ? (
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <p className="w-full text-xs font-medium text-amber-800">
-                  Archive &ldquo;{propertyName}&rdquo;? It will be hidden from all views.
+                  {tA("confirmPrompt", { name: propertyName })}
                 </p>
                 <button
                   onClick={handleArchive}
@@ -87,10 +90,10 @@ export default function PropertyDangerZone({
                   className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-60 transition-colors"
                 >
                   <ArchiveBoxIcon className="h-3.5 w-3.5" />
-                  {isPending ? "Archiving…" : "Yes, Archive"}
+                  {isPending ? tA("working") : tA("confirmYes")}
                 </button>
                 <button onClick={reset} disabled={isPending} className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
-                  Cancel
+                  {tA("cancel")}
                 </button>
               </div>
             ) : (
@@ -99,7 +102,7 @@ export default function PropertyDangerZone({
                 className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-50 transition-colors"
               >
                 <ArchiveBoxIcon className="h-3.5 w-3.5" />
-                Archive Building
+                {tA("button")}
               </button>
             )}
           </div>
@@ -110,14 +113,14 @@ export default function PropertyDangerZone({
             <ArrowPathIcon className="h-5 w-5 text-green-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-green-900">Restore this building</p>
+            <p className="text-sm font-semibold text-green-900">{tR("title")}</p>
             <p className="mt-0.5 text-xs text-green-700">
-              Makes it visible again in the buildings list. You can then re-activate it for bookings.
+              {tR("body")}
             </p>
             {confirm === "restore" ? (
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <p className="w-full text-xs font-medium text-green-800">
-                  Restore &ldquo;{propertyName}&rdquo;? It will reappear in the buildings list.
+                  {tR("confirmPrompt", { name: propertyName })}
                 </p>
                 <button
                   onClick={handleRestore}
@@ -125,10 +128,10 @@ export default function PropertyDangerZone({
                   className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700 disabled:opacity-60 transition-colors"
                 >
                   <CheckCircleIcon className="h-3.5 w-3.5" />
-                  {isPending ? "Restoring…" : "Yes, Restore"}
+                  {isPending ? tR("working") : tR("confirmYes")}
                 </button>
                 <button onClick={reset} disabled={isPending} className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
-                  Cancel
+                  {tR("cancel")}
                 </button>
               </div>
             ) : (
@@ -137,7 +140,7 @@ export default function PropertyDangerZone({
                 className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-green-300 bg-white px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-50 transition-colors"
               >
                 <ArrowPathIcon className="h-3.5 w-3.5" />
-                Restore Building
+                {tR("button")}
               </button>
             )}
           </div>
@@ -150,11 +153,16 @@ export default function PropertyDangerZone({
           <TrashIcon className="h-5 w-5 text-red-600" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-red-800">Delete permanently</p>
+          <p className="text-sm font-semibold text-red-800">{tD("title")}</p>
           <p className="mt-0.5 text-xs text-red-600">
-            Removes this building and all its units forever. Active reservations will block deletion.
+            {tD("body")}
             {unitCount > 0 && (
-              <> This building has <strong>{unitCount} unit{unitCount !== 1 ? "s" : ""}</strong> that will also be removed.</>
+              <>
+                {tD.rich("unitsInfo", {
+                  count: unitCount,
+                  b: (chunks) => <strong>{chunks}</strong>,
+                })}
+              </>
             )}
           </p>
           {confirm === "delete" ? (
@@ -162,7 +170,7 @@ export default function PropertyDangerZone({
               <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
                 <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-600" />
                 <p className="text-xs font-medium text-red-800">
-                  This cannot be undone. All units and their history will be lost.
+                  {tD("confirmWarning")}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -172,10 +180,10 @@ export default function PropertyDangerZone({
                   className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60 transition-colors"
                 >
                   <TrashIcon className="h-3.5 w-3.5" />
-                  {isPending ? "Deleting…" : "Delete Forever"}
+                  {isPending ? tD("working") : tD("confirmYes")}
                 </button>
                 <button onClick={reset} disabled={isPending} className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
-                  Cancel
+                  {tD("cancel")}
                 </button>
               </div>
             </div>
@@ -185,7 +193,7 @@ export default function PropertyDangerZone({
               className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 hover:border-red-300 transition-colors"
             >
               <TrashIcon className="h-3.5 w-3.5" />
-              Delete Building
+              {tD("button")}
             </button>
           )}
         </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations, useLocale } from "next-intl";
 import {
   Squares2X2Icon,
   ListBulletIcon,
@@ -32,11 +33,11 @@ import type { PropertyRow } from "./page";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const TYPE_BADGE: Record<string, { bg: string; text: string; label: string }> = {
-  RESIDENTIAL: { bg: "bg-blue-100",   text: "text-blue-700",   label: "Residential" },
-  MIXED:       { bg: "bg-violet-100", text: "text-violet-700", label: "Mixed Use"   },
-  HOTEL:       { bg: "bg-amber-100",  text: "text-amber-700",  label: "Short-term"  },
-  COMMERCIAL:  { bg: "bg-green-100",  text: "text-green-700",  label: "Commercial"  },
+const TYPE_BADGE_STYLE: Record<string, { bg: string; text: string }> = {
+  RESIDENTIAL: { bg: "bg-blue-100",   text: "text-blue-700"   },
+  MIXED:       { bg: "bg-violet-100", text: "text-violet-700" },
+  HOTEL:       { bg: "bg-amber-100",  text: "text-amber-700"  },
+  COMMERCIAL:  { bg: "bg-green-100",  text: "text-green-700"  },
 };
 
 type SortKey = "name" | "type" | "city" | "totalUnits" | "occupiedUnits" | "vacantUnits" | "isActive" | "createdAt" | "revenueThisMonth";
@@ -56,31 +57,6 @@ function sortProperties(items: PropertyRow[], key: SortKey, dir: SortDir): Prope
   });
 }
 
-function exportCSV(rows: PropertyRow[]) {
-  const headers = ["Name", "Type", "City", "Address", "Floors", "Total Units", "Occupied", "Vacant", "Revenue (OMR)", "Status", "Created"];
-  const lines = rows.map((p) => [
-    `"${p.name.replace(/"/g, '""')}"`,
-    TYPE_BADGE[p.type]?.label ?? p.type,
-    p.city,
-    p.address ?? "",
-    p.totalFloors ?? "",
-    p.totalUnits,
-    p.occupiedUnits,
-    p.vacantUnits,
-    p.revenueThisMonth.toFixed(3),
-    p.isActive ? "Active" : "Inactive",
-    new Date(p.createdAt).toLocaleDateString(),
-  ].join(","));
-  const csv = [headers.join(","), ...lines].join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href     = url;
-  a.download = `properties-${new Date().toISOString().slice(0, 10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
 // ── Sub-components ───────────────────────────────────────────────────────────
 
 function Thumbnail({ photos, name }: { photos: string[]; name: string }) {
@@ -98,8 +74,8 @@ function Thumbnail({ photos, name }: { photos: string[]; name: string }) {
   );
 }
 
-function OccupancyBar({ occupied, total }: { occupied: number; total: number }) {
-  if (total === 0) return <span className="text-xs text-gray-400">No units</span>;
+function OccupancyBar({ occupied, total, noUnitsLabel }: { occupied: number; total: number; noUnitsLabel: string }) {
+  if (total === 0) return <span className="text-xs text-gray-400">{noUnitsLabel}</span>;
   const pct = Math.round((occupied / total) * 100);
   const color = pct >= 90 ? "bg-red-400" : pct >= 60 ? "bg-amber-400" : "bg-green-500";
   return (
@@ -107,7 +83,7 @@ function OccupancyBar({ occupied, total }: { occupied: number; total: number }) 
       <div className="h-1.5 w-16 overflow-hidden rounded-full bg-gray-200">
         <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-xs text-gray-500">{pct}%</span>
+      <span className="text-xs text-gray-500 ltr-numbers">{pct}%</span>
     </div>
   );
 }
@@ -123,7 +99,7 @@ function SortTh({
     <th
       scope="col"
       onClick={() => onSort(sortKey)}
-      className={`cursor-pointer select-none px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-100 transition-colors group ${className}`}
+      className={`cursor-pointer select-none px-3 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-100 transition-colors group ${className}`}
     >
       <div className="flex items-center gap-1">
         {label}
@@ -148,6 +124,8 @@ function EditableRow({
   property: PropertyRow;
   onDone: () => void;
 }) {
+  const tT = useTranslations("buildings.types");
+  const tInline = useTranslations("buildings.inline");
   const [name, setName]         = useState(property.name);
   const [isActive, setIsActive] = useState(property.isActive);
   const [isPending, startTransition] = useTransition();
@@ -163,18 +141,19 @@ function EditableRow({
       if (res?.error) {
         toast.error(res.error);
       } else {
-        toast.success("Saved");
+        toast.success(tInline("saved"));
         router.refresh();
         onDone();
       }
     });
   };
 
-  const typeMeta = TYPE_BADGE[property.type] ?? { bg: "bg-gray-100", text: "text-gray-600", label: property.type };
+  const typeStyle = TYPE_BADGE_STYLE[property.type] ?? { bg: "bg-gray-100", text: "text-gray-600" };
+  const typeLabel = (() => { try { return tT(property.type); } catch { return property.type; } })();
 
   return (
     <tr className="bg-blue-50 ring-2 ring-inset ring-blue-300">
-      <td className="py-2.5 pl-4 pr-2 sm:pl-5">
+      <td className="py-2.5 ps-4 pe-2 sm:ps-5">
         <Thumbnail photos={property.photos} name={property.name} />
       </td>
       <td className="px-3 py-2" colSpan={2}>
@@ -186,14 +165,14 @@ function EditableRow({
         />
       </td>
       <td className="px-3 py-2 hidden sm:table-cell">
-        <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${typeMeta.bg} ${typeMeta.text}`}>
-          {typeMeta.label}
+        <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${typeStyle.bg} ${typeStyle.text}`}>
+          {typeLabel}
         </span>
       </td>
       <td className="px-3 py-2 hidden md:table-cell text-sm text-gray-500">{property.city}</td>
-      <td className="px-3 py-2 hidden lg:table-cell text-sm text-center">{property.totalUnits}</td>
-      <td className="px-3 py-2 hidden lg:table-cell text-sm text-center text-green-600 font-medium">{property.occupiedUnits}</td>
-      <td className="px-3 py-2 hidden lg:table-cell text-sm text-center text-gray-500">{property.vacantUnits}</td>
+      <td className="px-3 py-2 hidden lg:table-cell text-sm text-center ltr-numbers">{property.totalUnits}</td>
+      <td className="px-3 py-2 hidden lg:table-cell text-sm text-center text-green-600 font-medium ltr-numbers">{property.occupiedUnits}</td>
+      <td className="px-3 py-2 hidden lg:table-cell text-sm text-center text-gray-500 ltr-numbers">{property.vacantUnits}</td>
       <td className="px-3 py-2">
         <button
           type="button"
@@ -203,7 +182,7 @@ function EditableRow({
           }`}
         >
           {isActive ? <CheckCircleIcon className="h-3.5 w-3.5" /> : <WrenchScrewdriverIcon className="h-3.5 w-3.5" />}
-          {isActive ? "Active" : "Inactive"}
+          {isActive ? tInline("active") : tInline("inactive")}
         </button>
       </td>
       <td className="px-3 py-2">
@@ -213,13 +192,13 @@ function EditableRow({
             disabled={isPending}
             className="flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-60 transition-colors"
           >
-            <CheckIcon className="h-3.5 w-3.5" /> Save
+            <CheckIcon className="h-3.5 w-3.5" /> {tInline("save")}
           </button>
           <button
             onClick={onDone}
             className="flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
           >
-            <XMarkIcon className="h-3.5 w-3.5" /> Cancel
+            <XMarkIcon className="h-3.5 w-3.5" /> {tInline("cancel")}
           </button>
         </div>
       </td>
@@ -230,7 +209,12 @@ function EditableRow({
 // ── Card ─────────────────────────────────────────────────────────────────────
 
 function PropertyCard({ property }: { property: PropertyRow }) {
-  const typeMeta = TYPE_BADGE[property.type] ?? { bg: "bg-gray-100", text: "text-gray-600", label: property.type };
+  const tCard = useTranslations("buildings.card");
+  const tDet = useTranslations("buildings.detail");
+  const tTable = useTranslations("buildings.table");
+  const tT = useTranslations("buildings.types");
+  const typeStyle = TYPE_BADGE_STYLE[property.type] ?? { bg: "bg-gray-100", text: "text-gray-600" };
+  const typeLabel = (() => { try { return tT(property.type); } catch { return property.type; } })();
   const hasPhoto = property.photos.length > 0;
 
   return (
@@ -245,20 +229,20 @@ function PropertyCard({ property }: { property: PropertyRow }) {
           </div>
         )}
         {/* Type badge overlay */}
-        <span className={`absolute top-2 left-2 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold shadow-sm ${typeMeta.bg} ${typeMeta.text}`}>
-          {typeMeta.label}
+        <span className={`absolute top-2 start-2 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold shadow-sm ${typeStyle.bg} ${typeStyle.text}`}>
+          {typeLabel}
         </span>
         {/* Status overlay */}
-        <span className={`absolute top-2 right-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold shadow-sm ${
+        <span className={`absolute top-2 end-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold shadow-sm ${
           property.isArchived ? "bg-gray-200 text-gray-600"
           : property.isActive ? "bg-green-100 text-green-700"
           : "bg-amber-100 text-amber-700"
         }`}>
           {property.isArchived
-            ? <><ArchiveBoxIcon className="h-3 w-3" /> Archived</>
+            ? <><ArchiveBoxIcon className="h-3 w-3" /> {tDet("archived")}</>
             : property.isActive
-            ? <><CheckCircleIcon className="h-3 w-3" /> Active</>
-            : <><WrenchScrewdriverIcon className="h-3 w-3" /> Inactive</>}
+            ? <><CheckCircleIcon className="h-3 w-3" /> {tDet("active")}</>
+            : <><WrenchScrewdriverIcon className="h-3 w-3" /> {tDet("inactive")}</>}
         </span>
       </div>
 
@@ -270,29 +254,31 @@ function PropertyCard({ property }: { property: PropertyRow }) {
           </h3>
           <div className="mt-1 flex items-center gap-1 text-xs text-gray-500">
             <MapPinIcon className="h-3 w-3 flex-shrink-0" />
-            {property.city}{property.governorate ? `, ${property.governorate}` : ""}
-            {property.totalFloors ? ` · ${property.totalFloors}F` : ""}
+            <span className="ltr-numbers">
+              {property.city}{property.governorate ? `, ${property.governorate}` : ""}
+              {property.totalFloors ? ` · ${property.totalFloors}F` : ""}
+            </span>
           </div>
         </div>
 
         {/* Unit stats */}
         <div className="grid grid-cols-3 gap-2 rounded-lg bg-gray-50 px-3 py-2 text-center text-xs">
           <div>
-            <p className="text-base font-bold text-gray-800">{property.totalUnits}</p>
-            <p className="text-gray-400">Total</p>
+            <p className="text-base font-bold text-gray-800 ltr-numbers">{property.totalUnits}</p>
+            <p className="text-gray-400">{tCard("total")}</p>
           </div>
           <div>
-            <p className="text-base font-bold text-green-600">{property.occupiedUnits}</p>
-            <p className="text-gray-400">Occupied</p>
+            <p className="text-base font-bold text-green-600 ltr-numbers">{property.occupiedUnits}</p>
+            <p className="text-gray-400">{tCard("occupied")}</p>
           </div>
           <div>
-            <p className="text-base font-bold text-gray-500">{property.vacantUnits}</p>
-            <p className="text-gray-400">Vacant</p>
+            <p className="text-base font-bold text-gray-500 ltr-numbers">{property.vacantUnits}</p>
+            <p className="text-gray-400">{tCard("vacant")}</p>
           </div>
         </div>
 
         {/* Occupancy bar */}
-        <OccupancyBar occupied={property.occupiedUnits} total={property.totalUnits} />
+        <OccupancyBar occupied={property.occupiedUnits} total={property.totalUnits} noUnitsLabel={tTable("noUnits")} />
 
         {/* Actions */}
         <div className="mt-auto flex gap-2 pt-1">
@@ -300,13 +286,13 @@ function PropertyCard({ property }: { property: PropertyRow }) {
             href={`/dashboard/properties/${property.id}`}
             className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-gray-200 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            View
+            {tCard("view")}
           </Link>
           <Link
             href={`/dashboard/properties/${property.id}/edit`}
             className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-blue-600 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition-colors"
           >
-            Edit
+            {tCard("edit")}
           </Link>
         </div>
       </div>
@@ -317,43 +303,51 @@ function PropertyCard({ property }: { property: PropertyRow }) {
 // ── Summary Card ─────────────────────────────────────────────────────────────
 
 function SummaryCard({ property }: { property: PropertyRow }) {
-  const typeMeta = TYPE_BADGE[property.type] ?? { bg: "bg-gray-100", text: "text-gray-600", label: property.type };
+  const locale = useLocale();
+  const tSum = useTranslations("buildings.summary");
+  const tDet = useTranslations("buildings.detail");
+  const tT = useTranslations("buildings.types");
+
+  const typeStyle = TYPE_BADGE_STYLE[property.type] ?? { bg: "bg-gray-100", text: "text-gray-600" };
+  const typeLabel = (() => { try { return tT(property.type); } catch { return property.type; } })();
   const hasPhoto  = property.photos.length > 0;
   const pct       = property.totalUnits > 0
     ? Math.round((property.occupiedUnits / property.totalUnits) * 100) : 0;
   const barColor  = pct >= 90 ? "bg-red-500" : pct >= 60 ? "bg-amber-400" : "bg-emerald-500";
 
+  const numFmt = locale === "ar" ? "ar-OM" : "en-OM";
+
   const stats = [
     {
-      label: "Total Units",
-      value: property.totalUnits,
-      sub: property.totalFloors ? `${property.totalFloors} floor${property.totalFloors > 1 ? "s" : ""}` : null,
+      label: tSum("totalUnits"),
+      value: property.totalUnits.toString(),
+      sub: property.totalFloors ? tSum("floorsCount", { count: property.totalFloors }) : null,
       icon: HomeIcon,
       iconCls: "bg-blue-50 text-blue-500",
       valCls: "text-gray-900",
     },
     {
-      label: "Occupied",
+      label: tSum("occupied"),
       value: `${pct}%`,
-      sub: `${property.occupiedUnits} of ${property.totalUnits} units`,
+      sub: tSum("occupiedSub", { occupied: property.occupiedUnits, total: property.totalUnits }),
       icon: CheckCircleIcon,
       iconCls: "bg-emerald-50 text-emerald-500",
       valCls: pct >= 90 ? "text-red-600" : pct >= 60 ? "text-amber-600" : "text-emerald-600",
     },
     {
-      label: "Vacant",
-      value: property.vacantUnits,
-      sub: property.totalUnits > 0 ? `${100 - pct}% available` : "—",
+      label: tSum("vacant"),
+      value: property.vacantUnits.toString(),
+      sub: property.totalUnits > 0 ? tSum("availableSub", { pct: 100 - pct }) : "—",
       icon: BuildingOffice2Icon,
       iconCls: "bg-gray-50 text-gray-400",
       valCls: "text-gray-700",
     },
     {
-      label: "Revenue this month",
+      label: tSum("revenueThisMonth"),
       value: property.revenueThisMonth > 0
-        ? property.revenueThisMonth.toLocaleString("en-OM", { minimumFractionDigits: 3, maximumFractionDigits: 3 })
+        ? property.revenueThisMonth.toLocaleString(numFmt, { minimumFractionDigits: 3, maximumFractionDigits: 3 })
         : "—",
-      sub: property.revenueThisMonth > 0 ? "OMR" : "No payments yet",
+      sub: property.revenueThisMonth > 0 ? tSum("omr") : tSum("noPayments"),
       icon: BanknotesIcon,
       iconCls: "bg-violet-50 text-violet-500",
       valCls: "text-violet-700",
@@ -377,21 +371,21 @@ function SummaryCard({ property }: { property: PropertyRow }) {
         {/* Gradient overlay for text legibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
         {/* Type badge */}
-        <span className={`absolute top-3 left-3 inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold shadow ${typeMeta.bg} ${typeMeta.text}`}>
-          {typeMeta.label}
+        <span className={`absolute top-3 start-3 inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold shadow ${typeStyle.bg} ${typeStyle.text}`}>
+          {typeLabel}
         </span>
         {/* Status badge */}
-        <span className={`absolute top-3 right-3 inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold shadow ${
+        <span className={`absolute top-3 end-3 inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold shadow ${
           property.isArchived ? "bg-gray-200 text-gray-700"
           : property.isActive  ? "bg-emerald-100 text-emerald-700"
           : "bg-amber-100 text-amber-700"
         }`}>
-          {property.isArchived ? <><ArchiveBoxIcon className="h-3 w-3" />Archived</>
-          : property.isActive  ? <><CheckCircleIcon className="h-3 w-3" />Active</>
-          : <><WrenchScrewdriverIcon className="h-3 w-3" />Inactive</>}
+          {property.isArchived ? <><ArchiveBoxIcon className="h-3 w-3" />{tDet("archived")}</>
+          : property.isActive  ? <><CheckCircleIcon className="h-3 w-3" />{tDet("active")}</>
+          : <><WrenchScrewdriverIcon className="h-3 w-3" />{tDet("inactive")}</>}
         </span>
         {/* Name over photo */}
-        <div className="absolute bottom-0 left-0 right-0 px-4 pb-3">
+        <div className="absolute bottom-0 inset-x-0 px-4 pb-3">
           <h3 className="text-base font-bold text-white leading-tight drop-shadow line-clamp-1 group-hover:underline">
             {property.name}
           </h3>
@@ -407,8 +401,8 @@ function SummaryCard({ property }: { property: PropertyRow }) {
       {/* Occupancy bar */}
       <div className="px-4 pt-3 pb-1">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-xs font-medium text-gray-500">Occupancy</span>
-          <span className={`text-xs font-bold ${pct >= 90 ? "text-red-600" : pct >= 60 ? "text-amber-600" : "text-emerald-600"}`}>
+          <span className="text-xs font-medium text-gray-500">{tSum("occupancyLabel")}</span>
+          <span className={`text-xs font-bold ltr-numbers ${pct >= 90 ? "text-red-600" : pct >= 60 ? "text-amber-600" : "text-emerald-600"}`}>
             {pct}%
           </span>
         </div>
@@ -430,9 +424,9 @@ function SummaryCard({ property }: { property: PropertyRow }) {
                 <Icon className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <p className={`text-sm font-bold leading-tight ${s.valCls} truncate`}>{s.value}</p>
+                <p className={`text-sm font-bold leading-tight ${s.valCls} truncate ltr-numbers`}>{s.value}</p>
                 <p className="text-[11px] text-gray-400 leading-tight mt-0.5 truncate">{s.label}</p>
-                {s.sub && <p className="text-[10px] text-gray-300 mt-0.5 truncate">{s.sub}</p>}
+                {s.sub && <p className="text-[10px] text-gray-300 mt-0.5 truncate ltr-numbers">{s.sub}</p>}
               </div>
             </div>
           );
@@ -444,9 +438,9 @@ function SummaryCard({ property }: { property: PropertyRow }) {
         <span className="text-xs text-gray-400">
           {property.description
             ? <span className="line-clamp-1">{property.description}</span>
-            : <span>View all details →</span>}
+            : <span>{tSum("viewAllDetails")}</span>}
         </span>
-        <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5 flex-shrink-0 text-gray-400 group-hover:text-blue-500 transition-colors" />
+        <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5 flex-shrink-0 text-gray-400 group-hover:text-blue-500 transition-colors rtl:-scale-x-100" />
       </div>
     </Link>
   );
@@ -461,6 +455,51 @@ export default function PropertiesView({
   properties: PropertyRow[];
   initialSort: string;
 }) {
+  const t       = useTranslations("buildings");
+  const tTb     = useTranslations("buildings.toolbar");
+  const tTable  = useTranslations("buildings.table");
+  const tCard   = useTranslations("buildings.card");
+  const tT      = useTranslations("buildings.types");
+  const tDet    = useTranslations("buildings.detail");
+  const tPrint  = useTranslations("buildings.print");
+  const tCsv    = useTranslations("buildings.csv");
+  const locale  = useLocale();
+
+  // CSV export uses locale-aware translated headers
+  const exportCSV = (rows: PropertyRow[]) => {
+    const headers = [
+      tCsv("name"), tCsv("type"), tCsv("city"), tCsv("address"),
+      tCsv("floors"), tCsv("totalUnits"), tCsv("occupied"), tCsv("vacant"),
+      tCsv("revenue"), tCsv("status"), tCsv("created"),
+    ];
+    const lines = rows.map((p) => {
+      let typeLabel: string;
+      try { typeLabel = tT(p.type); } catch { typeLabel = p.type; }
+      const status = p.isArchived ? tDet("archived") : p.isActive ? tDet("active") : tDet("inactive");
+      return [
+        `"${p.name.replace(/"/g, '""')}"`,
+        typeLabel,
+        p.city,
+        p.address ?? "",
+        p.totalFloors ?? "",
+        p.totalUnits,
+        p.occupiedUnits,
+        p.vacantUnits,
+        p.revenueThisMonth.toFixed(3),
+        status,
+        new Date(p.createdAt).toLocaleDateString(locale === "ar" ? "ar-OM" : "en-GB"),
+      ].join(",");
+    });
+    const csv = [headers.join(","), ...lines].join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
+    a.download = `properties-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Derive initial sort from URL param
   const parseSort = (s: string): [SortKey, SortDir] => {
     if (s === "newest")    return ["createdAt", "desc"];
@@ -488,6 +527,9 @@ export default function PropertiesView({
 
   const handlePrint = () => window.print();
 
+  const printDate = new Date().toLocaleDateString(locale === "ar" ? "ar-OM" : "en-GB");
+  const noUnitsLabel = tTable("noUnits");
+
   return (
     <div className="space-y-3">
 
@@ -499,18 +541,18 @@ export default function PropertiesView({
           <button
             onClick={() => exportCSV(sorted)}
             className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-green-300 hover:bg-green-50 hover:text-green-700 transition-colors"
-            title="Export to CSV"
+            title={tTb("csvTitle")}
           >
             <DocumentArrowDownIcon className="h-3.5 w-3.5" />
-            CSV
+            {tTb("csv")}
           </button>
           <button
             onClick={handlePrint}
             className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 transition-colors"
-            title="Print list"
+            title={tTb("printTitle")}
           >
             <PrinterIcon className="h-3.5 w-3.5" />
-            Print
+            {tTb("print")}
           </button>
           <div className="mx-1 h-4 w-px bg-gray-200" />
           <button
@@ -520,10 +562,10 @@ export default function PropertiesView({
                 ? "border-blue-400 bg-blue-50 text-blue-700"
                 : "border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
             }`}
-            title="Toggle inline editing"
+            title={tTb("inlineEditTitle")}
           >
             <PencilSquareIcon className="h-3.5 w-3.5" />
-            {editMode ? "Exit Edit" : "Inline Edit"}
+            {editMode ? tTb("exitEdit") : tTb("inlineEdit")}
           </button>
         </div>
 
@@ -534,7 +576,7 @@ export default function PropertiesView({
             className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition-colors shadow-sm"
           >
             <PlusIcon className="h-3.5 w-3.5" />
-            New Property
+            {t("newProperty")}
           </Link>
           <div className="flex rounded-lg border border-gray-200 overflow-hidden">
             <button
@@ -542,7 +584,7 @@ export default function PropertiesView({
               className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 viewMode === "table" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50"
               }`}
-              title="Table view"
+              title={tTb("viewTable")}
             >
               <ListBulletIcon className="h-4 w-4" />
             </button>
@@ -551,7 +593,7 @@ export default function PropertiesView({
               className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 viewMode === "card" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50"
               }`}
-              title="Card view"
+              title={tTb("viewCard")}
             >
               <Squares2X2Icon className="h-4 w-4" />
             </button>
@@ -560,7 +602,7 @@ export default function PropertiesView({
               className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
                 viewMode === "summary" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50"
               }`}
-              title="Summary view"
+              title={tTb("viewSummary")}
             >
               <RectangleGroupIcon className="h-4 w-4" />
             </button>
@@ -575,16 +617,16 @@ export default function PropertiesView({
             <table className="min-w-full divide-y divide-gray-200 print:text-xs">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="py-3 pl-4 pr-2 sm:pl-5 w-16" />
-                  <SortTh label="Name"     sortKey="name"         currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="min-w-[160px]" />
-                  <SortTh label="Type"     sortKey="type"         currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden sm:table-cell" />
-                  <SortTh label="City"     sortKey="city"         currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden md:table-cell" />
-                  <SortTh label="Units"    sortKey="totalUnits"   currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden lg:table-cell text-center" />
-                  <SortTh label="Occupied" sortKey="occupiedUnits" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden lg:table-cell text-center" />
-                  <SortTh label="Vacant"   sortKey="vacantUnits"  currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden lg:table-cell text-center" />
-                  <SortTh label="Status"   sortKey="isActive"     currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                  <th className="px-3 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500 print:hidden">
-                    Actions
+                  <th className="py-3 ps-4 pe-2 sm:ps-5 w-16" />
+                  <SortTh label={tTable("colName")}     sortKey="name"          currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="min-w-[160px]" />
+                  <SortTh label={tTable("colType")}     sortKey="type"          currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden sm:table-cell" />
+                  <SortTh label={tTable("colCity")}     sortKey="city"          currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden md:table-cell" />
+                  <SortTh label={tTable("colUnits")}    sortKey="totalUnits"    currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden lg:table-cell text-center" />
+                  <SortTh label={tTable("colOccupied")} sortKey="occupiedUnits" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden lg:table-cell text-center" />
+                  <SortTh label={tTable("colVacant")}   sortKey="vacantUnits"   currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden lg:table-cell text-center" />
+                  <SortTh label={tTable("colStatus")}   sortKey="isActive"      currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
+                  <th className="px-3 py-3 text-end text-xs font-semibold uppercase tracking-wide text-gray-500 print:hidden">
+                    {tTable("colActions")}
                   </th>
                 </tr>
               </thead>
@@ -593,7 +635,7 @@ export default function PropertiesView({
                   <tr>
                     <td colSpan={9} className="py-16 text-center text-sm text-gray-400">
                       <BuildingOffice2Icon className="mx-auto mb-3 h-10 w-10 text-gray-200" />
-                      No buildings match your filters.
+                      {tTable("noMatch")}
                     </td>
                   </tr>
                 ) : (
@@ -606,7 +648,7 @@ export default function PropertiesView({
                         className="hover:bg-blue-50/50 transition-colors"
                       >
                         {/* Thumbnail */}
-                        <td className="py-2.5 pl-4 pr-2 sm:pl-5">
+                        <td className="py-2.5 ps-4 pe-2 sm:ps-5">
                           <Thumbnail photos={p.photos} name={p.name} />
                         </td>
 
@@ -628,10 +670,12 @@ export default function PropertiesView({
                         {/* Type */}
                         <td className="hidden sm:table-cell px-3 py-2.5">
                           {(() => {
-                            const m = TYPE_BADGE[p.type] ?? { bg: "bg-gray-100", text: "text-gray-600", label: p.type };
+                            const style = TYPE_BADGE_STYLE[p.type] ?? { bg: "bg-gray-100", text: "text-gray-600" };
+                            let label: string;
+                            try { label = tT(p.type); } catch { label = p.type; }
                             return (
-                              <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${m.bg} ${m.text}`}>
-                                {m.label}
+                              <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text}`}>
+                                {label}
                               </span>
                             );
                           })()}
@@ -646,20 +690,20 @@ export default function PropertiesView({
                         </td>
 
                         {/* Units */}
-                        <td className="hidden lg:table-cell px-3 py-2.5 text-sm text-center font-medium text-gray-700">
+                        <td className="hidden lg:table-cell px-3 py-2.5 text-sm text-center font-medium text-gray-700 ltr-numbers">
                           {p.totalUnits}
                         </td>
 
                         {/* Occupied */}
                         <td className="hidden lg:table-cell px-3 py-2.5">
                           <div className="flex flex-col items-center gap-1">
-                            <span className="text-sm font-semibold text-green-600">{p.occupiedUnits}</span>
-                            <OccupancyBar occupied={p.occupiedUnits} total={p.totalUnits} />
+                            <span className="text-sm font-semibold text-green-600 ltr-numbers">{p.occupiedUnits}</span>
+                            <OccupancyBar occupied={p.occupiedUnits} total={p.totalUnits} noUnitsLabel={noUnitsLabel} />
                           </div>
                         </td>
 
                         {/* Vacant */}
-                        <td className="hidden lg:table-cell px-3 py-2.5 text-sm text-center text-gray-500">
+                        <td className="hidden lg:table-cell px-3 py-2.5 text-sm text-center text-gray-500 ltr-numbers">
                           {p.vacantUnits}
                         </td>
 
@@ -667,27 +711,27 @@ export default function PropertiesView({
                         <td className="px-3 py-2.5">
                           {p.isArchived ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-600">
-                              <ArchiveBoxIcon className="h-3 w-3" /> Archived
+                              <ArchiveBoxIcon className="h-3 w-3" /> {tDet("archived")}
                             </span>
                           ) : p.isActive ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
-                              <CheckCircleIcon className="h-3 w-3" /> Active
+                              <CheckCircleIcon className="h-3 w-3" /> {tDet("active")}
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                              <WrenchScrewdriverIcon className="h-3 w-3" /> Inactive
+                              <WrenchScrewdriverIcon className="h-3 w-3" /> {tDet("inactive")}
                             </span>
                           )}
                         </td>
 
                         {/* Actions */}
-                        <td className="px-3 py-2.5 text-right print:hidden">
+                        <td className="px-3 py-2.5 text-end print:hidden">
                           <div className="flex items-center justify-end gap-1">
                             {editMode && (
                               <button
                                 onClick={() => setInlineEditId(p.id)}
                                 className="rounded-md p-1.5 text-gray-400 hover:bg-blue-100 hover:text-blue-600 transition-colors"
-                                title="Inline edit"
+                                title={tTable("actionInlineEdit")}
                               >
                                 <PencilSquareIcon className="h-4 w-4" />
                               </button>
@@ -695,9 +739,9 @@ export default function PropertiesView({
                             <Link
                               href={`/dashboard/properties/${p.id}`}
                               className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                              title="View details"
+                              title={tTable("actionViewDetails")}
                             >
-                              <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+                              <ArrowTopRightOnSquareIcon className="h-4 w-4 rtl:-scale-x-100" />
                             </Link>
                           </div>
                         </td>
@@ -711,11 +755,16 @@ export default function PropertiesView({
 
           {/* Footer */}
           {sorted.length > 0 && (
-            <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-2.5 text-xs text-gray-500">
-              {sorted.length} building{sorted.length !== 1 ? "s" : ""} ·{" "}
-              {sorted.reduce((s, p) => s + p.totalUnits, 0)} total units ·{" "}
-              <span className="text-green-600 font-medium">{sorted.reduce((s, p) => s + p.occupiedUnits, 0)} occupied</span> ·{" "}
-              {sorted.reduce((s, p) => s + p.vacantUnits, 0)} vacant
+            <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-2.5 text-xs text-gray-500 ltr-numbers">
+              {tTable("footerBuildings", { count: sorted.length })}
+              {tTable("footerSeparator")}
+              {tTable("footerTotalUnits", { count: sorted.reduce((s, p) => s + p.totalUnits, 0) })}
+              {tTable("footerSeparator")}
+              <span className="text-green-600 font-medium">
+                {tTable("footerOccupied", { count: sorted.reduce((s, p) => s + p.occupiedUnits, 0) })}
+              </span>
+              {tTable("footerSeparator")}
+              {tTable("footerVacant", { count: sorted.reduce((s, p) => s + p.vacantUnits, 0) })}
             </div>
           )}
         </div>
@@ -727,7 +776,7 @@ export default function PropertiesView({
           {sorted.length === 0 ? (
             <div className="rounded-xl border border-gray-200 bg-white py-16 text-center shadow-sm">
               <BuildingOffice2Icon className="mx-auto mb-3 h-10 w-10 text-gray-200" />
-              <p className="text-sm text-gray-400">No buildings match your filters.</p>
+              <p className="text-sm text-gray-400">{tTable("noMatch")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -740,7 +789,7 @@ export default function PropertiesView({
                 className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-white py-12 text-sm font-medium text-gray-400 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 transition-all"
               >
                 <PlusIcon className="h-8 w-8" />
-                Add Building
+                {tCard("addBuilding")}
               </Link>
             </div>
           )}
@@ -753,7 +802,7 @@ export default function PropertiesView({
           {sorted.length === 0 ? (
             <div className="rounded-xl border border-gray-200 bg-white py-16 text-center shadow-sm">
               <BuildingOffice2Icon className="mx-auto mb-3 h-10 w-10 text-gray-200" />
-              <p className="text-sm text-gray-400">No buildings match your filters.</p>
+              <p className="text-sm text-gray-400">{tTable("noMatch")}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -767,28 +816,32 @@ export default function PropertiesView({
 
       {/* ── Print-only table (hidden on screen) ──────────────────── */}
       <div className="hidden print:block">
-        <h2 className="mb-4 text-lg font-bold">Properties List — {new Date().toLocaleDateString()}</h2>
+        <h2 className="mb-4 text-lg font-bold">{tPrint("title", { date: printDate })}</h2>
         <table className="w-full text-xs border-collapse">
           <thead>
             <tr className="border-b-2 border-gray-800">
-              {["Name","Type","City","Address","Units","Occupied","Vacant","Status"].map((h) => (
-                <th key={h} className="py-1 pr-3 text-left font-semibold">{h}</th>
+              {[
+                tPrint("colName"), tPrint("colType"), tPrint("colCity"), tPrint("colAddress"),
+                tPrint("colUnits"), tPrint("colOccupied"), tPrint("colVacant"), tPrint("colStatus"),
+              ].map((h) => (
+                <th key={h} className="py-1 pe-3 text-start font-semibold">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {sorted.map((p) => {
-              const m = TYPE_BADGE[p.type];
+              let typeLabel: string;
+              try { typeLabel = tT(p.type); } catch { typeLabel = p.type; }
               return (
                 <tr key={p.id} className="border-b border-gray-200">
-                  <td className="py-1 pr-3 font-medium">{p.name}</td>
-                  <td className="py-1 pr-3">{m?.label ?? p.type}</td>
-                  <td className="py-1 pr-3">{p.city}</td>
-                  <td className="py-1 pr-3">{p.address ?? "—"}</td>
-                  <td className="py-1 pr-3 text-center">{p.totalUnits}</td>
-                  <td className="py-1 pr-3 text-center">{p.occupiedUnits}</td>
-                  <td className="py-1 pr-3 text-center">{p.vacantUnits}</td>
-                  <td className="py-1 pr-3">{p.isActive ? "Active" : "Inactive"}</td>
+                  <td className="py-1 pe-3 font-medium">{p.name}</td>
+                  <td className="py-1 pe-3">{typeLabel}</td>
+                  <td className="py-1 pe-3">{p.city}</td>
+                  <td className="py-1 pe-3">{p.address ?? tPrint("dash")}</td>
+                  <td className="py-1 pe-3 text-center ltr-numbers">{p.totalUnits}</td>
+                  <td className="py-1 pe-3 text-center ltr-numbers">{p.occupiedUnits}</td>
+                  <td className="py-1 pe-3 text-center ltr-numbers">{p.vacantUnits}</td>
+                  <td className="py-1 pe-3">{p.isActive ? tDet("active") : tDet("inactive")}</td>
                 </tr>
               );
             })}

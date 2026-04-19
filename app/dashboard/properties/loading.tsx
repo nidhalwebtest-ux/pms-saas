@@ -1,3 +1,5 @@
+import { getTranslations } from "next-intl/server";
+
 function SkeletonRow() {
   return (
     <div className="flex items-center gap-4 px-5 py-3.5 border-b border-gray-100 last:border-0">
@@ -15,9 +17,11 @@ function SkeletonRow() {
   );
 }
 
-export default function PropertiesLoading() {
+export default async function PropertiesLoading() {
+  const t = await getTranslations("buildings.loading");
+
   return (
-    <div className="space-y-4 animate-in fade-in duration-200">
+    <div className="space-y-4 animate-in fade-in duration-200" aria-label={t("label")} aria-busy="true">
       {/* Filter bar skeleton */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
         <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">

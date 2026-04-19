@@ -2,6 +2,9 @@ import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
+import { getTranslations, getLocale } from "next-intl/server";
+import { format } from "date-fns";
+import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import {
   HomeIcon,
   PhotoIcon,
@@ -12,19 +15,20 @@ import {
 } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
 import PropertyDangerZone from "@/components/dashboard/PropertyDangerZone";
-import { getUnitDisplayStatus, UNIT_STATUS_CONFIG } from "@/lib/unit-status";
+import { getUnitDisplayStatus } from "@/lib/unit-status";
 
-const TYPE_BADGE: Record<string, string> = {
+const TYPE_BADGE_STYLE: Record<string, string> = {
   RESIDENTIAL: "bg-blue-100 text-blue-700",
   MIXED:       "bg-violet-100 text-violet-700",
   HOTEL:       "bg-amber-100 text-amber-700",
   COMMERCIAL:  "bg-green-100 text-green-700",
 };
-const TYPE_LABEL: Record<string, string> = {
-  RESIDENTIAL: "Residential",
-  MIXED:       "Mixed Use",
-  HOTEL:       "Short-term",
-  COMMERCIAL:  "Commercial",
+
+const STATUS_BADGE_STYLE: Record<string, { badge: string; dot: string }> = {
+  vacant:      { badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
+  occupied:    { badge: "bg-blue-100 text-blue-700",       dot: "bg-blue-500"    },
+  reserved:    { badge: "bg-violet-100 text-violet-700",   dot: "bg-violet-500"  },
+  maintenance: { badge: "bg-amber-100 text-amber-700",     dot: "bg-amber-500"   },
 };
 
 export default async function PropertyDetailsPage({
@@ -61,6 +65,21 @@ export default async function PropertyDetailsPage({
   if (!property) notFound();
   if (property.organizationId !== dbUser?.organizationId) redirect("/dashboard");
 
+  const t      = await getTranslations("buildings.detail");
+  const tT     = await getTranslations("buildings.types");
+  const tStat  = await getTranslations("units.displayStatus");
+  const locale = await getLocale();
+  const dateLocale = locale === "ar" ? arLocale : enLocale;
+
+  const fmtDate = (d: Date) =>
+    format(d, "d MMM yyyy", { locale: dateLocale });
+
+  const tryT = <T,>(fn: (k: string) => T, key: string, fallback: T): T => {
+    try { return fn(key); } catch { return fallback; }
+  };
+
+  const typeLabel = tryT((k) => tT(k), property.type, property.type);
+
   return (
     <div className="space-y-6">
 
@@ -69,13 +88,13 @@ export default async function PropertyDetailsPage({
         <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-5 py-4">
           <ArchiveBoxIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
           <div>
-            <p className="text-sm font-semibold text-amber-900">This building is archived</p>
+            <p className="text-sm font-semibold text-amber-900">{t("archivedTitle")}</p>
             <p className="mt-0.5 text-xs text-amber-700">
-              It is hidden from all default views. All units, reservations, and historical data are preserved.
+              {t("archivedBody")}
               {property.archivedAt && (
-                <> Archived on {new Date(property.archivedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}.</>
+                <> {t("archivedOn", { date: fmtDate(property.archivedAt) })}</>
               )}
-              {" "}Scroll down to restore it.
+              {" "}{t("scrollToRestore")}
             </p>
           </div>
         </div>
@@ -89,26 +108,26 @@ export default async function PropertyDetailsPage({
               <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl sm:tracking-tight">
                 {property.name}
               </h2>
-              <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${TYPE_BADGE[property.type] ?? "bg-gray-100 text-gray-600"}`}>
-                {TYPE_LABEL[property.type] ?? property.type}
+              <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${TYPE_BADGE_STYLE[property.type] ?? "bg-gray-100 text-gray-600"}`}>
+                {typeLabel}
               </span>
               {property.isArchived ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-semibold text-gray-600">
-                  <ArchiveBoxIcon className="h-3.5 w-3.5" /> Archived
+                  <ArchiveBoxIcon className="h-3.5 w-3.5" /> {t("archived")}
                 </span>
               ) : property.isActive ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
-                  <CheckCircleIcon className="h-3.5 w-3.5" /> Active
+                  <CheckCircleIcon className="h-3.5 w-3.5" /> {t("active")}
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-                  <WrenchScrewdriverIcon className="h-3.5 w-3.5" /> Inactive
+                  <WrenchScrewdriverIcon className="h-3.5 w-3.5" /> {t("inactive")}
                 </span>
               )}
             </div>
             <p className="mt-1 text-sm text-gray-500">
               {[property.address, property.city, property.governorate].filter(Boolean).join(", ")}
-              {property.totalFloors ? ` · ${property.totalFloors} floor${property.totalFloors > 1 ? "s" : ""}` : ""}
+              {property.totalFloors ? t("floorsSuffix", { count: property.totalFloors }) : ""}
             </p>
             {property.description && (
               <p className="mt-2 text-sm text-gray-600 max-w-2xl">{property.description}</p>
@@ -116,19 +135,19 @@ export default async function PropertyDetailsPage({
           </div>
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-3 sm:ml-4 sm:mt-0">
+        <div className="mt-4 flex flex-wrap gap-3 sm:ms-4 sm:mt-0">
           <Link
             href={`/dashboard/properties/${id}/edit`}
             className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
           >
-            Edit Property
+            {t("editProperty")}
           </Link>
           {!property.isArchived && (
             <Link
               href={`/dashboard/units/new?propertyId=${id}`}
               className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
             >
-              + Add Unit
+              {t("addUnit")}
             </Link>
           )}
         </div>
@@ -138,13 +157,14 @@ export default async function PropertyDetailsPage({
       {property.photos.length > 0 && (
         <div>
           <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-700">
-            <PhotoIcon className="h-4 w-4 text-gray-400" /> Photos ({property.photos.length})
+            <PhotoIcon className="h-4 w-4 text-gray-400" />{" "}
+            <span className="ltr-numbers">{t("photosHeading", { count: property.photos.length })}</span>
           </h3>
           <div className="flex flex-wrap gap-3">
             {property.photos.map((url) => (
               <a key={url} href={url} target="_blank" rel="noopener noreferrer">
                 <div className="relative h-32 w-40 overflow-hidden rounded-xl ring-1 ring-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                  <Image src={url} alt="Property photo" fill className="object-cover" unoptimized />
+                  <Image src={url} alt={property.name} fill className="object-cover" unoptimized />
                 </div>
               </a>
             ))}
@@ -154,62 +174,63 @@ export default async function PropertyDetailsPage({
 
       {/* ── Units Table ─────────────────────────────────────────── */}
       <div>
-        <h3 className="mb-4 text-base font-semibold text-gray-900">
-          Units &amp; Rooms ({property._count.units})
+        <h3 className="mb-4 text-base font-semibold text-gray-900 ltr-numbers">
+          {t("unitsHeading", { count: property._count.units })}
         </h3>
         <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
           <table className="min-w-full divide-y divide-gray-300">
             <thead className="bg-gray-50">
               <tr>
-                <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">Name</th>
-                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Floor</th>
-                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
-                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Base Price</th>
-                <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                <th className="relative py-3.5 pl-3 pr-4 sm:pr-6"><span className="sr-only">Actions</span></th>
+                <th className="py-3.5 ps-4 pe-3 text-start text-sm font-semibold text-gray-900 sm:ps-6">{t("table.name")}</th>
+                <th className="px-3 py-3.5 text-start text-sm font-semibold text-gray-900">{t("table.floor")}</th>
+                <th className="px-3 py-3.5 text-start text-sm font-semibold text-gray-900">{t("table.type")}</th>
+                <th className="px-3 py-3.5 text-start text-sm font-semibold text-gray-900">{t("table.basePrice")}</th>
+                <th className="px-3 py-3.5 text-start text-sm font-semibold text-gray-900">{t("table.status")}</th>
+                <th className="relative py-3.5 ps-3 pe-4 sm:pe-6"><span className="sr-only">{t("table.actions")}</span></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
               {property.units.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="py-10 text-center text-sm text-gray-500">
-                    No units yet.{!property.isArchived && <> Click &ldquo;+ Add Unit&rdquo; to get started.</>}
+                    {t("noUnits")}{!property.isArchived && t("noUnitsAddHint")}
                   </td>
                 </tr>
               ) : (
                 property.units.map((unit) => {
                   const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations);
-                  const cfg = UNIT_STATUS_CONFIG[displayStatus];
+                  const cfg = STATUS_BADGE_STYLE[displayStatus];
+                  const statusLabel = tryT((k) => tStat(k), displayStatus, displayStatus);
                   return (
                   <tr key={unit.id} className="hover:bg-blue-50/40 transition-colors">
-                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                    <td className="whitespace-nowrap py-4 ps-4 pe-3 text-sm font-medium text-gray-900 sm:ps-6">
                       <div className="flex items-center gap-2">
                         <HomeIcon className="h-4 w-4 text-gray-400" />
                         {unit.name}
                         {unit.photos.length > 0 && (
-                          <span className="text-xs text-gray-400" title={`${unit.photos.length} photo(s)`}>
+                          <span className="text-xs text-gray-400 ltr-numbers" title={t("table.photosCount", { count: unit.photos.length })}>
                             <PhotoIcon className="inline h-3.5 w-3.5" /> {unit.photos.length}
                           </span>
                         )}
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{unit.floor ?? "—"}</td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                      {unit.bedrooms} Bed / {unit.bathrooms} Bath
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 ltr-numbers">{unit.floor ?? t("table.dash")}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 ltr-numbers">
+                      {t("table.bedsBaths", { beds: unit.bedrooms, baths: unit.bathrooms })}
                     </td>
-                    <td className="whitespace-nowrap px-3 py-4 text-sm font-semibold text-gray-800">
+                    <td className="whitespace-nowrap px-3 py-4 text-sm font-semibold text-gray-800 ltr-numbers">
                       {Number(unit.basePrice).toFixed(3)}{" "}
-                      <span className="text-xs font-normal text-gray-500">OMR</span>
+                      <span className="text-xs font-normal text-gray-500">{t("table.omr")}</span>
                     </td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm">
                       <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.badge}`}>
                         <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-                        {cfg.label}
+                        {statusLabel}
                       </span>
                     </td>
-                    <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                    <td className="relative whitespace-nowrap py-4 ps-3 pe-4 text-end text-sm font-medium sm:pe-6">
                       <Link href={`/dashboard/units/${unit.id}/edit`} className="text-blue-600 hover:text-blue-900">
-                        Edit
+                        {t("table.edit")}
                       </Link>
                     </td>
                   </tr>
@@ -223,7 +244,7 @@ export default async function PropertyDetailsPage({
 
       {/* ── Danger Zone ─────────────────────────────────────────── */}
       <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-        <p className="mb-4 text-sm font-semibold text-gray-700">Danger Zone</p>
+        <p className="mb-4 text-sm font-semibold text-gray-700">{t("dangerZone")}</p>
         <PropertyDangerZone
           propertyId={id}
           propertyName={property.name}

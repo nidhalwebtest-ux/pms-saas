@@ -85,15 +85,242 @@
   "buildings": {
     "title": "المباني",
     "addBuilding": "إضافة مبنى",
-    "buildingName": "اسم المبنى",
-    "address": "العنوان",
-    "city": "المدينة",
-    "totalUnits": "إجمالي الوحدات",
-    "floors": "الطوابق",
-    "type": "نوع المبنى",
-    "residential": "سكني",
-    "mixed": "متعدد الاستخدام",
-    "shortTerm": "إيجار قصير المدة"
+    "newProperty": "مبنى جديد",
+    "filters": {
+      "searchPlaceholder": "ابحث بالاسم أو المدينة أو العنوان…",
+      "clearSearch": "مسح البحث",
+      "buildingsCount": "{count, plural, zero {لا توجد مبانٍ} one {مبنى واحد} two {مبنيان} few {# مبانٍ} many {# مبنى} other {# مبنى}}",
+      "clear": "مسح",
+      "typeLabel": "النوع",
+      "statusLabel": "الحالة"
+    },
+    "types": {
+      "all": "كل الأنواع",
+      "RESIDENTIAL": "سكني",
+      "MIXED": "متعدد الاستخدام",
+      "HOTEL": "إيجار قصير",
+      "COMMERCIAL": "تجاري"
+    },
+    "status": {
+      "all": "الكل",
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "archived": "مؤرشف"
+    },
+    "toolbar": {
+      "csv": "CSV",
+      "csvTitle": "تصدير إلى CSV",
+      "print": "طباعة",
+      "printTitle": "طباعة القائمة",
+      "inlineEdit": "تحرير سريع",
+      "exitEdit": "إنهاء التحرير",
+      "inlineEditTitle": "تبديل التحرير السريع",
+      "viewTable": "عرض الجدول",
+      "viewCard": "عرض البطاقات",
+      "viewSummary": "عرض الملخص"
+    },
+    "table": {
+      "colName": "الاسم",
+      "colType": "النوع",
+      "colCity": "المدينة",
+      "colUnits": "الوحدات",
+      "colOccupied": "المشغولة",
+      "colVacant": "الشاغرة",
+      "colStatus": "الحالة",
+      "colActions": "إجراءات",
+      "noMatch": "لا توجد مبانٍ تطابق عوامل التصفية.",
+      "actionInlineEdit": "تحرير سريع",
+      "actionViewDetails": "عرض التفاصيل",
+      "footerBuildings": "{count, plural, zero {لا توجد مبانٍ} one {مبنى واحد} two {مبنيان} few {# مبانٍ} many {# مبنى} other {# مبنى}}",
+      "footerTotalUnits": "{count} إجمالي الوحدات",
+      "footerOccupied": "{count} مشغولة",
+      "footerVacant": "{count} شاغرة",
+      "footerSeparator": " · ",
+      "noUnits": "لا توجد وحدات"
+    },
+    "card": {
+      "total": "الإجمالي",
+      "occupied": "المشغولة",
+      "vacant": "الشاغرة",
+      "view": "عرض",
+      "edit": "تحرير",
+      "addBuilding": "إضافة مبنى"
+    },
+    "summary": {
+      "totalUnits": "إجمالي الوحدات",
+      "occupied": "المشغولة",
+      "vacant": "الشاغرة",
+      "revenueThisMonth": "إيرادات هذا الشهر",
+      "omr": "ر.ع",
+      "noPayments": "لا توجد مدفوعات بعد",
+      "occupancyLabel": "نسبة الإشغال",
+      "viewAllDetails": "عرض كل التفاصيل ←",
+      "floorsCount": "{count, plural, zero {بدون طوابق} one {طابق واحد} two {طابقان} few {# طوابق} many {# طابقاً} other {# طابق}}",
+      "occupiedSub": "{occupied} من {total} وحدات",
+      "availableSub": "{pct}% متاحة"
+    },
+    "inline": {
+      "saved": "تم الحفظ",
+      "save": "حفظ",
+      "cancel": "إلغاء",
+      "active": "نشط",
+      "inactive": "غير نشط"
+    },
+    "print": {
+      "title": "قائمة المباني — {date}",
+      "colName": "الاسم",
+      "colType": "النوع",
+      "colCity": "المدينة",
+      "colAddress": "العنوان",
+      "colUnits": "الوحدات",
+      "colOccupied": "المشغولة",
+      "colVacant": "الشاغرة",
+      "colStatus": "الحالة",
+      "dash": "—"
+    },
+    "csv": {
+      "name": "الاسم",
+      "type": "النوع",
+      "city": "المدينة",
+      "address": "العنوان",
+      "floors": "الطوابق",
+      "totalUnits": "إجمالي الوحدات",
+      "occupied": "المشغولة",
+      "vacant": "الشاغرة",
+      "revenue": "الإيرادات (ر.ع)",
+      "status": "الحالة",
+      "created": "تاريخ الإنشاء"
+    },
+    "loading": {
+      "label": "جارٍ تحميل المباني"
+    },
+    "detail": {
+      "back": "رجوع",
+      "archivedTitle": "هذا المبنى مؤرشف",
+      "archivedBody": "إنه مخفي من جميع العروض الافتراضية. يتم الاحتفاظ بكل الوحدات والحجوزات والبيانات التاريخية.",
+      "archivedOn": "تمت الأرشفة في {date}.",
+      "scrollToRestore": "مرّر للأسفل لاستعادته.",
+      "editProperty": "تحرير المبنى",
+      "addUnit": "+ إضافة وحدة",
+      "addressLine": "{location}",
+      "floorsSuffix": "{count, plural, zero {} one { · طابق واحد} two { · طابقان} few { · # طوابق} many { · # طابقاً} other { · # طابق}}",
+      "photosHeading": "الصور ({count})",
+      "unitsHeading": "الوحدات والغرف ({count})",
+      "noUnits": "لا توجد وحدات بعد.",
+      "noUnitsAddHint": " اضغط على \"+ إضافة وحدة\" للبدء.",
+      "table": {
+        "name": "الاسم",
+        "floor": "الطابق",
+        "type": "النوع",
+        "basePrice": "السعر الأساسي",
+        "status": "الحالة",
+        "actions": "إجراءات",
+        "edit": "تحرير",
+        "photosCount": "{count, plural, zero {لا صور} one {صورة واحدة} two {صورتان} few {# صور} many {# صورة} other {# صورة}}",
+        "bedsBaths": "{beds} غرفة / {baths} حمام",
+        "omr": "ر.ع",
+        "dash": "—"
+      },
+      "dangerZone": "منطقة الخطر",
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "archived": "مؤرشف"
+    },
+    "form": {
+      "newTitle": "إضافة مبنى جديد",
+      "newDescription": "أدخل تفاصيل المبنى أو الفندق أو المجمع.",
+      "editTitle": "تحرير المبنى",
+      "editDescription": "حدّث تفاصيل المبنى أو المجمع.",
+      "basicSection": "المعلومات الأساسية",
+      "locationSection": "الموقع",
+      "photosSection": "الصور",
+      "photosHint": "JPG, PNG, WEBP — بحد أقصى 5 ميجابايت لكل صورة",
+      "nameLabel": "اسم المبنى",
+      "namePlaceholder": "مثال: حدائق صلالة السكنية",
+      "typeLabel": "نوع المبنى",
+      "types": {
+        "RESIDENTIAL": { "label": "سكني", "sub": "شقق وفلل" },
+        "MIXED":       { "label": "متعدد الاستخدام", "sub": "سكني + تجاري" },
+        "HOTEL":       { "label": "إيجار قصير",  "sub": "فندق / وحدات مخدومة" },
+        "COMMERCIAL":  { "label": "تجاري",  "sub": "مكاتب ومحلات" }
+      },
+      "totalFloorsLabel": "عدد الطوابق",
+      "totalFloorsPlaceholder": "—",
+      "decreaseFloors": "إنقاص الطوابق",
+      "increaseFloors": "زيادة الطوابق",
+      "bookingStatusLabel": "حالة الحجز",
+      "activeAccepting": "نشط — يقبل الحجوزات",
+      "inactiveHidden": "غير نشط — مخفي من الحجز",
+      "descriptionLabel": "الوصف",
+      "descriptionPlaceholder": "صف المبنى بإيجاز — مميزات الموقع، المرافق، خصائص المبنى…",
+      "descriptionCount": "{current}/{max}",
+      "addressLabel": "العنوان",
+      "addressPlaceholder": "رقم المبنى، اسم الشارع…",
+      "cityLabel": "المدينة",
+      "cityOptions": {
+        "Salalah": "صلالة",
+        "Muscat": "مسقط",
+        "Other": "أخرى"
+      },
+      "cityCustomLabel": "حدد المدينة",
+      "cityCustomPlaceholder": "مثال: نزوى",
+      "governorateLabel": "المحافظة",
+      "governoratePlaceholder": "مثال: ظفار",
+      "submitCreate": "إنشاء المبنى",
+      "submitSave": "حفظ التغييرات",
+      "saving": "جارٍ الحفظ...",
+      "cancel": "إلغاء",
+      "toasts": {
+        "created": "تم إنشاء المبنى!",
+        "updated": "تم تحديث المبنى!"
+      }
+    },
+    "dangerZone": {
+      "archive": {
+        "title": "أرشفة هذا المبنى",
+        "body": "يخفيه من جميع القوائم. تُحفظ كل الوحدات والحجوزات والسجل بالكامل. يمكنك استعادته في أي وقت.",
+        "button": "أرشفة المبنى",
+        "confirmPrompt": "أرشفة \"{name}\"؟ سيتم إخفاؤه من جميع العروض.",
+        "confirmYes": "نعم، أرشف",
+        "working": "جارٍ الأرشفة…",
+        "successToast": "تمت أرشفة \"{name}\".",
+        "cancel": "إلغاء"
+      },
+      "restore": {
+        "title": "استعادة هذا المبنى",
+        "body": "يجعله مرئياً مجدداً في قائمة المباني. يمكنك بعدها إعادة تنشيطه لقبول الحجوزات.",
+        "button": "استعادة المبنى",
+        "confirmPrompt": "استعادة \"{name}\"؟ سيظهر مجدداً في قائمة المباني.",
+        "confirmYes": "نعم، استعد",
+        "working": "جارٍ الاستعادة…",
+        "successToast": "تمت استعادة \"{name}\".",
+        "cancel": "إلغاء"
+      },
+      "delete": {
+        "title": "حذف نهائي",
+        "body": "يزيل هذا المبنى وكل وحداته للأبد. الحجوزات النشطة ستمنع الحذف.",
+        "unitsInfo": " يحتوي هذا المبنى على {count, plural, zero {<b>لا وحدات</b>} one {<b>وحدة واحدة</b>} two {<b>وحدتين</b>} few {<b># وحدات</b>} many {<b># وحدة</b>} other {<b># وحدة</b>}} ستُحذف أيضاً.",
+        "button": "حذف المبنى",
+        "confirmWarning": "لا يمكن التراجع عن هذا. ستفقد جميع الوحدات وسجلها.",
+        "confirmYes": "احذف نهائياً",
+        "working": "جارٍ الحذف…",
+        "successToast": "تم حذف \"{name}\" نهائياً.",
+        "cancel": "إلغاء"
+      }
+    },
+    "errors": {
+      "unauthorized": "غير مصرّح",
+      "unauthorizedAccess": "وصول غير مصرّح به لهذا المبنى.",
+      "nameTypeRequired": "الاسم والنوع حقول مطلوبة.",
+      "createFailed": "فشل إنشاء المبنى. يرجى المحاولة مرة أخرى.",
+      "updateFailed": "فشل تحديث المبنى.",
+      "nameRequired": "الاسم مطلوب.",
+      "notFound": "المبنى غير موجود.",
+      "alreadyArchived": "المبنى مؤرشف بالفعل.",
+      "notArchived": "المبنى غير مؤرشف.",
+      "blockedByReservations": "لا يمكن الحذف: لهذا المبنى {count, plural, zero {لا حجوزات نشطة} one {حجز نشط} two {حجزان نشطان} few {# حجوزات نشطة} many {# حجزاً نشطاً} other {# حجز نشط}}. أكملها أو ألغها أولاً.",
+      "deleteFailed": "فشل حذف المبنى."
+    }
   },
   "units": {
     "list": {

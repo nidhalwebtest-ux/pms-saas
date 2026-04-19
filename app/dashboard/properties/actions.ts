@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 
 export type ActionResponse = {
@@ -40,8 +41,9 @@ function parsePhotos(formData: FormData): string[] {
 // ─── CREATE ───────────────────────────────────────────────────────────────────
 
 export async function createProperty(formData: FormData): Promise<ActionResponse> {
+  const tErr = await getTranslations("buildings.errors");
   const organizationId = await getOrgId();
-  if (!organizationId) return { error: "Unauthorized" };
+  if (!organizationId) return { error: tErr("unauthorized") };
 
   const name = (formData.get("name") as string)?.trim();
   const type = formData.get("type") as string;
@@ -56,7 +58,7 @@ export async function createProperty(formData: FormData): Promise<ActionResponse
   const isActive = formData.get("isActive") !== "false"; // default true
   const photos = parsePhotos(formData);
 
-  if (!name || !type) return { error: "Name and Type are required fields." };
+  if (!name || !type) return { error: tErr("nameTypeRequired") };
 
   try {
     const property = await prisma.property.create({
@@ -67,15 +69,16 @@ export async function createProperty(formData: FormData): Promise<ActionResponse
     return { success: true, id: property.id };
   } catch (err) {
     console.error(err);
-    return { error: "Failed to create property. Please try again." };
+    return { error: tErr("createFailed") };
   }
 }
 
 // ─── UPDATE ───────────────────────────────────────────────────────────────────
 
 export async function updateProperty(formData: FormData): Promise<ActionResponse> {
+  const tErr = await getTranslations("buildings.errors");
   const organizationId = await getOrgId();
-  if (!organizationId) return { error: "Unauthorized" };
+  if (!organizationId) return { error: tErr("unauthorized") };
 
   const id = formData.get("id") as string;
   const name = (formData.get("name") as string)?.trim();
@@ -95,7 +98,7 @@ export async function updateProperty(formData: FormData): Promise<ActionResponse
     where: { id },
     select: { organizationId: true },
   });
-  if (existing?.organizationId !== organizationId) return { error: "Unauthorized access to this property." };
+  if (existing?.organizationId !== organizationId) return { error: tErr("unauthorizedAccess") };
 
   try {
     await prisma.property.update({
@@ -108,27 +111,28 @@ export async function updateProperty(formData: FormData): Promise<ActionResponse
     return { success: true };
   } catch (err) {
     console.error(err);
-    return { error: "Failed to update property." };
+    return { error: tErr("updateFailed") };
   }
 }
 
 // ─── QUICK UPDATE (inline edit: name + status only) ───────────────────────────
 
 export async function quickUpdateProperty(formData: FormData): Promise<ActionResponse> {
+  const tErr = await getTranslations("buildings.errors");
   const organizationId = await getOrgId();
-  if (!organizationId) return { error: "Unauthorized" };
+  if (!organizationId) return { error: tErr("unauthorized") };
 
   const id = formData.get("id") as string;
   const name = (formData.get("name") as string)?.trim();
   const isActive = formData.get("isActive") !== "false";
 
-  if (!name) return { error: "Name is required." };
+  if (!name) return { error: tErr("nameRequired") };
 
   const existing = await prisma.property.findUnique({
     where: { id },
     select: { organizationId: true },
   });
-  if (existing?.organizationId !== organizationId) return { error: "Unauthorized." };
+  if (existing?.organizationId !== organizationId) return { error: tErr("unauthorized") };
 
   await prisma.property.update({ where: { id }, data: { name, isActive } });
   revalidatePath("/dashboard/properties");
@@ -138,16 +142,17 @@ export async function quickUpdateProperty(formData: FormData): Promise<ActionRes
 // ─── ARCHIVE (soft-delete) ────────────────────────────────────────────────────
 
 export async function archiveProperty(propertyId: string): Promise<ActionResponse> {
+  const tErr = await getTranslations("buildings.errors");
   const organizationId = await getOrgId();
-  if (!organizationId) return { error: "Unauthorized" };
+  if (!organizationId) return { error: tErr("unauthorized") };
 
   const property = await prisma.property.findUnique({
     where: { id: propertyId },
     select: { organizationId: true, isArchived: true },
   });
-  if (!property)                              return { error: "Property not found." };
-  if (property.organizationId !== organizationId) return { error: "Unauthorized." };
-  if (property.isArchived)                    return { error: "Property is already archived." };
+  if (!property)                                  return { error: tErr("notFound") };
+  if (property.organizationId !== organizationId) return { error: tErr("unauthorized") };
+  if (property.isArchived)                        return { error: tErr("alreadyArchived") };
 
   await prisma.property.update({
     where: { id: propertyId },
@@ -162,16 +167,17 @@ export async function archiveProperty(propertyId: string): Promise<ActionRespons
 // ─── RESTORE ──────────────────────────────────────────────────────────────────
 
 export async function restoreProperty(propertyId: string): Promise<ActionResponse> {
+  const tErr = await getTranslations("buildings.errors");
   const organizationId = await getOrgId();
-  if (!organizationId) return { error: "Unauthorized" };
+  if (!organizationId) return { error: tErr("unauthorized") };
 
   const property = await prisma.property.findUnique({
     where: { id: propertyId },
     select: { organizationId: true, isArchived: true },
   });
-  if (!property)                              return { error: "Property not found." };
-  if (property.organizationId !== organizationId) return { error: "Unauthorized." };
-  if (!property.isArchived)                   return { error: "Property is not archived." };
+  if (!property)                                  return { error: tErr("notFound") };
+  if (property.organizationId !== organizationId) return { error: tErr("unauthorized") };
+  if (!property.isArchived)                       return { error: tErr("notArchived") };
 
   await prisma.property.update({
     where: { id: propertyId },
@@ -186,15 +192,16 @@ export async function restoreProperty(propertyId: string): Promise<ActionRespons
 // ─── DELETE ───────────────────────────────────────────────────────────────────
 
 export async function deleteProperty(propertyId: string): Promise<ActionResponse> {
+  const tErr = await getTranslations("buildings.errors");
   const organizationId = await getOrgId();
-  if (!organizationId) return { error: "Unauthorized" };
+  if (!organizationId) return { error: tErr("unauthorized") };
 
   const property = await prisma.property.findUnique({
     where: { id: propertyId },
     select: { organizationId: true },
   });
-  if (!property) return { error: "Property not found." };
-  if (property.organizationId !== organizationId) return { error: "Unauthorized." };
+  if (!property) return { error: tErr("notFound") };
+  if (property.organizationId !== organizationId) return { error: tErr("unauthorized") };
 
   // Block deletion if any unit has an active reservation
   const activeReservationCount = await prisma.reservation.count({
@@ -206,7 +213,7 @@ export async function deleteProperty(propertyId: string): Promise<ActionResponse
 
   if (activeReservationCount > 0) {
     return {
-      error: `Cannot delete: this property has ${activeReservationCount} active reservation(s). Complete or cancel them first.`,
+      error: tErr("blockedByReservations", { count: activeReservationCount }),
     };
   }
 
@@ -217,6 +224,6 @@ export async function deleteProperty(propertyId: string): Promise<ActionResponse
     return { success: true };
   } catch (err) {
     console.error(err);
-    return { error: "Failed to delete property." };
+    return { error: tErr("deleteFailed") };
   }
 }

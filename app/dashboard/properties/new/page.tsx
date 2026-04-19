@@ -1,12 +1,15 @@
 import { PageHeader } from "@/components/ui/FormComponents";
-import PropertyForm from "@/components/dashboard/PropertyForm"; // Import the new form
+import PropertyForm from "@/components/dashboard/PropertyForm";
+import { getTranslations } from "next-intl/server";
 
-export default function NewPropertyPage() {
+export default async function NewPropertyPage() {
+  const t = await getTranslations("buildings.form");
+
   return (
     <div className="max-w-4xl mx-auto py-8 px-4">
       <PageHeader
-        title="Add New Property"
-        description="Enter the details of the building, hotel, or compound."
+        title={t("newTitle")}
+        description={t("newDescription")}
         listHref="/dashboard/properties"
       />
 

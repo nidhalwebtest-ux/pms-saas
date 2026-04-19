@@ -85,15 +85,242 @@
   "buildings": {
     "title": "Buildings",
     "addBuilding": "Add Building",
-    "buildingName": "Building Name",
-    "address": "Address",
-    "city": "City",
-    "totalUnits": "Total Units",
-    "floors": "Floors",
-    "type": "Building Type",
-    "residential": "Residential",
-    "mixed": "Mixed Use",
-    "shortTerm": "Short-term Rental"
+    "newProperty": "New Property",
+    "filters": {
+      "searchPlaceholder": "Search by name, city, address…",
+      "clearSearch": "Clear search",
+      "buildingsCount": "{count, plural, =0 {0 buildings} one {# building} other {# buildings}}",
+      "clear": "Clear",
+      "typeLabel": "Type",
+      "statusLabel": "Status"
+    },
+    "types": {
+      "all": "All Types",
+      "RESIDENTIAL": "Residential",
+      "MIXED": "Mixed Use",
+      "HOTEL": "Short-term",
+      "COMMERCIAL": "Commercial"
+    },
+    "status": {
+      "all": "All",
+      "active": "Active",
+      "inactive": "Inactive",
+      "archived": "Archived"
+    },
+    "toolbar": {
+      "csv": "CSV",
+      "csvTitle": "Export to CSV",
+      "print": "Print",
+      "printTitle": "Print list",
+      "inlineEdit": "Inline Edit",
+      "exitEdit": "Exit Edit",
+      "inlineEditTitle": "Toggle inline editing",
+      "viewTable": "Table view",
+      "viewCard": "Card view",
+      "viewSummary": "Summary view"
+    },
+    "table": {
+      "colName": "Name",
+      "colType": "Type",
+      "colCity": "City",
+      "colUnits": "Units",
+      "colOccupied": "Occupied",
+      "colVacant": "Vacant",
+      "colStatus": "Status",
+      "colActions": "Actions",
+      "noMatch": "No buildings match your filters.",
+      "actionInlineEdit": "Inline edit",
+      "actionViewDetails": "View details",
+      "footerBuildings": "{count, plural, =0 {0 buildings} one {# building} other {# buildings}}",
+      "footerTotalUnits": "{count} total units",
+      "footerOccupied": "{count} occupied",
+      "footerVacant": "{count} vacant",
+      "footerSeparator": " · ",
+      "noUnits": "No units"
+    },
+    "card": {
+      "total": "Total",
+      "occupied": "Occupied",
+      "vacant": "Vacant",
+      "view": "View",
+      "edit": "Edit",
+      "addBuilding": "Add Building"
+    },
+    "summary": {
+      "totalUnits": "Total Units",
+      "occupied": "Occupied",
+      "vacant": "Vacant",
+      "revenueThisMonth": "Revenue this month",
+      "omr": "OMR",
+      "noPayments": "No payments yet",
+      "occupancyLabel": "Occupancy",
+      "viewAllDetails": "View all details →",
+      "floorsCount": "{count, plural, one {# floor} other {# floors}}",
+      "occupiedSub": "{occupied} of {total} units",
+      "availableSub": "{pct}% available"
+    },
+    "inline": {
+      "saved": "Saved",
+      "save": "Save",
+      "cancel": "Cancel",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "print": {
+      "title": "Properties List — {date}",
+      "colName": "Name",
+      "colType": "Type",
+      "colCity": "City",
+      "colAddress": "Address",
+      "colUnits": "Units",
+      "colOccupied": "Occupied",
+      "colVacant": "Vacant",
+      "colStatus": "Status",
+      "dash": "—"
+    },
+    "csv": {
+      "name": "Name",
+      "type": "Type",
+      "city": "City",
+      "address": "Address",
+      "floors": "Floors",
+      "totalUnits": "Total Units",
+      "occupied": "Occupied",
+      "vacant": "Vacant",
+      "revenue": "Revenue (OMR)",
+      "status": "Status",
+      "created": "Created"
+    },
+    "loading": {
+      "label": "Loading buildings"
+    },
+    "detail": {
+      "back": "Back",
+      "archivedTitle": "This building is archived",
+      "archivedBody": "It is hidden from all default views. All units, reservations, and historical data are preserved.",
+      "archivedOn": "Archived on {date}.",
+      "scrollToRestore": "Scroll down to restore it.",
+      "editProperty": "Edit Property",
+      "addUnit": "+ Add Unit",
+      "addressLine": "{location}",
+      "floorsSuffix": "{count, plural, one { · # floor} other { · # floors}}",
+      "photosHeading": "Photos ({count})",
+      "unitsHeading": "Units & Rooms ({count})",
+      "noUnits": "No units yet.",
+      "noUnitsAddHint": " Click \"+ Add Unit\" to get started.",
+      "table": {
+        "name": "Name",
+        "floor": "Floor",
+        "type": "Type",
+        "basePrice": "Base Price",
+        "status": "Status",
+        "actions": "Actions",
+        "edit": "Edit",
+        "photosCount": "{count, plural, one {# photo} other {# photos}}",
+        "bedsBaths": "{beds} Bed / {baths} Bath",
+        "omr": "OMR",
+        "dash": "—"
+      },
+      "dangerZone": "Danger Zone",
+      "active": "Active",
+      "inactive": "Inactive",
+      "archived": "Archived"
+    },
+    "form": {
+      "newTitle": "Add New Property",
+      "newDescription": "Enter the details of the building, hotel, or compound.",
+      "editTitle": "Edit Property",
+      "editDescription": "Update the details of the building or compound.",
+      "basicSection": "Basic Information",
+      "locationSection": "Location",
+      "photosSection": "Photos",
+      "photosHint": "JPG, PNG, WEBP — max 5 MB each",
+      "nameLabel": "Building Name",
+      "namePlaceholder": "e.g. Salalah Gardens Residency",
+      "typeLabel": "Building Type",
+      "types": {
+        "RESIDENTIAL": { "label": "Residential", "sub": "Apartments & Villas" },
+        "MIXED":       { "label": "Mixed Use",   "sub": "Residential + Commercial" },
+        "HOTEL":       { "label": "Short-term",  "sub": "Hotel / Serviced Units" },
+        "COMMERCIAL":  { "label": "Commercial",  "sub": "Offices & Retail" }
+      },
+      "totalFloorsLabel": "Total Floors",
+      "totalFloorsPlaceholder": "—",
+      "decreaseFloors": "Decrease floors",
+      "increaseFloors": "Increase floors",
+      "bookingStatusLabel": "Booking Status",
+      "activeAccepting": "Active — accepting bookings",
+      "inactiveHidden": "Inactive — hidden from booking",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Briefly describe the property — location highlights, amenities, building features…",
+      "descriptionCount": "{current}/{max}",
+      "addressLabel": "Street Address",
+      "addressPlaceholder": "Building number, street name…",
+      "cityLabel": "City",
+      "cityOptions": {
+        "Salalah": "Salalah",
+        "Muscat": "Muscat",
+        "Other": "Other"
+      },
+      "cityCustomLabel": "Specify City",
+      "cityCustomPlaceholder": "e.g. Nizwa",
+      "governorateLabel": "Governorate",
+      "governoratePlaceholder": "e.g. Dhofar",
+      "submitCreate": "Create Property",
+      "submitSave": "Save Changes",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "toasts": {
+        "created": "Property created!",
+        "updated": "Property updated!"
+      }
+    },
+    "dangerZone": {
+      "archive": {
+        "title": "Archive this building",
+        "body": "Hides it from all lists. All units, reservations, and history are fully preserved. You can restore it at any time.",
+        "button": "Archive Building",
+        "confirmPrompt": "Archive \"{name}\"? It will be hidden from all views.",
+        "confirmYes": "Yes, Archive",
+        "working": "Archiving…",
+        "successToast": "\"{name}\" has been archived.",
+        "cancel": "Cancel"
+      },
+      "restore": {
+        "title": "Restore this building",
+        "body": "Makes it visible again in the buildings list. You can then re-activate it for bookings.",
+        "button": "Restore Building",
+        "confirmPrompt": "Restore \"{name}\"? It will reappear in the buildings list.",
+        "confirmYes": "Yes, Restore",
+        "working": "Restoring…",
+        "successToast": "\"{name}\" has been restored.",
+        "cancel": "Cancel"
+      },
+      "delete": {
+        "title": "Delete permanently",
+        "body": "Removes this building and all its units forever. Active reservations will block deletion.",
+        "unitsInfo": " This building has {count, plural, one {<b>1 unit</b>} other {<b># units</b>}} that will also be removed.",
+        "button": "Delete Building",
+        "confirmWarning": "This cannot be undone. All units and their history will be lost.",
+        "confirmYes": "Delete Forever",
+        "working": "Deleting…",
+        "successToast": "\"{name}\" has been permanently deleted.",
+        "cancel": "Cancel"
+      }
+    },
+    "errors": {
+      "unauthorized": "Unauthorized",
+      "unauthorizedAccess": "Unauthorized access to this property.",
+      "nameTypeRequired": "Name and Type are required fields.",
+      "createFailed": "Failed to create property. Please try again.",
+      "updateFailed": "Failed to update property.",
+      "nameRequired": "Name is required.",
+      "notFound": "Property not found.",
+      "alreadyArchived": "Property is already archived.",
+      "notArchived": "Property is not archived.",
+      "blockedByReservations": "Cannot delete: this property has {count, plural, one {# active reservation} other {# active reservations}}. Complete or cancel them first.",
+      "deleteFailed": "Failed to delete property."
+    }
   },
   "units": {
     "list": {

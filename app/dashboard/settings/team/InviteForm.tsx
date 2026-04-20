@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { CheckCircleIcon, ExclamationCircleIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
 
 interface Props {
@@ -9,6 +10,8 @@ interface Props {
 }
 
 export default function InviteForm({ action, canAssignAdmin }: Props) {
+  const t      = useTranslations("settings.team.invite");
+  const tRoles = useTranslations("settings.roles");
   const [state, formAction, isPending] = useActionState(action, {});
 
   return (
@@ -30,14 +33,14 @@ export default function InviteForm({ action, canAssignAdmin }: Props) {
         {/* Email */}
         <div className="sm:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Email Address <span className="text-red-500">*</span>
+            {t("emailLabel")} <span className="text-red-500">*</span>
           </label>
           <input
             type="email"
             name="email"
             required
             autoComplete="off"
-            placeholder="colleague@example.com"
+            placeholder={t("emailPlaceholder")}
             className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
@@ -45,24 +48,24 @@ export default function InviteForm({ action, canAssignAdmin }: Props) {
         {/* Role */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Role <span className="text-red-500">*</span>
+            {t("roleLabel")} <span className="text-red-500">*</span>
           </label>
           <select
             name="role"
             className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
             {canAssignAdmin && (
-              <option value="MANAGER">Admin</option>
+              <option value="MANAGER">{tRoles("MANAGER")}</option>
             )}
-            <option value="STAFF">Receptionist</option>
-            <option value="ACCOUNTANT">Accountant</option>
+            <option value="STAFF">{tRoles("STAFF")}</option>
+            <option value="ACCOUNTANT">{tRoles("ACCOUNTANT")}</option>
           </select>
         </div>
       </div>
 
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-400">
-          An invitation link valid for <span className="font-medium text-gray-500">72 hours</span> will be sent to their email.
+          {t.rich("expiryNote", { b: (chunks) => <span className="font-medium text-gray-500">{chunks}</span> })}
         </p>
         <button
           type="submit"
@@ -70,7 +73,7 @@ export default function InviteForm({ action, canAssignAdmin }: Props) {
           className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
         >
           <PaperAirplaneIcon className="h-4 w-4" />
-          {isPending ? "Sending…" : "Send Invite"}
+          {isPending ? t("sending") : t("sendButton")}
         </button>
       </div>
     </form>

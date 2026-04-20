@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { prisma } from "@/lib/prisma";
@@ -41,29 +42,31 @@ export async function sendInvitation(
   _prev: { error?: string; success?: string },
   formData: FormData,
 ): Promise<{ error?: string; success?: string }> {
+  const tErr   = await getTranslations("settings.team.errors");
+  const tInv   = await getTranslations("settings.team.invite");
   const caller = await getCallerWithOrg();
 
   if (!can(caller.role, "manageTeam")) {
-    return { error: "You do not have permission to invite team members." };
+    return { error: tErr("noPermission") };
   }
 
   const email = (formData.get("email") as string)?.trim().toLowerCase();
   const role  = formData.get("role") as UserRole;
 
-  if (!email) return { error: "Email address is required." };
+  if (!email) return { error: tErr("emailRequired") };
   if (!["MANAGER", "STAFF", "ACCOUNTANT"].includes(role)) {
-    return { error: "Invalid role selected." };
+    return { error: tErr("invalidRole") };
   }
   // Only OWNER can invite MANAGER (Admin)
   if (role === "MANAGER" && caller.role !== "OWNER") {
-    return { error: "Only the Owner can invite an Admin." };
+    return { error: tErr("ownerOnlyAdmin") };
   }
 
   // Already a member?
   const existing = await prisma.user.findFirst({
     where: { email, organizationId: caller.organizationId },
   });
-  if (existing) return { error: "This email is already a member of your team." };
+  if (existing) return { error: tErr("alreadyMember") };
 
   // Already has a pending (non-cancelled, non-expired) invite?
   const pending = await prisma.invitation.findFirst({
@@ -75,7 +78,7 @@ export async function sendInvitation(
       expiresAt:   { gt: new Date() },
     },
   });
-  if (pending) return { error: "A pending invitation already exists for this email." };
+  if (pending) return { error: tErr("pendingExists") };
 
   // Get org name for the email
   const org = await prisma.organization.findUnique({
@@ -110,7 +113,7 @@ export async function sendInvitation(
   }
 
   revalidatePath("/dashboard/settings/team");
-  return { success: `Invitation sent to ${email}.` };
+  return { success: tInv("sentToast", { email }) };
 }
 
 // ── Resend invitation ─────────────────────────────────────────────────────────
@@ -169,17 +172,18 @@ export async function cancelInvitation(invitationId: string) {
 // ── Update member role ────────────────────────────────────────────────────────
 
 export async function updateMemberRole(memberId: string, newRole: UserRole) {
+  const tErr   = await getTranslations("settings.team.errors");
   const caller = await getCallerWithOrg();
 
-  if (!can(caller.role, "changeRoles")) throw new Error("Only the Owner can change roles.");
-  if (memberId === caller.id) throw new Error("You cannot change your own role.");
+  if (!can(caller.role, "changeRoles")) throw new Error(tErr("ownerOnlyChangeRoles"));
+  if (memberId === caller.id) throw new Error(tErr("cannotChangeOwnRole"));
 
   const target = await prisma.user.findUnique({
     where:  { id: memberId },
     select: { role: true, organizationId: true },
   });
-  if (!target || target.organizationId !== caller.organizationId) throw new Error("Member not found.");
-  if (target.role === "OWNER") throw new Error("The Owner role cannot be changed.");
+  if (!target || target.organizationId !== caller.organizationId) throw new Error(tErr("memberNotFound"));
+  if (target.role === "OWNER") throw new Error(tErr("ownerCannotChange"));
 
   await prisma.user.update({ where: { id: memberId }, data: { role: newRole } });
   revalidatePath("/dashboard/settings/team");
@@ -188,17 +192,18 @@ export async function updateMemberRole(memberId: string, newRole: UserRole) {
 // ── Remove team member ────────────────────────────────────────────────────────
 
 export async function removeTeamMember(memberId: string) {
+  const tErr   = await getTranslations("settings.team.errors");
   const caller = await getCallerWithOrg();
 
-  if (!can(caller.role, "removeTeamMember")) throw new Error("Only the Owner can remove members.");
-  if (memberId === caller.id) throw new Error("You cannot remove yourself.");
+  if (!can(caller.role, "removeTeamMember")) throw new Error(tErr("ownerOnlyRemove"));
+  if (memberId === caller.id) throw new Error(tErr("cannotRemoveSelf"));
 
   const target = await prisma.user.findUnique({
     where:  { id: memberId },
     select: { role: true, organizationId: true },
   });
-  if (!target || target.organizationId !== caller.organizationId) throw new Error("Member not found.");
-  if (target.role === "OWNER") throw new Error("The Owner account cannot be removed.");
+  if (!target || target.organizationId !== caller.organizationId) throw new Error(tErr("memberNotFound"));
+  if (target.role === "OWNER") throw new Error(tErr("ownerCannotRemove"));
 
   const adminClient = createAdminClient();
   await adminClient.auth.admin.deleteUser(memberId);

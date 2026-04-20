@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   PlusIcon,
   PencilSquareIcon,
@@ -21,6 +22,9 @@ interface Category {
 }
 
 export default function ExpenseCategoryManager() {
+  const t      = useTranslations("settings.categories");
+  const tToast = useTranslations("settings.categories.toasts");
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,7 +48,7 @@ export default function ExpenseCategoryManager() {
       const data = await res.json();
       if (data.success) setCategories(data.categories);
     } catch {
-      toast.error("Failed to load categories");
+      toast.error(tToast("loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -53,7 +57,7 @@ export default function ExpenseCategoryManager() {
   useEffect(() => { fetchCategories(); }, []);
 
   async function handleAdd() {
-    if (!addName.trim()) return toast.error("Name is required");
+    if (!addName.trim()) return toast.error(tToast("nameRequired"));
     setSaving(true);
     try {
       const res = await fetch("/api/expense-categories", {
@@ -63,11 +67,11 @@ export default function ExpenseCategoryManager() {
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error); return; }
-      toast.success("Category added");
+      toast.success(tToast("added"));
       setShowAdd(false);
       setAddName(""); setAddNameAr(""); setAddIcon("");
       fetchCategories();
-    } catch { toast.error("Failed to add category"); }
+    } catch { toast.error(tToast("addFailed")); }
     finally { setSaving(false); }
   }
 
@@ -81,10 +85,10 @@ export default function ExpenseCategoryManager() {
       });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error); return; }
-      toast.success("Category updated");
+      toast.success(tToast("updated"));
       setEditId(null);
       fetchCategories();
-    } catch { toast.error("Failed to update"); }
+    } catch { toast.error(tToast("updateFailed")); }
     finally { setSaving(false); }
   }
 
@@ -93,9 +97,9 @@ export default function ExpenseCategoryManager() {
       const res = await fetch(`/api/expense-categories/${id}`, { method: "PATCH" });
       const data = await res.json();
       if (!res.ok) { toast.error(data.error); return; }
-      toast.success(data.category.isActive ? "Category activated" : "Category deactivated");
+      toast.success(data.category.isActive ? tToast("activated") : tToast("deactivated"));
       fetchCategories();
-    } catch { toast.error("Failed to toggle"); }
+    } catch { toast.error(tToast("toggleFailed")); }
   }
 
   function startEdit(cat: Category) {
@@ -109,7 +113,7 @@ export default function ExpenseCategoryManager() {
     return (
       <div className="bg-white rounded-xl shadow-sm ring-1 ring-gray-200 py-16 text-center">
         <ArrowPathIcon className="h-6 w-6 text-gray-300 animate-spin mx-auto mb-2" />
-        <p className="text-sm text-gray-400">Loading categories…</p>
+        <p className="text-sm text-gray-400">{t("loading")}</p>
       </div>
     );
   }
@@ -118,13 +122,13 @@ export default function ExpenseCategoryManager() {
     <div className="space-y-4">
       <div className="bg-white rounded-xl shadow-sm ring-1 ring-gray-200 overflow-hidden">
         <div className="px-5 py-3.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-700">Categories</h3>
+          <h3 className="text-sm font-semibold text-gray-700">{t("listTitle")}</h3>
           <button
             onClick={() => setShowAdd(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors"
           >
             <PlusIcon className="h-3.5 w-3.5" />
-            Add Category
+            {t("addButton")}
           </button>
         </div>
 
@@ -142,19 +146,19 @@ export default function ExpenseCategoryManager() {
                   <input
                     value={editIcon}
                     onChange={(e) => setEditIcon(e.target.value)}
-                    placeholder="Icon"
+                    placeholder={t("iconPlaceholder")}
                     className="w-12 rounded-lg border border-gray-300 px-2 py-1.5 text-center text-lg focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   />
                   <input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    placeholder="Name (English)"
+                    placeholder={t("namePlaceholderEn")}
                     className="flex-1 min-w-[120px] rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   />
                   <input
                     value={editNameAr}
                     onChange={(e) => setEditNameAr(e.target.value)}
-                    placeholder="Name (Arabic)"
+                    placeholder={t("namePlaceholderAr")}
                     dir="rtl"
                     className="flex-1 min-w-[120px] rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   />
@@ -187,14 +191,14 @@ export default function ExpenseCategoryManager() {
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                     cat.isSystem ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
                   }`}>
-                    {cat.isSystem ? "System" : "Custom"}
+                    {cat.isSystem ? t("system") : t("custom")}
                   </span>
                   <div className="flex items-center gap-2">
                     {!cat.isSystem && (
                       <button
                         onClick={() => startEdit(cat)}
                         className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                        title="Edit"
+                        title={t("editTitle")}
                       >
                         <PencilSquareIcon className="h-4 w-4" />
                       </button>
@@ -207,7 +211,7 @@ export default function ExpenseCategoryManager() {
                           : "bg-gray-100 text-gray-500 hover:bg-green-100 hover:text-green-700"
                       }`}
                     >
-                      {cat.isActive ? "Active" : "Inactive"}
+                      {cat.isActive ? t("active") : t("inactive")}
                     </button>
                   </div>
                 </>
@@ -219,7 +223,7 @@ export default function ExpenseCategoryManager() {
         {/* Add form at the bottom */}
         {showAdd && (
           <div className="px-5 py-4 border-t-2 border-blue-100 bg-blue-50/50">
-            <p className="text-xs font-semibold text-blue-700 mb-3">New Custom Category</p>
+            <p className="text-xs font-semibold text-blue-700 mb-3">{t("newSectionTitle")}</p>
             <div className="flex items-center gap-3 flex-wrap">
               <input
                 value={addIcon}
@@ -230,13 +234,13 @@ export default function ExpenseCategoryManager() {
               <input
                 value={addName}
                 onChange={(e) => setAddName(e.target.value)}
-                placeholder="Name (English)"
+                placeholder={t("namePlaceholderEn")}
                 className="flex-1 min-w-[120px] rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"
               />
               <input
                 value={addNameAr}
                 onChange={(e) => setAddNameAr(e.target.value)}
-                placeholder="Name (Arabic)"
+                placeholder={t("namePlaceholderAr")}
                 dir="rtl"
                 className="flex-1 min-w-[120px] rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-sm focus:ring-1 focus:ring-blue-500 focus:outline-none"
               />
@@ -246,13 +250,13 @@ export default function ExpenseCategoryManager() {
                   disabled={saving}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50"
                 >
-                  {saving ? "Saving…" : "Add"}
+                  {saving ? t("saving") : t("addLabel")}
                 </button>
                 <button
                   onClick={() => { setShowAdd(false); setAddName(""); setAddNameAr(""); setAddIcon(""); }}
                   className="text-xs text-gray-500 hover:text-gray-700"
                 >
-                  Cancel
+                  {t("cancel")}
                 </button>
               </div>
             </div>

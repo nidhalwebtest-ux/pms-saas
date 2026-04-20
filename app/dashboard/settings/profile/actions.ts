@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { prisma } from "@/lib/prisma";
@@ -21,13 +22,15 @@ export async function updateProfile(
   _prev: { error?: string; success?: string },
   formData: FormData,
 ): Promise<{ error?: string; success?: string }> {
-  const user = await getAuthUser();
+  const tErr  = await getTranslations("settings.profile.errors");
+  const tOk   = await getTranslations("settings.profile.toasts");
+  const user  = await getAuthUser();
 
   const firstName = (formData.get("firstName") as string)?.trim();
   const lastName  = (formData.get("lastName")  as string)?.trim();
   const phone     = (formData.get("phone")     as string)?.trim();
 
-  if (!firstName) return { error: "First name is required." };
+  if (!firstName) return { error: tErr("firstNameRequired") };
 
   await prisma.user.update({
     where: { id: user.id },
@@ -35,7 +38,7 @@ export async function updateProfile(
   });
 
   revalidatePath("/dashboard", "layout");
-  return { success: "Profile updated successfully." };
+  return { success: tOk("profileUpdated") };
 }
 
 // ── Change password ───────────────────────────────────────────────────────────
@@ -44,6 +47,8 @@ export async function changePassword(
   _prev: { error?: string; success?: string },
   formData: FormData,
 ): Promise<{ error?: string; success?: string }> {
+  const tErr      = await getTranslations("settings.profile.errors");
+  const tOk       = await getTranslations("settings.profile.toasts");
   const user      = await getAuthUser();
   const supabase  = await createClient();
 
@@ -52,16 +57,16 @@ export async function changePassword(
   const confirmPassword = (formData.get("confirmPassword") as string) ?? "";
 
   if (!currentPassword || !newPassword || !confirmPassword) {
-    return { error: "All fields are required." };
+    return { error: tErr("allFieldsRequired") };
   }
   if (newPassword.length < 8) {
-    return { error: "New password must be at least 8 characters." };
+    return { error: tErr("passwordTooShort") };
   }
   if (newPassword !== confirmPassword) {
-    return { error: "New passwords do not match." };
+    return { error: tErr("passwordsMismatch") };
   }
   if (currentPassword === newPassword) {
-    return { error: "New password must be different from the current one." };
+    return { error: tErr("sameAsCurrent") };
   }
 
   // Verify current password by attempting sign-in
@@ -69,7 +74,7 @@ export async function changePassword(
     email:    user.email!,
     password: currentPassword,
   });
-  if (verifyError) return { error: "Current password is incorrect." };
+  if (verifyError) return { error: tErr("currentIncorrect") };
 
   // Update via admin client (avoids session side-effects from sign-in above)
   const admin = createAdminClient();
@@ -77,7 +82,7 @@ export async function changePassword(
     password: newPassword,
   });
 
-  if (updateError) return { error: "Failed to update password. Please try again." };
+  if (updateError) return { error: tErr("updateFailed") };
 
-  return { success: "Password changed successfully." };
+  return { success: tOk("passwordChanged") };
 }

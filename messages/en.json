@@ -2191,6 +2191,169 @@
     "language": "Language",
     "selectLanguage": "Select Language",
     "english": "English",
-    "arabic": "العربية"
+    "arabic": "العربية",
+    "roles": {
+      "OWNER": "Owner",
+      "MANAGER": "Admin",
+      "STAFF": "Receptionist",
+      "ACCOUNTANT": "Accountant"
+    },
+    "team": {
+      "header": {
+        "title": "Team Management",
+        "description": "Invite staff and manage their access levels."
+      },
+      "stats": {
+        "total": "Total Staff",
+        "admin": "Admin",
+        "receptionist": "Receptionist",
+        "accountant": "Accountant"
+      },
+      "inviteCard": {
+        "title": "Invite Team Member"
+      },
+      "invite": {
+        "emailLabel": "Email Address",
+        "emailPlaceholder": "colleague@example.com",
+        "roleLabel": "Role",
+        "expiryNote": "An invitation link valid for <b>72 hours</b> will be sent to their email.",
+        "sendButton": "Send Invite",
+        "sending": "Sending…",
+        "sentToast": "Invitation sent to {email}."
+      },
+      "pending": {
+        "title": "Pending Invitations",
+        "invitedBy": "Invited by {name}",
+        "expired": "Expired",
+        "hoursMinutesLeft": "{hours}h {minutes}m left",
+        "minutesLeft": "{minutes}m left",
+        "resendTitle": "Resend invitation",
+        "cancelTitle": "Cancel invitation",
+        "cancelConfirm": "Cancel?",
+        "yes": "Yes",
+        "no": "No"
+      },
+      "permissions": {
+        "title": "Role Permissions",
+        "admin": {
+          "label": "Admin",
+          "perm1": "All properties & units",
+          "perm2": "All tenants & reservations",
+          "perm3": "All payments & expenses",
+          "perm4": "Team management"
+        },
+        "receptionist": {
+          "label": "Receptionist",
+          "perm1": "View properties",
+          "perm2": "Manage tenants",
+          "perm3": "Manage reservations",
+          "perm4": "Record payments"
+        },
+        "accountant": {
+          "label": "Accountant",
+          "perm1": "View dashboard",
+          "perm2": "Record payments",
+          "perm3": "Manage expenses",
+          "perm4": "Cannot access tenants or reservations"
+        }
+      },
+      "staff": {
+        "title": "Staff Accounts",
+        "hint": "Click ✏ to change a member's role",
+        "you": "You",
+        "changeRoleTitle": "Change role",
+        "removeTitle": "Remove member",
+        "saveTitle": "Save",
+        "cancelTitle": "Cancel",
+        "removeConfirm": "Remove?",
+        "yes": "Yes",
+        "no": "No"
+      },
+      "errors": {
+        "noPermission": "You do not have permission to invite team members.",
+        "emailRequired": "Email address is required.",
+        "invalidRole": "Invalid role selected.",
+        "ownerOnlyAdmin": "Only the Owner can invite an Admin.",
+        "alreadyMember": "This email is already a member of your team.",
+        "pendingExists": "A pending invitation already exists for this email.",
+        "ownerOnlyChangeRoles": "Only the Owner can change roles.",
+        "cannotChangeOwnRole": "You cannot change your own role.",
+        "memberNotFound": "Member not found.",
+        "ownerCannotChange": "The Owner role cannot be changed.",
+        "ownerOnlyRemove": "Only the Owner can remove members.",
+        "cannotRemoveSelf": "You cannot remove yourself.",
+        "ownerCannotRemove": "The Owner account cannot be removed."
+      }
+    },
+    "profile": {
+      "personal": {
+        "title": "Personal Information",
+        "subtitle": "Your name and contact details.",
+        "firstNameLabel": "First Name",
+        "firstNamePlaceholder": "Ahmed",
+        "lastNameLabel": "Last Name",
+        "lastNamePlaceholder": "Al-Balushi",
+        "phoneLabel": "Phone Number",
+        "phonePlaceholder": "+968 9123 4567",
+        "emailLabel": "Email Address",
+        "emailNote": "Email cannot be changed.",
+        "saveButton": "Save Changes",
+        "saving": "Saving…"
+      },
+      "password": {
+        "title": "Change Password",
+        "subtitle": "Use a strong password of at least 8 characters.",
+        "currentLabel": "Current Password",
+        "newLabel": "New Password",
+        "confirmLabel": "Confirm New Password",
+        "updateButton": "Update Password",
+        "updating": "Updating…"
+      },
+      "toasts": {
+        "profileUpdated": "Profile updated successfully.",
+        "passwordChanged": "Password changed successfully."
+      },
+      "errors": {
+        "firstNameRequired": "First name is required.",
+        "allFieldsRequired": "All fields are required.",
+        "passwordTooShort": "New password must be at least 8 characters.",
+        "passwordsMismatch": "New passwords do not match.",
+        "sameAsCurrent": "New password must be different from the current one.",
+        "currentIncorrect": "Current password is incorrect.",
+        "updateFailed": "Failed to update password. Please try again."
+      }
+    },
+    "categories": {
+      "header": {
+        "title": "Expense Categories",
+        "description": "Manage expense categories for your organization"
+      },
+      "listTitle": "Categories",
+      "addButton": "Add Category",
+      "newSectionTitle": "New Custom Category",
+      "namePlaceholderEn": "Name (English)",
+      "namePlaceholderAr": "Name (Arabic)",
+      "iconPlaceholder": "Icon",
+      "addLabel": "Add",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "system": "System",
+      "custom": "Custom",
+      "active": "Active",
+      "inactive": "Inactive",
+      "editTitle": "Edit",
+      "loading": "Loading categories…",
+      "toasts": {
+        "loadFailed": "Failed to load categories",
+        "nameRequired": "Name is required",
+        "added": "Category added",
+        "updated": "Category updated",
+        "activated": "Category activated",
+        "deactivated": "Category deactivated",
+        "addFailed": "Failed to add category",
+        "updateFailed": "Failed to update",
+        "toggleFailed": "Failed to toggle"
+      }
+    }
   }
 }

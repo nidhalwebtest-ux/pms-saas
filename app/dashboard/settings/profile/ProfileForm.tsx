@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   CheckCircleIcon,
   ExclamationCircleIcon,
@@ -65,7 +66,7 @@ function Field({
           className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
         />
         {addon && (
-          <div className="absolute right-3 top-1/2 -translate-y-1/2">{addon}</div>
+          <div className="absolute end-3 top-1/2 -translate-y-1/2">{addon}</div>
         )}
       </div>
     </div>
@@ -118,13 +119,14 @@ export function ProfileInfoForm({
   phone?:     string | null;
   email:      string;
 }) {
+  const t = useTranslations("settings.profile.personal");
   const [state, action, isPending] = useActionState(updateProfile, {});
 
   return (
     <form action={action} className="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
       <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-        <h2 className="text-sm font-semibold text-gray-900">Personal Information</h2>
-        <p className="text-xs text-gray-500 mt-0.5">Your name and contact details.</p>
+        <h2 className="text-sm font-semibold text-gray-900">{t("title")}</h2>
+        <p className="text-xs text-gray-500 mt-0.5">{t("subtitle")}</p>
       </div>
 
       <div className="p-6 space-y-5">
@@ -132,33 +134,33 @@ export function ProfileInfoForm({
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field
-            label="First Name"
+            label={t("firstNameLabel")}
             name="firstName"
             defaultValue={firstName ?? ""}
-            placeholder="Ahmed"
+            placeholder={t("firstNamePlaceholder")}
             required
           />
           <Field
-            label="Last Name"
+            label={t("lastNameLabel")}
             name="lastName"
             defaultValue={lastName ?? ""}
-            placeholder="Al-Balushi"
+            placeholder={t("lastNamePlaceholder")}
           />
         </div>
 
         <Field
-          label="Phone Number"
+          label={t("phoneLabel")}
           name="phone"
           type="tel"
           defaultValue={phone ?? ""}
-          placeholder="+968 9123 4567"
+          placeholder={t("phonePlaceholder")}
           autoComplete="tel"
         />
 
         {/* Email — read-only */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Email Address
+            {t("emailLabel")}
           </label>
           <input
             type="email"
@@ -166,7 +168,7 @@ export function ProfileInfoForm({
             disabled
             className="block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-400 cursor-not-allowed"
           />
-          <p className="mt-1 text-xs text-gray-400">Email cannot be changed.</p>
+          <p className="mt-1 text-xs text-gray-400">{t("emailNote")}</p>
         </div>
 
         <div className="flex justify-end pt-1">
@@ -175,7 +177,7 @@ export function ProfileInfoForm({
             disabled={isPending}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
-            {isPending ? "Saving…" : "Save Changes"}
+            {isPending ? t("saving") : t("saveButton")}
           </button>
         </div>
       </div>
@@ -186,32 +188,33 @@ export function ProfileInfoForm({
 // ── Change password card ──────────────────────────────────────────────────────
 
 export function ChangePasswordForm() {
+  const t = useTranslations("settings.profile.password");
   const [state, action, isPending] = useActionState(changePassword, {});
 
   return (
     <form action={action} className="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
       <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-        <h2 className="text-sm font-semibold text-gray-900">Change Password</h2>
-        <p className="text-xs text-gray-500 mt-0.5">Use a strong password of at least 8 characters.</p>
+        <h2 className="text-sm font-semibold text-gray-900">{t("title")}</h2>
+        <p className="text-xs text-gray-500 mt-0.5">{t("subtitle")}</p>
       </div>
 
       <div className="p-6 space-y-5">
         <StatusBanner state={state} />
 
         <PasswordField
-          label="Current Password"
+          label={t("currentLabel")}
           name="currentPassword"
           autoComplete="current-password"
         />
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <PasswordField
-            label="New Password"
+            label={t("newLabel")}
             name="newPassword"
             autoComplete="new-password"
           />
           <PasswordField
-            label="Confirm New Password"
+            label={t("confirmLabel")}
             name="confirmPassword"
             autoComplete="new-password"
           />
@@ -223,7 +226,7 @@ export function ChangePasswordForm() {
             disabled={isPending}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
           >
-            {isPending ? "Updating…" : "Update Password"}
+            {isPending ? t("updating") : t("updateButton")}
           </button>
         </div>
       </div>

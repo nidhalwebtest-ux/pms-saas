@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { ROLE_LABELS, ROLE_BADGE, type Role } from "@/lib/permissions";
+import { ROLE_BADGE, type Role } from "@/lib/permissions";
 import { ProfileInfoForm, ChangePasswordForm } from "./ProfileForm";
 import { UserCircleIcon } from "@heroicons/react/24/outline";
 
@@ -14,6 +15,8 @@ export default async function ProfilePage() {
     where:  { id: user.id },
     select: { firstName: true, lastName: true, phone: true, role: true, createdAt: true },
   });
+
+  const tRoles = await getTranslations("settings.roles");
 
   const role       = (dbUser?.role ?? "STAFF") as Role;
   const initials   = [dbUser?.firstName, dbUser?.lastName]
@@ -34,10 +37,10 @@ export default async function ProfilePage() {
           <h1 className="text-xl font-bold text-gray-900">{displayName}</h1>
           <p className="text-sm text-gray-500 mt-0.5">{user.email}</p>
           <span className={`mt-1.5 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${ROLE_BADGE[role]}`}>
-            {ROLE_LABELS[role]}
+            {tRoles(role)}
           </span>
         </div>
-        <UserCircleIcon className="ml-auto h-8 w-8 text-gray-300" />
+        <UserCircleIcon className="ms-auto h-8 w-8 text-gray-300" />
       </div>
 
       {/* ── Personal info form ── */}

@@ -2191,6 +2191,169 @@
     "language": "اللغة",
     "selectLanguage": "اختر اللغة",
     "english": "English",
-    "arabic": "العربية"
+    "arabic": "العربية",
+    "roles": {
+      "OWNER": "المالك",
+      "MANAGER": "مدير",
+      "STAFF": "موظف استقبال",
+      "ACCOUNTANT": "محاسب"
+    },
+    "team": {
+      "header": {
+        "title": "إدارة الفريق",
+        "description": "ادعُ أعضاء الفريق وأدر مستويات الوصول الخاصة بهم."
+      },
+      "stats": {
+        "total": "إجمالي الموظفين",
+        "admin": "المدراء",
+        "receptionist": "موظفو الاستقبال",
+        "accountant": "المحاسبون"
+      },
+      "inviteCard": {
+        "title": "دعوة عضو إلى الفريق"
+      },
+      "invite": {
+        "emailLabel": "البريد الإلكتروني",
+        "emailPlaceholder": "colleague@example.com",
+        "roleLabel": "الدور",
+        "expiryNote": "سيتم إرسال رابط دعوة صالح لمدة <b>72 ساعة</b> إلى بريده الإلكتروني.",
+        "sendButton": "إرسال الدعوة",
+        "sending": "جارٍ الإرسال…",
+        "sentToast": "تم إرسال الدعوة إلى {email}."
+      },
+      "pending": {
+        "title": "الدعوات المعلقة",
+        "invitedBy": "بدعوة من {name}",
+        "expired": "منتهية",
+        "hoursMinutesLeft": "متبقٍ {hours}س {minutes}د",
+        "minutesLeft": "متبقٍ {minutes}د",
+        "resendTitle": "إعادة إرسال الدعوة",
+        "cancelTitle": "إلغاء الدعوة",
+        "cancelConfirm": "إلغاء؟",
+        "yes": "نعم",
+        "no": "لا"
+      },
+      "permissions": {
+        "title": "صلاحيات الأدوار",
+        "admin": {
+          "label": "مدير",
+          "perm1": "جميع المباني والوحدات",
+          "perm2": "جميع المستأجرين والحجوزات",
+          "perm3": "جميع المدفوعات والمصروفات",
+          "perm4": "إدارة الفريق"
+        },
+        "receptionist": {
+          "label": "موظف استقبال",
+          "perm1": "عرض المباني",
+          "perm2": "إدارة المستأجرين",
+          "perm3": "إدارة الحجوزات",
+          "perm4": "تسجيل المدفوعات"
+        },
+        "accountant": {
+          "label": "محاسب",
+          "perm1": "عرض لوحة التحكم",
+          "perm2": "تسجيل المدفوعات",
+          "perm3": "إدارة المصروفات",
+          "perm4": "لا يمكنه الوصول إلى المستأجرين أو الحجوزات"
+        }
+      },
+      "staff": {
+        "title": "حسابات الموظفين",
+        "hint": "اضغط ✏ لتغيير دور العضو",
+        "you": "أنت",
+        "changeRoleTitle": "تغيير الدور",
+        "removeTitle": "حذف العضو",
+        "saveTitle": "حفظ",
+        "cancelTitle": "إلغاء",
+        "removeConfirm": "حذف؟",
+        "yes": "نعم",
+        "no": "لا"
+      },
+      "errors": {
+        "noPermission": "ليس لديك صلاحية لدعوة أعضاء الفريق.",
+        "emailRequired": "البريد الإلكتروني مطلوب.",
+        "invalidRole": "الدور المختار غير صالح.",
+        "ownerOnlyAdmin": "يمكن للمالك فقط دعوة مدير.",
+        "alreadyMember": "هذا البريد الإلكتروني عضو بالفعل في فريقك.",
+        "pendingExists": "توجد دعوة معلقة بالفعل لهذا البريد الإلكتروني.",
+        "ownerOnlyChangeRoles": "يمكن للمالك فقط تغيير الأدوار.",
+        "cannotChangeOwnRole": "لا يمكنك تغيير دورك الخاص.",
+        "memberNotFound": "لم يتم العثور على العضو.",
+        "ownerCannotChange": "لا يمكن تغيير دور المالك.",
+        "ownerOnlyRemove": "يمكن للمالك فقط حذف الأعضاء.",
+        "cannotRemoveSelf": "لا يمكنك حذف نفسك.",
+        "ownerCannotRemove": "لا يمكن حذف حساب المالك."
+      }
+    },
+    "profile": {
+      "personal": {
+        "title": "المعلومات الشخصية",
+        "subtitle": "اسمك وبيانات الاتصال الخاصة بك.",
+        "firstNameLabel": "الاسم الأول",
+        "firstNamePlaceholder": "أحمد",
+        "lastNameLabel": "اسم العائلة",
+        "lastNamePlaceholder": "البلوشي",
+        "phoneLabel": "رقم الهاتف",
+        "phonePlaceholder": "+968 9123 4567",
+        "emailLabel": "البريد الإلكتروني",
+        "emailNote": "لا يمكن تغيير البريد الإلكتروني.",
+        "saveButton": "حفظ التغييرات",
+        "saving": "جارٍ الحفظ…"
+      },
+      "password": {
+        "title": "تغيير كلمة المرور",
+        "subtitle": "استخدم كلمة مرور قوية لا تقل عن 8 أحرف.",
+        "currentLabel": "كلمة المرور الحالية",
+        "newLabel": "كلمة المرور الجديدة",
+        "confirmLabel": "تأكيد كلمة المرور الجديدة",
+        "updateButton": "تحديث كلمة المرور",
+        "updating": "جارٍ التحديث…"
+      },
+      "toasts": {
+        "profileUpdated": "تم تحديث الملف الشخصي بنجاح.",
+        "passwordChanged": "تم تغيير كلمة المرور بنجاح."
+      },
+      "errors": {
+        "firstNameRequired": "الاسم الأول مطلوب.",
+        "allFieldsRequired": "جميع الحقول مطلوبة.",
+        "passwordTooShort": "يجب أن تتكون كلمة المرور الجديدة من 8 أحرف على الأقل.",
+        "passwordsMismatch": "كلمتا المرور الجديدتان غير متطابقتين.",
+        "sameAsCurrent": "يجب أن تختلف كلمة المرور الجديدة عن الحالية.",
+        "currentIncorrect": "كلمة المرور الحالية غير صحيحة.",
+        "updateFailed": "فشل تحديث كلمة المرور. يرجى المحاولة مرة أخرى."
+      }
+    },
+    "categories": {
+      "header": {
+        "title": "تصنيفات المصروفات",
+        "description": "إدارة تصنيفات المصروفات لمؤسستك"
+      },
+      "listTitle": "التصنيفات",
+      "addButton": "إضافة تصنيف",
+      "newSectionTitle": "تصنيف مخصص جديد",
+      "namePlaceholderEn": "الاسم (الإنجليزية)",
+      "namePlaceholderAr": "الاسم (العربية)",
+      "iconPlaceholder": "أيقونة",
+      "addLabel": "إضافة",
+      "saving": "جارٍ الحفظ…",
+      "cancel": "إلغاء",
+      "system": "نظام",
+      "custom": "مخصص",
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "editTitle": "تعديل",
+      "loading": "جارٍ تحميل التصنيفات…",
+      "toasts": {
+        "loadFailed": "فشل تحميل التصنيفات",
+        "nameRequired": "الاسم مطلوب",
+        "added": "تمت إضافة التصنيف",
+        "updated": "تم تحديث التصنيف",
+        "activated": "تم تفعيل التصنيف",
+        "deactivated": "تم إلغاء تفعيل التصنيف",
+        "addFailed": "فشل إضافة التصنيف",
+        "updateFailed": "فشل التحديث",
+        "toggleFailed": "فشل التبديل"
+      }
+    }
   }
 }

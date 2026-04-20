@@ -1,16 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { PencilSquareIcon, TrashIcon, CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { ROLE_LABELS, ROLE_BADGE, type Role } from "@/lib/permissions";
+import { ROLE_BADGE, type Role } from "@/lib/permissions";
 import { updateMemberRole, removeTeamMember } from "./actions";
 import type { UserRole } from "@prisma/client";
 
-const ASSIGNABLE_ROLES: { value: UserRole; label: string }[] = [
-  { value: "MANAGER",    label: "Admin" },
-  { value: "STAFF",      label: "Receptionist" },
-  { value: "ACCOUNTANT", label: "Accountant" },
-];
+const ASSIGNABLE_ROLES: UserRole[] = ["MANAGER", "STAFF", "ACCOUNTANT"];
 
 interface Member {
   id:        string;
@@ -29,6 +26,9 @@ export default function MemberRow({
   currentUserId: string;
   callerRole:    Role;
 }) {
+  const t      = useTranslations("settings.team.staff");
+  const tRoles = useTranslations("settings.roles");
+
   const [editing, setEditing]     = useState(false);
   const [selected, setSelected]   = useState<UserRole>(member.role);
   const [confirming, setConfirming] = useState(false);
@@ -78,7 +78,7 @@ export default function MemberRow({
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
             {isCurrentUser && (
-              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600">You</span>
+              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600">{t("you")}</span>
             )}
           </div>
           <p className="text-xs text-gray-500 truncate">{member.email}</p>
@@ -94,17 +94,17 @@ export default function MemberRow({
               value={selected}
               onChange={(e) => setSelected(e.target.value as UserRole)}
               disabled={isPending}
-              className="rounded-md border border-gray-300 py-1 pl-2 pr-7 text-xs text-gray-900 focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              className="rounded-md border border-gray-300 py-1 ps-2 pe-7 text-xs text-gray-900 focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             >
               {ASSIGNABLE_ROLES.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
+                <option key={r} value={r}>{tRoles(r)}</option>
               ))}
             </select>
             <button
               onClick={saveRole}
               disabled={isPending}
               className="rounded bg-green-600 p-1 text-white hover:bg-green-500 disabled:opacity-50"
-              title="Save"
+              title={t("saveTitle")}
             >
               <CheckIcon className="h-3.5 w-3.5" />
             </button>
@@ -112,14 +112,14 @@ export default function MemberRow({
               onClick={() => { setEditing(false); setSelected(member.role); setError(null); }}
               disabled={isPending}
               className="rounded bg-gray-200 p-1 text-gray-700 hover:bg-gray-300 disabled:opacity-50"
-              title="Cancel"
+              title={t("cancelTitle")}
             >
               <XMarkIcon className="h-3.5 w-3.5" />
             </button>
           </div>
         ) : (
           <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${ROLE_BADGE[member.role]}`}>
-            {ROLE_LABELS[member.role]}
+            {tRoles(member.role)}
           </span>
         )}
 
@@ -128,7 +128,7 @@ export default function MemberRow({
           <button
             onClick={() => { setEditing(true); setError(null); }}
             className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-blue-600 transition-colors"
-            title="Change role"
+            title={t("changeRoleTitle")}
           >
             <PencilSquareIcon className="h-4 w-4" />
           </button>
@@ -139,7 +139,7 @@ export default function MemberRow({
           <button
             onClick={() => setConfirming(true)}
             className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
-            title="Remove member"
+            title={t("removeTitle")}
           >
             <TrashIcon className="h-4 w-4" />
           </button>
@@ -147,20 +147,20 @@ export default function MemberRow({
 
         {confirming && (
           <div className="flex items-center gap-1.5">
-            <span className="text-xs text-red-600 font-medium">Remove?</span>
+            <span className="text-xs text-red-600 font-medium">{t("removeConfirm")}</span>
             <button
               onClick={handleRemove}
               disabled={isPending}
               className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-500 disabled:opacity-50"
             >
-              Yes
+              {t("yes")}
             </button>
             <button
               onClick={() => setConfirming(false)}
               disabled={isPending}
               className="rounded bg-gray-200 px-2 py-1 text-xs text-gray-700 hover:bg-gray-300 disabled:opacity-50"
             >
-              No
+              {t("no")}
             </button>
           </div>
         )}

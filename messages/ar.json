@@ -2355,5 +2355,193 @@
         "toggleFailed": "فشل التبديل"
       }
     }
+  },
+  "auth": {
+    "brand": {
+      "name": "أم رنت",
+      "tagline": "نظام إدارة العقارات"
+    },
+    "common": {
+      "back": "رجوع",
+      "next": "التالي",
+      "backToHome": "العودة إلى الرئيسية",
+      "backToSignIn": "العودة إلى تسجيل الدخول",
+      "showPassword": "إظهار كلمة المرور",
+      "hidePassword": "إخفاء كلمة المرور"
+    },
+    "login": {
+      "tabs": {
+        "signIn": "تسجيل الدخول",
+        "signUp": "إنشاء حساب"
+      },
+      "google": "المتابعة باستخدام Google",
+      "or": "أو",
+      "emailLabel": "البريد الإلكتروني",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "كلمة المرور",
+      "passwordPlaceholderSignup": "8 أحرف كحد أدنى",
+      "passwordPlaceholderSignin": "••••••••",
+      "confirmPasswordLabel": "تأكيد كلمة المرور",
+      "confirmPasswordPlaceholder": "أعد إدخال كلمة المرور",
+      "rememberMe": "تذكرني لمدة 30 يوماً",
+      "submitSignIn": "تسجيل الدخول",
+      "submitSignUp": "إنشاء الحساب",
+      "signingIn": "جارٍ تسجيل الدخول…",
+      "creatingAccount": "جارٍ إنشاء الحساب…",
+      "didntGetEmail": "لم تستلم بريد التحقق؟",
+      "resendIt": "إعادة الإرسال",
+      "lockoutTitle": "تم قفل الحساب مؤقتاً",
+      "lockoutBodyNow": "محاولات فاشلة كثيرة. حاول الآن.",
+      "lockoutBodyIn": "محاولات فاشلة كثيرة. حاول مجدداً خلال <b>{time}</b>.",
+      "remainingAttempts": "{count, plural, zero {لا توجد محاولات متبقية} one {محاولة واحدة متبقية} two {محاولتان متبقيتان} few {# محاولات متبقية} many {# محاولة متبقية} other {# محاولة متبقية}} قبل القفل لمدة 15 دقيقة.",
+      "lastAttemptWarning": "المحاولة الفاشلة التالية ستقفل حسابك لمدة 15 دقيقة.",
+      "passwordReq": {
+        "minLength": "8 أحرف على الأقل",
+        "uppercase": "حرف كبير واحد",
+        "number": "رقم واحد",
+        "special": "رمز خاص واحد"
+      },
+      "strength": {
+        "weak": "ضعيفة",
+        "fair": "مقبولة",
+        "good": "جيدة",
+        "strong": "قوية"
+      },
+      "validation": {
+        "emailRequired": "البريد الإلكتروني مطلوب.",
+        "emailInvalid": "أدخل بريداً إلكترونياً صحيحاً.",
+        "passwordRequired": "كلمة المرور مطلوبة.",
+        "passwordTooShort": "يجب أن تكون 8 أحرف على الأقل.",
+        "passwordNeedsUpper": "يجب أن تحتوي على حرف كبير.",
+        "passwordNeedsNumber": "يجب أن تحتوي على رقم.",
+        "passwordNeedsSpecial": "يجب أن تحتوي على رمز خاص.",
+        "passwordsMismatch": "كلمتا المرور غير متطابقتين."
+      },
+      "serverErrors": {
+        "invalid_credentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+        "email_exists": "يوجد حساب مسجّل بهذا البريد. حاول تسجيل الدخول بدلاً من ذلك.",
+        "email_not_confirmed": "يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول.",
+        "oauth_error": "فشل تسجيل الدخول عبر Google. حاول مرة أخرى.",
+        "auth_error": "رابط المصادقة غير صالح أو منتهٍ. حاول مرة أخرى.",
+        "server_error": "حدث خطأ من جهتنا. حاول مجدداً لاحقاً.",
+        "session_expired": "انتهت جلستك بسبب عدم النشاط. يرجى تسجيل الدخول مجدداً."
+      },
+      "terms": "بإنشاء حساب فإنك توافق على <terms>شروط الخدمة</terms> و<privacy>سياسة الخصوصية</privacy>."
+    },
+    "verify": {
+      "title": "تحقق من بريدك الوارد",
+      "sentTo": "أرسلنا رابط التحقق إلى",
+      "instructions": "اضغط على الرابط في البريد لتفعيل حسابك. تحقق من مجلد البريد المزعج إذا لم تجده خلال دقائق قليلة.",
+      "successResent": "تمت إعادة إرسال بريد التحقق! تحقق من بريدك الوارد.",
+      "sending": "جارٍ الإرسال…",
+      "resendIn": "إعادة الإرسال خلال {seconds} ثانية",
+      "resendButton": "إعادة إرسال بريد التحقق",
+      "errorEmailRequired": "البريد الإلكتروني مطلوب.",
+      "errorGenerateFailed": "تعذّر إنشاء رابط التحقق. تأكد أنك سجّلت بهذا البريد.",
+      "errorSendFailed": "فشل إرسال البريد. حاول مجدداً بعد قليل."
+    },
+    "onboarding": {
+      "header": {
+        "title": "إعداد مساحة عملك",
+        "description": "أخبرنا عن شركتك — لا تستغرق سوى دقيقة"
+      },
+      "steps": {
+        "company": {
+          "label": "الشركة",
+          "description": "هوية عملك"
+        },
+        "location": {
+          "label": "الموقع",
+          "description": "مكان عملك"
+        },
+        "preferences": {
+          "label": "التفضيلات",
+          "description": "المنطقة الزمنية والعملة"
+        }
+      },
+      "company": {
+        "nameLabel": "اسم الشركة / النشاط",
+        "namePlaceholder": "مثال: عقارات صلالة ش.م.م",
+        "phoneLabel": "رقم الهاتف",
+        "phonePlaceholder": "+968 9123 4567",
+        "logoLabel": "شعار الشركة",
+        "logoOptional": "(اختياري)",
+        "logoUploadCta": "اضغط لرفع الشعار",
+        "logoHint": "PNG، JPG، SVG — الحد الأقصى 2 ميجابايت",
+        "logoTooLarge": "حجم الملف كبير جداً (الحد الأقصى 2 ميجابايت)"
+      },
+      "location": {
+        "addressLabel": "عنوان الشارع",
+        "addressPlaceholder": "مثال: شارع الحافة، مبنى 12",
+        "cityLabel": "المدينة",
+        "cityPlaceholder": "صلالة",
+        "areaLabel": "المنطقة / الحي",
+        "areaPlaceholder": "الحافة",
+        "defaultsHint": "📍 الإعدادات الافتراضية مضبوطة على <b>صلالة، ظفار، عمان</b>. غيّرها حسب الحاجة."
+      },
+      "preferences": {
+        "timezoneLabel": "المنطقة الزمنية",
+        "currencyLabel": "العملة",
+        "settingsHint": "💡 يمكن تغيير هذه الإعدادات لاحقاً من <b>الإعدادات ← المؤسسة</b>.",
+        "summary": {
+          "title": "الملخص",
+          "company": "الشركة",
+          "phone": "الهاتف",
+          "city": "المدينة",
+          "address": "العنوان",
+          "timezone": "المنطقة الزمنية",
+          "currency": "العملة",
+          "empty": "—"
+        }
+      },
+      "errors": {
+        "nameRequired": "اسم الشركة مطلوب.",
+        "cityRequired": "المدينة مطلوبة.",
+        "generic": "حدث خطأ ما. حاول مجدداً."
+      },
+      "createButton": "إنشاء مساحة العمل",
+      "creatingButton": "جارٍ إنشاء مساحة العمل…",
+      "stepCounter": "الخطوة {current} من {total}"
+    },
+    "invite": {
+      "from": "دعوة من",
+      "roleLabel": "الدور:",
+      "invitedBy": "دعوة من {name}",
+      "expired": "منتهية",
+      "hoursRemaining": "متبقي {hours} س {minutes} د",
+      "minutesRemaining": "متبقي {minutes} د",
+      "invalidUsedTitle": "تم استخدام الدعوة من قبل",
+      "invalidUsedBody": "تم قبول رابط الدعوة هذا مسبقاً.",
+      "invalidCancelledTitle": "تم إلغاء الدعوة",
+      "invalidCancelledBody": "تم إلغاء هذه الدعوة من قبل المسؤول.",
+      "invalidExpiredTitle": "انتهت صلاحية الدعوة",
+      "invalidExpiredBody": "انتهت صلاحية الرابط. اطلب من مسؤولك إرسال دعوة جديدة.",
+      "createTitle": "أنشئ حسابك",
+      "createDesc": "أدخل اسمك وكلمة المرور للانضمام إلى <b>{org}</b>.",
+      "form": {
+        "emailLabel": "البريد الإلكتروني",
+        "firstNameLabel": "الاسم الأول",
+        "firstNamePlaceholder": "أحمد",
+        "lastNameLabel": "اسم العائلة",
+        "lastNamePlaceholder": "البلوشي",
+        "createPasswordLabel": "إنشاء كلمة المرور",
+        "confirmPasswordLabel": "تأكيد كلمة المرور",
+        "submit": "قبول وإنشاء الحساب",
+        "submitting": "جارٍ إنشاء الحساب…"
+      },
+      "errors": {
+        "firstNameRequired": "الاسم الأول مطلوب.",
+        "passwordTooShort": "يجب أن تكون كلمة المرور 8 أحرف على الأقل.",
+        "passwordsMismatch": "كلمتا المرور غير متطابقتين.",
+        "notFound": "الدعوة غير موجودة. يرجى طلب دعوة جديدة.",
+        "alreadyUsed": "تم استخدام هذه الدعوة من قبل.",
+        "cancelled": "تم إلغاء هذه الدعوة.",
+        "expired": "انتهت صلاحية هذه الدعوة. اطلب من مسؤولك إعادة إرسالها.",
+        "alreadyExists": "يوجد حساب مسجّل بهذا البريد.",
+        "alreadyExistsSignIn": "يوجد حساب مسجّل بهذا البريد. يرجى تسجيل الدخول.",
+        "createFailed": "فشل إنشاء الحساب. حاول مرة أخرى.",
+        "createFailedShort": "فشل إنشاء الحساب."
+      }
+    }
   }
 }

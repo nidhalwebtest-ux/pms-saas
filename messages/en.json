@@ -2355,5 +2355,193 @@
         "toggleFailed": "Failed to toggle"
       }
     }
+  },
+  "auth": {
+    "brand": {
+      "name": "OmRent",
+      "tagline": "Property Management System"
+    },
+    "common": {
+      "back": "Back",
+      "next": "Next",
+      "backToHome": "Back to home",
+      "backToSignIn": "Back to Sign In",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password"
+    },
+    "login": {
+      "tabs": {
+        "signIn": "Sign In",
+        "signUp": "Sign Up"
+      },
+      "google": "Continue with Google",
+      "or": "or",
+      "emailLabel": "Email address",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "Password",
+      "passwordPlaceholderSignup": "Min. 8 characters",
+      "passwordPlaceholderSignin": "••••••••",
+      "confirmPasswordLabel": "Confirm password",
+      "confirmPasswordPlaceholder": "Re-enter your password",
+      "rememberMe": "Remember me for 30 days",
+      "submitSignIn": "Sign In",
+      "submitSignUp": "Create Account",
+      "signingIn": "Signing in…",
+      "creatingAccount": "Creating account…",
+      "didntGetEmail": "Didn't get a verification email?",
+      "resendIt": "Resend it",
+      "lockoutTitle": "Account temporarily locked",
+      "lockoutBodyNow": "Too many failed attempts. Try again now.",
+      "lockoutBodyIn": "Too many failed attempts. Try again in <b>{time}</b>.",
+      "remainingAttempts": "{count, plural, =0 {No attempts left} one {# attempt left} other {# attempts left}} before 15-minute lockout.",
+      "lastAttemptWarning": "Next failure will lock your account for 15 minutes.",
+      "passwordReq": {
+        "minLength": "At least 8 characters",
+        "uppercase": "One uppercase letter",
+        "number": "One number",
+        "special": "One special character"
+      },
+      "strength": {
+        "weak": "Weak",
+        "fair": "Fair",
+        "good": "Good",
+        "strong": "Strong"
+      },
+      "validation": {
+        "emailRequired": "Email address is required.",
+        "emailInvalid": "Enter a valid email address.",
+        "passwordRequired": "Password is required.",
+        "passwordTooShort": "Must be at least 8 characters.",
+        "passwordNeedsUpper": "Must contain an uppercase letter.",
+        "passwordNeedsNumber": "Must contain a number.",
+        "passwordNeedsSpecial": "Must contain a special character.",
+        "passwordsMismatch": "Passwords do not match."
+      },
+      "serverErrors": {
+        "invalid_credentials": "Incorrect email or password.",
+        "email_exists": "An account with this email already exists. Try signing in instead.",
+        "email_not_confirmed": "Please verify your email before signing in.",
+        "oauth_error": "Google sign-in failed. Please try again.",
+        "auth_error": "Authentication link is invalid or expired. Please try again.",
+        "server_error": "Something went wrong on our end. Please try again later.",
+        "session_expired": "Your session expired due to inactivity. Please sign in again."
+      },
+      "terms": "By creating an account you agree to our <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>."
+    },
+    "verify": {
+      "title": "Check your inbox",
+      "sentTo": "We've sent a verification link to",
+      "instructions": "Click the link in the email to activate your account. Check your spam folder if you don't see it within a few minutes.",
+      "successResent": "Verification email resent! Check your inbox.",
+      "sending": "Sending…",
+      "resendIn": "Resend in {seconds}s",
+      "resendButton": "Resend verification email",
+      "errorEmailRequired": "Email address is required.",
+      "errorGenerateFailed": "Could not generate a verification link. Make sure you signed up with this email address.",
+      "errorSendFailed": "Failed to send the email. Please try again in a moment."
+    },
+    "onboarding": {
+      "header": {
+        "title": "Set Up Your Workspace",
+        "description": "Tell us about your company — takes 1 minute"
+      },
+      "steps": {
+        "company": {
+          "label": "Company",
+          "description": "Your business identity"
+        },
+        "location": {
+          "label": "Location",
+          "description": "Where you operate"
+        },
+        "preferences": {
+          "label": "Preferences",
+          "description": "Timezone & currency"
+        }
+      },
+      "company": {
+        "nameLabel": "Company / Business Name",
+        "namePlaceholder": "e.g. Salalah Properties LLC",
+        "phoneLabel": "Phone Number",
+        "phonePlaceholder": "+968 9123 4567",
+        "logoLabel": "Company Logo",
+        "logoOptional": "(optional)",
+        "logoUploadCta": "Click to upload logo",
+        "logoHint": "PNG, JPG, SVG — max 2 MB",
+        "logoTooLarge": "File too large (max 2 MB)"
+      },
+      "location": {
+        "addressLabel": "Street Address",
+        "addressPlaceholder": "e.g. Al Haffa Road, Building 12",
+        "cityLabel": "City",
+        "cityPlaceholder": "Salalah",
+        "areaLabel": "Area / Neighbourhood",
+        "areaPlaceholder": "Al Haffa",
+        "defaultsHint": "📍 Defaults are pre-set for <b>Salalah, Dhofar, Oman</b>. Change as needed."
+      },
+      "preferences": {
+        "timezoneLabel": "Timezone",
+        "currencyLabel": "Currency",
+        "settingsHint": "💡 These can be changed later in <b>Settings → Organization</b>.",
+        "summary": {
+          "title": "Summary",
+          "company": "Company",
+          "phone": "Phone",
+          "city": "City",
+          "address": "Address",
+          "timezone": "Timezone",
+          "currency": "Currency",
+          "empty": "—"
+        }
+      },
+      "errors": {
+        "nameRequired": "Company name is required.",
+        "cityRequired": "City is required.",
+        "generic": "Something went wrong. Please try again."
+      },
+      "createButton": "Create Workspace",
+      "creatingButton": "Creating workspace…",
+      "stepCounter": "Step {current} of {total}"
+    },
+    "invite": {
+      "from": "Invitation from",
+      "roleLabel": "Role:",
+      "invitedBy": "Invited by {name}",
+      "expired": "Expired",
+      "hoursRemaining": "{hours}h {minutes}m remaining",
+      "minutesRemaining": "{minutes}m remaining",
+      "invalidUsedTitle": "Invitation already used",
+      "invalidUsedBody": "This invitation link has already been accepted.",
+      "invalidCancelledTitle": "Invitation cancelled",
+      "invalidCancelledBody": "This invitation was cancelled by the admin.",
+      "invalidExpiredTitle": "Invitation expired",
+      "invalidExpiredBody": "This link expired. Ask your admin to send a new invitation.",
+      "createTitle": "Create your account",
+      "createDesc": "Set up your name and password to join <b>{org}</b>.",
+      "form": {
+        "emailLabel": "Email Address",
+        "firstNameLabel": "First Name",
+        "firstNamePlaceholder": "Ahmed",
+        "lastNameLabel": "Last Name",
+        "lastNamePlaceholder": "Al-Balushi",
+        "createPasswordLabel": "Create Password",
+        "confirmPasswordLabel": "Confirm Password",
+        "submit": "Accept & Create Account",
+        "submitting": "Creating account…"
+      },
+      "errors": {
+        "firstNameRequired": "First name is required.",
+        "passwordTooShort": "Password must be at least 8 characters.",
+        "passwordsMismatch": "Passwords do not match.",
+        "notFound": "Invitation not found. Please request a new one.",
+        "alreadyUsed": "This invitation has already been used.",
+        "cancelled": "This invitation has been cancelled.",
+        "expired": "This invitation has expired. Please ask your admin to resend it.",
+        "alreadyExists": "An account with this email already exists.",
+        "alreadyExistsSignIn": "An account with this email already exists. Please sign in.",
+        "createFailed": "Failed to create account. Please try again.",
+        "createFailedShort": "Failed to create account."
+      }
+    }
   }
 }

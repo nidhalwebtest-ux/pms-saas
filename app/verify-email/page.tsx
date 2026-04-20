@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import VerifyEmailClient from "./VerifyEmailClient";
 
 export default async function VerifyEmailPage({
@@ -6,13 +7,14 @@ export default async function VerifyEmailPage({
   searchParams: Promise<{ email?: string }>;
 }) {
   const { email } = await searchParams;
+  const t = await getTranslations("auth.brand");
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 p-4">
       {/* Background orbs — same as login page */}
-      <div className="pointer-events-none absolute top-1/4 left-1/4 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-1/4 right-1/4 h-96 w-96 rounded-full bg-indigo-600/15 blur-3xl" />
-      <div className="pointer-events-none absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-2xl" />
+      <div className="pointer-events-none absolute top-1/4 start-1/4 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl" />
+      <div className="pointer-events-none absolute bottom-1/4 end-1/4 h-96 w-96 rounded-full bg-indigo-600/15 blur-3xl" />
+      <div className="pointer-events-none absolute top-1/2 start-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-500/10 blur-2xl" />
 
       {/* Branding */}
       <div className="w-full max-w-md">
@@ -28,8 +30,8 @@ export default async function VerifyEmailPage({
             </svg>
           </div>
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-white">OmRent</h1>
-            <p className="text-sm text-slate-400">Property Management System</p>
+            <h1 className="text-2xl font-bold text-white">{t("name")}</h1>
+            <p className="text-sm text-slate-400">{t("tagline")}</p>
           </div>
         </div>
 

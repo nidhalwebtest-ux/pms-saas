@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { login, signup, signInWithGoogle } from "./actions";
 import {
   BuildingOfficeIcon,
@@ -17,45 +18,44 @@ import {
   ShieldExclamationIcon,
 } from "@heroicons/react/24/outline";
 
-// ─── Error messages ────────────────────────────────────────────────────────────
+// ─── Error keys ────────────────────────────────────────────────────────────────
 
-const SERVER_ERRORS: Record<string, string> = {
-  invalid_credentials:  "Incorrect email or password.",
-  email_exists:         "An account with this email already exists. Try signing in instead.",
-  email_not_confirmed:  "Please verify your email before signing in.",
-  oauth_error:          "Google sign-in failed. Please try again.",
-  auth_error:           "Authentication link is invalid or expired. Please try again.",
-  server_error:         "Something went wrong on our end. Please try again later.",
-  session_expired:      "Your session expired due to inactivity. Please sign in again.",
-  too_many_attempts:    "", // handled separately with countdown
-};
+type ServerErrorKey =
+  | "invalid_credentials"
+  | "email_exists"
+  | "email_not_confirmed"
+  | "oauth_error"
+  | "auth_error"
+  | "server_error"
+  | "session_expired";
 
 // ─── Password strength ─────────────────────────────────────────────────────────
 
 const PASSWORD_REQUIREMENTS = [
-  { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
-  { label: "One uppercase letter",  test: (p: string) => /[A-Z]/.test(p) },
-  { label: "One number",            test: (p: string) => /[0-9]/.test(p) },
-  { label: "One special character", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+  { key: "minLength", test: (p: string) => p.length >= 8 },
+  { key: "uppercase", test: (p: string) => /[A-Z]/.test(p) },
+  { key: "number",    test: (p: string) => /[0-9]/.test(p) },
+  { key: "special",   test: (p: string) => /[^A-Za-z0-9]/.test(p) },
 ] as const;
 
 function getStrength(password: string) {
   const score = PASSWORD_REQUIREMENTS.filter((r) => r.test(password)).length;
-  const labels = ["", "Weak", "Fair", "Good", "Strong"];
-  const bar = ["", "bg-red-500", "bg-orange-400", "bg-yellow-400", "bg-green-500"];
-  const text = ["", "text-red-600", "text-orange-600", "text-yellow-600", "text-green-600"];
-  return { score, label: labels[score], barColor: bar[score], textColor: text[score] };
+  const keys  = ["", "weak", "fair", "good", "strong"] as const;
+  const bar   = ["", "bg-red-500", "bg-orange-400", "bg-yellow-400", "bg-green-500"];
+  const text  = ["", "text-red-600", "text-orange-600", "text-yellow-600", "text-green-600"];
+  return { score, labelKey: keys[score], barColor: bar[score], textColor: text[score] };
 }
 
 // ─── Lockout countdown banner ─────────────────────────────────────────────────
 
 function LockoutBanner({ until }: { until: number }) {
-  const [timeLeft, setTimeLeft] = useState("");
+  const t = useTranslations("auth.login");
+  const [timeLeft, setTimeLeft] = useState<string | null>(null);
 
   useEffect(() => {
     const tick = () => {
       const diff = until - Date.now();
-      if (diff <= 0) { setTimeLeft("now"); return; }
+      if (diff <= 0) { setTimeLeft(""); return; }
       const m = Math.floor(diff / 60_000);
       const s = Math.floor((diff % 60_000) / 1000);
       setTimeLeft(`${m}:${s.toString().padStart(2, "0")}`);
@@ -69,14 +69,16 @@ function LockoutBanner({ until }: { until: number }) {
     <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3.5">
       <ShieldExclamationIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
       <div>
-        <p className="text-sm font-semibold text-red-700">Account temporarily locked</p>
+        <p className="text-sm font-semibold text-red-700">{t("lockoutTitle")}</p>
         <p className="mt-0.5 text-sm text-red-600">
-          Too many failed attempts. Try again{" "}
-          {timeLeft === "now" ? (
-            <span className="font-semibold">now</span>
-          ) : timeLeft ? (
-            <>in <span className="font-mono font-semibold">{timeLeft}</span></>
-          ) : null}.
+          {timeLeft === ""
+            ? t("lockoutBodyNow")
+            : timeLeft
+              ? t.rich("lockoutBodyIn", {
+                  time: timeLeft,
+                  b: (chunks) => <span className="font-mono font-semibold ltr-numbers">{chunks}</span>,
+                })
+              : null}
         </p>
       </div>
     </div>
@@ -109,6 +111,13 @@ export default function LoginForm({
   lockoutUntil?: number;   // Unix ms — when the lockout expires
   remainingAttempts?: number; // how many attempts before lockout
 }) {
+  const t        = useTranslations("auth.login");
+  const tBrand   = useTranslations("auth.brand");
+  const tCommon  = useTranslations("auth.common");
+  const tReq     = useTranslations("auth.login.passwordReq");
+  const tStr     = useTranslations("auth.login.strength");
+  const tErr     = useTranslations("auth.login.serverErrors");
+
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
@@ -118,9 +127,15 @@ export default function LoginForm({
   const [isPending, startTransition] = useTransition();
   const [googlePending] = useState(false);
 
+  const knownErrorKeys: ServerErrorKey[] = [
+    "invalid_credentials", "email_exists", "email_not_confirmed",
+    "oauth_error", "auth_error", "server_error", "session_expired",
+  ];
   const isLockedOut = initialError === "too_many_attempts" && !!lockoutUntil;
   const serverError = (initialError && !isLockedOut)
-    ? (SERVER_ERRORS[initialError] ?? initialError)
+    ? (knownErrorKeys.includes(initialError as ServerErrorKey)
+        ? tErr(initialError as ServerErrorKey)
+        : initialError)
     : null;
   const serverSuccess = initialSuccess ?? null;
   const strength = getStrength(password);
@@ -144,22 +159,22 @@ export default function LoginForm({
     const errs: Record<string, string> = {};
 
     if (!email.trim()) {
-      errs.email = "Email address is required.";
+      errs.email = t("validation.emailRequired");
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      errs.email = "Enter a valid email address.";
+      errs.email = t("validation.emailInvalid");
     }
 
     if (!pw) {
-      errs.password = "Password is required.";
+      errs.password = t("validation.passwordRequired");
     } else if (mode === "signup") {
-      if (pw.length < 8)         errs.password = "Must be at least 8 characters.";
-      else if (!/[A-Z]/.test(pw)) errs.password = "Must contain an uppercase letter.";
-      else if (!/[0-9]/.test(pw)) errs.password = "Must contain a number.";
-      else if (!/[^A-Za-z0-9]/.test(pw)) errs.password = "Must contain a special character.";
+      if (pw.length < 8)         errs.password = t("validation.passwordTooShort");
+      else if (!/[A-Z]/.test(pw)) errs.password = t("validation.passwordNeedsUpper");
+      else if (!/[0-9]/.test(pw)) errs.password = t("validation.passwordNeedsNumber");
+      else if (!/[^A-Za-z0-9]/.test(pw)) errs.password = t("validation.passwordNeedsSpecial");
     }
 
     if (mode === "signup" && !errs.password && pw !== confirm) {
-      errs.confirmPassword = "Passwords do not match.";
+      errs.confirmPassword = t("validation.passwordsMismatch");
     }
 
     return errs;
@@ -196,8 +211,8 @@ export default function LoginForm({
           <BuildingOfficeIcon className="h-8 w-8 text-white" />
         </div>
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white">OmRent</h1>
-          <p className="text-sm text-slate-400">Property Management System</p>
+          <h1 className="text-2xl font-bold text-white">{tBrand("name")}</h1>
+          <p className="text-sm text-slate-400">{tBrand("tagline")}</p>
         </div>
       </div>
 
@@ -217,7 +232,7 @@ export default function LoginForm({
                   : "text-slate-500 hover:text-slate-700"
               }`}
             >
-              {m === "signin" ? "Sign In" : "Sign Up"}
+              {m === "signin" ? t("tabs.signIn") : t("tabs.signUp")}
             </button>
           ))}
         </div>
@@ -233,12 +248,12 @@ export default function LoginForm({
               <span>{serverError}</span>
               {typeof remainingAttempts === "number" && remainingAttempts > 0 && (
                 <p className="mt-0.5 text-xs text-red-500">
-                  {remainingAttempts} attempt{remainingAttempts !== 1 ? "s" : ""} left before 15-minute lockout.
+                  {t("remainingAttempts", { count: remainingAttempts })}
                 </p>
               )}
               {typeof remainingAttempts === "number" && remainingAttempts === 0 && (
                 <p className="mt-0.5 text-xs text-red-500 font-medium">
-                  Next failure will lock your account for 15 minutes.
+                  {t("lastAttemptWarning")}
                 </p>
               )}
             </div>
@@ -268,14 +283,14 @@ export default function LoginForm({
             ) : (
               <GoogleIcon />
             )}
-            Continue with Google
+            {t("google")}
           </button>
         </form>
 
         {/* Divider */}
         <div className="my-5 flex items-center gap-3">
           <div className="h-px flex-1 bg-slate-200" />
-          <span className="text-xs font-medium text-slate-400">or</span>
+          <span className="text-xs font-medium text-slate-400">{t("or")}</span>
           <div className="h-px flex-1 bg-slate-200" />
         </div>
 
@@ -285,19 +300,19 @@ export default function LoginForm({
           {/* Email */}
           <div>
             <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-slate-700">
-              Email address
+              {t("emailLabel")}
             </label>
             <div className="relative">
-              <EnvelopeIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <EnvelopeIcon className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 id="email"
                 name="email"
                 type="email"
                 autoComplete="email"
-                placeholder="you@example.com"
+                placeholder={t("emailPlaceholder")}
                 disabled={isLoading}
                 onChange={() => clearError("email")}
-                className={`w-full rounded-lg border py-2.5 pl-9 pr-4 text-sm text-slate-900 placeholder:text-slate-400 transition focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-400 ${
+                className={`w-full rounded-lg border py-2.5 ps-9 pe-4 text-sm text-slate-900 placeholder:text-slate-400 transition focus:outline-none focus:ring-2 disabled:bg-slate-50 disabled:text-slate-400 ${
                   fieldErrors.email
                     ? "border-red-300 bg-red-50 focus:ring-red-400"
                     : "border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500/30"
@@ -315,23 +330,23 @@ export default function LoginForm({
           {/* Password */}
           <div>
             <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-slate-700">
-              Password
+              {t("passwordLabel")}
             </label>
             <div className="relative">
-              <LockClosedIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <LockClosedIcon className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 id="password"
                 name="password"
                 type={showPassword ? "text" : "password"}
                 autoComplete={mode === "signin" ? "current-password" : "new-password"}
-                placeholder={mode === "signup" ? "Min. 8 characters" : "••••••••"}
+                placeholder={mode === "signup" ? t("passwordPlaceholderSignup") : t("passwordPlaceholderSignin")}
                 disabled={isLoading}
                 value={password}
                 onChange={(e) => {
                   setPassword(e.target.value);
                   clearError("password");
                 }}
-                className={`w-full rounded-lg border py-2.5 pl-9 pr-10 text-sm text-slate-900 placeholder:text-slate-400 transition focus:outline-none focus:ring-2 disabled:bg-slate-50 ${
+                className={`w-full rounded-lg border py-2.5 ps-9 pe-10 text-sm text-slate-900 placeholder:text-slate-400 transition focus:outline-none focus:ring-2 disabled:bg-slate-50 ${
                   fieldErrors.password
                     ? "border-red-300 bg-red-50 focus:ring-red-400"
                     : "border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500/30"
@@ -341,8 +356,8 @@ export default function LoginForm({
                 type="button"
                 tabIndex={-1}
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
-                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-600"
+                aria-label={showPassword ? tCommon("hidePassword") : tCommon("showPassword")}
               >
                 {showPassword ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
               </button>
@@ -363,9 +378,9 @@ export default function LoginForm({
                       />
                     ))}
                   </div>
-                  {strength.label && (
+                  {strength.labelKey && (
                     <span className={`text-xs font-semibold ${strength.textColor}`}>
-                      {strength.label}
+                      {tStr(strength.labelKey)}
                     </span>
                   )}
                 </div>
@@ -376,7 +391,7 @@ export default function LoginForm({
                     const met = req.test(password);
                     return (
                       <div
-                        key={req.label}
+                        key={req.key}
                         className={`flex items-center gap-1.5 text-xs transition-colors ${
                           met ? "text-green-600" : "text-slate-400"
                         }`}
@@ -386,7 +401,7 @@ export default function LoginForm({
                         ) : (
                           <XMarkIcon className="h-3 w-3 flex-shrink-0" />
                         )}
-                        {req.label}
+                        {tReq(req.key)}
                       </div>
                     );
                   })}
@@ -406,23 +421,23 @@ export default function LoginForm({
           {mode === "signup" && (
             <div>
               <label htmlFor="confirmPassword" className="mb-1.5 block text-sm font-medium text-slate-700">
-                Confirm password
+                {t("confirmPasswordLabel")}
               </label>
               <div className="relative">
-                <LockClosedIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <LockClosedIcon className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   id="confirmPassword"
                   name="confirmPassword"
                   type={showConfirm ? "text" : "password"}
                   autoComplete="new-password"
-                  placeholder="Re-enter your password"
+                  placeholder={t("confirmPasswordPlaceholder")}
                   disabled={isLoading}
                   value={confirmPassword}
                   onChange={(e) => {
                     setConfirmPassword(e.target.value);
                     clearError("confirmPassword");
                   }}
-                  className={`w-full rounded-lg border py-2.5 pl-9 pr-10 text-sm text-slate-900 placeholder:text-slate-400 transition focus:outline-none focus:ring-2 disabled:bg-slate-50 ${
+                  className={`w-full rounded-lg border py-2.5 ps-9 pe-10 text-sm text-slate-900 placeholder:text-slate-400 transition focus:outline-none focus:ring-2 disabled:bg-slate-50 ${
                     fieldErrors.confirmPassword
                       ? "border-red-300 bg-red-50 focus:ring-red-400"
                       : confirmPassword && confirmPassword === password
@@ -430,7 +445,7 @@ export default function LoginForm({
                         : "border-slate-200 bg-white focus:border-blue-500 focus:ring-blue-500/30"
                   }`}
                 />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                <div className="absolute end-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
                   {/* Match indicator */}
                   {confirmPassword && (
                     confirmPassword === password ? (
@@ -444,7 +459,7 @@ export default function LoginForm({
                     tabIndex={-1}
                     onClick={() => setShowConfirm((v) => !v)}
                     className="text-slate-400 transition-colors hover:text-slate-600"
-                    aria-label={showConfirm ? "Hide password" : "Show password"}
+                    aria-label={showConfirm ? tCommon("hidePassword") : tCommon("showPassword")}
                   >
                     {showConfirm ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
                   </button>
@@ -470,7 +485,7 @@ export default function LoginForm({
                   disabled={isLoading || isLockedOut}
                   className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
                 />
-                <span className="text-sm text-slate-600">Remember me for 30 days</span>
+                <span className="text-sm text-slate-600">{t("rememberMe")}</span>
               </label>
             </div>
           )}
@@ -487,21 +502,21 @@ export default function LoginForm({
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                 </svg>
-                {mode === "signin" ? "Signing in…" : "Creating account…"}
+                {mode === "signin" ? t("signingIn") : t("creatingAccount")}
               </>
             ) : mode === "signin" ? (
-              "Sign In"
+              t("submitSignIn")
             ) : (
-              "Create Account"
+              t("submitSignUp")
             )}
           </button>
 
           {/* Resend / forgot links */}
           {mode === "signin" && (
             <p className="text-center text-xs text-slate-500">
-              Didn&apos;t get a verification email?{" "}
+              {t("didntGetEmail")}{" "}
               <Link href="/verify-email" className="font-medium text-blue-600 hover:underline">
-                Resend it
+                {t("resendIt")}
               </Link>
             </p>
           )}
@@ -510,10 +525,10 @@ export default function LoginForm({
         {/* Terms — signup only */}
         {mode === "signup" && (
           <p className="mt-4 text-center text-xs text-slate-400">
-            By creating an account you agree to our{" "}
-            <span className="text-blue-600 cursor-pointer hover:underline">Terms of Service</span>
-            {" "}and{" "}
-            <span className="text-blue-600 cursor-pointer hover:underline">Privacy Policy</span>.
+            {t.rich("terms", {
+              terms:   (chunks) => <span className="text-blue-600 cursor-pointer hover:underline">{chunks}</span>,
+              privacy: (chunks) => <span className="text-blue-600 cursor-pointer hover:underline">{chunks}</span>,
+            })}
           </p>
         )}
       </div>
@@ -524,8 +539,8 @@ export default function LoginForm({
           href="/"
           className="inline-flex items-center gap-1.5 text-sm text-slate-400 transition-colors hover:text-slate-200"
         >
-          <ArrowLeftIcon className="h-3.5 w-3.5" />
-          Back to home
+          <ArrowLeftIcon className="h-3.5 w-3.5 rtl:rotate-180" />
+          {tCommon("backToHome")}
         </Link>
       </div>
     </div>

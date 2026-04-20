@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { prisma } from "@/lib/prisma";
@@ -10,14 +11,16 @@ export async function acceptInvitation(
   _prev: { error?: string },
   formData: FormData,
 ): Promise<{ error?: string }> {
+  const t = await getTranslations("auth.invite.errors");
+
   const firstName       = (formData.get("firstName") as string)?.trim();
   const lastName        = (formData.get("lastName")  as string)?.trim() || null;
   const password        = (formData.get("password")  as string) ?? "";
   const confirmPassword = (formData.get("confirmPassword") as string) ?? "";
 
-  if (!firstName)                     return { error: "First name is required." };
-  if (password.length < 8)            return { error: "Password must be at least 8 characters." };
-  if (password !== confirmPassword)   return { error: "Passwords do not match." };
+  if (!firstName)                     return { error: t("firstNameRequired") };
+  if (password.length < 8)            return { error: t("passwordTooShort") };
+  if (password !== confirmPassword)   return { error: t("passwordsMismatch") };
 
   // Fetch and validate the invitation
   const invite = await prisma.invitation.findUnique({
@@ -25,16 +28,16 @@ export async function acceptInvitation(
     include: { organization: { select: { id: true, name: true } } },
   });
 
-  if (!invite)             return { error: "Invitation not found. Please request a new one." };
-  if (invite.usedAt)       return { error: "This invitation has already been used." };
-  if (invite.cancelledAt)  return { error: "This invitation has been cancelled." };
-  if (invite.expiresAt < new Date()) return { error: "This invitation has expired. Please ask your admin to resend it." };
+  if (!invite)             return { error: t("notFound") };
+  if (invite.usedAt)       return { error: t("alreadyUsed") };
+  if (invite.cancelledAt)  return { error: t("cancelled") };
+  if (invite.expiresAt < new Date()) return { error: t("expired") };
 
   // Check the email is not already registered in this org
   const existing = await prisma.user.findFirst({
     where: { email: invite.email, organizationId: invite.organizationId },
   });
-  if (existing) return { error: "An account with this email already exists." };
+  if (existing) return { error: t("alreadyExists") };
 
   const admin = createAdminClient();
 
@@ -46,11 +49,11 @@ export async function acceptInvitation(
   });
   if (authError) {
     if (authError.message.toLowerCase().includes("already")) {
-      return { error: "An account with this email already exists. Please sign in." };
+      return { error: t("alreadyExistsSignIn") };
     }
-    return { error: "Failed to create account. Please try again." };
+    return { error: t("createFailed") };
   }
-  if (!newAuth.user) return { error: "Failed to create account." };
+  if (!newAuth.user) return { error: t("createFailedShort") };
 
   // Create Prisma user linked to the org
   await prisma.user.create({

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { resendVerificationEmail } from "./actions";
 import {
   EnvelopeIcon,
@@ -14,6 +15,8 @@ import {
 const RESEND_COOLDOWN = 60; // seconds
 
 export default function VerifyEmailClient({ email }: { email: string }) {
+  const t       = useTranslations("auth.verify");
+  const tCommon = useTranslations("auth.common");
   const [countdown, setCountdown] = useState(0);
   const [status, setStatus] = useState<"idle" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
@@ -63,16 +66,15 @@ export default function VerifyEmailClient({ email }: { email: string }) {
         </div>
 
         <div className="text-center">
-          <h1 className="text-xl font-bold text-slate-900">Check your inbox</h1>
+          <h1 className="text-xl font-bold text-slate-900">{t("title")}</h1>
           <p className="mt-2 text-sm text-slate-500">
-            We&apos;ve sent a verification link to
+            {t("sentTo")}
           </p>
           {email && (
             <p className="mt-1 text-sm font-semibold text-slate-700">{maskedEmail}</p>
           )}
           <p className="mt-3 text-xs text-slate-400">
-            Click the link in the email to activate your account. Check your spam folder if
-            you don&apos;t see it within a few minutes.
+            {t("instructions")}
           </p>
         </div>
 
@@ -81,7 +83,7 @@ export default function VerifyEmailClient({ email }: { email: string }) {
           {status === "sent" && (
             <div className="flex items-start gap-2.5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
               <CheckCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
-              <span>Verification email resent! Check your inbox.</span>
+              <span>{t("successResent")}</span>
             </div>
           )}
 
@@ -102,10 +104,10 @@ export default function VerifyEmailClient({ email }: { email: string }) {
           >
             <ArrowPathIcon className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`} />
             {isPending
-              ? "Sending…"
+              ? t("sending")
               : countdown > 0
-                ? `Resend in ${countdown}s`
-                : "Resend verification email"}
+                ? t("resendIn", { seconds: countdown })
+                : t("resendButton")}
           </button>
         </div>
       </div>
@@ -117,7 +119,7 @@ export default function VerifyEmailClient({ email }: { email: string }) {
           className="inline-flex items-center gap-1.5 text-sm text-slate-400 transition-colors hover:text-slate-200"
         >
           <ArrowLeftIcon className="h-3.5 w-3.5" />
-          Back to Sign In
+          {tCommon("backToSignIn")}
         </Link>
       </div>
     </div>

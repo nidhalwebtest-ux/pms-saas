@@ -1,16 +1,17 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   EyeIcon, EyeSlashIcon, ExclamationCircleIcon,
   CheckIcon, XMarkIcon,
 } from "@heroicons/react/24/outline";
 
 const PASSWORD_REQUIREMENTS = [
-  { label: "At least 8 characters",  test: (p: string) => p.length >= 8 },
-  { label: "One uppercase letter",   test: (p: string) => /[A-Z]/.test(p) },
-  { label: "One number",             test: (p: string) => /[0-9]/.test(p) },
-  { label: "One special character",  test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+  { key: "minLength",  test: (p: string) => p.length >= 8 },
+  { key: "uppercase",  test: (p: string) => /[A-Z]/.test(p) },
+  { key: "number",     test: (p: string) => /[0-9]/.test(p) },
+  { key: "special",    test: (p: string) => /[^A-Za-z0-9]/.test(p) },
 ] as const;
 
 function PasswordField({
@@ -33,13 +34,13 @@ function PasswordField({
           onChange={(e) => onChange(e.target.value)}
           required
           autoComplete={autoComplete}
-          className="w-full rounded-xl border border-slate-600 bg-slate-800/60 px-4 py-2.5 pr-10 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
+          className="w-full rounded-xl border border-slate-600 bg-slate-800/60 px-4 py-2.5 pe-10 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
         />
         <button
           type="button"
           tabIndex={-1}
           onClick={() => setShow((v) => !v)}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
+          className="absolute end-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 transition-colors"
         >
           {show ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
         </button>
@@ -55,6 +56,9 @@ export default function AcceptForm({
   token: string;
   email: string;
 }) {
+  const t       = useTranslations("auth.invite.form");
+  const tReq    = useTranslations("auth.login.passwordReq");
+  const tStr    = useTranslations("auth.login.strength");
   const [password, setPassword]       = useState("");
   const [confirmPw, setConfirmPw]     = useState("");
 
@@ -63,7 +67,7 @@ export default function AcceptForm({
 
   const strength = PASSWORD_REQUIREMENTS.filter((r) => r.test(password)).length;
   const strengthColors = ["", "bg-red-500", "bg-orange-400", "bg-yellow-400", "bg-green-500"];
-  const strengthLabels = ["", "Weak", "Fair", "Good", "Strong"];
+  const strengthKeys = ["", "weak", "fair", "good", "strong"] as const;
   const strengthTextColors = ["", "text-red-400", "text-orange-400", "text-yellow-400", "text-green-400"];
 
   return (
@@ -77,7 +81,7 @@ export default function AcceptForm({
 
       {/* Read-only email */}
       <div>
-        <label className="block text-sm font-medium text-slate-300 mb-1.5">Email Address</label>
+        <label className="block text-sm font-medium text-slate-300 mb-1.5">{t("emailLabel")}</label>
         <input
           type="email"
           value={email}
@@ -90,24 +94,24 @@ export default function AcceptForm({
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-1.5">
-            First Name <span className="text-blue-400">*</span>
+            {t("firstNameLabel")} <span className="text-blue-400">*</span>
           </label>
           <input
             name="firstName"
             type="text"
             required
             autoComplete="given-name"
-            placeholder="Ahmed"
+            placeholder={t("firstNamePlaceholder")}
             className="w-full rounded-xl border border-slate-600 bg-slate-800/60 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">Last Name</label>
+          <label className="block text-sm font-medium text-slate-300 mb-1.5">{t("lastNameLabel")}</label>
           <input
             name="lastName"
             type="text"
             autoComplete="family-name"
-            placeholder="Al-Balushi"
+            placeholder={t("lastNamePlaceholder")}
             className="w-full rounded-xl border border-slate-600 bg-slate-800/60 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
           />
         </div>
@@ -115,7 +119,7 @@ export default function AcceptForm({
 
       {/* Password */}
       <PasswordField
-        label="Create Password"
+        label={t("createPasswordLabel")}
         name="password"
         value={password}
         onChange={setPassword}
@@ -136,7 +140,7 @@ export default function AcceptForm({
             </div>
             {strength > 0 && (
               <span className={`text-xs font-semibold ${strengthTextColors[strength]}`}>
-                {strengthLabels[strength]}
+                {tStr(strengthKeys[strength])}
               </span>
             )}
           </div>
@@ -144,9 +148,9 @@ export default function AcceptForm({
             {PASSWORD_REQUIREMENTS.map((req) => {
               const met = req.test(password);
               return (
-                <div key={req.label} className={`flex items-center gap-1.5 text-xs ${met ? "text-green-400" : "text-slate-500"}`}>
+                <div key={req.key} className={`flex items-center gap-1.5 text-xs ${met ? "text-green-400" : "text-slate-500"}`}>
                   {met ? <CheckIcon className="h-3 w-3 flex-shrink-0" /> : <XMarkIcon className="h-3 w-3 flex-shrink-0" />}
-                  {req.label}
+                  {tReq(req.key)}
                 </div>
               );
             })}
@@ -156,7 +160,7 @@ export default function AcceptForm({
 
       {/* Confirm password */}
       <PasswordField
-        label="Confirm Password"
+        label={t("confirmPasswordLabel")}
         name="confirmPassword"
         value={confirmPw}
         onChange={setConfirmPw}
@@ -174,10 +178,10 @@ export default function AcceptForm({
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
             </svg>
-            Creating account…
+            {t("submitting")}
           </>
         ) : (
-          "Accept & Create Account"
+          t("submit")
         )}
       </button>
     </form>

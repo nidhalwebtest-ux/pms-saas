@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useRef } from "react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import {
   BuildingOffice2Icon,
   MapPinIcon,
@@ -38,11 +39,8 @@ const CURRENCIES = [
   { value: "QAR", label: "QAR — Qatari Riyal" },
 ];
 
-const STEPS = [
-  { id: 1, label: "Company",     description: "Your business identity",   icon: BuildingOffice2Icon },
-  { id: 2, label: "Location",    description: "Where you operate",         icon: MapPinIcon },
-  { id: 3, label: "Preferences", description: "Timezone & currency",       icon: Cog6ToothIcon },
-];
+const STEP_KEYS = ["company", "location", "preferences"] as const;
+const STEP_ICONS = [BuildingOffice2Icon, MapPinIcon, Cog6ToothIcon];
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -60,15 +58,17 @@ interface FormState {
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function StepIndicator({ current }: { current: number }) {
+  const t = useTranslations("auth.onboarding.steps");
   return (
     <div className="flex items-center justify-center gap-0 mb-10">
-      {STEPS.map((step, idx) => {
-        const done    = current > step.id;
-        const active  = current === step.id;
-        const Icon    = step.icon;
+      {STEP_KEYS.map((key, idx) => {
+        const id      = idx + 1;
+        const done    = current > id;
+        const active  = current === id;
+        const Icon    = STEP_ICONS[idx];
 
         return (
-          <div key={step.id} className="flex items-center">
+          <div key={key} className="flex items-center">
             {/* Connector line (before every step except first) */}
             {idx > 0 && (
               <div className={`h-px w-12 sm:w-20 transition-colors duration-500 ${done || active ? "bg-blue-500" : "bg-slate-700"}`} />
@@ -89,10 +89,10 @@ function StepIndicator({ current }: { current: number }) {
               </div>
               <div className="text-center">
                 <p className={`text-xs font-semibold transition-colors ${active ? "text-white" : done ? "text-blue-400" : "text-slate-500"}`}>
-                  {step.label}
+                  {t(`${key}.label`)}
                 </p>
                 <p className={`hidden sm:block text-[10px] transition-colors ${active ? "text-slate-400" : "text-slate-600"}`}>
-                  {step.description}
+                  {t(`${key}.description`)}
                 </p>
               </div>
             </div>
@@ -160,13 +160,14 @@ function LogoUploader({
   file:     File | null;
   onChange: (f: File | null) => void;
 }) {
+  const t = useTranslations("auth.onboarding.company");
   const inputRef  = useRef<HTMLInputElement>(null);
   const previewUrl = file ? URL.createObjectURL(file) : null;
 
   return (
     <div>
       <label className="block text-sm font-medium text-slate-300 mb-1.5">
-        Company Logo <span className="text-slate-500 font-normal">(optional)</span>
+        {t("logoLabel")} <span className="text-slate-500 font-normal">{t("logoOptional")}</span>
       </label>
       <div
         onClick={() => inputRef.current?.click()}
@@ -175,7 +176,7 @@ function LogoUploader({
         {previewUrl ? (
           <Image
             src={previewUrl}
-            alt="Logo preview"
+            alt={t("logoLabel")}
             width={56}
             height={56}
             className="h-14 w-14 rounded-xl object-cover ring-1 ring-white/10"
@@ -187,15 +188,15 @@ function LogoUploader({
         )}
         <div>
           <p className="text-sm font-medium text-slate-200">
-            {file ? file.name : "Click to upload logo"}
+            {file ? file.name : t("logoUploadCta")}
           </p>
-          <p className="text-xs text-slate-500 mt-0.5">PNG, JPG, SVG — max 2 MB</p>
+          <p className="text-xs text-slate-500 mt-0.5">{t("logoHint")}</p>
         </div>
         {file && (
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onChange(null); }}
-            className="absolute right-3 top-3 rounded-full bg-slate-700 p-1 text-slate-400 hover:bg-red-800 hover:text-red-200 transition"
+            className="absolute end-3 top-3 rounded-full bg-slate-700 p-1 text-slate-400 hover:bg-red-800 hover:text-red-200 transition"
           >
             ✕
           </button>
@@ -208,7 +209,7 @@ function LogoUploader({
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0] ?? null;
-          if (f && f.size > 2 * 1024 * 1024) { alert("File too large (max 2 MB)"); return; }
+          if (f && f.size > 2 * 1024 * 1024) { alert(t("logoTooLarge")); return; }
           onChange(f);
         }}
       />
@@ -219,6 +220,14 @@ function LogoUploader({
 // ── Main wizard ───────────────────────────────────────────────────────────────
 
 export default function OnboardingWizard() {
+  const t        = useTranslations("auth.onboarding");
+  const tCompany = useTranslations("auth.onboarding.company");
+  const tLoc     = useTranslations("auth.onboarding.location");
+  const tPref    = useTranslations("auth.onboarding.preferences");
+  const tSum     = useTranslations("auth.onboarding.preferences.summary");
+  const tStep    = useTranslations("auth.onboarding.steps");
+  const tCommon  = useTranslations("auth.common");
+
   const [step, setStep] = useState(1);
   const [error, setError]   = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -243,11 +252,11 @@ export default function OnboardingWizard() {
 
   function validateAndNext() {
     if (step === 1 && !form.name.trim()) {
-      setError("Company name is required.");
+      setError(t("errors.nameRequired"));
       return;
     }
     if (step === 2 && !form.city.trim()) {
-      setError("City is required.");
+      setError(t("errors.cityRequired"));
       return;
     }
     setError(null);
@@ -272,10 +281,12 @@ export default function OnboardingWizard() {
       try {
         await createOrganization(fd);
       } catch {
-        setError("Something went wrong. Please try again.");
+        setError(t("errors.generic"));
       }
     });
   }
+
+  const currentKey = STEP_KEYS[step - 1];
 
   // ── Animated step content ─────────────────────────────────────────────────
 
@@ -288,8 +299,8 @@ export default function OnboardingWizard() {
           <BuildingOffice2Icon className="h-7 w-7 text-white" />
         </div>
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white">Set Up Your Workspace</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Tell us about your company — takes 1 minute</p>
+          <h1 className="text-2xl font-bold text-white">{t("header.title")}</h1>
+          <p className="text-sm text-slate-400 mt-0.5">{t("header.description")}</p>
         </div>
       </div>
 
@@ -304,8 +315,8 @@ export default function OnboardingWizard() {
       >
         {/* Step title */}
         <div className="mb-6">
-          <h2 className="text-lg font-bold text-white">{STEPS[step - 1].label}</h2>
-          <p className="text-sm text-slate-400 mt-0.5">{STEPS[step - 1].description}</p>
+          <h2 className="text-lg font-bold text-white">{tStep(`${currentKey}.label`)}</h2>
+          <p className="text-sm text-slate-400 mt-0.5">{tStep(`${currentKey}.description`)}</p>
         </div>
 
         {/* Error banner */}
@@ -319,20 +330,20 @@ export default function OnboardingWizard() {
         {step === 1 && (
           <div className="space-y-5">
             <InputField
-              label="Company / Business Name"
+              label={tCompany("nameLabel")}
               name="name"
               value={form.name}
               onChange={(v) => set("name", v)}
-              placeholder="e.g. Salalah Properties LLC"
+              placeholder={tCompany("namePlaceholder")}
               required
             />
             <InputField
-              label="Phone Number"
+              label={tCompany("phoneLabel")}
               name="phone"
               type="tel"
               value={form.phone}
               onChange={(v) => set("phone", v)}
-              placeholder="+968 9123 4567"
+              placeholder={tCompany("phonePlaceholder")}
             />
             <LogoUploader
               file={form.logo}
@@ -345,31 +356,33 @@ export default function OnboardingWizard() {
         {step === 2 && (
           <div className="space-y-5">
             <InputField
-              label="Street Address"
+              label={tLoc("addressLabel")}
               name="address"
               value={form.address}
               onChange={(v) => set("address", v)}
-              placeholder="e.g. Al Haffa Road, Building 12"
+              placeholder={tLoc("addressPlaceholder")}
             />
             <div className="grid grid-cols-2 gap-4">
               <InputField
-                label="City"
+                label={tLoc("cityLabel")}
                 name="city"
                 value={form.city}
                 onChange={(v) => set("city", v)}
-                placeholder="Salalah"
+                placeholder={tLoc("cityPlaceholder")}
                 required
               />
               <InputField
-                label="Area / Neighbourhood"
+                label={tLoc("areaLabel")}
                 name="area"
                 value={form.area}
                 onChange={(v) => set("area", v)}
-                placeholder="Al Haffa"
+                placeholder={tLoc("areaPlaceholder")}
               />
             </div>
             <div className="rounded-xl bg-slate-800/50 px-4 py-3 text-xs text-slate-400">
-              📍 Defaults are pre-set for <span className="text-slate-200 font-medium">Salalah, Dhofar, Oman</span>. Change as needed.
+              {tLoc.rich("defaultsHint", {
+                b: (chunks) => <span className="text-slate-200 font-medium">{chunks}</span>,
+              })}
             </div>
           </div>
         )}
@@ -378,37 +391,39 @@ export default function OnboardingWizard() {
         {step === 3 && (
           <div className="space-y-5">
             <SelectField
-              label="Timezone"
+              label={tPref("timezoneLabel")}
               name="timezone"
               value={form.timezone}
               onChange={(v) => set("timezone", v)}
               options={TIMEZONES}
             />
             <SelectField
-              label="Currency"
+              label={tPref("currencyLabel")}
               name="currency"
               value={form.currency}
               onChange={(v) => set("currency", v)}
               options={CURRENCIES}
             />
             <div className="rounded-xl bg-slate-800/50 px-4 py-3 text-xs text-slate-400">
-              💡 These can be changed later in <span className="text-slate-200 font-medium">Settings → Organization</span>.
+              {tPref.rich("settingsHint", {
+                b: (chunks) => <span className="text-slate-200 font-medium">{chunks}</span>,
+              })}
             </div>
 
             {/* Summary */}
             <div className="rounded-xl border border-slate-700 bg-slate-800/40 px-4 py-4 space-y-2">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">Summary</p>
+              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-3">{tSum("title")}</p>
               {[
-                { label: "Company",  value: form.name },
-                { label: "Phone",    value: form.phone    || "—" },
-                { label: "City",     value: form.city },
-                { label: "Address",  value: form.address  || "—" },
-                { label: "Timezone", value: form.timezone },
-                { label: "Currency", value: form.currency },
+                { label: tSum("company"),  value: form.name },
+                { label: tSum("phone"),    value: form.phone    || tSum("empty") },
+                { label: tSum("city"),     value: form.city },
+                { label: tSum("address"),  value: form.address  || tSum("empty") },
+                { label: tSum("timezone"), value: form.timezone },
+                { label: tSum("currency"), value: form.currency },
               ].map((row) => (
                 <div key={row.label} className="flex justify-between text-xs">
                   <span className="text-slate-500">{row.label}</span>
-                  <span className="text-slate-200 font-medium truncate max-w-[60%] text-right">{row.value}</span>
+                  <span className="text-slate-200 font-medium truncate max-w-[60%] text-end">{row.value}</span>
                 </div>
               ))}
             </div>
@@ -424,7 +439,7 @@ export default function OnboardingWizard() {
               disabled={isPending}
               className="flex items-center gap-2 rounded-xl border border-slate-600 px-4 py-2.5 text-sm font-medium text-slate-300 hover:border-slate-400 hover:text-white transition-colors disabled:opacity-50"
             >
-              <ArrowLeftIcon className="h-4 w-4" /> Back
+              <ArrowLeftIcon className="h-4 w-4 rtl:rotate-180" /> {tCommon("back")}
             </button>
           ) : (
             <div />
@@ -436,7 +451,7 @@ export default function OnboardingWizard() {
               onClick={validateAndNext}
               className="flex items-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md shadow-blue-500/25 hover:bg-blue-500 hover:-translate-y-0.5 transition-all"
             >
-              Next <ArrowRightIcon className="h-4 w-4" />
+              {tCommon("next")} <ArrowRightIcon className="h-4 w-4 rtl:rotate-180" />
             </button>
           ) : (
             <button
@@ -451,11 +466,11 @@ export default function OnboardingWizard() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                   </svg>
-                  Creating workspace…
+                  {t("creatingButton")}
                 </>
               ) : (
                 <>
-                  <CheckIcon className="h-4 w-4" /> Create Workspace
+                  <CheckIcon className="h-4 w-4" /> {t("createButton")}
                 </>
               )}
             </button>
@@ -465,7 +480,7 @@ export default function OnboardingWizard() {
 
       {/* Step counter */}
       <p className="mt-4 text-center text-xs text-slate-600">
-        Step {step} of {STEPS.length}
+        {t("stepCounter", { current: step, total: STEP_KEYS.length })}
       </p>
     </div>
   );

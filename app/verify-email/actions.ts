@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { getTranslations } from "next-intl/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { sendVerificationEmail } from "@/lib/email";
 
@@ -14,7 +15,9 @@ async function getOrigin(): Promise<string> {
 export async function resendVerificationEmail(
   email: string,
 ): Promise<{ error?: string; success?: boolean }> {
-  if (!email?.trim()) return { error: "Email address is required." };
+  const t = await getTranslations("auth.verify");
+
+  if (!email?.trim()) return { error: t("errorEmailRequired") };
 
   const adminClient = createAdminClient();
   const origin      = await getOrigin();
@@ -30,9 +33,7 @@ export async function resendVerificationEmail(
 
   if (linkError || !linkData?.properties?.action_link) {
     console.error("[resend] generateLink failed:", linkError?.message);
-    return {
-      error: "Could not generate a verification link. Make sure you signed up with this email address.",
-    };
+    return { error: t("errorGenerateFailed") };
   }
 
   // Send via Resend REST API directly — no SMTP.
@@ -41,6 +42,6 @@ export async function resendVerificationEmail(
     return { success: true };
   } catch (err) {
     console.error("[resend] Resend send failed:", err);
-    return { error: "Failed to send the email. Please try again in a moment." };
+    return { error: t("errorSendFailed") };
   }
 }

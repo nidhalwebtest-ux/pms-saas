@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import { XMarkIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
 
 interface ReservationUnitInfo {
@@ -52,35 +55,17 @@ interface AvailabilityData {
 
 type PricingOption = "charge_difference" | "complimentary" | "apply_new_rate" | "keep_original_rate";
 
-const REASONS = [
-  "Guest Request - Different Floor",
-  "Guest Request - Larger Unit",
-  "Guest Request - Smaller Unit",
-  "Maintenance Issue",
-  "AC/Plumbing Problem",
-  "Noise Complaint",
-  "Management Decision",
-  "Complimentary Upgrade",
-  "Other",
+const REASON_KEYS: { value: string; key: string }[] = [
+  { value: "Guest Request - Different Floor", key: "guestRequestFloor" },
+  { value: "Guest Request - Larger Unit", key: "guestRequestLarger" },
+  { value: "Guest Request - Smaller Unit", key: "guestRequestSmaller" },
+  { value: "Maintenance Issue", key: "maintenance" },
+  { value: "AC/Plumbing Problem", key: "acPlumbing" },
+  { value: "Noise Complaint", key: "noise" },
+  { value: "Management Decision", key: "management" },
+  { value: "Complimentary Upgrade", key: "complimentary" },
+  { value: "Other", key: "other" },
 ];
-
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric", month: "short", year: "numeric",
-  });
-}
-
-function fmtUnitType(t: string) {
-  const map: Record<string, string> = {
-    STUDIO: "Studio", ONE_BR: "1 BR", TWO_BR: "2 BR", THREE_BR: "3 BR",
-    FOUR_BR: "4 BR", SUITE: "Suite", PENTHOUSE: "Penthouse", VILLA: "Villa",
-  };
-  return map[t] ?? t;
-}
-
-function fmtOMR(v: number) {
-  return v.toFixed(3) + " OMR";
-}
 
 export default function MoveUnitModal({
   reservationId,
@@ -89,6 +74,18 @@ export default function MoveUnitModal({
   onClose,
   onSuccess,
 }: Props) {
+  const t = useTranslations("reservations.moveUnitModal");
+  const tUnitTypes = useTranslations("reservations.detail.unitTypes");
+  const locale = useLocale();
+  const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
+
+  const fmtDate = (iso: string) =>
+    format(new Date(iso), "d MMM yyyy", { locale: dateFnsLocale });
+
+  const fmtUnitType = (type: string) => (tUnitTypes.has(type) ? tUnitTypes(type) : type);
+
+  const fmtOMR = (v: number) => `${v.toFixed(3)} OMR`;
+
   const today = new Date().toISOString().slice(0, 10);
   const maxDate = (() => {
     const d = new Date(checkOutDate);
@@ -138,18 +135,18 @@ export default function MoveUnitModal({
       );
       const data = await res.json();
       if (!res.ok) {
-        setAvailError(data.error ?? "Failed to load available units");
+        setAvailError(data.error ?? t("errors.loadFailed"));
         return;
       }
       setAvailability(data as AvailabilityData);
       // Pre-fill custom rate with fromUnit's current rate
       setCustomRate((data as AvailabilityData).fromUnit.rateAmount.toFixed(3));
     } catch {
-      setAvailError("Network error loading available units");
+      setAvailError(t("errors.loadNetwork"));
     } finally {
       setAvailLoading(false);
     }
-  }, [reservationId, selectedFromUnitId, moveDate]);
+  }, [reservationId, selectedFromUnitId, moveDate, t]);
 
   useEffect(() => {
     if (selectedFromUnitId && moveDate) {
@@ -209,13 +206,13 @@ export default function MoveUnitModal({
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Move failed");
+        toast.error(data.error ?? t("errors.moveFailed"));
         return;
       }
-      toast.success(`Guest moved from ${data.fromUnit} to ${data.toUnit} successfully`);
+      toast.success(t("success.moved", { from: data.fromUnit, to: data.toUnit }));
       onSuccess();
     } catch {
-      toast.error("Network error. Please try again.");
+      toast.error(t("errors.network"));
     } finally {
       setSubmitting(false);
     }
@@ -226,9 +223,10 @@ export default function MoveUnitModal({
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-blue-600 rounded-t-xl">
-          <h2 className="text-lg font-semibold text-white">Move Unit</h2>
+          <h2 className="text-lg font-semibold text-white">{t("title")}</h2>
           <button
             onClick={onClose}
+            aria-label={t("close")}
             className="p-1 rounded-lg hover:bg-blue-700 transition-colors text-white"
           >
             <XMarkIcon className="h-5 w-5" />
@@ -240,7 +238,7 @@ export default function MoveUnitModal({
           {reservationUnits.length > 1 && (
             <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                Select unit to move <span className="text-red-500">*</span>
+                {t("selectUnitToMove")} <span className="text-red-500">*</span>
               </h3>
               <div className="space-y-2">
                 {reservationUnits.map((u) => (
@@ -262,8 +260,12 @@ export default function MoveUnitModal({
                     />
                     <div>
                       <p className="font-medium text-gray-900 text-sm">{u.unitName}</p>
-                      <p className="text-xs text-gray-500">
-                        Floor {u.floor} — {fmtUnitType(u.unitType)} — {u.rateAmount.toFixed(3)} OMR/night
+                      <p className="text-xs text-gray-500 ltr-numbers">
+                        {t("unitMetaFull", {
+                          floor: u.floor,
+                          type: fmtUnitType(u.unitType),
+                          rate: u.rateAmount.toFixed(3),
+                        })}
                       </p>
                     </div>
                   </label>
@@ -275,10 +277,14 @@ export default function MoveUnitModal({
           {/* Auto-selected unit display (single unit case) */}
           {reservationUnits.length === 1 && selectedFromUnit && (
             <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-xs text-blue-600 font-medium">Moving unit:</p>
+              <p className="text-xs text-blue-600 font-medium">{t("movingUnit")}</p>
               <p className="font-semibold text-gray-900 text-sm">{selectedFromUnit.unitName}</p>
-              <p className="text-xs text-gray-500">
-                Floor {selectedFromUnit.floor} — {fmtUnitType(selectedFromUnit.unitType)} — {selectedFromUnit.rateAmount.toFixed(3)} OMR/night
+              <p className="text-xs text-gray-500 ltr-numbers">
+                {t("unitMetaFull", {
+                  floor: selectedFromUnit.floor,
+                  type: fmtUnitType(selectedFromUnit.unitType),
+                  rate: selectedFromUnit.rateAmount.toFixed(3),
+                })}
               </p>
             </div>
           )}
@@ -287,7 +293,7 @@ export default function MoveUnitModal({
           {selectedFromUnitId && (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Move date <span className="text-red-500">*</span>
+                {t("moveDate")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
@@ -298,7 +304,7 @@ export default function MoveUnitModal({
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
               />
               <p className="text-xs text-gray-400 mt-1">
-                Guest will move on this date. Today = immediate.
+                {t("moveDateHelp")}
               </p>
             </div>
           )}
@@ -307,7 +313,7 @@ export default function MoveUnitModal({
           {availLoading && (
             <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
               <div className="h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm text-gray-600">Finding available units…</span>
+              <span className="text-sm text-gray-600">{t("findingUnits")}</span>
             </div>
           )}
 
@@ -322,12 +328,12 @@ export default function MoveUnitModal({
           {availability && !availLoading && (
             <div>
               <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                Available Units ({availability.remainingNights} remaining nights)
+                {t("availableUnitsHeading", { count: availability.remainingNights })}
               </h3>
 
               {availability.availableUnits.length === 0 ? (
                 <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800">
-                  No available units found for this period. Try a different date.
+                  {t("noUnitsFound")}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -340,7 +346,7 @@ export default function MoveUnitModal({
                         key={unit.id}
                         type="button"
                         onClick={() => setSelectedToUnitId(unit.id)}
-                        className={`text-left p-4 rounded-xl border-2 transition-all ${
+                        className={`text-start p-4 rounded-xl border-2 transition-all ${
                           isSelected
                             ? "border-blue-500 bg-blue-50 shadow-sm"
                             : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
@@ -350,25 +356,31 @@ export default function MoveUnitModal({
                           <p className="font-semibold text-gray-900 text-sm">{unit.name}</p>
                           {isUpgrade && (
                             <span className="text-xs px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 font-medium shrink-0">
-                              ↑ Upgrade
+                              {t("upgrade")}
                             </span>
                           )}
                           {isDowngrade && (
                             <span className="text-xs px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 font-medium shrink-0">
-                              ↓ Downgrade
+                              {t("downgrade")}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-gray-500 mb-2">
-                          Floor {unit.floor} — {fmtUnitType(unit.unitType)} — {unit.propertyName}
+                        <p className="text-xs text-gray-500 mb-2 ltr-numbers">
+                          {t("unitMetaShort", {
+                            floor: unit.floor,
+                            type: fmtUnitType(unit.unitType),
+                            property: unit.propertyName,
+                          })}
                         </p>
                         <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-700">
-                            {unit.rateAmount.toFixed(3)} OMR/night
+                          <p className="text-sm font-medium text-gray-700 ltr-numbers">
+                            {t("ratePerNight", { amount: unit.rateAmount.toFixed(3) })}
                           </p>
                           {unit.rateDifference !== 0 && (
-                            <p className={`text-xs font-medium ${isUpgrade ? "text-green-700" : "text-orange-700"}`}>
-                              {isUpgrade ? "+" : ""}{unit.rateDifference.toFixed(3)}/night
+                            <p className={`text-xs font-medium ltr-numbers ${isUpgrade ? "text-green-700" : "text-orange-700"}`}>
+                              {t("rateDiffPerNight", {
+                                amount: `${isUpgrade ? "+" : ""}${unit.rateDifference.toFixed(3)}`,
+                              })}
                             </p>
                           )}
                         </div>
@@ -376,8 +388,11 @@ export default function MoveUnitModal({
                           <p className="text-xs text-orange-600 mt-0.5">{unit.priceName}</p>
                         )}
                         {isSelected && (
-                          <p className="text-xs text-blue-700 font-medium mt-2">
-                            Subtotal: {fmtOMR(unit.subtotal)} for {availability.remainingNights} nights
+                          <p className="text-xs text-blue-700 font-medium mt-2 ltr-numbers">
+                            {t("subtotalFor", {
+                              amount: fmtOMR(unit.subtotal),
+                              count: availability.remainingNights,
+                            })}
                           </p>
                         )}
                       </button>
@@ -393,17 +408,17 @@ export default function MoveUnitModal({
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Reason for move <span className="text-red-500">*</span>
+                  {t("reasonLabel")} <span className="text-red-500">*</span>
                 </label>
                 <select
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                 >
-                  <option value="">Select reason…</option>
-                  {REASONS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
+                  <option value="">{t("selectReason")}</option>
+                  {REASON_KEYS.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {t(`reasons.${r.key}`)}
                     </option>
                   ))}
                 </select>
@@ -412,13 +427,13 @@ export default function MoveUnitModal({
               {showNotes && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes <span className="text-red-500">*</span>
+                    {t("notesLabel")} <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     rows={3}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Provide details about the reason…"
+                    placeholder={t("notesPlaceholder")}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                   />
                 </div>
@@ -435,45 +450,47 @@ export default function MoveUnitModal({
                   <p className="text-sm font-medium text-gray-700">
                     {availability?.fromUnit.name}
                   </p>
-                  <ArrowRightIcon className="h-4 w-4 text-gray-400" />
+                  <ArrowRightIcon className="h-4 w-4 text-gray-400 rtl:rotate-180" />
                   <p className="text-sm font-medium text-blue-700">{selectedToUnit?.name}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-xs mb-3">
                   <div>
-                    <p className="text-gray-400">Original rate</p>
-                    <p className="font-medium text-gray-900">{fmtOMR(fromRateAmount)}/night</p>
-                  </div>
-                  <div>
-                    <p className="text-gray-400">New rate</p>
-                    <p className={`font-medium ${toRateAmount > fromRateAmount ? "text-green-700" : toRateAmount < fromRateAmount ? "text-orange-700" : "text-gray-900"}`}>
-                      {fmtOMR(toRateAmount)}/night
+                    <p className="text-gray-400">{t("originalRate")}</p>
+                    <p className="font-medium text-gray-900 ltr-numbers">
+                      {t("ratePerNight", { amount: fromRateAmount.toFixed(3) })}
                     </p>
                   </div>
                   <div>
-                    <p className="text-gray-400">Remaining nights</p>
-                    <p className="font-medium text-gray-900">{remainingNights}</p>
+                    <p className="text-gray-400">{t("newRate")}</p>
+                    <p className={`font-medium ltr-numbers ${toRateAmount > fromRateAmount ? "text-green-700" : toRateAmount < fromRateAmount ? "text-orange-700" : "text-gray-900"}`}>
+                      {t("ratePerNight", { amount: toRateAmount.toFixed(3) })}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-gray-400">Period end</p>
-                    <p className="font-medium text-gray-900">
+                    <p className="text-gray-400">{t("remainingNights")}</p>
+                    <p className="font-medium text-gray-900 ltr-numbers">{remainingNights}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400">{t("periodEnd")}</p>
+                    <p className="font-medium text-gray-900 ltr-numbers">
                       {availability?.periodEnd ? fmtDate(availability.periodEnd) : "—"}
                     </p>
                   </div>
                 </div>
                 <div className="border-t border-gray-200 pt-3 space-y-1 text-sm">
                   <div className="flex justify-between text-gray-600">
-                    <span>Original remaining stay</span>
-                    <span>{fmtOMR(originalSubtotal)}</span>
+                    <span>{t("originalRemainingStay")}</span>
+                    <span className="ltr-numbers">{fmtOMR(originalSubtotal)}</span>
                   </div>
                   {pricingOption !== "complimentary" && pricingOption !== "keep_original_rate" && adjustment !== 0 && (
                     <div className={`flex justify-between ${adjustment > 0 ? "text-red-600" : "text-green-600"}`}>
-                      <span>{adjustment > 0 ? "Additional charge" : "Reduction"}</span>
-                      <span>{adjustment > 0 ? "+" : ""}{fmtOMR(adjustment)}</span>
+                      <span>{adjustment > 0 ? t("additionalCharge") : t("reduction")}</span>
+                      <span className="ltr-numbers">{adjustment > 0 ? "+" : ""}{fmtOMR(adjustment)}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-bold text-gray-900 border-t border-gray-200 pt-2">
-                    <span>New remaining subtotal</span>
-                    <span>{fmtOMR(newSubtotal)}</span>
+                    <span>{t("newRemainingSubtotal")}</span>
+                    <span className="ltr-numbers">{fmtOMR(newSubtotal)}</span>
                   </div>
                 </div>
               </div>
@@ -481,7 +498,7 @@ export default function MoveUnitModal({
               {/* Custom rate input */}
               <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
                 <label className="text-sm text-gray-700 shrink-0 font-medium">
-                  Rate for new unit (OMR/night):
+                  {t("rateForNewUnit")}
                 </label>
                 <input
                   type="number"
@@ -489,40 +506,43 @@ export default function MoveUnitModal({
                   min="0"
                   value={customRate}
                   onChange={(e) => setCustomRate(e.target.value)}
-                  className="w-32 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                  className="w-32 rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 ltr-numbers"
                 />
                 {customRate && Number(customRate) > 0 && (
-                  <span className="text-xs text-blue-700 font-medium">
-                    Total: {fmtOMR(Number(customRate) * remainingNights)}
+                  <span className="text-xs text-blue-700 font-medium ltr-numbers">
+                    {t("total", { amount: fmtOMR(Number(customRate) * remainingNights) })}
                   </span>
                 )}
               </div>
 
               {/* Pricing options */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Pricing option</h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">{t("pricingOption")}</h3>
                 <div className="space-y-2">
                   {(
                     [
                       {
                         value: "charge_difference" as PricingOption,
-                        label: "Charge the difference",
-                        desc: `Guest pays the rate difference (${(toRateAmount - fromRateAmount).toFixed(3)} OMR/night × ${remainingNights} nights)`,
+                        label: t("options.chargeDifference.label"),
+                        desc: t("options.chargeDifference.desc", {
+                          diff: (toRateAmount - fromRateAmount).toFixed(3),
+                          nights: remainingNights,
+                        }),
                       },
                       {
                         value: "complimentary" as PricingOption,
-                        label: "Complimentary upgrade — no charge",
-                        desc: "Guest keeps original rate. No additional charges.",
+                        label: t("options.complimentary.label"),
+                        desc: t("options.complimentary.desc"),
                       },
                       {
                         value: "apply_new_rate" as PricingOption,
-                        label: "Apply new unit rate",
-                        desc: `Recalculate remaining stay at ${toRateAmount.toFixed(3)} OMR/night`,
+                        label: t("options.applyNewRate.label"),
+                        desc: t("options.applyNewRate.desc", { rate: toRateAmount.toFixed(3) }),
                       },
                       {
                         value: "keep_original_rate" as PricingOption,
-                        label: "Keep original rate",
-                        desc: `Keep ${fromRateAmount.toFixed(3)} OMR/night regardless of new unit price`,
+                        label: t("options.keepOriginalRate.label"),
+                        desc: t("options.keepOriginalRate.desc", { rate: fromRateAmount.toFixed(3) }),
                       },
                     ] as const
                   ).map((opt) => (
@@ -557,7 +577,7 @@ export default function MoveUnitModal({
                 disabled={!canSubmit}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors"
               >
-                {submitting ? "Processing Move…" : "Confirm Unit Move"}
+                {submitting ? t("processing") : t("confirmButton")}
               </button>
             </div>
           )}

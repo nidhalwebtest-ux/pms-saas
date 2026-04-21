@@ -2200,6 +2200,152 @@
         "clickToOpen": "Click to open reservation →",
         "clickToCreate": "Click to create reservation →"
       }
+    },
+    "statusActions": {
+      "checkIn": "Check In",
+      "completeCheckOut": "Complete (Check Out)",
+      "cancel": "Cancel",
+      "updating": "Updating…",
+      "cancelling": "Cancelling…",
+      "markedAs": {
+        "CHECKED_IN": "Reservation marked as checked in",
+        "COMPLETED": "Reservation marked as completed",
+        "CANCELLED": "Reservation marked as cancelled"
+      }
+    },
+    "confirmCard": {
+      "heading": "Reservation is Pending",
+      "description": {
+        "daily": "This reservation is holding the dates but has no financial contract yet. Confirm it to generate the <strong>Daily Invoices</strong>.",
+        "monthly": "This reservation is holding the dates but has no financial contract yet. Confirm it to generate the <strong>Monthly Invoices</strong>."
+      },
+      "processing": "Processing…",
+      "confirmButton": "Confirm & Generate Contract",
+      "successToast": "Reservation confirmed! Invoices generated."
+    },
+    "extendStayModal": {
+      "title": "Extend Stay",
+      "close": "Close",
+      "currentCheckoutDate": "Current checkout date",
+      "monthlyRate": "Monthly rate",
+      "dailyRate": "Daily rate",
+      "rateTypeSuffix": "{rate} reservation",
+      "newCheckoutDate": "New checkout date",
+      "newDateMustBeAfter": "New date must be after {date}",
+      "checkingAvailability": "Checking availability and pricing…",
+      "unitAvailability": "Unit Availability",
+      "availableRange": "Available {from} → {to}",
+      "conflictWith": "Conflict with {other} ({name})",
+      "anotherReservation": "another reservation",
+      "extend": "Extend",
+      "tableHeaders": {
+        "dateRange": "Date Range",
+        "nights": "Nights",
+        "rateNight": "Rate/Night",
+        "subtotal": "Subtotal"
+      },
+      "extensionSubtotal": "Extension Subtotal",
+      "overrideRate": "Override rate (OMR/night):",
+      "partialExtendWarning": "Some units are unavailable. The extension will apply only to the available units you have selected.",
+      "financialSummary": "Financial Summary",
+      "previousGrandTotal": "Previous Grand Total",
+      "extensionCharges": "+ Extension Charges",
+      "newGrandTotal": "= New Grand Total",
+      "alreadyPaid": "Already Paid",
+      "newBalanceDue": "= New Balance Due",
+      "collectPayment": "Collect payment now?",
+      "yes": "Yes",
+      "no": "No",
+      "amountLabel": "Amount (OMR)",
+      "methodLabel": "Method",
+      "referenceLabel": "Reference (optional)",
+      "referencePlaceholder": "Receipt #, transaction ID…",
+      "confirmButton": "Confirm Extension",
+      "confirming": "Confirming Extension…",
+      "emptyState": "Select a new checkout date above to see availability and pricing",
+      "errors": {
+        "previewFailed": "Failed to load preview",
+        "previewNetwork": "Network error loading preview",
+        "extensionFailed": "Extension failed",
+        "network": "Network error. Please try again.",
+        "noUnits": "No units selected for extension"
+      },
+      "success": {
+        "extended": "Stay extended to {date}. Additional charges: {amount}"
+      }
+    },
+    "moveUnitModal": {
+      "title": "Move Unit",
+      "close": "Close",
+      "selectUnitToMove": "Select unit to move",
+      "movingUnit": "Moving unit:",
+      "unitMetaFull": "Floor {floor} — {type} — {rate} OMR/night",
+      "unitMetaShort": "Floor {floor} — {type} — {property}",
+      "moveDate": "Move date",
+      "moveDateHelp": "Guest will move on this date. Today = immediate.",
+      "findingUnits": "Finding available units…",
+      "availableUnitsHeading": "Available Units ({count} remaining nights)",
+      "noUnitsFound": "No available units found for this period. Try a different date.",
+      "upgrade": "↑ Upgrade",
+      "downgrade": "↓ Downgrade",
+      "ratePerNight": "{amount} OMR/night",
+      "rateDiffPerNight": "{amount}/night",
+      "subtotalFor": "Subtotal: {amount} for {count} nights",
+      "reasonLabel": "Reason for move",
+      "selectReason": "Select reason…",
+      "reasons": {
+        "guestRequestFloor": "Guest Request - Different Floor",
+        "guestRequestLarger": "Guest Request - Larger Unit",
+        "guestRequestSmaller": "Guest Request - Smaller Unit",
+        "maintenance": "Maintenance Issue",
+        "acPlumbing": "AC/Plumbing Problem",
+        "noise": "Noise Complaint",
+        "management": "Management Decision",
+        "complimentary": "Complimentary Upgrade",
+        "other": "Other"
+      },
+      "notesLabel": "Notes",
+      "notesPlaceholder": "Provide details about the reason…",
+      "originalRate": "Original rate",
+      "newRate": "New rate",
+      "remainingNights": "Remaining nights",
+      "periodEnd": "Period end",
+      "originalRemainingStay": "Original remaining stay",
+      "additionalCharge": "Additional charge",
+      "reduction": "Reduction",
+      "newRemainingSubtotal": "New remaining subtotal",
+      "rateForNewUnit": "Rate for new unit (OMR/night):",
+      "total": "Total: {amount}",
+      "pricingOption": "Pricing option",
+      "options": {
+        "chargeDifference": {
+          "label": "Charge the difference",
+          "desc": "Guest pays the rate difference ({diff} OMR/night × {nights} nights)"
+        },
+        "complimentary": {
+          "label": "Complimentary upgrade — no charge",
+          "desc": "Guest keeps original rate. No additional charges."
+        },
+        "applyNewRate": {
+          "label": "Apply new unit rate",
+          "desc": "Recalculate remaining stay at {rate} OMR/night"
+        },
+        "keepOriginalRate": {
+          "label": "Keep original rate",
+          "desc": "Keep {rate} OMR/night regardless of new unit price"
+        }
+      },
+      "confirmButton": "Confirm Unit Move",
+      "processing": "Processing Move…",
+      "errors": {
+        "moveFailed": "Move failed",
+        "network": "Network error. Please try again.",
+        "loadFailed": "Failed to load available units",
+        "loadNetwork": "Network error loading available units"
+      },
+      "success": {
+        "moved": "Guest moved from {from} to {to} successfully"
+      }
     }
   },
   "invoices": {
@@ -3005,5 +3151,16 @@
         "toggleFailed": "Failed to toggle"
       }
     }
+  },
+  "photoUpload": {
+    "onlyImages": "Only image files (JPG, PNG, WEBP…) are allowed.",
+    "sizeLimit": "Each file must be under 5 MB.",
+    "uploadFailed": "Upload failed: {message}",
+    "photoAlt": "Property photo",
+    "removePhoto": "Remove photo",
+    "uploading": "Uploading…",
+    "browsePrefix": "Drag & drop photos here, or ",
+    "browse": "click to browse",
+    "constraints": "JPG, PNG, WEBP — max 5 MB each"
   }
 }

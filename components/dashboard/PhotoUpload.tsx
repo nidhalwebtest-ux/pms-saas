@@ -11,6 +11,7 @@
  */
 
 import { useState, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/utils/supabase/client";
 import { ArrowUpTrayIcon, XMarkIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export default function PhotoUpload({ initialPhotos = [], folder, name = "photos" }: Props) {
+  const t = useTranslations("photoUpload");
   const [photos, setPhotos] = useState<string[]>(initialPhotos);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -39,11 +41,11 @@ export default function PhotoUpload({ initialPhotos = [], folder, name = "photos
     const added: string[] = [];
     for (const file of Array.from(files)) {
       if (!file.type.startsWith("image/")) {
-        setUploadError("Only image files (JPG, PNG, WEBP…) are allowed.");
+        setUploadError(t("onlyImages"));
         continue;
       }
       if (file.size > 5 * 1024 * 1024) {
-        setUploadError("Each file must be under 5 MB.");
+        setUploadError(t("sizeLimit"));
         continue;
       }
 
@@ -55,7 +57,7 @@ export default function PhotoUpload({ initialPhotos = [], folder, name = "photos
         .upload(path, file, { cacheControl: "3600", upsert: false });
 
       if (error) {
-        setUploadError(`Upload failed: ${error.message}`);
+        setUploadError(t("uploadFailed", { message: error.message }));
         continue;
       }
 
@@ -89,12 +91,12 @@ export default function PhotoUpload({ initialPhotos = [], folder, name = "photos
               key={url}
               className="relative h-24 w-24 overflow-hidden rounded-xl ring-1 ring-gray-200 shadow-sm"
             >
-              <Image src={url} alt="Property photo" fill className="object-cover" unoptimized />
+              <Image src={url} alt={t("photoAlt")} fill className="object-cover" unoptimized />
               <button
                 type="button"
                 onClick={() => removePhoto(url)}
-                className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-red-600"
-                aria-label="Remove photo"
+                className="absolute end-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white transition-colors hover:bg-red-600"
+                aria-label={t("removePhoto")}
               >
                 <XMarkIcon className="h-3 w-3" />
               </button>
@@ -119,7 +121,7 @@ export default function PhotoUpload({ initialPhotos = [], folder, name = "photos
         {uploading ? (
           <>
             <div className="h-7 w-7 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-            <p className="text-sm text-blue-600 font-medium">Uploading…</p>
+            <p className="text-sm text-blue-600 font-medium">{t("uploading")}</p>
           </>
         ) : (
           <>
@@ -129,10 +131,10 @@ export default function PhotoUpload({ initialPhotos = [], folder, name = "photos
               <PhotoIcon className="h-10 w-10 text-gray-300" />
             )}
             <p className="text-sm font-medium text-gray-700">
-              Drag & drop photos here, or{" "}
-              <span className="text-blue-600">click to browse</span>
+              {t("browsePrefix")}
+              <span className="text-blue-600">{t("browse")}</span>
             </p>
-            <p className="text-xs text-gray-400">JPG, PNG, WEBP — max 5 MB each</p>
+            <p className="text-xs text-gray-400">{t("constraints")}</p>
           </>
         )}
         <input

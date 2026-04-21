@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import { XMarkIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
 
 interface Props {
@@ -55,16 +58,6 @@ interface PreviewData {
   };
 }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric", month: "short", year: "numeric",
-  });
-}
-
-function fmtOMR(v: number) {
-  return v.toFixed(3) + " OMR";
-}
-
 export default function ExtendStayModal({
   reservationId,
   currentCheckOut,
@@ -72,6 +65,16 @@ export default function ExtendStayModal({
   onClose,
   onSuccess,
 }: Props) {
+  const t = useTranslations("reservations.extendStayModal");
+  const tMethods = useTranslations("payments.methods");
+  const locale = useLocale();
+  const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
+
+  const fmtDate = (iso: string) =>
+    format(new Date(iso), "d MMM yyyy", { locale: dateFnsLocale });
+
+  const fmtOMR = (v: number) => `${v.toFixed(3)} OMR`;
+
   const minDate = (() => {
     const d = new Date(currentCheckOut);
     d.setDate(d.getDate() + 1);
@@ -110,7 +113,7 @@ export default function ExtendStayModal({
         );
         const data = await res.json();
         if (!res.ok) {
-          setPreviewError(data.error ?? "Failed to load preview");
+          setPreviewError(data.error ?? t("errors.previewFailed"));
           setPreview(null);
           return;
         }
@@ -128,13 +131,13 @@ export default function ExtendStayModal({
         // Pre-fill payment amount with balance due
         setPaymentAmount(((data as PreviewData).summary.newBalanceDue).toFixed(3));
       } catch {
-        setPreviewError("Network error loading preview");
+        setPreviewError(t("errors.previewNetwork"));
         setPreview(null);
       } finally {
         setPreviewLoading(false);
       }
     },
-    [reservationId],
+    [reservationId, t],
   );
 
   useEffect(() => {
@@ -161,7 +164,7 @@ export default function ExtendStayModal({
 
     const extendingAny = unitExtensions.some((ue) => ue.extend);
     if (!extendingAny) {
-      toast.error("No units selected for extension");
+      toast.error(t("errors.noUnits"));
       return;
     }
 
@@ -196,15 +199,18 @@ export default function ExtendStayModal({
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? "Extension failed");
+        toast.error(data.error ?? t("errors.extensionFailed"));
         return;
       }
       toast.success(
-        `Stay extended to ${fmtDate(data.newEndDate)}. Additional charges: ${fmtOMR(data.additionalCharges)}`,
+        t("success.extended", {
+          date: fmtDate(data.newEndDate),
+          amount: fmtOMR(data.additionalCharges),
+        }),
       );
       onSuccess();
     } catch {
-      toast.error("Network error. Please try again.");
+      toast.error(t("errors.network"));
     } finally {
       setSubmitting(false);
     }
@@ -220,9 +226,10 @@ export default function ExtendStayModal({
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-blue-600 rounded-t-xl">
-          <h2 className="text-lg font-semibold text-white">Extend Stay</h2>
+          <h2 className="text-lg font-semibold text-white">{t("title")}</h2>
           <button
             onClick={onClose}
+            aria-label={t("close")}
             className="p-1 rounded-lg hover:bg-blue-700 transition-colors text-white"
           >
             <XMarkIcon className="h-5 w-5" />
@@ -232,17 +239,19 @@ export default function ExtendStayModal({
         <div className="px-6 py-5 space-y-6">
           {/* Current checkout info */}
           <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-            <p className="text-sm text-gray-500">Current checkout date</p>
-            <p className="font-semibold text-gray-900 text-lg">{fmtDate(currentCheckOut)}</p>
+            <p className="text-sm text-gray-500">{t("currentCheckoutDate")}</p>
+            <p className="font-semibold text-gray-900 text-lg ltr-numbers">{fmtDate(currentCheckOut)}</p>
             <p className="text-xs text-gray-400 mt-0.5">
-              {rateType === "monthly" ? "Monthly rate" : "Daily rate"} reservation
+              {t("rateTypeSuffix", {
+                rate: rateType === "monthly" ? t("monthlyRate") : t("dailyRate"),
+              })}
             </p>
           </div>
 
           {/* Date picker */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              New checkout date <span className="text-red-500">*</span>
+              {t("newCheckoutDate")} <span className="text-red-500">*</span>
             </label>
             <input
               type="date"
@@ -253,7 +262,7 @@ export default function ExtendStayModal({
             />
             {newDate && newDate <= currentCheckOut.slice(0, 10) && (
               <p className="text-xs text-red-600 mt-1">
-                New date must be after {fmtDate(currentCheckOut)}
+                {t("newDateMustBeAfter", { date: fmtDate(currentCheckOut) })}
               </p>
             )}
           </div>
@@ -262,7 +271,7 @@ export default function ExtendStayModal({
           {previewLoading && (
             <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
               <div className="h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm text-gray-600">Checking availability and pricing…</span>
+              <span className="text-sm text-gray-600">{t("checkingAvailability")}</span>
             </div>
           )}
 
@@ -278,7 +287,7 @@ export default function ExtendStayModal({
             <div className="space-y-4">
               {/* Per-unit availability */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Unit Availability</h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">{t("unitAvailability")}</h3>
                 <div className="space-y-3">
                   {preview.units.map((u) => (
                     <div
@@ -299,19 +308,23 @@ export default function ExtendStayModal({
                           <div>
                             <p className="font-medium text-gray-900 text-sm">
                               {u.unitName}
-                              <span className="text-gray-500 font-normal ml-1">— {u.propertyName}</span>
+                              <span className="text-gray-500 font-normal ms-1">— {u.propertyName}</span>
                             </p>
                             {u.available ? (
                               <p className="text-xs text-green-700 mt-0.5">
-                                Available {fmtDate(u.effectiveCheckOut)} → {fmtDate(preview.newCheckOut)}
+                                {t("availableRange", {
+                                  from: fmtDate(u.effectiveCheckOut),
+                                  to: fmtDate(preview.newCheckOut),
+                                })}
                               </p>
                             ) : (
                               <p className="text-xs text-red-700 mt-0.5">
-                                Conflict with{" "}
-                                {u.conflict?.reservationNumber
-                                  ? `#${u.conflict.reservationNumber}`
-                                  : "another reservation"}{" "}
-                                ({u.conflict?.guestFirstName} {u.conflict?.guestLastName})
+                                {t("conflictWith", {
+                                  other: u.conflict?.reservationNumber
+                                    ? `#${u.conflict.reservationNumber}`
+                                    : t("anotherReservation"),
+                                  name: `${u.conflict?.guestFirstName ?? ""} ${u.conflict?.guestLastName ?? ""}`.trim(),
+                                })}
                               </p>
                             )}
                           </div>
@@ -330,7 +343,7 @@ export default function ExtendStayModal({
                               }}
                               className="h-4 w-4 rounded text-blue-600"
                             />
-                            <span className="text-xs text-gray-600">Extend</span>
+                            <span className="text-xs text-gray-600">{t("extend")}</span>
                           </label>
                         )}
                       </div>
@@ -341,24 +354,24 @@ export default function ExtendStayModal({
                           <table className="w-full text-xs">
                             <thead>
                               <tr className="text-gray-500">
-                                <th className="text-left font-medium pb-1">Date Range</th>
-                                <th className="text-right font-medium pb-1">Nights</th>
-                                <th className="text-right font-medium pb-1">Rate/Night</th>
-                                <th className="text-right font-medium pb-1">Subtotal</th>
+                                <th className="text-start font-medium pb-1">{t("tableHeaders.dateRange")}</th>
+                                <th className="text-end font-medium pb-1">{t("tableHeaders.nights")}</th>
+                                <th className="text-end font-medium pb-1">{t("tableHeaders.rateNight")}</th>
+                                <th className="text-end font-medium pb-1">{t("tableHeaders.subtotal")}</th>
                               </tr>
                             </thead>
                             <tbody>
                               {u.segments.map((seg, i) => (
                                 <tr key={i} className="text-gray-700">
-                                  <td className="py-0.5">
+                                  <td className="py-0.5 ltr-numbers">
                                     {fmtDate(seg.startDate)} – {fmtDate(seg.endDate)}
                                     {seg.priceName && (
-                                      <span className="ml-1 text-orange-600">({seg.priceName})</span>
+                                      <span className="ms-1 text-orange-600">({seg.priceName})</span>
                                     )}
                                   </td>
-                                  <td className="text-right py-0.5">{seg.nights}</td>
-                                  <td className="text-right py-0.5">{seg.ratePerNight.toFixed(3)}</td>
-                                  <td className="text-right py-0.5 font-medium">
+                                  <td className="text-end py-0.5 ltr-numbers">{seg.nights}</td>
+                                  <td className="text-end py-0.5 ltr-numbers">{seg.ratePerNight.toFixed(3)}</td>
+                                  <td className="text-end py-0.5 font-medium ltr-numbers">
                                     {seg.subtotal.toFixed(3)}
                                   </td>
                                 </tr>
@@ -366,8 +379,8 @@ export default function ExtendStayModal({
                             </tbody>
                           </table>
                           <div className="flex justify-between text-xs font-semibold text-gray-900 pt-2 border-t border-green-200 mt-2">
-                            <span>Extension Subtotal</span>
-                            <span>{fmtOMR(u.extensionSubtotal)}</span>
+                            <span>{t("extensionSubtotal")}</span>
+                            <span className="ltr-numbers">{fmtOMR(u.extensionSubtotal)}</span>
                           </div>
                         </div>
                       )}
@@ -376,7 +389,7 @@ export default function ExtendStayModal({
                       {u.available && (
                         <div className="mt-3 border-t border-green-200 pt-3 flex items-center gap-3">
                           <label className="text-xs text-gray-600 shrink-0">
-                            Override rate (OMR/night):
+                            {t("overrideRate")}
                           </label>
                           <input
                             type="number"
@@ -386,10 +399,10 @@ export default function ExtendStayModal({
                             onChange={(e) =>
                               setCustomRates((prev) => ({ ...prev, [u.unitId]: e.target.value }))
                             }
-                            className="w-32 rounded-lg border border-gray-300 px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                            className="w-32 rounded-lg border border-gray-300 px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 ltr-numbers"
                           />
                           {customRates[u.unitId] && Number(customRates[u.unitId]) !== u.existingRate && (
-                            <span className="text-xs text-blue-600 font-medium">
+                            <span className="text-xs text-blue-600 font-medium ltr-numbers">
                               → {fmtOMR(Number(customRates[u.unitId]) * u.extensionNights)}
                             </span>
                           )}
@@ -403,37 +416,36 @@ export default function ExtendStayModal({
               {/* Warning for partial extends */}
               {someUnavailable && someAvailableToExtend && (
                 <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-                  Some units are unavailable. The extension will apply only to the available units
-                  you have selected.
+                  {t("partialExtendWarning")}
                 </div>
               )}
 
               {/* Financial summary */}
               <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-2">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">Financial Summary</h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">{t("financialSummary")}</h3>
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>Previous Grand Total</span>
-                  <span>{fmtOMR(preview.summary.previousGrandTotal)}</span>
+                  <span>{t("previousGrandTotal")}</span>
+                  <span className="ltr-numbers">{fmtOMR(preview.summary.previousGrandTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-green-700">
-                  <span>+ Extension Charges</span>
-                  <span>+{fmtOMR(preview.summary.extensionTotal)}</span>
+                  <span>{t("extensionCharges")}</span>
+                  <span className="ltr-numbers">+{fmtOMR(preview.summary.extensionTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm font-bold text-gray-900 border-t border-gray-200 pt-2">
-                  <span>= New Grand Total</span>
-                  <span>{fmtOMR(preview.summary.newGrandTotal)}</span>
+                  <span>{t("newGrandTotal")}</span>
+                  <span className="ltr-numbers">{fmtOMR(preview.summary.newGrandTotal)}</span>
                 </div>
                 <div className="flex justify-between text-sm text-gray-600">
-                  <span>Already Paid</span>
-                  <span>−{fmtOMR(preview.summary.previousAmountPaid)}</span>
+                  <span>{t("alreadyPaid")}</span>
+                  <span className="ltr-numbers">−{fmtOMR(preview.summary.previousAmountPaid)}</span>
                 </div>
                 <div
                   className={`flex justify-between text-sm font-bold border-t border-gray-200 pt-2 ${
                     preview.summary.newBalanceDue > 0 ? "text-red-600" : "text-green-600"
                   }`}
                 >
-                  <span>= New Balance Due</span>
-                  <span>{fmtOMR(preview.summary.newBalanceDue)}</span>
+                  <span>{t("newBalanceDue")}</span>
+                  <span className="ltr-numbers">{fmtOMR(preview.summary.newBalanceDue)}</span>
                 </div>
               </div>
 
@@ -442,11 +454,11 @@ export default function ExtendStayModal({
                 <button
                   type="button"
                   onClick={() => setCollectPayment((v) => !v)}
-                  className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors text-left"
+                  className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors text-start"
                 >
-                  <span>Collect payment now?</span>
+                  <span>{t("collectPayment")}</span>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${collectPayment ? "bg-blue-100 text-blue-700" : "bg-gray-200 text-gray-500"}`}>
-                    {collectPayment ? "Yes" : "No"}
+                    {collectPayment ? t("yes") : t("no")}
                   </span>
                 </button>
 
@@ -455,7 +467,7 @@ export default function ExtendStayModal({
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">
-                          Amount (OMR)
+                          {t("amountLabel")}
                         </label>
                         <input
                           type="number"
@@ -464,34 +476,34 @@ export default function ExtendStayModal({
                           value={paymentAmount}
                           onChange={(e) => setPaymentAmount(e.target.value)}
                           placeholder={preview.summary.newBalanceDue.toFixed(3)}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 ltr-numbers"
                         />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">
-                          Method
+                          {t("methodLabel")}
                         </label>
                         <select
                           value={paymentMethod}
                           onChange={(e) => setPaymentMethod(e.target.value)}
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                         >
-                          <option value="CASH">Cash</option>
-                          <option value="CARD">Card</option>
-                          <option value="BANK_TRANSFER">Bank Transfer</option>
-                          <option value="CHEQUE">Cheque</option>
+                          <option value="CASH">{tMethods("CASH")}</option>
+                          <option value="CARD">{tMethods("CARD")}</option>
+                          <option value="BANK_TRANSFER">{tMethods("BANK_TRANSFER")}</option>
+                          <option value="CHEQUE">{tMethods("CHEQUE")}</option>
                         </select>
                       </div>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Reference (optional)
+                        {t("referenceLabel")}
                       </label>
                       <input
                         type="text"
                         value={paymentReference}
                         onChange={(e) => setPaymentReference(e.target.value)}
-                        placeholder="Receipt #, transaction ID…"
+                        placeholder={t("referencePlaceholder")}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                       />
                     </div>
@@ -505,7 +517,7 @@ export default function ExtendStayModal({
                 disabled={submitting || !someAvailableToExtend}
                 className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors"
               >
-                {submitting ? "Confirming Extension…" : "Confirm Extension"}
+                {submitting ? t("confirming") : t("confirmButton")}
               </button>
             </div>
           )}
@@ -513,7 +525,7 @@ export default function ExtendStayModal({
           {/* Empty state before date selection */}
           {!preview && !previewLoading && !previewError && (
             <div className="text-center py-8 text-gray-400 text-sm">
-              Select a new checkout date above to see availability and pricing
+              {t("emptyState")}
             </div>
           )}
         </div>

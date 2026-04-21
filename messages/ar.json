@@ -2200,6 +2200,152 @@
         "clickToOpen": "← اضغط لفتح الحجز",
         "clickToCreate": "← اضغط لإنشاء حجز"
       }
+    },
+    "statusActions": {
+      "checkIn": "تسجيل الدخول",
+      "completeCheckOut": "إكمال (تسجيل الخروج)",
+      "cancel": "إلغاء",
+      "updating": "جارٍ التحديث…",
+      "cancelling": "جارٍ الإلغاء…",
+      "markedAs": {
+        "CHECKED_IN": "تم تسجيل دخول الحجز",
+        "COMPLETED": "تم إكمال الحجز",
+        "CANCELLED": "تم إلغاء الحجز"
+      }
+    },
+    "confirmCard": {
+      "heading": "الحجز معلّق",
+      "description": {
+        "daily": "هذا الحجز يحتفظ بالتواريخ لكن ليس له عقد مالي بعد. قم بتأكيده لإنشاء <strong>الفواتير اليومية</strong>.",
+        "monthly": "هذا الحجز يحتفظ بالتواريخ لكن ليس له عقد مالي بعد. قم بتأكيده لإنشاء <strong>الفواتير الشهرية</strong>."
+      },
+      "processing": "جارٍ المعالجة…",
+      "confirmButton": "تأكيد وإنشاء العقد",
+      "successToast": "تم تأكيد الحجز! تم إنشاء الفواتير."
+    },
+    "extendStayModal": {
+      "title": "تمديد الإقامة",
+      "close": "إغلاق",
+      "currentCheckoutDate": "تاريخ المغادرة الحالي",
+      "monthlyRate": "سعر شهري",
+      "dailyRate": "سعر يومي",
+      "rateTypeSuffix": "حجز بـ{rate}",
+      "newCheckoutDate": "تاريخ المغادرة الجديد",
+      "newDateMustBeAfter": "يجب أن يكون التاريخ الجديد بعد {date}",
+      "checkingAvailability": "جارٍ التحقق من التوفر والأسعار…",
+      "unitAvailability": "توفر الوحدات",
+      "availableRange": "متاح من {from} إلى {to}",
+      "conflictWith": "تعارض مع {other} ({name})",
+      "anotherReservation": "حجز آخر",
+      "extend": "تمديد",
+      "tableHeaders": {
+        "dateRange": "الفترة",
+        "nights": "الليالي",
+        "rateNight": "السعر/الليلة",
+        "subtotal": "المجموع الفرعي"
+      },
+      "extensionSubtotal": "المجموع الفرعي للتمديد",
+      "overrideRate": "تعديل السعر (ر.ع/الليلة):",
+      "partialExtendWarning": "بعض الوحدات غير متاحة. سيُطبَّق التمديد فقط على الوحدات المتاحة التي قمت بتحديدها.",
+      "financialSummary": "الملخص المالي",
+      "previousGrandTotal": "الإجمالي السابق",
+      "extensionCharges": "+ رسوم التمديد",
+      "newGrandTotal": "= الإجمالي الجديد",
+      "alreadyPaid": "المدفوع سابقًا",
+      "newBalanceDue": "= الرصيد المستحق الجديد",
+      "collectPayment": "تحصيل الدفع الآن؟",
+      "yes": "نعم",
+      "no": "لا",
+      "amountLabel": "المبلغ (ر.ع)",
+      "methodLabel": "طريقة الدفع",
+      "referenceLabel": "المرجع (اختياري)",
+      "referencePlaceholder": "رقم الإيصال، معرّف المعاملة…",
+      "confirmButton": "تأكيد التمديد",
+      "confirming": "جارٍ تأكيد التمديد…",
+      "emptyState": "اختر تاريخ مغادرة جديدًا أعلاه لعرض التوفر والأسعار",
+      "errors": {
+        "previewFailed": "تعذّر تحميل المعاينة",
+        "previewNetwork": "خطأ في الشبكة أثناء تحميل المعاينة",
+        "extensionFailed": "فشل التمديد",
+        "network": "خطأ في الشبكة. يرجى المحاولة مرة أخرى.",
+        "noUnits": "لم يتم تحديد وحدات للتمديد"
+      },
+      "success": {
+        "extended": "تم تمديد الإقامة حتى {date}. الرسوم الإضافية: {amount}"
+      }
+    },
+    "moveUnitModal": {
+      "title": "نقل الوحدة",
+      "close": "إغلاق",
+      "selectUnitToMove": "اختر الوحدة المراد نقلها",
+      "movingUnit": "نقل الوحدة:",
+      "unitMetaFull": "الطابق {floor} — {type} — {rate} ر.ع/الليلة",
+      "unitMetaShort": "الطابق {floor} — {type} — {property}",
+      "moveDate": "تاريخ النقل",
+      "moveDateHelp": "سينتقل النزيل في هذا التاريخ. اليوم = فوري.",
+      "findingUnits": "جارٍ البحث عن الوحدات المتاحة…",
+      "availableUnitsHeading": "الوحدات المتاحة ({count} ليلة متبقية)",
+      "noUnitsFound": "لا توجد وحدات متاحة لهذه الفترة. جرّب تاريخًا آخر.",
+      "upgrade": "↑ ترقية",
+      "downgrade": "↓ تخفيض",
+      "ratePerNight": "{amount} ر.ع/الليلة",
+      "rateDiffPerNight": "{amount}/الليلة",
+      "subtotalFor": "المجموع الفرعي: {amount} لـ{count} ليلة",
+      "reasonLabel": "سبب النقل",
+      "selectReason": "اختر السبب…",
+      "reasons": {
+        "guestRequestFloor": "طلب النزيل - طابق مختلف",
+        "guestRequestLarger": "طلب النزيل - وحدة أكبر",
+        "guestRequestSmaller": "طلب النزيل - وحدة أصغر",
+        "maintenance": "مشكلة صيانة",
+        "acPlumbing": "مشكلة تكييف/سباكة",
+        "noise": "شكوى ضوضاء",
+        "management": "قرار إداري",
+        "complimentary": "ترقية مجانية",
+        "other": "أخرى"
+      },
+      "notesLabel": "ملاحظات",
+      "notesPlaceholder": "قدّم تفاصيل عن السبب…",
+      "originalRate": "السعر الأصلي",
+      "newRate": "السعر الجديد",
+      "remainingNights": "الليالي المتبقية",
+      "periodEnd": "نهاية الفترة",
+      "originalRemainingStay": "الإقامة المتبقية الأصلية",
+      "additionalCharge": "رسوم إضافية",
+      "reduction": "خصم",
+      "newRemainingSubtotal": "المجموع الفرعي المتبقي الجديد",
+      "rateForNewUnit": "سعر الوحدة الجديدة (ر.ع/الليلة):",
+      "total": "الإجمالي: {amount}",
+      "pricingOption": "خيار التسعير",
+      "options": {
+        "chargeDifference": {
+          "label": "تحصيل الفرق",
+          "desc": "يدفع النزيل فرق السعر ({diff} ر.ع/الليلة × {nights} ليلة)"
+        },
+        "complimentary": {
+          "label": "ترقية مجانية — بدون رسوم",
+          "desc": "يحتفظ النزيل بالسعر الأصلي. لا توجد رسوم إضافية."
+        },
+        "applyNewRate": {
+          "label": "تطبيق سعر الوحدة الجديدة",
+          "desc": "إعادة حساب الإقامة المتبقية بسعر {rate} ر.ع/الليلة"
+        },
+        "keepOriginalRate": {
+          "label": "الإبقاء على السعر الأصلي",
+          "desc": "الإبقاء على {rate} ر.ع/الليلة بغض النظر عن سعر الوحدة الجديدة"
+        }
+      },
+      "confirmButton": "تأكيد نقل الوحدة",
+      "processing": "جارٍ معالجة النقل…",
+      "errors": {
+        "moveFailed": "فشل النقل",
+        "network": "خطأ في الشبكة. يرجى المحاولة مرة أخرى.",
+        "loadFailed": "تعذّر تحميل الوحدات المتاحة",
+        "loadNetwork": "خطأ في الشبكة أثناء تحميل الوحدات المتاحة"
+      },
+      "success": {
+        "moved": "تم نقل النزيل من {from} إلى {to} بنجاح"
+      }
     }
   },
   "invoices": {
@@ -3005,5 +3151,16 @@
         "toggleFailed": "فشل التبديل"
       }
     }
+  },
+  "photoUpload": {
+    "onlyImages": "مسموح فقط برفع ملفات الصور (JPG, PNG, WEBP…).",
+    "sizeLimit": "يجب أن يكون حجم كل ملف أقل من 5 ميجابايت.",
+    "uploadFailed": "فشل الرفع: {message}",
+    "photoAlt": "صورة العقار",
+    "removePhoto": "إزالة الصورة",
+    "uploading": "جارٍ الرفع…",
+    "browsePrefix": "اسحب الصور وأفلتها هنا، أو ",
+    "browse": "انقر للاستعراض",
+    "constraints": "JPG, PNG, WEBP — بحد أقصى 5 ميجابايت لكل صورة"
   }
 }

@@ -28,13 +28,192 @@
     "all": "الكل"
   },
   "auth": {
-    "login": "تسجيل الدخول",
-    "logout": "تسجيل الخروج",
-    "email": "البريد الإلكتروني",
-    "password": "كلمة المرور",
-    "forgotPassword": "نسيت كلمة المرور؟",
-    "register": "إنشاء حساب",
-    "companyName": "اسم الشركة"
+    "brand": {
+      "name": "أم رنت",
+      "tagline": "نظام إدارة العقارات"
+    },
+    "common": {
+      "back": "رجوع",
+      "next": "التالي",
+      "backToHome": "العودة إلى الرئيسية",
+      "backToSignIn": "العودة إلى تسجيل الدخول",
+      "showPassword": "إظهار كلمة المرور",
+      "hidePassword": "إخفاء كلمة المرور"
+    },
+    "login": {
+      "tabs": {
+        "signIn": "تسجيل الدخول",
+        "signUp": "إنشاء حساب"
+      },
+      "google": "المتابعة باستخدام Google",
+      "or": "أو",
+      "emailLabel": "البريد الإلكتروني",
+      "emailPlaceholder": "you@example.com",
+      "passwordLabel": "كلمة المرور",
+      "passwordPlaceholderSignup": "8 أحرف كحد أدنى",
+      "passwordPlaceholderSignin": "••••••••",
+      "confirmPasswordLabel": "تأكيد كلمة المرور",
+      "confirmPasswordPlaceholder": "أعد إدخال كلمة المرور",
+      "rememberMe": "تذكرني لمدة 30 يوماً",
+      "submitSignIn": "تسجيل الدخول",
+      "submitSignUp": "إنشاء الحساب",
+      "signingIn": "جارٍ تسجيل الدخول…",
+      "creatingAccount": "جارٍ إنشاء الحساب…",
+      "didntGetEmail": "لم تستلم بريد التحقق؟",
+      "resendIt": "إعادة الإرسال",
+      "lockoutTitle": "تم قفل الحساب مؤقتاً",
+      "lockoutBodyNow": "محاولات فاشلة كثيرة. حاول الآن.",
+      "lockoutBodyIn": "محاولات فاشلة كثيرة. حاول مجدداً خلال <b>{time}</b>.",
+      "remainingAttempts": "{count, plural, zero {لا توجد محاولات متبقية} one {محاولة واحدة متبقية} two {محاولتان متبقيتان} few {# محاولات متبقية} many {# محاولة متبقية} other {# محاولة متبقية}} قبل القفل لمدة 15 دقيقة.",
+      "lastAttemptWarning": "المحاولة الفاشلة التالية ستقفل حسابك لمدة 15 دقيقة.",
+      "passwordReq": {
+        "minLength": "8 أحرف على الأقل",
+        "uppercase": "حرف كبير واحد",
+        "number": "رقم واحد",
+        "special": "رمز خاص واحد"
+      },
+      "strength": {
+        "weak": "ضعيفة",
+        "fair": "مقبولة",
+        "good": "جيدة",
+        "strong": "قوية"
+      },
+      "validation": {
+        "emailRequired": "البريد الإلكتروني مطلوب.",
+        "emailInvalid": "أدخل بريداً إلكترونياً صحيحاً.",
+        "passwordRequired": "كلمة المرور مطلوبة.",
+        "passwordTooShort": "يجب أن تكون 8 أحرف على الأقل.",
+        "passwordNeedsUpper": "يجب أن تحتوي على حرف كبير.",
+        "passwordNeedsNumber": "يجب أن تحتوي على رقم.",
+        "passwordNeedsSpecial": "يجب أن تحتوي على رمز خاص.",
+        "passwordsMismatch": "كلمتا المرور غير متطابقتين."
+      },
+      "serverErrors": {
+        "invalid_credentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+        "email_exists": "يوجد حساب مسجّل بهذا البريد. حاول تسجيل الدخول بدلاً من ذلك.",
+        "email_not_confirmed": "يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول.",
+        "oauth_error": "فشل تسجيل الدخول عبر Google. حاول مرة أخرى.",
+        "auth_error": "رابط المصادقة غير صالح أو منتهٍ. حاول مرة أخرى.",
+        "server_error": "حدث خطأ من جهتنا. حاول مجدداً لاحقاً.",
+        "session_expired": "انتهت جلستك بسبب عدم النشاط. يرجى تسجيل الدخول مجدداً."
+      },
+      "terms": "بإنشاء حساب فإنك توافق على <terms>شروط الخدمة</terms> و<privacy>سياسة الخصوصية</privacy>."
+    },
+    "verify": {
+      "title": "تحقق من بريدك الوارد",
+      "sentTo": "أرسلنا رابط التحقق إلى",
+      "instructions": "اضغط على الرابط في البريد لتفعيل حسابك. تحقق من مجلد البريد المزعج إذا لم تجده خلال دقائق قليلة.",
+      "successResent": "تمت إعادة إرسال بريد التحقق! تحقق من بريدك الوارد.",
+      "sending": "جارٍ الإرسال…",
+      "resendIn": "إعادة الإرسال خلال {seconds} ثانية",
+      "resendButton": "إعادة إرسال بريد التحقق",
+      "errorEmailRequired": "البريد الإلكتروني مطلوب.",
+      "errorGenerateFailed": "تعذّر إنشاء رابط التحقق. تأكد أنك سجّلت بهذا البريد.",
+      "errorSendFailed": "فشل إرسال البريد. حاول مجدداً بعد قليل."
+    },
+    "onboarding": {
+      "header": {
+        "title": "إعداد مساحة عملك",
+        "description": "أخبرنا عن شركتك — لا تستغرق سوى دقيقة"
+      },
+      "steps": {
+        "company": {
+          "label": "الشركة",
+          "description": "هوية عملك"
+        },
+        "location": {
+          "label": "الموقع",
+          "description": "مكان عملك"
+        },
+        "preferences": {
+          "label": "التفضيلات",
+          "description": "المنطقة الزمنية والعملة"
+        }
+      },
+      "company": {
+        "nameLabel": "اسم الشركة / النشاط",
+        "namePlaceholder": "مثال: عقارات صلالة ش.م.م",
+        "phoneLabel": "رقم الهاتف",
+        "phonePlaceholder": "+968 9123 4567",
+        "logoLabel": "شعار الشركة",
+        "logoOptional": "(اختياري)",
+        "logoUploadCta": "اضغط لرفع الشعار",
+        "logoHint": "PNG، JPG، SVG — الحد الأقصى 2 ميجابايت",
+        "logoTooLarge": "حجم الملف كبير جداً (الحد الأقصى 2 ميجابايت)"
+      },
+      "location": {
+        "addressLabel": "عنوان الشارع",
+        "addressPlaceholder": "مثال: شارع الحافة، مبنى 12",
+        "cityLabel": "المدينة",
+        "cityPlaceholder": "صلالة",
+        "areaLabel": "المنطقة / الحي",
+        "areaPlaceholder": "الحافة",
+        "defaultsHint": "📍 الإعدادات الافتراضية مضبوطة على <b>صلالة، ظفار، عمان</b>. غيّرها حسب الحاجة."
+      },
+      "preferences": {
+        "timezoneLabel": "المنطقة الزمنية",
+        "currencyLabel": "العملة",
+        "settingsHint": "💡 يمكن تغيير هذه الإعدادات لاحقاً من <b>الإعدادات ← المؤسسة</b>.",
+        "summary": {
+          "title": "الملخص",
+          "company": "الشركة",
+          "phone": "الهاتف",
+          "city": "المدينة",
+          "address": "العنوان",
+          "timezone": "المنطقة الزمنية",
+          "currency": "العملة",
+          "empty": "—"
+        }
+      },
+      "errors": {
+        "nameRequired": "اسم الشركة مطلوب.",
+        "cityRequired": "المدينة مطلوبة.",
+        "generic": "حدث خطأ ما. حاول مجدداً."
+      },
+      "createButton": "إنشاء مساحة العمل",
+      "creatingButton": "جارٍ إنشاء مساحة العمل…",
+      "stepCounter": "الخطوة {current} من {total}"
+    },
+    "invite": {
+      "from": "دعوة من",
+      "roleLabel": "الدور:",
+      "invitedBy": "دعوة من {name}",
+      "expired": "منتهية",
+      "hoursRemaining": "متبقي {hours} س {minutes} د",
+      "minutesRemaining": "متبقي {minutes} د",
+      "invalidUsedTitle": "تم استخدام الدعوة من قبل",
+      "invalidUsedBody": "تم قبول رابط الدعوة هذا مسبقاً.",
+      "invalidCancelledTitle": "تم إلغاء الدعوة",
+      "invalidCancelledBody": "تم إلغاء هذه الدعوة من قبل المسؤول.",
+      "invalidExpiredTitle": "انتهت صلاحية الدعوة",
+      "invalidExpiredBody": "انتهت صلاحية الرابط. اطلب من مسؤولك إرسال دعوة جديدة.",
+      "createTitle": "أنشئ حسابك",
+      "createDesc": "أدخل اسمك وكلمة المرور للانضمام إلى <b>{org}</b>.",
+      "form": {
+        "emailLabel": "البريد الإلكتروني",
+        "firstNameLabel": "الاسم الأول",
+        "firstNamePlaceholder": "أحمد",
+        "lastNameLabel": "اسم العائلة",
+        "lastNamePlaceholder": "البلوشي",
+        "createPasswordLabel": "إنشاء كلمة المرور",
+        "confirmPasswordLabel": "تأكيد كلمة المرور",
+        "submit": "قبول وإنشاء الحساب",
+        "submitting": "جارٍ إنشاء الحساب…"
+      },
+      "errors": {
+        "firstNameRequired": "الاسم الأول مطلوب.",
+        "passwordTooShort": "يجب أن تكون كلمة المرور 8 أحرف على الأقل.",
+        "passwordsMismatch": "كلمتا المرور غير متطابقتين.",
+        "notFound": "الدعوة غير موجودة. يرجى طلب دعوة جديدة.",
+        "alreadyUsed": "تم استخدام هذه الدعوة من قبل.",
+        "cancelled": "تم إلغاء هذه الدعوة.",
+        "expired": "انتهت صلاحية هذه الدعوة. اطلب من مسؤولك إعادة إرسالها.",
+        "alreadyExists": "يوجد حساب مسجّل بهذا البريد.",
+        "alreadyExistsSignIn": "يوجد حساب مسجّل بهذا البريد. يرجى تسجيل الدخول.",
+        "createFailed": "فشل إنشاء الحساب. حاول مرة أخرى.",
+        "createFailedShort": "فشل إنشاء الحساب."
+      }
+    }
   },
   "nav": {
     "dashboard": "لوحة التحكم",
@@ -482,10 +661,22 @@
       "namePlaceholder": "مثال: حدائق صلالة السكنية",
       "typeLabel": "نوع المبنى",
       "types": {
-        "RESIDENTIAL": { "label": "سكني", "sub": "شقق وفلل" },
-        "MIXED":       { "label": "متعدد الاستخدام", "sub": "سكني + تجاري" },
-        "HOTEL":       { "label": "إيجار قصير",  "sub": "فندق / وحدات مخدومة" },
-        "COMMERCIAL":  { "label": "تجاري",  "sub": "مكاتب ومحلات" }
+        "RESIDENTIAL": {
+          "label": "سكني",
+          "sub": "شقق وفلل"
+        },
+        "MIXED": {
+          "label": "متعدد الاستخدام",
+          "sub": "سكني + تجاري"
+        },
+        "HOTEL": {
+          "label": "إيجار قصير",
+          "sub": "فندق / وحدات مخدومة"
+        },
+        "COMMERCIAL": {
+          "label": "تجاري",
+          "sub": "مكاتب ومحلات"
+        }
       },
       "totalFloorsLabel": "عدد الطوابق",
       "totalFloorsPlaceholder": "—",
@@ -1368,12 +1559,30 @@
       "unitsLabel": "الوحدات:"
     },
     "empty": {
-      "arriving":     { "title": "لا توجد وصولات اليوم",     "sub": "استمتع بالهدوء!" },
-      "overstay":     { "title": "لا توجد حالات تجاوز",      "sub": "كل المغادرات في وقتها!" },
-      "dueCheckout":  { "title": "لا مغادرات مستحقة اليوم",  "sub": "أنت على اطلاع بكل شيء." },
-      "inHouse":      { "title": "لا يوجد نزلاء مقيمون",     "sub": "" },
-      "upcoming":     { "title": "لا توجد حجوزات قادمة",     "sub": "" },
-      "default":      { "title": "لا توجد حجوزات",          "sub": "أنشئ أول حجز للبدء." }
+      "arriving": {
+        "title": "لا توجد وصولات اليوم",
+        "sub": "استمتع بالهدوء!"
+      },
+      "overstay": {
+        "title": "لا توجد حالات تجاوز",
+        "sub": "كل المغادرات في وقتها!"
+      },
+      "dueCheckout": {
+        "title": "لا مغادرات مستحقة اليوم",
+        "sub": "أنت على اطلاع بكل شيء."
+      },
+      "inHouse": {
+        "title": "لا يوجد نزلاء مقيمون",
+        "sub": ""
+      },
+      "upcoming": {
+        "title": "لا توجد حجوزات قادمة",
+        "sub": ""
+      },
+      "default": {
+        "title": "لا توجد حجوزات",
+        "sub": "أنشئ أول حجز للبدء."
+      }
     },
     "newPage": {
       "title": "حجز جديد",
@@ -1792,6 +2001,204 @@
         "thanksArabic": "شكراً لاختياركم {org}",
         "fallbackOrg": "عقارنا",
         "fallbackOrgArabic": "عقارنا"
+      }
+    },
+    "bookingEngine": {
+      "steps": {
+        "tenant": "المستأجر",
+        "dates": "التواريخ",
+        "units": "الوحدات",
+        "summary": "الملخص",
+        "confirm": "التأكيد"
+      },
+      "step1": {
+        "title": "اختر المستأجر / الضيف",
+        "addTenant": "إضافة مستأجر",
+        "newTenantHint": "مستأجر جديد — سيتم اختياره تلقائياً بعد الحفظ",
+        "searchPlaceholder": "ابحث بالاسم أو الهاتف أو الهوية…",
+        "searching": "جاري البحث…",
+        "noTenantsFound": "لم يتم العثور على مستأجرين.",
+        "createOne": "إنشاء واحد؟",
+        "vipBadge": "VIP",
+        "blacklistedBadge": "محظور",
+        "blacklistedWarning": "⚠ هذا المستأجر محظور. يرجى المراجعة قبل المتابعة."
+      },
+      "step2": {
+        "title": "التواريخ والعقار",
+        "property": "العقار",
+        "billingMode": "نمط الفوترة",
+        "dailyMode": "يومي / ليلي",
+        "monthlyMode": "شهري (تقويمي)",
+        "monthlyHint": "ℹ معيار الشهر التقويمي — شهر واحد = نفس التاريخ من الشهر التالي (مثلاً 15 مارس → 15 أبريل). السعر ثابت بغض النظر عن أيام الشهر. معيار الصناعة (ماريوت، IHG، Opera PMS).",
+        "checkInAndDuration": "تاريخ الوصول والمدة",
+        "useInputs": "استخدام الحقول",
+        "openCalendar": "فتح التقويم",
+        "checkInDate": "تاريخ الوصول",
+        "checkOutDate": "تاريخ المغادرة",
+        "numberOfNights": "عدد الليالي",
+        "numberOfMonths": "عدد الأشهر",
+        "calendarMonthsOnly": "أشهر تقويمية فقط",
+        "nightsHint": "ليالي",
+        "autoComputed": "محسوب تلقائياً",
+        "lockedHint": "مقفل — استناداً إلى الوصول + الأشهر",
+        "nightsSummary": "{count, plural, zero {لا ليالٍ} one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}}",
+        "monthsSummary": "{count, plural, zero {لا أشهر} one {شهر تقويمي واحد} two {شهران تقويميان} few {# أشهر تقويمية} many {# شهراً تقويمياً} other {# شهر تقويمي}}"
+      },
+      "step3": {
+        "title": "اختر الوحدات",
+        "selectedCount": "تم اختيار {count}",
+        "allTypes": "جميع الأنواع",
+        "loadingAvailability": "جاري تحميل التوفر…",
+        "noUnits": "لا توجد وحدات لهذا العقار.",
+        "available": "متاحة",
+        "occupied": "مشغولة",
+        "perNight": "{amount} / ليلة",
+        "perMonth": "{amount} / شهر",
+        "customRateNight": "✏ {amount} / ليلة (مخصص)",
+        "customRateMonth": "✏ {amount} / شهر (مخصص)",
+        "omrTotal": "إجمالي ر.ع.",
+        "customPriceLabel": "سعر مخصص (اختياري)",
+        "reset": "إعادة تعيين",
+        "ratePerNight": "السعر لكل ليلة (ر.ع.)",
+        "ratePerMonth": "السعر لكل شهر (ر.ع.)",
+        "or": "أو",
+        "totalForPeriodNights": "الإجمالي للفترة الكاملة ({count} ليلة) (ر.ع.)",
+        "totalForPeriodMonths": "الإجمالي للفترة الكاملة ({count} شهر) (ر.ع.)",
+        "ratePlaceholderFromTotal": "≈ {amount} (من الإجمالي)",
+        "ratePlaceholderDefault": "افتراضي: {amount}",
+        "totalPlaceholderFromRate": "≈ {amount} (من السعر)",
+        "totalPlaceholderDefault": "افتراضي: {amount}",
+        "loadFailed": "فشل تحميل الوحدات.",
+        "floorSuffix": "الطابق {n}",
+        "bedBath": "{bd} غرف / {ba} حمام",
+        "areaSuffix": "{area} م²",
+        "conflict": {
+          "title": "تعارض في الحجز المزدوج",
+          "body": "الوحدة <strong>{unitName}</strong> تم حجزها من قبل شخص آخر أثناء إكمال هذا النموذج.",
+          "reservationLabel": "الحجز:",
+          "guestLabel": "الضيف:",
+          "datesLabel": "التواريخ:",
+          "hint": "يرجى اختيار وحدة أخرى أو تغيير التواريخ."
+        }
+      },
+      "step4": {
+        "periodCol": "الفترة",
+        "nightsCol": "الليالي",
+        "monthsCol": "الأشهر",
+        "rateCol": "السعر",
+        "amountCol": "المبلغ",
+        "unitTotal": "إجمالي الوحدة",
+        "customRateBadge": "سعر مخصص",
+        "customRateRow": "✏ سعر مخصص",
+        "perNight": "{amount} / ليلة",
+        "perMonth": "{amount} / شهر",
+        "bookingDetails": "تفاصيل الحجز",
+        "discount": "الخصم (ر.ع.)",
+        "discountPlaceholder": "0.000",
+        "source": "المصدر",
+        "notes": "الملاحظات",
+        "notesPlaceholder": "طلبات خاصة، ملاحظات داخلية…",
+        "subtotal": "المجموع الفرعي",
+        "discountSummary": "الخصم",
+        "grandTotal": "الإجمالي الكلي"
+      },
+      "step5": {
+        "title": "تأكيد الحجز",
+        "unitsCount": "{count, plural, zero {لا وحدات} one {وحدة واحدة} two {وحدتان} few {# وحدات} many {# وحدة} other {# وحدة}}",
+        "rateLineDaily": "{count, plural, zero {لا ليالٍ} one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}} · سعر يومي",
+        "rateLineMonthly": "{count, plural, zero {لا أشهر} one {شهر تقويمي واحد} two {شهران تقويميان} few {# أشهر تقويمية} many {# شهراً تقويمياً} other {# شهر تقويمي}} · سعر شهري",
+        "afterDiscount": "بعد خصم {amount} ر.ع.",
+        "submitting": "جاري الإنشاء…",
+        "submit": "تأكيد وإنشاء الحجز",
+        "customRateInline": "[سعر مخصص]"
+      },
+      "sources": {
+        "walk_in": "زيارة شخصية",
+        "referral": "إحالة",
+        "online": "عبر الإنترنت",
+        "agent": "وكيل",
+        "returning": "ضيف عائد",
+        "corporate_contract": "عقد شركة"
+      },
+      "nav": {
+        "back": "رجوع",
+        "next": "التالي",
+        "reviewConfirm": "مراجعة وتأكيد"
+      },
+      "createSuccess": "تم إنشاء الحجز!",
+      "createFailed": "فشل إنشاء الحجز.",
+      "networkError": "خطأ في الشبكة. يرجى المحاولة مرة أخرى.",
+      "omr": "ر.ع."
+    },
+    "bookingModal": {
+      "title": "اختر التواريخ والوحدة",
+      "subtitle": "اختر التواريخ لمشاهدة التوفر الفوري.",
+      "step1": "1. اختر المدة",
+      "step2": "2. اختر وحدة متاحة",
+      "nightCount": "{count, plural, zero {لا ليالٍ} one {ليلة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}}",
+      "quickSelect": "اختيار سريع",
+      "plus1Day": "+ يوم",
+      "plus7Days": "+ 7 أيام",
+      "plus1Month": "+ شهر",
+      "plus6Months": "+ 6 أشهر",
+      "plus1Year": "+ سنة",
+      "noDatesPrompt": "اختر تاريخ الوصول والمغادرة",
+      "noDatesPromptLine2": "لعرض الوحدات المتاحة.",
+      "availableCount": "متاح {count}",
+      "fullyBooked": "محجوزة بالكامل لهذه التواريخ.",
+      "perNight": "ر.ع. / ليلة",
+      "cancel": "إلغاء",
+      "confirm": "تأكيد الاختيار"
+    },
+    "availabilityCalendar": {
+      "widget": {
+        "title": "تقويم التوفر",
+        "from": "من",
+        "to": "إلى",
+        "thisMonth": "هذا الشهر",
+        "nextMonth": "الشهر القادم",
+        "thisMonthShort": "هذا الشهر",
+        "nextMonthShort": "الشهر القادم",
+        "khareef": "خريف",
+        "presetDays": "{n}ي",
+        "viewCalendar": "عرض تقويم التوفر"
+      },
+      "modal": {
+        "fallbackTitle": "تقويم التوفر",
+        "rangeLabel": "{startLabel} – {endLabel} · {nights, plural, zero {لا ليالٍ} one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}}",
+        "loading": "جاري التحميل…",
+        "refresh": "تحديث",
+        "loadingFull": "جاري تحميل التوفر…",
+        "noUnits": "لا توجد وحدات لهذا العقار.",
+        "loadFailed": "فشل تحميل التوفر",
+        "unitColumn": "الوحدة",
+        "potentialRevenue": "الإيرادات المحتملة من الوحدات الشاغرة:",
+        "omr": "ر.ع.",
+        "floorSuffix": "الطابق {n}"
+      },
+      "stats": {
+        "vacant": "شاغرة",
+        "confirmed": "مؤكدة",
+        "checkedIn": "تسجيل دخول",
+        "blocked": "محظورة",
+        "pending": "معلقة"
+      },
+      "legend": {
+        "diagonal": "· القطر = يوم وصول / مغادرة · الإطار البرتقالي المتقطع = فجوة قصيرة",
+        "weekend": "الجمعة والسبت مميزان (عطلة نهاية الأسبوع العمانية)"
+      },
+      "tooltip": {
+        "turnaroundDay": "يوم التبديل",
+        "departing": "مغادر",
+        "arriving": "قادم",
+        "checkInToday": "تسجيل دخول اليوم",
+        "checkOutToday": "تسجيل خروج اليوم",
+        "vacant": "شاغرة",
+        "shortGap": "فجوة قصيرة — فكر بشغلها",
+        "until": "حتى {date}",
+        "perNight": "{amount} ر.ع. / ليلة",
+        "clickToOpen": "← اضغط لفتح الحجز",
+        "clickToCreate": "← اضغط لإنشاء حجز"
       }
     }
   },
@@ -2596,194 +3003,6 @@
         "addFailed": "فشل إضافة التصنيف",
         "updateFailed": "فشل التحديث",
         "toggleFailed": "فشل التبديل"
-      }
-    }
-  },
-  "auth": {
-    "brand": {
-      "name": "أم رنت",
-      "tagline": "نظام إدارة العقارات"
-    },
-    "common": {
-      "back": "رجوع",
-      "next": "التالي",
-      "backToHome": "العودة إلى الرئيسية",
-      "backToSignIn": "العودة إلى تسجيل الدخول",
-      "showPassword": "إظهار كلمة المرور",
-      "hidePassword": "إخفاء كلمة المرور"
-    },
-    "login": {
-      "tabs": {
-        "signIn": "تسجيل الدخول",
-        "signUp": "إنشاء حساب"
-      },
-      "google": "المتابعة باستخدام Google",
-      "or": "أو",
-      "emailLabel": "البريد الإلكتروني",
-      "emailPlaceholder": "you@example.com",
-      "passwordLabel": "كلمة المرور",
-      "passwordPlaceholderSignup": "8 أحرف كحد أدنى",
-      "passwordPlaceholderSignin": "••••••••",
-      "confirmPasswordLabel": "تأكيد كلمة المرور",
-      "confirmPasswordPlaceholder": "أعد إدخال كلمة المرور",
-      "rememberMe": "تذكرني لمدة 30 يوماً",
-      "submitSignIn": "تسجيل الدخول",
-      "submitSignUp": "إنشاء الحساب",
-      "signingIn": "جارٍ تسجيل الدخول…",
-      "creatingAccount": "جارٍ إنشاء الحساب…",
-      "didntGetEmail": "لم تستلم بريد التحقق؟",
-      "resendIt": "إعادة الإرسال",
-      "lockoutTitle": "تم قفل الحساب مؤقتاً",
-      "lockoutBodyNow": "محاولات فاشلة كثيرة. حاول الآن.",
-      "lockoutBodyIn": "محاولات فاشلة كثيرة. حاول مجدداً خلال <b>{time}</b>.",
-      "remainingAttempts": "{count, plural, zero {لا توجد محاولات متبقية} one {محاولة واحدة متبقية} two {محاولتان متبقيتان} few {# محاولات متبقية} many {# محاولة متبقية} other {# محاولة متبقية}} قبل القفل لمدة 15 دقيقة.",
-      "lastAttemptWarning": "المحاولة الفاشلة التالية ستقفل حسابك لمدة 15 دقيقة.",
-      "passwordReq": {
-        "minLength": "8 أحرف على الأقل",
-        "uppercase": "حرف كبير واحد",
-        "number": "رقم واحد",
-        "special": "رمز خاص واحد"
-      },
-      "strength": {
-        "weak": "ضعيفة",
-        "fair": "مقبولة",
-        "good": "جيدة",
-        "strong": "قوية"
-      },
-      "validation": {
-        "emailRequired": "البريد الإلكتروني مطلوب.",
-        "emailInvalid": "أدخل بريداً إلكترونياً صحيحاً.",
-        "passwordRequired": "كلمة المرور مطلوبة.",
-        "passwordTooShort": "يجب أن تكون 8 أحرف على الأقل.",
-        "passwordNeedsUpper": "يجب أن تحتوي على حرف كبير.",
-        "passwordNeedsNumber": "يجب أن تحتوي على رقم.",
-        "passwordNeedsSpecial": "يجب أن تحتوي على رمز خاص.",
-        "passwordsMismatch": "كلمتا المرور غير متطابقتين."
-      },
-      "serverErrors": {
-        "invalid_credentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
-        "email_exists": "يوجد حساب مسجّل بهذا البريد. حاول تسجيل الدخول بدلاً من ذلك.",
-        "email_not_confirmed": "يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول.",
-        "oauth_error": "فشل تسجيل الدخول عبر Google. حاول مرة أخرى.",
-        "auth_error": "رابط المصادقة غير صالح أو منتهٍ. حاول مرة أخرى.",
-        "server_error": "حدث خطأ من جهتنا. حاول مجدداً لاحقاً.",
-        "session_expired": "انتهت جلستك بسبب عدم النشاط. يرجى تسجيل الدخول مجدداً."
-      },
-      "terms": "بإنشاء حساب فإنك توافق على <terms>شروط الخدمة</terms> و<privacy>سياسة الخصوصية</privacy>."
-    },
-    "verify": {
-      "title": "تحقق من بريدك الوارد",
-      "sentTo": "أرسلنا رابط التحقق إلى",
-      "instructions": "اضغط على الرابط في البريد لتفعيل حسابك. تحقق من مجلد البريد المزعج إذا لم تجده خلال دقائق قليلة.",
-      "successResent": "تمت إعادة إرسال بريد التحقق! تحقق من بريدك الوارد.",
-      "sending": "جارٍ الإرسال…",
-      "resendIn": "إعادة الإرسال خلال {seconds} ثانية",
-      "resendButton": "إعادة إرسال بريد التحقق",
-      "errorEmailRequired": "البريد الإلكتروني مطلوب.",
-      "errorGenerateFailed": "تعذّر إنشاء رابط التحقق. تأكد أنك سجّلت بهذا البريد.",
-      "errorSendFailed": "فشل إرسال البريد. حاول مجدداً بعد قليل."
-    },
-    "onboarding": {
-      "header": {
-        "title": "إعداد مساحة عملك",
-        "description": "أخبرنا عن شركتك — لا تستغرق سوى دقيقة"
-      },
-      "steps": {
-        "company": {
-          "label": "الشركة",
-          "description": "هوية عملك"
-        },
-        "location": {
-          "label": "الموقع",
-          "description": "مكان عملك"
-        },
-        "preferences": {
-          "label": "التفضيلات",
-          "description": "المنطقة الزمنية والعملة"
-        }
-      },
-      "company": {
-        "nameLabel": "اسم الشركة / النشاط",
-        "namePlaceholder": "مثال: عقارات صلالة ش.م.م",
-        "phoneLabel": "رقم الهاتف",
-        "phonePlaceholder": "+968 9123 4567",
-        "logoLabel": "شعار الشركة",
-        "logoOptional": "(اختياري)",
-        "logoUploadCta": "اضغط لرفع الشعار",
-        "logoHint": "PNG، JPG، SVG — الحد الأقصى 2 ميجابايت",
-        "logoTooLarge": "حجم الملف كبير جداً (الحد الأقصى 2 ميجابايت)"
-      },
-      "location": {
-        "addressLabel": "عنوان الشارع",
-        "addressPlaceholder": "مثال: شارع الحافة، مبنى 12",
-        "cityLabel": "المدينة",
-        "cityPlaceholder": "صلالة",
-        "areaLabel": "المنطقة / الحي",
-        "areaPlaceholder": "الحافة",
-        "defaultsHint": "📍 الإعدادات الافتراضية مضبوطة على <b>صلالة، ظفار، عمان</b>. غيّرها حسب الحاجة."
-      },
-      "preferences": {
-        "timezoneLabel": "المنطقة الزمنية",
-        "currencyLabel": "العملة",
-        "settingsHint": "💡 يمكن تغيير هذه الإعدادات لاحقاً من <b>الإعدادات ← المؤسسة</b>.",
-        "summary": {
-          "title": "الملخص",
-          "company": "الشركة",
-          "phone": "الهاتف",
-          "city": "المدينة",
-          "address": "العنوان",
-          "timezone": "المنطقة الزمنية",
-          "currency": "العملة",
-          "empty": "—"
-        }
-      },
-      "errors": {
-        "nameRequired": "اسم الشركة مطلوب.",
-        "cityRequired": "المدينة مطلوبة.",
-        "generic": "حدث خطأ ما. حاول مجدداً."
-      },
-      "createButton": "إنشاء مساحة العمل",
-      "creatingButton": "جارٍ إنشاء مساحة العمل…",
-      "stepCounter": "الخطوة {current} من {total}"
-    },
-    "invite": {
-      "from": "دعوة من",
-      "roleLabel": "الدور:",
-      "invitedBy": "دعوة من {name}",
-      "expired": "منتهية",
-      "hoursRemaining": "متبقي {hours} س {minutes} د",
-      "minutesRemaining": "متبقي {minutes} د",
-      "invalidUsedTitle": "تم استخدام الدعوة من قبل",
-      "invalidUsedBody": "تم قبول رابط الدعوة هذا مسبقاً.",
-      "invalidCancelledTitle": "تم إلغاء الدعوة",
-      "invalidCancelledBody": "تم إلغاء هذه الدعوة من قبل المسؤول.",
-      "invalidExpiredTitle": "انتهت صلاحية الدعوة",
-      "invalidExpiredBody": "انتهت صلاحية الرابط. اطلب من مسؤولك إرسال دعوة جديدة.",
-      "createTitle": "أنشئ حسابك",
-      "createDesc": "أدخل اسمك وكلمة المرور للانضمام إلى <b>{org}</b>.",
-      "form": {
-        "emailLabel": "البريد الإلكتروني",
-        "firstNameLabel": "الاسم الأول",
-        "firstNamePlaceholder": "أحمد",
-        "lastNameLabel": "اسم العائلة",
-        "lastNamePlaceholder": "البلوشي",
-        "createPasswordLabel": "إنشاء كلمة المرور",
-        "confirmPasswordLabel": "تأكيد كلمة المرور",
-        "submit": "قبول وإنشاء الحساب",
-        "submitting": "جارٍ إنشاء الحساب…"
-      },
-      "errors": {
-        "firstNameRequired": "الاسم الأول مطلوب.",
-        "passwordTooShort": "يجب أن تكون كلمة المرور 8 أحرف على الأقل.",
-        "passwordsMismatch": "كلمتا المرور غير متطابقتين.",
-        "notFound": "الدعوة غير موجودة. يرجى طلب دعوة جديدة.",
-        "alreadyUsed": "تم استخدام هذه الدعوة من قبل.",
-        "cancelled": "تم إلغاء هذه الدعوة.",
-        "expired": "انتهت صلاحية هذه الدعوة. اطلب من مسؤولك إعادة إرسالها.",
-        "alreadyExists": "يوجد حساب مسجّل بهذا البريد.",
-        "alreadyExistsSignIn": "يوجد حساب مسجّل بهذا البريد. يرجى تسجيل الدخول.",
-        "createFailed": "فشل إنشاء الحساب. حاول مرة أخرى.",
-        "createFailedShort": "فشل إنشاء الحساب."
       }
     }
   }

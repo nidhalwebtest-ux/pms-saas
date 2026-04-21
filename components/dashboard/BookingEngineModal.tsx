@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { XMarkIcon, HomeModernIcon } from "@heroicons/react/24/outline";
 import { DayPicker, DateRange } from "react-day-picker";
 import "react-day-picker/dist/style.css"; // Ensure styles are loaded
 import { addDays, addMonths, addYears, differenceInDays } from "date-fns";
+import { ar as arLocale, enUS as enLocale, type Locale } from "date-fns/locale";
 
 type PropertyWithUnits = {
   id: string;
@@ -34,6 +36,10 @@ export default function BookingEngineModal({
   currentUnitId,
   onConfirm,
 }: Props) {
+  const t = useTranslations("reservations.bookingModal");
+  const locale = useLocale();
+  const dateFnsLocale: Locale = locale === "ar" ? arLocale : enLocale;
+
   const [dateRange, setDateRange] = useState<DateRange | undefined>(
     currentDateRange,
   );
@@ -98,10 +104,10 @@ export default function BookingEngineModal({
         <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
           <div>
             <h2 className="text-xl font-bold text-gray-900">
-              Select Dates & Unit
+              {t("title")}
             </h2>
             <p className="text-sm text-gray-500">
-              Choose dates to see real-time availability.
+              {t("subtitle")}
             </p>
           </div>
           <button
@@ -115,12 +121,12 @@ export default function BookingEngineModal({
         {/* Body: Two Columns */}
         <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
           {/* Left Column: VERTICAL Calendar */}
-          <div className="w-full lg:w-1/2 p-4 border-r border-gray-100 overflow-y-auto flex flex-col items-center bg-white">
+          <div className="w-full lg:w-1/2 p-4 border-e border-gray-100 overflow-y-auto flex flex-col items-center bg-white">
             <h3 className="text-base font-semibold text-gray-900 mb-3 w-full text-center flex items-center justify-center gap-2">
-              1. Select Duration
+              {t("step1")}
               {duration > 0 && (
                 <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
-                  {duration} Night{duration > 1 ? "s" : ""}
+                  {t("nightCount", { count: duration })}
                 </span>
               )}
             </h3>
@@ -138,6 +144,7 @@ export default function BookingEngineModal({
               pagedNavigation
               showOutsideDays={false}
               disabled={{ before: new Date() }}
+              locale={dateFnsLocale}
               className="mx-auto" // Center it
               classNames={{
                 months: "flex flex-col space-y-2", // strictly vertical
@@ -170,7 +177,7 @@ export default function BookingEngineModal({
 
             <div className="mt-4 w-full max-w-md px-2">
               <p className="text-[0.65rem] font-medium text-gray-400 uppercase tracking-wider mb-2 text-center">
-                Quick Select
+                {t("quickSelect")}
               </p>
               <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
                 <button
@@ -178,35 +185,35 @@ export default function BookingEngineModal({
                   onClick={() => handleQuickSelect(1, 0, 0)}
                   className="px-1 py-1.5 text-[0.7rem] font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 hover:text-blue-600 hover:border-blue-300 transition-colors shadow-sm"
                 >
-                  +1 Day
+                  {t("plus1Day")}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickSelect(7, 0, 0)}
                   className="px-1 py-1.5 text-[0.7rem] font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 hover:text-blue-600 hover:border-blue-300 transition-colors shadow-sm"
                 >
-                  +7 Days
+                  {t("plus7Days")}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickSelect(0, 1, 0)}
                   className="px-1 py-1.5 text-[0.7rem] font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 hover:text-blue-600 hover:border-blue-300 transition-colors shadow-sm"
                 >
-                  +1 Month
+                  {t("plus1Month")}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickSelect(0, 6, 0)}
                   className="px-1 py-1.5 text-[0.7rem] font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 hover:text-blue-600 hover:border-blue-300 transition-colors shadow-sm"
                 >
-                  +6 Months
+                  {t("plus6Months")}
                 </button>
                 <button
                   type="button"
                   onClick={() => handleQuickSelect(0, 0, 1)}
                   className="px-1 py-1.5 text-[0.7rem] font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50 hover:text-blue-600 hover:border-blue-300 transition-colors shadow-sm"
                 >
-                  +1 Year
+                  {t("plus1Year")}
                 </button>
               </div>
             </div>
@@ -215,14 +222,14 @@ export default function BookingEngineModal({
           {/* Right Column: AVAILABLE Units List */}
           <div className="w-full lg:w-1/2 p-4 bg-gray-50/50 overflow-y-auto">
             <h3 className="text-base font-semibold text-gray-900 mb-3">
-              2. Select Available Unit
+              {t("step2")}
             </h3>
 
             {!dateRange?.from || !dateRange?.to ? (
               <div className="h-[60%] flex items-center justify-center text-gray-400 text-sm border-2 border-dashed border-gray-200 rounded-xl p-8 text-center bg-white">
-                Select Check-In and Check-Out dates
+                {t("noDatesPrompt")}
                 <br />
-                to view available units.
+                {t("noDatesPromptLine2")}
               </div>
             ) : (
               <div className="space-y-4">
@@ -234,13 +241,13 @@ export default function BookingEngineModal({
                     <div className="bg-gray-100 px-4 py-3 border-b border-gray-200 font-bold text-gray-800 text-sm flex justify-between items-center">
                       {property.name}
                       <span className="text-xs font-medium text-gray-500 bg-white px-2 py-1 rounded-full border border-gray-200">
-                        {property.units.length} available
+                        {t("availableCount", { count: property.units.length })}
                       </span>
                     </div>
                     <div className="divide-y divide-gray-100">
                       {property.units.length === 0 && (
                         <div className="p-6 text-sm text-gray-500 text-center italic bg-gray-50/50">
-                          Fully booked for these dates.
+                          {t("fullyBooked")}
                         </div>
                       )}
                       {property.units.map((unit) => (
@@ -264,12 +271,12 @@ export default function BookingEngineModal({
                               </div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className="text-base font-bold text-gray-900">
+                          <div className="text-end">
+                            <div className="text-base font-bold text-gray-900 ltr-numbers">
                               {Number(unit.basePrice).toFixed(3)}
                             </div>
                             <div className="text-xs text-gray-500 font-medium">
-                              OMR / night
+                              {t("perNight")}
                             </div>
                           </div>
                         </label>
@@ -288,14 +295,14 @@ export default function BookingEngineModal({
             onClick={onClose}
             className="px-5 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            Cancel
+            {t("cancel")}
           </button>
           <button
             onClick={handleConfirm}
             disabled={!dateRange?.from || !dateRange?.to || !selectedUnit}
             className="px-8 py-2.5 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all"
           >
-            Confirm Selection
+            {t("confirm")}
           </button>
         </div>
       </div>

@@ -2,9 +2,12 @@
 
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { DayPicker, DateRange } from "react-day-picker";
 import "react-day-picker/style.css";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ar as arLocale, enUS as enLocale, type Locale } from "date-fns/locale";
 import {
   MagnifyingGlassIcon,
   CalendarIcon,
@@ -28,9 +31,7 @@ import {
   buildCalendarMonthBreakdown,
   collapseToSegments,
   calculateGrandTotal,
-  formatDuration,
   roundOMR,
-  sumSubtotals,
 } from "@/lib/reservation-engine";
 import TenantForm from "@/components/dashboard/TenantForm";
 
@@ -78,21 +79,22 @@ interface UnitOption {
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const STEPS = [
-  { id: 1, label: "Tenant",  icon: UserIcon },
-  { id: 2, label: "Dates",   icon: CalendarIcon },
-  { id: 3, label: "Units",   icon: HomeIcon },
-  { id: 4, label: "Summary", icon: CurrencyDollarIcon },
-  { id: 5, label: "Confirm", icon: CheckCircleIcon },
-];
+const STEP_DEFS = [
+  { id: 1, key: "tenant",  icon: UserIcon },
+  { id: 2, key: "dates",   icon: CalendarIcon },
+  { id: 3, key: "units",   icon: HomeIcon },
+  { id: 4, key: "summary", icon: CurrencyDollarIcon },
+  { id: 5, key: "confirm", icon: CheckCircleIcon },
+] as const;
 
-const UNIT_TYPE_LABELS: Record<string, string> = {
-  STUDIO:   "Studio",
-  ONE_BR:   "1 BR",
-  TWO_BR:   "2 BR",
-  THREE_BR: "3 BR",
-  SUITE:    "Suite",
-};
+const SOURCE_KEYS = [
+  "walk_in",
+  "referral",
+  "online",
+  "agent",
+  "returning",
+  "corporate_contract",
+] as const;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -113,11 +115,11 @@ function parseLocalDate(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
-function ClassBadge({ c }: { c: string | null }) {
+function ClassBadge({ c, t }: { c: string | null; t: (k: string) => string }) {
   if (c === "vip")
-    return <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-full px-1.5 py-0.5"><StarIcon className="h-2.5 w-2.5" />VIP</span>;
+    return <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-full px-1.5 py-0.5"><StarIcon className="h-2.5 w-2.5" />{t("vipBadge")}</span>;
   if (c === "blacklisted")
-    return <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded-full px-1.5 py-0.5"><NoSymbolIcon className="h-2.5 w-2.5" />Blacklisted</span>;
+    return <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded-full px-1.5 py-0.5"><NoSymbolIcon className="h-2.5 w-2.5" />{t("blacklistedBadge")}</span>;
   return null;
 }
 
@@ -125,6 +127,25 @@ function ClassBadge({ c }: { c: string | null }) {
 
 export default function BookingEngine({ properties }: { properties: PropertyOption[] }) {
   const router = useRouter();
+  const locale = useLocale();
+  const dateFnsLocale: Locale = locale === "ar" ? arLocale : enLocale;
+
+  const t          = useTranslations("reservations.bookingEngine");
+  const tSteps     = useTranslations("reservations.bookingEngine.steps");
+  const tStep1     = useTranslations("reservations.bookingEngine.step1");
+  const tStep2     = useTranslations("reservations.bookingEngine.step2");
+  const tStep3     = useTranslations("reservations.bookingEngine.step3");
+  const tConflict  = useTranslations("reservations.bookingEngine.step3.conflict");
+  const tStep4     = useTranslations("reservations.bookingEngine.step4");
+  const tStep5     = useTranslations("reservations.bookingEngine.step5");
+  const tSrc       = useTranslations("reservations.bookingEngine.sources");
+  const tNav       = useTranslations("reservations.bookingEngine.nav");
+  const tCommon    = useTranslations("common");
+  const tUnitTypes = useTranslations("reservations.detail.unitTypes");
+
+  const unitTypeLabel = (type: string) =>
+    tUnitTypes.has(type) ? tUnitTypes(type) : type;
+
   const [step, setStep] = useState(1);
 
   // ── Step 1: Tenant ────────────────────────────────────────────────────────
@@ -237,7 +258,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
   // ── Tenant search (debounced) ─────────────────────────────────────────────
   useEffect(() => {
     if (!tenantQuery.trim()) { setTenantResults([]); return; }
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       setTenantLoading(true);
       try {
         const res  = await fetch(`/api/tenants?q=${encodeURIComponent(tenantQuery)}`);
@@ -248,7 +269,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
         setTenantLoading(false);
       }
     }, 350);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [tenantQuery]);
 
   // ── Sync calendar range → text inputs ────────────────────────────────────
@@ -351,11 +372,11 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
       setUnits(data.units ?? []);
       setUnitTypeFilter("ALL");
     } catch {
-      toast.error("Failed to load units.");
+      toast.error(tStep3("loadFailed"));
     } finally {
       setUnitsLoading(false);
     }
-  }, [propertyId, startDate, endDate, rateType]);
+  }, [propertyId, startDate, endDate, rateType, tStep3]);
 
   // ── Toggle unit selection ─────────────────────────────────────────────────
   function toggleUnit(unitId: string) {
@@ -412,14 +433,14 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
           setConflictError(data.conflict);
           setStep(3); // go back to unit selection step to show the conflict
         } else {
-          toast.error(data.error ?? "Failed to create reservation.");
+          toast.error(data.error ?? t("createFailed"));
         }
         return;
       }
-      toast.success("Reservation created!");
+      toast.success(t("createSuccess"));
       router.push(`/dashboard/reservations/${data.reservation.id}`);
     } catch {
-      toast.error("Network error. Please try again.");
+      toast.error(t("networkError"));
     } finally {
       setSubmitting(false);
     }
@@ -430,7 +451,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
     <div className="space-y-6">
       {/* Step indicator */}
       <nav className="flex items-center gap-0">
-        {STEPS.map((s, i) => {
+        {STEP_DEFS.map((s, i) => {
           const done    = step > s.id;
           const current = step === s.id;
           const Icon    = s.icon;
@@ -455,10 +476,10 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                     : <Icon className={`h-4 w-4 ${current ? "text-blue-600" : "text-gray-400"}`} />
                   }
                 </div>
-                <span className="hidden sm:block text-xs font-medium">{s.label}</span>
+                <span className="hidden sm:block text-xs font-medium">{tSteps(s.key)}</span>
               </button>
-              {i < STEPS.length - 1 && (
-                <ChevronRightIcon className="h-4 w-4 text-gray-300 flex-shrink-0" />
+              {i < STEP_DEFS.length - 1 && (
+                <ChevronRightIcon className="h-4 w-4 text-gray-300 flex-shrink-0 rtl:rotate-180" />
               )}
             </div>
           );
@@ -469,7 +490,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
       {step === 1 && (
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Select Tenant / Guest</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{tStep1("title")}</h2>
             <button
               onClick={() => setShowAddTenant((v) => !v)}
               className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium border transition-colors ${
@@ -479,7 +500,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
               }`}
             >
               <PlusIcon className="h-3.5 w-3.5" />
-              {showAddTenant ? "Cancel" : "Add Tenant"}
+              {showAddTenant ? tCommon("cancel") : tStep1("addTenant")}
             </button>
           </div>
 
@@ -487,7 +508,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
           {showAddTenant && (
             <div className="rounded-xl border-2 border-dashed border-blue-200 bg-blue-50/40 p-4">
               <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider mb-3">
-                New Tenant — will be auto-selected after saving
+                {tStep1("newTenantHint")}
               </p>
               <TenantForm
                 onSuccess={(tenant) => {
@@ -511,11 +532,11 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
               {/* Search */}
               <div className="relative" ref={dropdownRef}>
                 <div className="relative">
-                  <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                  <MagnifyingGlassIcon className="pointer-events-none absolute start-3 top-2.5 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
-                    className="block w-full rounded-lg border-0 py-2.5 pl-9 pr-9 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 sm:text-sm"
-                    placeholder="Search by name, phone, ID…"
+                    className="block w-full rounded-lg border-0 py-2.5 ps-9 pe-9 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 sm:text-sm"
+                    placeholder={tStep1("searchPlaceholder")}
                     value={selectedTenant ? `${selectedTenant.firstName} ${selectedTenant.lastName}` : tenantQuery}
                     onChange={(e) => {
                       if (selectedTenant) setSelectedTenant(null);
@@ -527,7 +548,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                   {selectedTenant && (
                     <button
                       onClick={() => { setSelectedTenant(null); setTenantQuery(""); }}
-                      className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600"
+                      className="absolute end-2.5 top-2.5 text-gray-400 hover:text-gray-600"
                     >
                       <XMarkIcon className="h-4 w-4" />
                     </button>
@@ -536,34 +557,34 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
 
                 {showDropdown && !selectedTenant && (
                   <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-64 overflow-y-auto">
-                    {tenantLoading && <div className="px-4 py-3 text-sm text-gray-500">Searching…</div>}
+                    {tenantLoading && <div className="px-4 py-3 text-sm text-gray-500">{tStep1("searching")}</div>}
                     {!tenantLoading && tenantResults.length === 0 && tenantQuery && (
                       <div className="px-4 py-3 text-sm text-gray-500">
-                        No tenants found.{" "}
+                        {tStep1("noTenantsFound")}{" "}
                         <button className="text-blue-600 hover:underline" onClick={() => setShowAddTenant(true)}>
-                          Create one?
+                          {tStep1("createOne")}
                         </button>
                       </div>
                     )}
-                    {tenantResults.map((t) => (
+                    {tenantResults.map((tn) => (
                       <button
-                        key={t.id}
-                        className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50"
-                        onClick={() => { setSelectedTenant(t); setShowDropdown(false); setTenantQuery(""); }}
+                        key={tn.id}
+                        className="flex w-full items-center gap-3 px-4 py-2.5 text-start hover:bg-gray-50"
+                        onClick={() => { setSelectedTenant(tn); setShowDropdown(false); setTenantQuery(""); }}
                       >
                         <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                          t.classification === "vip" ? "bg-yellow-100 text-yellow-800" :
-                          t.classification === "blacklisted" ? "bg-red-100 text-red-700" :
+                          tn.classification === "vip" ? "bg-yellow-100 text-yellow-800" :
+                          tn.classification === "blacklisted" ? "bg-red-100 text-red-700" :
                           "bg-blue-100 text-blue-700"
                         }`}>
-                          {t.firstName[0]}{t.lastName[0]}
+                          {tn.firstName[0]}{tn.lastName[0]}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm text-gray-900">{t.firstName} {t.lastName}</span>
-                            <ClassBadge c={t.classification} />
+                            <span className="font-medium text-sm text-gray-900">{tn.firstName} {tn.lastName}</span>
+                            <ClassBadge c={tn.classification} t={tStep1} />
                           </div>
-                          <div className="text-xs text-gray-500">{t.phone}{t.nationality ? ` · ${t.nationality}` : ""}</div>
+                          <div className="text-xs text-gray-500 ltr-numbers">{tn.phone}{tn.nationality ? ` · ${tn.nationality}` : ""}</div>
                         </div>
                       </button>
                     ))}
@@ -588,9 +609,9 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-gray-900">{selectedTenant.firstName} {selectedTenant.lastName}</span>
-                      <ClassBadge c={selectedTenant.classification} />
+                      <ClassBadge c={selectedTenant.classification} t={tStep1} />
                     </div>
-                    {selectedTenant.phone && <div className="text-sm text-gray-600">{selectedTenant.phone}</div>}
+                    {selectedTenant.phone && <div className="text-sm text-gray-600 ltr-numbers">{selectedTenant.phone}</div>}
                     {selectedTenant.nationality && <div className="text-xs text-gray-500">{selectedTenant.nationality}</div>}
                   </div>
                   <CheckCircleSolid className="h-6 w-6 text-green-500 flex-shrink-0" />
@@ -599,7 +620,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
 
               {selectedTenant?.classification === "blacklisted" && (
                 <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 font-medium">
-                  ⚠ This tenant is blacklisted. Please review before proceeding.
+                  {tStep1("blacklistedWarning")}
                 </div>
               )}
             </>
@@ -610,11 +631,11 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
       {/* ── STEP 2: Dates ──────────────────────────────────────────────────── */}
       {step === 2 && (
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-5">
-          <h2 className="text-lg font-semibold text-gray-900">Dates & Property</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{tStep2("title")}</h2>
 
           {/* Property */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Property</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{tStep2("property")}</label>
             <select
               className="block w-full rounded-lg border-0 py-2.5 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm"
               value={propertyId}
@@ -626,7 +647,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
 
           {/* Rate type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Billing Mode</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{tStep2("billingMode")}</label>
             <div className="flex gap-2">
               {(["daily", "monthly"] as const).map((rt) => (
                 <button
@@ -638,28 +659,27 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                       : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
                   }`}
                 >
-                  {rt === "daily" ? "Daily / Nightly" : "Monthly (Calendar)"}
+                  {rt === "daily" ? tStep2("dailyMode") : tStep2("monthlyMode")}
                 </button>
               ))}
             </div>
             {rateType === "monthly" && (
               <p className="mt-1.5 text-xs text-gray-500">
-                ℹ Calendar month standard — 1 month = same date next month (e.g. Mar 15 → Apr 15).
-                Rate is flat regardless of days in the month. Industry standard (Marriott, IHG, Opera PMS).
+                {tStep2("monthlyHint")}
               </p>
             )}
           </div>
 
           {/* Date + Period inputs */}
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Check-In & Duration</span>
+            <span className="text-sm font-medium text-gray-700">{tStep2("checkInAndDuration")}</span>
             {rateType === "daily" && (
               <button
                 onClick={() => setCalMode((v) => !v)}
                 className="text-xs text-blue-600 hover:underline flex items-center gap-1"
               >
                 <CalendarIcon className="h-3.5 w-3.5" />
-                {calMode ? "Use inputs" : "Open calendar"}
+                {calMode ? tStep2("useInputs") : tStep2("openCalendar")}
               </button>
             )}
           </div>
@@ -668,7 +688,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {/* Check-In */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Check-In Date</label>
+                <label className="block text-xs text-gray-500 mb-1">{tStep2("checkInDate")}</label>
                 <input
                   type="date"
                   className="block w-full rounded-lg border-0 py-2.5 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm"
@@ -680,38 +700,40 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
               {/* Period */}
               <div>
                 <label className="block text-xs text-gray-500 mb-1">
-                  {rateType === "daily" ? "Number of Nights" : "Number of Months"}
+                  {rateType === "daily" ? tStep2("numberOfNights") : tStep2("numberOfMonths")}
                 </label>
                 <div className="flex">
                   <button
                     onClick={() => handlePeriodChange(Math.max(1, period - 1))}
-                    className="flex items-center justify-center w-9 rounded-l-lg border border-r-0 border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 text-sm font-bold"
+                    className="flex items-center justify-center w-9 rounded-s-lg border border-e-0 border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 text-sm font-bold"
                   >−</button>
                   <input
                     type="number"
                     min={1}
                     max={rateType === "daily" ? 730 : 24}
-                    className="block flex-1 min-w-0 border-y border-gray-300 py-2.5 text-center focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+                    className="block flex-1 min-w-0 border-y border-gray-300 py-2.5 text-center focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm ltr-numbers"
                     value={period}
                     onChange={(e) => handlePeriodChange(parseInt(e.target.value) || 1)}
                   />
                   <button
                     onClick={() => handlePeriodChange(period + 1)}
-                    className="flex items-center justify-center w-9 rounded-r-lg border border-l-0 border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 text-sm font-bold"
+                    className="flex items-center justify-center w-9 rounded-e-lg border border-s-0 border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 text-sm font-bold"
                   >+</button>
                 </div>
                 <p className="text-[10px] text-gray-400 mt-0.5 text-center">
-                  {rateType === "monthly" ? "Calendar months only" : "nights"}
+                  {rateType === "monthly" ? tStep2("calendarMonthsOnly") : tStep2("nightsHint")}
                 </p>
               </div>
 
               {/* Check-Out */}
               <div>
-                <label className="block text-xs text-gray-500 mb-1">Check-Out Date</label>
+                <label className="block text-xs text-gray-500 mb-1">{tStep2("checkOutDate")}</label>
                 {rateType === "monthly" ? (
                   <div className="block w-full rounded-lg border-0 py-2.5 px-3 ring-1 ring-inset ring-gray-200 bg-gray-50 sm:text-sm text-gray-700 font-medium">
-                    {endDate || <span className="text-gray-400">Auto-computed</span>}
-                    <div className="text-[10px] text-gray-400 font-normal">Locked — based on check-in + months</div>
+                    {endDate
+                      ? <span className="ltr-numbers">{endDate}</span>
+                      : <span className="text-gray-400">{tStep2("autoComputed")}</span>}
+                    <div className="text-[10px] text-gray-400 font-normal">{tStep2("lockedHint")}</div>
                   </div>
                 ) : (
                   <input
@@ -733,6 +755,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                 onSelect={setCalRange}
                 disabled={{ before: new Date() }}
                 numberOfMonths={2}
+                locale={dateFnsLocale}
                 className="border border-gray-200 rounded-xl p-4"
               />
             </div>
@@ -743,10 +766,10 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
             <div className="rounded-lg bg-blue-50 border border-blue-100 px-4 py-3 text-sm text-blue-700 flex items-center justify-between">
               <span className="font-semibold">
                 {rateType === "daily"
-                  ? `${currentPeriod} night${currentPeriod !== 1 ? "s" : ""}`
-                  : `${currentPeriod} calendar month${currentPeriod !== 1 ? "s" : ""}`}
+                  ? tStep2("nightsSummary", { count: currentPeriod })
+                  : tStep2("monthsSummary", { count: currentPeriod })}
               </span>
-              <span className="text-blue-500 text-xs">{startDate} → {endDate}</span>
+              <span className="text-blue-500 text-xs ltr-numbers">{startDate} → {endDate}</span>
             </div>
           )}
         </div>
@@ -764,25 +787,26 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                   <XMarkIcon className="h-5 w-5 text-white" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-red-800 text-sm">Double-Booking Conflict</p>
-                  <p className="text-sm text-red-700 mt-0.5">
-                    Unit <strong>{conflictError.unitName}</strong> was booked by someone else while you were completing this form.
-                  </p>
+                  <p className="font-semibold text-red-800 text-sm">{tConflict("title")}</p>
+                  <p
+                    className="text-sm text-red-700 mt-0.5"
+                    dangerouslySetInnerHTML={{ __html: tConflict("body", { unitName: conflictError.unitName }) }}
+                  />
                   <div className="mt-2 bg-white border border-red-200 rounded-lg px-3 py-2 text-xs text-gray-700 space-y-0.5">
                     {conflictError.reservationNumber && (
-                      <p>Reservation: <span className="font-mono font-medium">{conflictError.reservationNumber}</span></p>
+                      <p>{tConflict("reservationLabel")} <span className="font-mono font-medium ltr-numbers">{conflictError.reservationNumber}</span></p>
                     )}
-                    <p>Guest: <span className="font-medium">{conflictError.guestName}</span></p>
+                    <p>{tConflict("guestLabel")} <span className="font-medium">{conflictError.guestName}</span></p>
                     <p>
-                      Dates:{" "}
-                      <span className="font-medium">
-                        {new Date(conflictError.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                      {tConflict("datesLabel")}{" "}
+                      <span className="font-medium ltr-numbers">
+                        {format(new Date(conflictError.startDate), "d MMM yyyy", { locale: dateFnsLocale })}
                         {" → "}
-                        {new Date(conflictError.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
+                        {format(new Date(conflictError.endDate), "d MMM yyyy", { locale: dateFnsLocale })}
                       </span>
                     </p>
                   </div>
-                  <p className="text-xs text-red-600 mt-2">Please select a different unit or change the dates.</p>
+                  <p className="text-xs text-red-600 mt-2">{tConflict("hint")}</p>
                 </div>
                 <button
                   onClick={() => setConflictError(null)}
@@ -795,10 +819,10 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
           )}
 
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <h2 className="text-lg font-semibold text-gray-900">Select Units</h2>
+            <h2 className="text-lg font-semibold text-gray-900">{tStep3("title")}</h2>
             {selectedUnits.length > 0 && (
               <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-                {selectedUnits.length} selected
+                {tStep3("selectedCount", { count: selectedUnits.length })}
               </span>
             )}
           </div>
@@ -816,17 +840,17 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                       : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
                   }`}
                 >
-                  {type === "ALL" ? "All Types" : (UNIT_TYPE_LABELS[type] ?? type)}
+                  {type === "ALL" ? tStep3("allTypes") : unitTypeLabel(type)}
                 </button>
               ))}
             </div>
           )}
 
           {unitsLoading && (
-            <div className="text-center py-8 text-gray-500 text-sm">Loading availability…</div>
+            <div className="text-center py-8 text-gray-500 text-sm">{tStep3("loadingAvailability")}</div>
           )}
           {!unitsLoading && filteredUnits.length === 0 && (
-            <div className="text-center py-8 text-gray-500 text-sm">No units found for this property.</div>
+            <div className="text-center py-8 text-gray-500 text-sm">{tStep3("noUnits")}</div>
           )}
 
           {!unitsLoading && (
@@ -866,39 +890,41 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                         <div className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
                           !unit.available ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
                         }`}>
-                          {unit.available ? "Available" : "Occupied"}
+                          {unit.available ? tStep3("available") : tStep3("occupied")}
                         </div>
                         {isSelected && <CheckCircleSolid className="h-5 w-5 text-blue-600 flex-shrink-0" />}
                       </div>
 
                       <h3 className="font-semibold text-gray-900">{unit.name}</h3>
                       <p className="text-xs text-gray-500">
-                        {UNIT_TYPE_LABELS[unit.unitType] ?? unit.unitType}
-                        {unit.floor > 0 ? ` · Floor ${unit.floor}` : ""}
-                        {" · "}{unit.bedrooms}bd / {unit.bathrooms}ba
-                        {unit.area ? ` · ${unit.area} m²` : ""}
+                        {unitTypeLabel(unit.unitType)}
+                        {unit.floor > 0 ? ` · ${tStep3("floorSuffix", { n: unit.floor })}` : ""}
+                        {" · "}<span className="ltr-numbers">{tStep3("bedBath", { bd: unit.bedrooms, ba: unit.bathrooms })}</span>
+                        {unit.area ? ` · ${tStep3("areaSuffix", { area: unit.area })}` : ""}
                       </p>
 
                       {unit.available && (
                         <div className="mt-3 pt-3 border-t border-gray-100 flex items-end justify-between">
                           <div>
-                            <span className={`text-xs ${hasCustom ? "line-through text-gray-400" : "text-gray-500"}`}>
+                            <span className={`text-xs ltr-numbers ${hasCustom ? "line-through text-gray-400" : "text-gray-500"}`}>
                               {rateType === "daily"
-                                ? `${fmtOMR(unit.rateAmount)} / night`
-                                : `${fmtOMR(unit.rateAmount)} / month`}
+                                ? tStep3("perNight", { amount: fmtOMR(unit.rateAmount) })
+                                : tStep3("perMonth", { amount: fmtOMR(unit.rateAmount) })}
                             </span>
                             {unit.priceName && !hasCustom && (
                               <div className="text-[10px] text-yellow-700 font-medium">🌟 {unit.priceName}</div>
                             )}
                             {hasCustom && (
-                              <div className="text-[10px] text-purple-700 font-medium">
-                                ✏ {fmtOMR(displayRate)} / {rateType === "daily" ? "night" : "month"} (custom)
+                              <div className="text-[10px] text-purple-700 font-medium ltr-numbers">
+                                {rateType === "daily"
+                                  ? tStep3("customRateNight", { amount: fmtOMR(displayRate) })
+                                  : tStep3("customRateMonth", { amount: fmtOMR(displayRate) })}
                               </div>
                             )}
                           </div>
-                          <div className="text-right">
-                            <div className="text-base font-bold text-gray-900">{fmtOMR(displaySubtotal)}</div>
-                            <div className="text-[10px] text-gray-400">OMR total</div>
+                          <div className="text-end">
+                            <div className="text-base font-bold text-gray-900 ltr-numbers">{fmtOMR(displaySubtotal)}</div>
+                            <div className="text-[10px] text-gray-400">{tStep3("omrTotal")}</div>
                           </div>
                         </div>
                       )}
@@ -906,13 +932,13 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                       {!unit.available && unit.conflict && (
                         <div className="mt-2 pt-2 border-t border-gray-200">
                           <p className="text-[10px] text-red-600 font-medium">
-                            {unit.conflict.reservationNumber ? `#${unit.conflict.reservationNumber} · ` : ""}
+                            {unit.conflict.reservationNumber ? <span className="ltr-numbers">#{unit.conflict.reservationNumber} · </span> : ""}
                             {unit.conflict.guestName}
                           </p>
-                          <p className="text-[10px] text-gray-400">
-                            {new Date(unit.conflict.startDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                          <p className="text-[10px] text-gray-400 ltr-numbers">
+                            {format(new Date(unit.conflict.startDate), "d MMM", { locale: dateFnsLocale })}
                             {" → "}
-                            {new Date(unit.conflict.endDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
+                            {format(new Date(unit.conflict.endDate), "d MMM", { locale: dateFnsLocale })}
                           </p>
                         </div>
                       )}
@@ -924,7 +950,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                         <div className="flex items-center justify-between">
                           <span className="flex items-center gap-1 text-xs font-medium text-purple-700">
                             <PencilSquareIcon className="h-3.5 w-3.5" />
-                            Custom price (optional)
+                            {tStep3("customPriceLabel")}
                           </span>
                           {hasCustom && (
                             <button
@@ -934,7 +960,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                               }}
                               className="text-[10px] text-gray-400 hover:text-red-500 flex items-center gap-0.5"
                             >
-                              <XMarkIcon className="h-3 w-3" /> Reset
+                              <XMarkIcon className="h-3 w-3" /> {tStep3("reset")}
                             </button>
                           )}
                         </div>
@@ -942,16 +968,16 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                         {/* Rate per night/month */}
                         <div>
                           <label className="block text-[10px] text-gray-500 mb-0.5">
-                            Rate per {rateType === "daily" ? "night" : "month"} (OMR)
+                            {rateType === "daily" ? tStep3("ratePerNight") : tStep3("ratePerMonth")}
                           </label>
                           <input
                             type="number" min={0} step="0.001"
-                            className={`block w-full rounded-lg border-0 py-1.5 px-2.5 text-sm ring-1 ring-inset focus:ring-2 focus:ring-purple-500 ${
+                            className={`block w-full rounded-lg border-0 py-1.5 px-2.5 text-sm ring-1 ring-inset focus:ring-2 focus:ring-purple-500 ltr-numbers ${
                               hasTotal ? "bg-gray-50 ring-gray-200 text-gray-400" : "ring-purple-300"
                             }`}
                             placeholder={hasTotal
-                              ? `≈ ${fmtOMR(displayRate)} (from total)`
-                              : `Default: ${fmtOMR(unit.rateAmount)}`}
+                              ? tStep3("ratePlaceholderFromTotal", { amount: fmtOMR(displayRate) })
+                              : tStep3("ratePlaceholderDefault", { amount: fmtOMR(unit.rateAmount) })}
                             value={hasTotal ? "" : rateStr}
                             disabled={hasTotal}
                             onChange={(e) => {
@@ -964,23 +990,25 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                         {/* OR divider */}
                         <div className="flex items-center gap-2">
                           <div className="flex-1 border-t border-gray-200" />
-                          <span className="text-[10px] font-medium text-gray-400">OR</span>
+                          <span className="text-[10px] font-medium text-gray-400">{tStep3("or")}</span>
                           <div className="flex-1 border-t border-gray-200" />
                         </div>
 
                         {/* Total amount for the full period */}
                         <div>
                           <label className="block text-[10px] text-gray-500 mb-0.5">
-                            Total for full period ({periodCount} {rateType === "daily" ? "nights" : "months"}) (OMR)
+                            {rateType === "daily"
+                              ? tStep3("totalForPeriodNights", { count: periodCount })
+                              : tStep3("totalForPeriodMonths", { count: periodCount })}
                           </label>
                           <input
                             type="number" min={0} step="0.001"
-                            className={`block w-full rounded-lg border-0 py-1.5 px-2.5 text-sm ring-1 ring-inset focus:ring-2 focus:ring-purple-500 ${
+                            className={`block w-full rounded-lg border-0 py-1.5 px-2.5 text-sm ring-1 ring-inset focus:ring-2 focus:ring-purple-500 ltr-numbers ${
                               hasRate ? "bg-gray-50 ring-gray-200 text-gray-400" : "ring-purple-300"
                             }`}
                             placeholder={hasRate
-                              ? `≈ ${fmtOMR(displaySubtotal)} (from rate)`
-                              : `Default: ${fmtOMR(unit.subtotal)}`}
+                              ? tStep3("totalPlaceholderFromRate", { amount: fmtOMR(displaySubtotal) })
+                              : tStep3("totalPlaceholderDefault", { amount: fmtOMR(unit.subtotal) })}
                             value={hasRate ? "" : totalStr}
                             disabled={hasRate}
                             onChange={(e) => {
@@ -1026,12 +1054,12 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                   <h3 className="font-semibold text-gray-900">{unit.name}</h3>
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     {customRate != null && (
-                      <span className="text-xs font-medium bg-purple-100 text-purple-700 rounded-full px-2 py-0.5">Custom rate</span>
+                      <span className="text-xs font-medium bg-purple-100 text-purple-700 rounded-full px-2 py-0.5">{tStep4("customRateBadge")}</span>
                     )}
-                    <span>
+                    <span className="ltr-numbers">
                       {rateType === "daily"
-                        ? `${fmtOMR(customRate ?? unit.rateAmount)} / night`
-                        : `${fmtOMR(customRate ?? unit.rateAmount)} / month`}
+                        ? tStep4("perNight", { amount: fmtOMR(customRate ?? unit.rateAmount) })
+                        : tStep4("perMonth", { amount: fmtOMR(customRate ?? unit.rateAmount) })}
                     </span>
                   </div>
                 </div>
@@ -1039,36 +1067,36 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-xs font-medium text-gray-400 uppercase">
-                      <th className="text-left pb-1">Period</th>
-                      <th className="text-right pb-1">{rateType === "daily" ? "Nights" : "Months"}</th>
-                      <th className="text-right pb-1">Rate</th>
-                      <th className="text-right pb-1">Amount</th>
+                      <th className="text-start pb-1">{tStep4("periodCol")}</th>
+                      <th className="text-end pb-1">{rateType === "daily" ? tStep4("nightsCol") : tStep4("monthsCol")}</th>
+                      <th className="text-end pb-1">{tStep4("rateCol")}</th>
+                      <th className="text-end pb-1">{tStep4("amountCol")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
                     {breakdownRows.map((row, i) => (
                       <tr key={i} className="text-gray-700">
                         <td className="py-1.5">
-                          <div className="text-xs">{row.label}</div>
+                          <div className="text-xs ltr-numbers">{row.label}</div>
                           {row.priceName && !row.isCustom && (
                             <div className="text-[10px] text-yellow-700">🌟 {row.priceName}</div>
                           )}
                           {row.isCustom && (
-                            <div className="text-[10px] text-purple-700">✏ Custom rate</div>
+                            <div className="text-[10px] text-purple-700">{tStep4("customRateRow")}</div>
                           )}
                         </td>
-                        <td className="text-right py-1.5 text-xs">
+                        <td className="text-end py-1.5 text-xs ltr-numbers">
                           {rateType === "daily" ? row.nights : 1}
                         </td>
-                        <td className="text-right py-1.5 text-xs">{fmtOMR(row.rate)}</td>
-                        <td className="text-right py-1.5 font-medium">{fmtOMR(row.subtotal)}</td>
+                        <td className="text-end py-1.5 text-xs ltr-numbers">{fmtOMR(row.rate)}</td>
+                        <td className="text-end py-1.5 font-medium ltr-numbers">{fmtOMR(row.subtotal)}</td>
                       </tr>
                     ))}
                   </tbody>
                   <tfoot>
                     <tr className="border-t border-gray-200 font-semibold text-gray-900">
-                      <td colSpan={3} className="pt-2 text-xs uppercase text-gray-500">Unit Total</td>
-                      <td className="pt-2 text-right">{fmtOMR(subtotal)}</td>
+                      <td colSpan={3} className="pt-2 text-xs uppercase text-gray-500">{tStep4("unitTotal")}</td>
+                      <td className="pt-2 text-end ltr-numbers">{fmtOMR(subtotal)}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -1078,40 +1106,37 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
 
           {/* Booking details */}
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-4">
-            <h3 className="font-semibold text-gray-900">Booking Details</h3>
+            <h3 className="font-semibold text-gray-900">{tStep4("bookingDetails")}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Discount (OMR)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{tStep4("discount")}</label>
                 <input
                   type="number" min="0" step="0.001"
-                  className="block w-full rounded-lg border-0 py-2.5 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm"
-                  placeholder="0.000"
+                  className="block w-full rounded-lg border-0 py-2.5 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm ltr-numbers"
+                  placeholder={tStep4("discountPlaceholder")}
                   value={discount}
                   onChange={(e) => setDiscount(e.target.value)}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{tStep4("source")}</label>
                 <select
                   className="block w-full rounded-lg border-0 py-2.5 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm"
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
                 >
-                  <option value="walk_in">Walk-In</option>
-                  <option value="referral">Referral</option>
-                  <option value="online">Online</option>
-                  <option value="agent">Agent</option>
-                  <option value="returning">Returning Guest</option>
-                  <option value="corporate_contract">Corporate Contract</option>
+                  {SOURCE_KEYS.map((k) => (
+                    <option key={k} value={k}>{tSrc(k)}</option>
+                  ))}
                 </select>
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{tStep4("notes")}</label>
               <textarea
                 rows={2}
                 className="block w-full rounded-lg border-0 py-2.5 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm resize-none"
-                placeholder="Special requests, internal notes…"
+                placeholder={tStep4("notesPlaceholder")}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
@@ -1122,18 +1147,18 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
           <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-5">
             <div className="space-y-1.5 text-sm">
               <div className="flex justify-between text-gray-700">
-                <span>Subtotal</span>
-                <span>{fmtOMR(grandTotal.totalAmount)} OMR</span>
+                <span>{tStep4("subtotal")}</span>
+                <span className="ltr-numbers">{fmtOMR(grandTotal.totalAmount)} {t("omr")}</span>
               </div>
               {grandTotal.discountAmount > 0 && (
                 <div className="flex justify-between text-green-700">
-                  <span>Discount</span>
-                  <span>− {fmtOMR(grandTotal.discountAmount)} OMR</span>
+                  <span>{tStep4("discountSummary")}</span>
+                  <span className="ltr-numbers">− {fmtOMR(grandTotal.discountAmount)} {t("omr")}</span>
                 </div>
               )}
               <div className="flex justify-between font-bold text-gray-900 text-base pt-2 border-t border-blue-200">
-                <span>Grand Total</span>
-                <span>{fmtOMR(grandTotal.grandTotal)} OMR</span>
+                <span>{tStep4("grandTotal")}</span>
+                <span className="ltr-numbers">{fmtOMR(grandTotal.grandTotal)} {t("omr")}</span>
               </div>
             </div>
           </div>
@@ -1143,14 +1168,14 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
       {/* ── STEP 5: Confirm ────────────────────────────────────────────────── */}
       {step === 5 && (
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-5">
-          <h2 className="text-lg font-semibold text-gray-900">Confirm Booking</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{tStep5("title")}</h2>
 
           {selectedTenant && (
             <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
               <UserIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
               <div>
                 <div className="font-medium text-gray-900">{selectedTenant.firstName} {selectedTenant.lastName}</div>
-                {selectedTenant.phone && <div className="text-sm text-gray-500">{selectedTenant.phone}</div>}
+                {selectedTenant.phone && <div className="text-sm text-gray-500 ltr-numbers">{selectedTenant.phone}</div>}
               </div>
             </div>
           )}
@@ -1158,12 +1183,11 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
           <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-lg border border-gray-100">
             <CalendarIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
             <div>
-              <div className="font-medium text-gray-900">{startDate} → {endDate}</div>
-              <div className="text-sm text-gray-500 capitalize">
+              <div className="font-medium text-gray-900 ltr-numbers">{startDate} → {endDate}</div>
+              <div className="text-sm text-gray-500">
                 {rateType === "daily"
-                  ? `${nights} night${nights !== 1 ? "s" : ""}`
-                  : `${calMonths} calendar month${calMonths !== 1 ? "s" : ""}`}
-                {" "}· {rateType === "daily" ? "Daily" : "Monthly"} rate
+                  ? tStep5("rateLineDaily", { count: nights })
+                  : tStep5("rateLineMonthly", { count: calMonths })}
               </div>
             </div>
           </div>
@@ -1171,16 +1195,16 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
           <div className="p-4 bg-gray-50 rounded-lg border border-gray-100 space-y-1">
             <div className="flex items-center gap-2 mb-2">
               <HomeIcon className="h-5 w-5 text-gray-400" />
-              <span className="font-medium text-gray-900">{selectedUnitObjects.length} Unit{selectedUnitObjects.length !== 1 ? "s" : ""}</span>
+              <span className="font-medium text-gray-900">{tStep5("unitsCount", { count: selectedUnitObjects.length })}</span>
             </div>
             {selectedUnitObjects.map(({ unit, subtotal, customRate }) => (
               <div key={unit.id} className="flex justify-between text-sm text-gray-700">
                 <span>
                   {unit.name}
-                  <span className="text-gray-400 ml-1">({UNIT_TYPE_LABELS[unit.unitType] ?? unit.unitType})</span>
-                  {customRate != null && <span className="ml-1 text-xs text-purple-600">[custom rate]</span>}
+                  <span className="text-gray-400 ms-1">({unitTypeLabel(unit.unitType)})</span>
+                  {customRate != null && <span className="ms-1 text-xs text-purple-600">{tStep5("customRateInline")}</span>}
                 </span>
-                <span className="font-medium">{fmtOMR(subtotal)} OMR</span>
+                <span className="font-medium ltr-numbers">{fmtOMR(subtotal)} {t("omr")}</span>
               </div>
             ))}
           </div>
@@ -1188,9 +1212,9 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
           <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg border border-blue-100">
             <CurrencyDollarIcon className="h-5 w-5 text-blue-500 flex-shrink-0" />
             <div className="flex-1">
-              <div className="font-bold text-gray-900 text-lg">{fmtOMR(grandTotal.grandTotal)} OMR</div>
+              <div className="font-bold text-gray-900 text-lg ltr-numbers">{fmtOMR(grandTotal.grandTotal)} {t("omr")}</div>
               {grandTotal.discountAmount > 0 && (
-                <div className="text-xs text-gray-500">After {fmtOMR(grandTotal.discountAmount)} OMR discount</div>
+                <div className="text-xs text-gray-500">{tStep5("afterDiscount", { amount: fmtOMR(grandTotal.discountAmount) })}</div>
               )}
             </div>
           </div>
@@ -1200,7 +1224,7 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
             disabled={submitting}
             className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors disabled:opacity-60"
           >
-            {submitting ? "Creating…" : "Confirm & Create Reservation"}
+            {submitting ? tStep5("submitting") : tStep5("submit")}
             {!submitting && <CheckCircleIcon className="h-5 w-5" />}
           </button>
         </div>
@@ -1213,8 +1237,8 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
           disabled={step === 1}
           className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          <ChevronLeftIcon className="h-4 w-4" />
-          Back
+          <ChevronLeftIcon className="h-4 w-4 rtl:rotate-180" />
+          {tNav("back")}
         </button>
 
         {step < 5 && (
@@ -1223,8 +1247,8 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
             disabled={!canAdvance()}
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {step === 4 ? "Review & Confirm" : "Next"}
-            <ChevronRightIcon className="h-4 w-4" />
+            {step === 4 ? tNav("reviewConfirm") : tNav("next")}
+            <ChevronRightIcon className="h-4 w-4 rtl:rotate-180" />
           </button>
         )}
       </div>

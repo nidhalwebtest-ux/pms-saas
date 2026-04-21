@@ -80,7 +80,250 @@
     "occupancyRate": "نسبة الإشغال",
     "revenueMTD": "الإيرادات (الشهر الحالي)",
     "outstandingBalance": "الأرصدة المستحقة",
-    "pendingApprovals": "بانتظار الموافقة"
+    "pendingApprovals": "بانتظار الموافقة",
+    "header": {
+      "appName": "OmRent",
+      "version": "v1.0",
+      "viewNotifications": "عرض الإشعارات",
+      "logout": "تسجيل الخروج"
+    },
+    "loading": "جارٍ التحميل…",
+    "today": {
+      "loadFailed": "تعذّر تحميل بيانات اللوحة",
+      "loadingData": "جارٍ تحميل بيانات اليوم…",
+      "noData": "لا توجد بيانات",
+      "stats": {
+        "arrivingToday": "الوصول اليوم",
+        "checkingOut": "المغادرة",
+        "overstays": "تجاوزات الإقامة",
+        "inHouse": "النزلاء الحاليون",
+        "scheduledArrivals": "وصولات مجدولة",
+        "overdueCount": "{count} متأخر",
+        "dueToday": "اليوم",
+        "urgent": "عاجل",
+        "allClear": "لا توجد حالات",
+        "currentlyStaying": "مقيمون حالياً"
+      },
+      "sections": {
+        "arrivingToday": "الوصول اليوم",
+        "checkingOutToday": "المغادرة اليوم",
+        "overstays": "تجاوزات الإقامة",
+        "noArrivals": "لا توجد وصولات مجدولة لليوم",
+        "noCheckouts": "لا توجد مغادرات مجدولة لليوم"
+      },
+      "guest": {
+        "vipBadge": "كبار الشخصيات ⭐",
+        "overdueBadge": "متأخر {days} يوم",
+        "overstayBadge": "تجاوز {days} يوم",
+        "nights": "{count, plural, zero {0 ليلة} one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}}",
+        "balanceWarn": "⚠ {amount}",
+        "balancePaid": "✓ مدفوع",
+        "collect": "تحصيل",
+        "view": "عرض"
+      },
+      "financial": {
+        "title": "النشاط المالي اليوم",
+        "paymentsReceived": "المدفوعات المستلمة",
+        "expenses": "المصروفات",
+        "noExpenses": "لا توجد مصروفات اليوم",
+        "count": "العدد",
+        "total": "الإجمالي",
+        "recordPayment": "تسجيل دفعة",
+        "logExpense": "تسجيل مصروف"
+      },
+      "methods": {
+        "CASH": "نقداً",
+        "CARD": "بطاقة",
+        "BANK_TRANSFER": "تحويل بنكي",
+        "CHEQUE": "شيك",
+        "OTHER": "أخرى"
+      },
+      "activity": {
+        "title": "النشاط الأخير",
+        "allReservations": "جميع الحجوزات",
+        "noActivity": "لا يوجد نشاط خلال آخر 24 ساعة",
+        "viewLink": "عرض ←",
+        "labels": {
+          "CREATED": "تم إنشاء حجز جديد",
+          "CHECKED_IN": "تم تسجيل دخول النزيل",
+          "CHECKED_OUT": "تم تسجيل خروج النزيل",
+          "CANCELLED": "تم إلغاء الحجز",
+          "PAYMENT_RECORDED": "تم تسجيل دفعة",
+          "CHARGE_ADDED": "تم إضافة رسم",
+          "UNIT_CHANGED": "تم تغيير الوحدة",
+          "DATES_CHANGED": "تم تعديل التواريخ",
+          "EXTENDED": "تم تمديد الإقامة",
+          "UNIT_MOVED": "تم نقل النزيل إلى وحدة جديدة",
+          "NOTE_ADDED": "تم إضافة ملاحظة",
+          "NO_SHOW": "تم تسجيل عدم حضور"
+        }
+      }
+    },
+    "receptionist": {
+      "loadFailed": "تعذّر تحميل بيانات الاستقبال",
+      "loading": "جارٍ التحميل…",
+      "noData": "لا توجد بيانات",
+      "tabs": {
+        "occupancy": "الإشغال ({total} وحدة)",
+        "guests": "نزلاء حاليون ({count})",
+        "outstanding": "مستحقة ({count})"
+      },
+      "occupancy": {
+        "totalUnits": "إجمالي الوحدات",
+        "acrossBuildings": "في جميع المباني",
+        "occupied": "مشغول",
+        "reserved": "محجوز",
+        "vacant": "شاغر",
+        "maintenance": "صيانة",
+        "pctOfTotal": "{pct}٪ من الإجمالي",
+        "lowAlert": "{name} بنسبة إشغال {pct}٪ — {vacant, plural, zero {لا توجد وحدات شاغرة} one {وحدة شاغرة واحدة} two {وحدتان شاغرتان} few {# وحدات شاغرة} many {# وحدة شاغرة} other {# وحدة شاغرة}}",
+        "buildingBreakdown": "تفصيل المباني",
+        "table": {
+          "building": "المبنى",
+          "total": "الإجمالي",
+          "occupied": "مشغول",
+          "reserved": "محجوز",
+          "vacant": "شاغر",
+          "maint": "صيانة",
+          "occupancy": "الإشغال"
+        }
+      },
+      "guests": {
+        "searchPlaceholder": "ابحث عن نزلاء أو وحدات أو رقم حجز…",
+        "noMatching": "لا توجد نتائج مطابقة",
+        "noneCheckedIn": "لا يوجد نزلاء مسجلون حالياً",
+        "vip": "VIP",
+        "paid": "✓ مدفوع",
+        "collect": "تحصيل",
+        "view": "عرض",
+        "table": {
+          "guest": "النزيل",
+          "units": "الوحدة/الوحدات",
+          "checkin": "الدخول",
+          "checkout": "الخروج",
+          "nightsLeft": "الليالي المتبقية",
+          "balance": "الرصيد"
+        }
+      },
+      "outstanding": {
+        "totalLabel": "إجمالي المستحق:",
+        "summary": "في {count, plural, zero {لا حجوزات} one {حجز واحد} two {حجزان} few {# حجوزات} many {# حجزاً} other {# حجز}}",
+        "recordPayment": "تسجيل دفعة ←",
+        "searchPlaceholder": "ابحث باسم النزيل أو الوحدة أو رقم الحجز…",
+        "noMatching": "لا توجد نتائج مطابقة",
+        "allSettled": "جميع الأرصدة مسددة",
+        "current": "حالي",
+        "daysSuffix": "{days} يوم",
+        "collect": "تحصيل",
+        "view": "عرض",
+        "table": {
+          "guest": "النزيل",
+          "unit": "الوحدة",
+          "status": "الحالة",
+          "total": "الإجمالي",
+          "paid": "المدفوع",
+          "balance": "الرصيد",
+          "daysOverdue": "أيام التأخير"
+        }
+      }
+    },
+    "manager": {
+      "loadFailed": "تعذّر تحميل بيانات المدير",
+      "loading": "جارٍ تحميل بيانات المدير…",
+      "noData": "لا توجد بيانات",
+      "alerts": {
+        "view": "عرض ←"
+      },
+      "kpis": {
+        "revenueMTD": "الإيرادات (الشهر الحالي)",
+        "expensesMTD": "المصروفات (الشهر الحالي)",
+        "noi": "صافي الدخل (الشهر الحالي)",
+        "occupancyRate": "نسبة الإشغال",
+        "outstanding": "الأرصدة المستحقة",
+        "buildings": "المباني",
+        "lowerBetter": "كلما قلّ كان أفضل",
+        "revenueMinusExpenses": "الإيرادات – المصروفات",
+        "currentlyCheckedIn": "مسجلون حالياً",
+        "outstandingSub": "{count, plural, zero {لا حجوزات} one {حجز واحد} two {حجزان} few {# حجوزات} many {# حجزاً} other {# حجز}}",
+        "totalUnits": "{count} وحدة إجمالاً"
+      },
+      "trend": {
+        "vsLastMonth": "مقارنة بالشهر الماضي"
+      },
+      "charts": {
+        "revenue30": "اتجاه الإيرادات — آخر 30 يوماً",
+        "revenue6m": "الإيرادات — آخر 6 أشهر",
+        "noData": "لا توجد بيانات"
+      },
+      "buildingPerf": {
+        "title": "أداء المباني — {month}",
+        "total": "الإجمالي",
+        "table": {
+          "building": "المبنى",
+          "units": "الوحدات",
+          "occupied": "مشغول",
+          "occupancy": "الإشغال",
+          "revenueMTD": "الإيرادات (الشهر الحالي)",
+          "expensesMTD": "المصروفات (الشهر الحالي)",
+          "noi": "صافي الدخل"
+        }
+      },
+      "expenses": {
+        "title": "تفصيل المصروفات — {month}",
+        "none": "لا توجد مصروفات هذا الشهر",
+        "total": "الإجمالي",
+        "categories": {
+          "UTILITIES": "خدمات",
+          "MAINTENANCE": "صيانة",
+          "SALARY": "رواتب",
+          "MARKETING": "تسويق",
+          "SUPPLIES": "مستلزمات",
+          "OTHER": "أخرى"
+        }
+      },
+      "aging": {
+        "title": "أعمار الذمم المدينة",
+        "viewAll": "عرض الكل ←",
+        "noBalances": "لا توجد أرصدة مستحقة",
+        "current": "حالي",
+        "d1to30": "1–30 يوماً",
+        "d31to60": "31–60 يوماً",
+        "d61to90": "61–90 يوماً",
+        "d90plus": "أكثر من 90 يوماً",
+        "tenants": "{count, plural, zero {لا مستأجرين} one {مستأجر واحد} two {مستأجران} few {# مستأجرين} many {# مستأجراً} other {# مستأجر}}",
+        "urgent": "⚠ عاجل",
+        "totalOutstanding": "إجمالي المستحق"
+      },
+      "team": {
+        "title": "أداء الفريق — {month}",
+        "table": {
+          "rank": "#",
+          "name": "الاسم",
+          "role": "الدور",
+          "reservationsCreated": "حجوزات منشأة",
+          "checkins": "تسجيل الدخول",
+          "checkouts": "تسجيل الخروج",
+          "paymentsLogged": "دفعات مسجلة",
+          "totalActions": "إجمالي العمليات"
+        }
+      }
+    },
+    "modals": {
+      "addNewTenant": "إضافة مستأجر جديد",
+      "addNewProperty": "إضافة عقار جديد",
+      "addNewUnit": "إضافة وحدة جديدة",
+      "quickAddTenant": {
+        "title": "إضافة مستأجر سريعة",
+        "firstName": "الاسم الأول",
+        "lastName": "اسم العائلة",
+        "phone": "رقم الهاتف",
+        "emailOptional": "البريد الإلكتروني (اختياري)",
+        "saving": "جارٍ الحفظ...",
+        "createTenant": "إنشاء مستأجر",
+        "cancel": "إلغاء",
+        "successCreated": "تم إنشاء المستأجر بنجاح!"
+      }
+    }
   },
   "buildings": {
     "title": "المباني",

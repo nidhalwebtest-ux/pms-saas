@@ -1,7 +1,7 @@
 import { BellIcon, ArrowRightStartOnRectangleIcon } from "@heroicons/react/24/outline";
 import { getTranslations } from "next-intl/server";
 import { logout } from "@/app/login/actions";
-import { ROLE_LABELS, ROLE_BADGE, type Role } from "@/lib/permissions";
+import { ROLE_BADGE, type Role } from "@/lib/permissions";
 import PropertySelector from "./PropertySelector";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
@@ -15,18 +15,19 @@ interface Props {
 
 export default async function Header({ userEmail, userName, role, properties, selectedPropertyId }: Props) {
   const displayName = userName || userEmail?.split("@")[0] || "User";
-  const t = await getTranslations("auth");
+  const t      = await getTranslations("dashboard.header");
+  const tRoles = await getTranslations("settings.roles");
 
   return (
     <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8 border-b border-gray-200">
 
-      {/* ── Left: Logo + Property selector ───────────────────────── */}
+      {/* ── Start: Logo + Property selector ───────────────────────── */}
       <div className="flex items-center gap-3 flex-shrink-0">
         <div className="h-8 w-8 rounded-md bg-blue-600 flex items-center justify-center flex-shrink-0">
           <span className="text-white font-bold text-lg">P</span>
         </div>
         <span className="text-lg font-semibold tracking-tight text-gray-900 hidden sm:block">
-          OmRent <span className="text-xs text-gray-400 font-normal">v1.0</span>
+          {t("appName")} <span className="text-xs text-gray-400 font-normal ltr-numbers">{t("version")}</span>
         </span>
 
         {/* Divider */}
@@ -41,10 +42,10 @@ export default async function Header({ userEmail, userName, role, properties, se
         )}
       </div>
 
-      {/* ── Right: notifications + language + user + logout ─────── */}
+      {/* ── End: notifications + language + user + logout ─────── */}
       <div className="flex items-center gap-3 lg:gap-4 flex-shrink-0">
         <button type="button" className="-m-2 p-2 text-gray-400 hover:text-gray-500 transition-colors">
-          <span className="sr-only">View notifications</span>
+          <span className="sr-only">{t("viewNotifications")}</span>
           <BellIcon className="h-5 w-5" aria-hidden="true" />
         </button>
 
@@ -60,7 +61,7 @@ export default async function Header({ userEmail, userName, role, properties, se
           <div className="hidden sm:block text-end">
             <p className="text-sm font-semibold text-gray-900 leading-tight">{displayName}</p>
             <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${ROLE_BADGE[role]}`}>
-              {ROLE_LABELS[role]}
+              {tRoles(role)}
             </span>
           </div>
         </div>
@@ -70,7 +71,7 @@ export default async function Header({ userEmail, userName, role, properties, se
             type="submit"
             className="flex items-center gap-1.5 rounded-md bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
           >
-            <ArrowRightStartOnRectangleIcon className="h-4 w-4" />
+            <ArrowRightStartOnRectangleIcon className="h-4 w-4 rtl:rotate-180" />
             <span className="hidden sm:inline">{t("logout")}</span>
           </button>
         </form>

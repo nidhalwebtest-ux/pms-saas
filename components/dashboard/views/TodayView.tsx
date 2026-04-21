@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format, formatDistanceToNow, parseISO } from "date-fns";
+import { ar as arLocale, enUS as enLocale } from "date-fns/locale";
+import { useTranslations, useLocale } from "next-intl";
 import {
   ArrowRightIcon,
   BanknotesIcon,
@@ -61,21 +63,6 @@ function omr(n: number) {
   return `${n.toFixed(3)} OMR`;
 }
 
-const ACTION_LABELS: Record<string, string> = {
-  CREATED:          "New reservation created",
-  CHECKED_IN:       "Guest checked in",
-  CHECKED_OUT:      "Guest checked out",
-  CANCELLED:        "Reservation cancelled",
-  PAYMENT_RECORDED: "Payment recorded",
-  CHARGE_ADDED:     "Charge added",
-  UNIT_CHANGED:     "Unit changed",
-  DATES_CHANGED:    "Dates modified",
-  EXTENDED:         "Stay extended",
-  UNIT_MOVED:       "Guest moved to new unit",
-  NOTE_ADDED:       "Note added",
-  NO_SHOW:          "No-show recorded",
-};
-
 const ACTION_COLORS: Record<string, string> = {
   CREATED:          "bg-blue-100 text-blue-700",
   CHECKED_IN:       "bg-green-100 text-green-700",
@@ -85,13 +72,7 @@ const ACTION_COLORS: Record<string, string> = {
   NO_SHOW:          "bg-gray-100 text-gray-500",
 };
 
-const METHOD_LABELS: Record<string, string> = {
-  CASH:          "Cash",
-  BANK_TRANSFER: "Bank Transfer",
-  CARD:          "Card",
-  CHEQUE:        "Cheque",
-  OTHER:         "Other",
-};
+const METHOD_KEYS = ["CASH", "CARD", "BANK_TRANSFER", "CHEQUE", "OTHER"] as const;
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -128,6 +109,7 @@ function StatCard({
 }
 
 function GuestRow({ res, type }: { res: ReservationRow; type: "arrival" | "departure" | "overstay" }) {
+  const t = useTranslations("dashboard.today.guest");
   const isOverdue = type === "arrival" && new Date(res.startDate) < new Date(new Date().setHours(0,0,0,0));
   const daysOverdue = isOverdue
     ? Math.floor((Date.now() - new Date(res.startDate).getTime()) / 86400000)
@@ -150,22 +132,22 @@ function GuestRow({ res, type }: { res: ReservationRow; type: "arrival" | "depar
             </span>
             {res.tenant.classification === "vip" && (
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                VIP ⭐
+                {t("vipBadge")}
               </span>
             )}
             {isOverdue && (
               <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
-                OVERDUE {daysOverdue}d
+                {t("overdueBadge", { days: daysOverdue })}
               </span>
             )}
             {type === "overstay" && (
               <span className="rounded-full bg-red-200 px-2 py-0.5 text-xs font-bold text-red-800">
-                OVERSTAY {daysPastEnd}d
+                {t("overstayBadge", { days: daysPastEnd })}
               </span>
             )}
           </div>
           <p className="mt-0.5 text-xs text-gray-500">
-            {res.tenant.phone && <span className="mr-2">{res.tenant.phone}</span>}
+            {res.tenant.phone && <span className="me-2 ltr-numbers">{res.tenant.phone}</span>}
             {res.unitNames.join(", ")}
             {" · "}
             {res.propertyName}
@@ -173,13 +155,13 @@ function GuestRow({ res, type }: { res: ReservationRow; type: "arrival" | "depar
           <p className="mt-0.5 text-xs text-gray-400">
             {res.reservationNumber ?? "—"}
             {" · "}
-            {res.totalNights} night{res.totalNights !== 1 ? "s" : ""}
+            {t("nights", { count: res.totalNights })}
           </p>
         </div>
-        <div className="flex-shrink-0 text-right space-y-1">
+        <div className="flex-shrink-0 text-end space-y-1">
           {(type === "departure" || type === "overstay") && (
             <div className={`text-sm font-semibold ${res.balance > 0.001 ? "text-red-600" : "text-green-600"}`}>
-              {res.balance > 0.001 ? `⚠ ${omr(res.balance)}` : "✓ Paid"}
+              {res.balance > 0.001 ? t("balanceWarn", { amount: omr(res.balance) }) : t("balancePaid")}
             </div>
           )}
           <div className="flex gap-1.5 justify-end">
@@ -188,14 +170,14 @@ function GuestRow({ res, type }: { res: ReservationRow; type: "arrival" | "depar
                 href={`/dashboard/payments/new?reservationId=${res.id}`}
                 className="rounded-md bg-green-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-green-700 transition-colors"
               >
-                Collect
+                {t("collect")}
               </Link>
             )}
             <Link
               href={`/dashboard/reservations/${res.id}`}
               className="rounded-md bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 transition-colors"
             >
-              View
+              {t("view")}
             </Link>
           </div>
         </div>
@@ -239,6 +221,16 @@ function SectionCard({
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export function TodayView({ propertyId }: { propertyId: string }) {
+  const t       = useTranslations("dashboard.today");
+  const tStats  = useTranslations("dashboard.today.stats");
+  const tSec    = useTranslations("dashboard.today.sections");
+  const tFin    = useTranslations("dashboard.today.financial");
+  const tMeth   = useTranslations("dashboard.today.methods");
+  const tAct    = useTranslations("dashboard.today.activity");
+  const tActLab = useTranslations("dashboard.today.activity.labels");
+  const locale  = useLocale();
+  const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
+
   const [data, setData]       = useState<TodayData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
@@ -251,11 +243,11 @@ export function TodayView({ propertyId }: { propertyId: string }) {
       setData(await res.json());
       setError(null);
     } catch {
-      setError("Failed to load dashboard data");
+      setError(t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [propertyId]);
+  }, [propertyId, t]);
 
   useEffect(() => {
     fetchData();
@@ -266,13 +258,13 @@ export function TodayView({ propertyId }: { propertyId: string }) {
   if (loading)
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-sm text-gray-400">Loading today&apos;s data…</div>
+        <div className="text-sm text-gray-400">{t("loadingData")}</div>
       </div>
     );
   if (error || !data)
     return (
       <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-        {error ?? "No data"}
+        {error ?? t("noData")}
       </div>
     );
 
@@ -283,33 +275,33 @@ export function TodayView({ propertyId }: { propertyId: string }) {
       {/* ── Stat cards ── */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard
-          label="Arriving Today"
+          label={tStats("arrivingToday")}
           value={data.arrivals.length + data.overdueArrivals.length}
           sub={data.overdueArrivals.length > 0
-            ? `${data.overdueArrivals.length} overdue`
-            : "scheduled arrivals"}
+            ? tStats("overdueCount", { count: data.overdueArrivals.length })
+            : tStats("scheduledArrivals")}
           color="bg-blue-600"
           icon={ArrowDownIcon}
         />
         <StatCard
-          label="Checking Out"
+          label={tStats("checkingOut")}
           value={data.departures.length}
-          sub="due today"
+          sub={tStats("dueToday")}
           color="bg-orange-500"
           icon={ArrowUpIcon}
         />
         <StatCard
-          label="Overstays"
+          label={tStats("overstays")}
           value={data.overstays.length}
-          sub={data.overstays.length > 0 ? "URGENT" : "all clear"}
+          sub={data.overstays.length > 0 ? tStats("urgent") : tStats("allClear")}
           color={data.overstays.length > 0 ? "bg-red-600" : "bg-red-400"}
           icon={ExclamationTriangleIcon}
           pulse
         />
         <StatCard
-          label="In House"
+          label={tStats("inHouse")}
           value={data.inHouseCount}
-          sub="currently staying"
+          sub={tStats("currentlyStaying")}
           color="bg-green-600"
           icon={HomeModernIcon}
         />
@@ -319,10 +311,10 @@ export function TodayView({ propertyId }: { propertyId: string }) {
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Arrivals */}
         <SectionCard
-          title="Arriving Today"
+          title={tSec("arrivingToday")}
           count={allArrivals.length}
           color="bg-blue-500"
-          emptyText="No arrivals scheduled for today"
+          emptyText={tSec("noArrivals")}
         >
           {allArrivals.map((res) => (
             <GuestRow
@@ -336,10 +328,10 @@ export function TodayView({ propertyId }: { propertyId: string }) {
         {/* Departures + Overstays */}
         <div className="space-y-4">
           <SectionCard
-            title="Checking Out Today"
+            title={tSec("checkingOutToday")}
             count={data.departures.length}
             color="bg-orange-500"
-            emptyText="No checkouts scheduled for today"
+            emptyText={tSec("noCheckouts")}
           >
             {data.departures.map((res) => (
               <GuestRow key={res.id} res={res} type="departure" />
@@ -348,7 +340,7 @@ export function TodayView({ propertyId }: { propertyId: string }) {
 
           {data.overstays.length > 0 && (
             <SectionCard
-              title="Overstays"
+              title={tSec("overstays")}
               count={data.overstays.length}
               color="bg-red-500"
               emptyText=""
@@ -368,10 +360,10 @@ export function TodayView({ propertyId }: { propertyId: string }) {
           <div className="flex items-center gap-2 mb-4">
             <BanknotesIcon className="h-5 w-5 text-green-600" />
             <h3 className="text-sm font-semibold text-gray-900">
-              Today&apos;s Financial Activity
+              {tFin("title")}
             </h3>
             <span className="text-xs text-gray-400">
-              {format(new Date(), "d MMM yyyy")}
+              {format(new Date(), "d MMM yyyy", { locale: dateFnsLocale })}
             </span>
           </div>
 
@@ -379,23 +371,23 @@ export function TodayView({ propertyId }: { propertyId: string }) {
             {/* Payments */}
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Payments Received
+                {tFin("paymentsReceived")}
               </p>
               <dl className="space-y-1.5">
-                {(["CASH", "CARD", "BANK_TRANSFER", "CHEQUE", "OTHER"] as const).map(
+                {METHOD_KEYS.map(
                   (method) =>
                     (data.paymentsToday[method] ?? 0) > 0 && (
                       <div key={method} className="flex justify-between text-sm">
-                        <dt className="text-gray-500">{METHOD_LABELS[method]}</dt>
-                        <dd className="font-medium text-gray-900">
+                        <dt className="text-gray-500">{tMeth(method)}</dt>
+                        <dd className="font-medium text-gray-900 ltr-numbers">
                           {omr(data.paymentsToday[method] ?? 0)}
                         </dd>
                       </div>
                     ),
                 )}
                 <div className="flex justify-between text-sm border-t border-gray-100 pt-1.5 mt-1.5">
-                  <dt className="font-semibold text-gray-700">Total</dt>
-                  <dd className="font-bold text-green-700">
+                  <dt className="font-semibold text-gray-700">{tFin("total")}</dt>
+                  <dd className="font-bold text-green-700 ltr-numbers">
                     {omr(data.paymentsToday.total ?? 0)}
                   </dd>
                 </div>
@@ -405,19 +397,19 @@ export function TodayView({ propertyId }: { propertyId: string }) {
             {/* Expenses */}
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                Expenses
+                {tFin("expenses")}
               </p>
               {data.expensesToday.count === 0 ? (
-                <p className="text-sm text-gray-400">No expenses today</p>
+                <p className="text-sm text-gray-400">{tFin("noExpenses")}</p>
               ) : (
                 <dl className="space-y-1.5">
                   <div className="flex justify-between text-sm">
-                    <dt className="text-gray-500">Count</dt>
+                    <dt className="text-gray-500">{tFin("count")}</dt>
                     <dd className="font-medium">{data.expensesToday.count}</dd>
                   </div>
                   <div className="flex justify-between text-sm border-t border-gray-100 pt-1.5 mt-1.5">
-                    <dt className="font-semibold text-gray-700">Total</dt>
-                    <dd className="font-bold text-red-600">
+                    <dt className="font-semibold text-gray-700">{tFin("total")}</dt>
+                    <dd className="font-bold text-red-600 ltr-numbers">
                       {omr(data.expensesToday.total)}
                     </dd>
                   </div>
@@ -431,14 +423,14 @@ export function TodayView({ propertyId }: { propertyId: string }) {
                   className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-100 transition-colors"
                 >
                   <BanknotesIcon className="h-3.5 w-3.5" />
-                  Record Payment
+                  {tFin("recordPayment")}
                 </Link>
                 <Link
                   href="/dashboard/expenses/new"
                   className="flex items-center gap-1.5 rounded-lg bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
                 >
                   <ArrowUpIcon className="h-3.5 w-3.5" />
-                  Log Expense
+                  {tFin("logExpense")}
                 </Link>
               </div>
             </div>
@@ -451,61 +443,65 @@ export function TodayView({ propertyId }: { propertyId: string }) {
             <div className="flex items-center gap-2">
               <ClockIcon className="h-4 w-4 text-gray-400" />
               <h3 className="text-sm font-semibold text-gray-900">
-                Recent Activity
+                {tAct("title")}
               </h3>
             </div>
             <Link
               href="/dashboard/reservations"
               className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800"
             >
-              All reservations
-              <ArrowRightIcon className="h-3 w-3" />
+              {tAct("allReservations")}
+              <ArrowRightIcon className="h-3 w-3 rtl:rotate-180" />
             </Link>
           </div>
 
           {data.recentActivities.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10">
               <UserGroupIcon className="mb-2 h-8 w-8 text-gray-200" />
-              <p className="text-sm text-gray-400">No activity in the last 24 hours</p>
+              <p className="text-sm text-gray-400">{tAct("noActivity")}</p>
             </div>
           ) : (
             <ul className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
-              {data.recentActivities.map((act) => (
-                <li key={act.id} className="px-4 py-2.5 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start gap-2.5">
-                    <span
-                      className={`mt-0.5 inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                        ACTION_COLORS[act.action] ?? "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {ACTION_LABELS[act.action] ?? act.action}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-xs text-gray-600 truncate">
-                    {act.description}
-                  </p>
-                  <div className="mt-0.5 flex items-center gap-2 text-[10px] text-gray-400">
-                    {act.performedBy && (
-                      <span className="font-medium text-gray-500">
-                        {act.performedBy}
-                      </span>
-                    )}
-                    <span>
-                      {formatDistanceToNow(parseISO(act.createdAt), {
-                        addSuffix: true,
-                      })}
-                    </span>
-                    {act.reservationId && (
-                      <Link
-                        href={`/dashboard/reservations/${act.reservationId}`}
-                        className="text-blue-500 hover:text-blue-700"
+              {data.recentActivities.map((act) => {
+                const actionLabel = tActLab.has(act.action) ? tActLab(act.action) : act.action;
+                return (
+                  <li key={act.id} className="px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                    <div className="flex items-start gap-2.5">
+                      <span
+                        className={`mt-0.5 inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                          ACTION_COLORS[act.action] ?? "bg-gray-100 text-gray-500"
+                        }`}
                       >
-                        {act.reservationNumber ?? "View →"}
-                      </Link>
-                    )}
-                  </div>
-                </li>
-              ))}
+                        {actionLabel}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-xs text-gray-600 truncate">
+                      {act.description}
+                    </p>
+                    <div className="mt-0.5 flex items-center gap-2 text-[10px] text-gray-400">
+                      {act.performedBy && (
+                        <span className="font-medium text-gray-500">
+                          {act.performedBy}
+                        </span>
+                      )}
+                      <span>
+                        {formatDistanceToNow(parseISO(act.createdAt), {
+                          addSuffix: true,
+                          locale: dateFnsLocale,
+                        })}
+                      </span>
+                      {act.reservationId && (
+                        <Link
+                          href={`/dashboard/reservations/${act.reservationId}`}
+                          className="text-blue-500 hover:text-blue-700"
+                        >
+                          {act.reservationNumber ?? tAct("viewLink")}
+                        </Link>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>

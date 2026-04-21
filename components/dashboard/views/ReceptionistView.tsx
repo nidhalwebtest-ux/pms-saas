@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
+import { ar as arLocale, enUS as enLocale } from "date-fns/locale";
+import { useTranslations, useLocale } from "next-intl";
 import {
   BuildingOfficeIcon,
   CheckCircleIcon,
@@ -61,8 +63,8 @@ function OccupancyBar({ pct, color = "bg-blue-500" }: { pct: number; color?: str
 }
 
 function UnitCountCard({
-  label, value, total, color, bg,
-}: { label: string; value: number; total: number; color: string; bg: string }) {
+  label, value, total, color, bg, pctLabel,
+}: { label: string; value: number; total: number; color: string; bg: string; pctLabel: string }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
     <div className={`rounded-xl p-4 ${bg}`}>
@@ -70,7 +72,7 @@ function UnitCountCard({
         {label}
       </p>
       <p className={`mt-1 text-3xl font-bold ${color}`}>{value}</p>
-      <p className={`text-xs mt-0.5 ${color} opacity-60`}>{pct}% of total</p>
+      <p className={`text-xs mt-0.5 ${color} opacity-60`}>{pctLabel}</p>
       <OccupancyBar pct={pct} color={color.replace("text-", "bg-")} />
     </div>
   );
@@ -85,6 +87,18 @@ export function ReceptionistView({
   propertyId: string;
   properties: { id: string; name: string }[];
 }) {
+  void properties;
+  const t       = useTranslations("dashboard.receptionist");
+  const tTabs   = useTranslations("dashboard.receptionist.tabs");
+  const tOcc    = useTranslations("dashboard.receptionist.occupancy");
+  const tOccTbl = useTranslations("dashboard.receptionist.occupancy.table");
+  const tG      = useTranslations("dashboard.receptionist.guests");
+  const tGTbl   = useTranslations("dashboard.receptionist.guests.table");
+  const tO      = useTranslations("dashboard.receptionist.outstanding");
+  const tOTbl   = useTranslations("dashboard.receptionist.outstanding.table");
+  const locale  = useLocale();
+  const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
+
   const [data, setData]       = useState<ReceptionistData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
@@ -99,24 +113,24 @@ export function ReceptionistView({
       setData(await res.json());
       setError(null);
     } catch {
-      setError("Failed to load receptionist data");
+      setError(t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [propertyId]);
+  }, [propertyId, t]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   if (loading)
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-sm text-gray-400">Loading…</div>
+        <div className="text-sm text-gray-400">{t("loading")}</div>
       </div>
     );
   if (error || !data)
     return (
       <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-        {error ?? "No data"}
+        {error ?? t("noData")}
       </div>
     );
 
@@ -150,9 +164,9 @@ export function ReceptionistView({
       {/* Sub-tab nav */}
       <div className="flex gap-1 border-b border-gray-200">
         {([
-          ["occupancy",   `Occupancy (${uc.total} units)`],
-          ["guests",      `In House (${uc.occupied})`],
-          ["outstanding", `Outstanding (${outstandingBalances.length})`],
+          ["occupancy",   tTabs("occupancy",   { total: uc.total })],
+          ["guests",      tTabs("guests",      { count: uc.occupied })],
+          ["outstanding", tTabs("outstanding", { count: outstandingBalances.length })],
         ] as [SubTab, string][]).map(([tab, label]) => (
           <button
             key={tab}
@@ -174,14 +188,14 @@ export function ReceptionistView({
           {/* Unit count cards */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <div className="rounded-xl bg-gray-50 p-4 lg:col-span-1">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">Total Units</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">{tOcc("totalUnits")}</p>
               <p className="mt-1 text-3xl font-bold text-gray-900">{uc.total}</p>
-              <p className="text-xs text-gray-400 mt-0.5">across all buildings</p>
+              <p className="text-xs text-gray-400 mt-0.5">{tOcc("acrossBuildings")}</p>
             </div>
-            <UnitCountCard label="Occupied"    value={uc.occupied}    total={uc.total} color="text-red-600"    bg="bg-red-50" />
-            <UnitCountCard label="Reserved"    value={uc.reserved}    total={uc.total} color="text-blue-600"   bg="bg-blue-50" />
-            <UnitCountCard label="Vacant"      value={uc.vacant}      total={uc.total} color="text-green-600"  bg="bg-green-50" />
-            <UnitCountCard label="Maintenance" value={uc.maintenance} total={uc.total} color="text-gray-500"   bg="bg-gray-100" />
+            <UnitCountCard label={tOcc("occupied")}    value={uc.occupied}    total={uc.total} color="text-red-600"    bg="bg-red-50"   pctLabel={tOcc("pctOfTotal", { pct: uc.total > 0 ? Math.round((uc.occupied / uc.total) * 100) : 0 })} />
+            <UnitCountCard label={tOcc("reserved")}    value={uc.reserved}    total={uc.total} color="text-blue-600"   bg="bg-blue-50"  pctLabel={tOcc("pctOfTotal", { pct: uc.total > 0 ? Math.round((uc.reserved / uc.total) * 100) : 0 })} />
+            <UnitCountCard label={tOcc("vacant")}      value={uc.vacant}      total={uc.total} color="text-green-600"  bg="bg-green-50" pctLabel={tOcc("pctOfTotal", { pct: uc.total > 0 ? Math.round((uc.vacant / uc.total) * 100) : 0 })} />
+            <UnitCountCard label={tOcc("maintenance")} value={uc.maintenance} total={uc.total} color="text-gray-500"   bg="bg-gray-100" pctLabel={tOcc("pctOfTotal", { pct: uc.total > 0 ? Math.round((uc.maintenance / uc.total) * 100) : 0 })} />
           </div>
 
           {/* Low-occupancy alert */}
@@ -192,9 +206,8 @@ export function ReceptionistView({
                 {buildingOccupancy
                   .filter((b) => b.occupancyPct < 50 && b.total > 0)
                   .map((b) => (
-                    <span key={b.id} className="mr-3">
-                      <strong>{b.name}</strong> at {b.occupancyPct}% occupancy —{" "}
-                      {b.vacant} vacant unit{b.vacant !== 1 ? "s" : ""}
+                    <span key={b.id} className="me-3">
+                      {tOcc("lowAlert", { name: b.name, pct: b.occupancyPct, vacant: b.vacant })}
                     </span>
                   ))}
               </div>
@@ -206,15 +219,15 @@ export function ReceptionistView({
             <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
               <div className="flex items-center gap-2 border-b border-gray-100 px-5 py-3">
                 <BuildingOfficeIcon className="h-4 w-4 text-gray-400" />
-                <h3 className="text-sm font-semibold text-gray-900">Building Breakdown</h3>
+                <h3 className="text-sm font-semibold text-gray-900">{tOcc("buildingBreakdown")}</h3>
               </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-100">
                   <thead>
                     <tr className="bg-gray-50">
-                      {["Building", "Total", "Occupied", "Reserved", "Vacant", "Maint.", "Occupancy"].map((h) => (
-                        <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                          {h}
+                      {(["building", "total", "occupied", "reserved", "vacant", "maint", "occupancy"] as const).map((k) => (
+                        <th key={k} className="px-4 py-2.5 text-start text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          {tOccTbl(k)}
                         </th>
                       ))}
                     </tr>
@@ -269,13 +282,13 @@ export function ReceptionistView({
         <div className="space-y-4">
           {/* Search */}
           <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <MagnifyingGlassIcon className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search guests, units, reservation number…"
+              placeholder={tG("searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 ps-9 pe-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -283,7 +296,7 @@ export function ReceptionistView({
             <div className="flex flex-col items-center justify-center rounded-xl bg-white py-14 shadow-sm ring-1 ring-gray-900/5">
               <CheckCircleIcon className="mb-2 h-10 w-10 text-gray-200" />
               <p className="text-sm text-gray-400">
-                {search ? "No matching guests" : "No guests currently checked in"}
+                {search ? tG("noMatching") : tG("noneCheckedIn")}
               </p>
             </div>
           ) : (
@@ -292,11 +305,12 @@ export function ReceptionistView({
                 <table className="min-w-full divide-y divide-gray-100">
                   <thead>
                     <tr className="bg-gray-50">
-                      {["Guest", "Unit(s)", "Check-in", "Check-out", "Nights Left", "Balance", ""].map((h) => (
-                        <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                          {h}
+                      {(["guest", "units", "checkin", "checkout", "nightsLeft", "balance"] as const).map((k) => (
+                        <th key={k} className="px-4 py-2.5 text-start text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          {tGTbl(k)}
                         </th>
                       ))}
+                      <th className="px-4 py-2.5" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -307,11 +321,11 @@ export function ReceptionistView({
                             <div>
                               <p className="text-sm font-medium text-gray-900">{g.tenant.name}</p>
                               {g.tenant.phone && (
-                                <p className="text-xs text-gray-400">{g.tenant.phone}</p>
+                                <p className="text-xs text-gray-400 ltr-numbers">{g.tenant.phone}</p>
                               )}
                             </div>
                             {g.tenant.classification === "vip" && (
-                              <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">VIP</span>
+                              <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">{tG("vip")}</span>
                             )}
                           </div>
                         </td>
@@ -320,10 +334,10 @@ export function ReceptionistView({
                           <div className="text-xs text-gray-400">{g.propertyName}</div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                          {format(parseISO(g.startDate), "d MMM")}
+                          {format(parseISO(g.startDate), "d MMM", { locale: dateFnsLocale })}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">
-                          {format(parseISO(g.endDate), "d MMM")}
+                          {format(parseISO(g.endDate), "d MMM", { locale: dateFnsLocale })}
                         </td>
                         <td className="px-4 py-3 text-sm">
                           <span className={`font-semibold ${g.nightsRemaining <= 1 ? "text-orange-600" : "text-gray-700"}`}>
@@ -331,8 +345,8 @@ export function ReceptionistView({
                           </span>
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          <span className={g.balance > 0.001 ? "font-semibold text-red-600" : "text-green-600"}>
-                            {g.balance > 0.001 ? omr(g.balance) : "✓ Paid"}
+                          <span className={g.balance > 0.001 ? "font-semibold text-red-600 ltr-numbers" : "text-green-600"}>
+                            {g.balance > 0.001 ? omr(g.balance) : tG("paid")}
                           </span>
                         </td>
                         <td className="px-4 py-3">
@@ -342,14 +356,14 @@ export function ReceptionistView({
                                 href={`/dashboard/payments/new?reservationId=${g.id}`}
                                 className="rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100 transition-colors"
                               >
-                                Collect
+                                {tG("collect")}
                               </Link>
                             )}
                             <Link
                               href={`/dashboard/reservations/${g.id}`}
                               className="rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
                             >
-                              View
+                              {tG("view")}
                             </Link>
                           </div>
                         </td>
@@ -371,29 +385,29 @@ export function ReceptionistView({
               <div className="flex items-center gap-2">
                 <BanknotesIcon className="h-5 w-5 text-red-500" />
                 <p className="text-sm font-semibold text-red-800">
-                  Total Outstanding:{" "}
-                  <span className="text-red-700">{omr(totalOutstanding)}</span>
-                  {" "}across {outstandingBalances.length} reservation{outstandingBalances.length !== 1 ? "s" : ""}
+                  {tO("totalLabel")}{" "}
+                  <span className="text-red-700 ltr-numbers">{omr(totalOutstanding)}</span>
+                  {" "}{tO("summary", { count: outstandingBalances.length })}
                 </p>
               </div>
               <Link
                 href="/dashboard/payments/new"
                 className="text-sm font-semibold text-red-700 hover:text-red-900"
               >
-                Record payment →
+                {tO("recordPayment")}
               </Link>
             </div>
           )}
 
           {/* Search */}
           <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <MagnifyingGlassIcon className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              placeholder="Search by guest name, unit, or reservation number…"
+              placeholder={tO("searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 ps-9 pe-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
 
@@ -401,7 +415,7 @@ export function ReceptionistView({
             <div className="flex flex-col items-center justify-center rounded-xl bg-white py-14 shadow-sm ring-1 ring-gray-900/5">
               <CheckCircleIcon className="mb-2 h-10 w-10 text-green-300" />
               <p className="text-sm text-gray-400">
-                {search ? "No matching results" : "All balances are settled"}
+                {search ? tO("noMatching") : tO("allSettled")}
               </p>
             </div>
           ) : (
@@ -410,11 +424,12 @@ export function ReceptionistView({
                 <table className="min-w-full divide-y divide-gray-100">
                   <thead>
                     <tr className="bg-gray-50">
-                      {["Guest", "Unit", "Status", "Total", "Paid", "Balance", "Days Overdue", ""].map((h) => (
-                        <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                          {h}
+                      {(["guest", "unit", "status", "total", "paid", "balance", "daysOverdue"] as const).map((k) => (
+                        <th key={k} className="px-4 py-2.5 text-start text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          {tOTbl(k)}
                         </th>
                       ))}
+                      <th className="px-4 py-2.5" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -434,7 +449,7 @@ export function ReceptionistView({
                         <td className="px-4 py-3">
                           <p className="text-sm font-medium text-gray-900">{b.tenant.name}</p>
                           {b.tenant.phone && (
-                            <p className="text-xs text-gray-400">{b.tenant.phone}</p>
+                            <p className="text-xs text-gray-400 ltr-numbers">{b.tenant.phone}</p>
                           )}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">{b.unitName}</td>
@@ -443,9 +458,9 @@ export function ReceptionistView({
                             {b.status.toLowerCase().replace("_", " ")}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{omr(b.grandTotal)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{omr(b.amountPaid)}</td>
-                        <td className="px-4 py-3 text-sm font-bold text-red-600">{omr(b.balance)}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 ltr-numbers">{omr(b.grandTotal)}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600 ltr-numbers">{omr(b.amountPaid)}</td>
+                        <td className="px-4 py-3 text-sm font-bold text-red-600 ltr-numbers">{omr(b.balance)}</td>
                         <td className="px-4 py-3">
                           {b.daysPastCheckout > 0 ? (
                             <span className={`text-sm font-bold ${
@@ -455,10 +470,10 @@ export function ReceptionistView({
                                   ? "text-orange-600"
                                   : "text-amber-600"
                             }`}>
-                              {b.daysPastCheckout}d
+                              {tO("daysSuffix", { days: b.daysPastCheckout })}
                             </span>
                           ) : (
-                            <span className="text-xs text-gray-400">Current</span>
+                            <span className="text-xs text-gray-400">{tO("current")}</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
@@ -467,13 +482,13 @@ export function ReceptionistView({
                               href={`/dashboard/payments/new?reservationId=${b.id}`}
                               className="rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 hover:bg-green-100 transition-colors"
                             >
-                              Collect
+                              {tO("collect")}
                             </Link>
                             <Link
                               href={`/dashboard/reservations/${b.id}`}
                               className="rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
                             >
-                              View
+                              {tO("view")}
                             </Link>
                           </div>
                         </td>

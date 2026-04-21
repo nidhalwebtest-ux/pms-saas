@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
+import { ar as arLocale, enUS as enLocale, type Locale } from "date-fns/locale";
+import { useTranslations, useLocale } from "next-intl";
 import {
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
@@ -61,11 +63,11 @@ const PAD = { l: 56, r: 8, t: 8, b: 28 };
 const PLOT_W = SVG_W - PAD.l - PAD.r;
 const PLOT_H = SVG_H - PAD.t - PAD.b;
 
-function MinimalLineChart({ data }: { data: RevPoint[] }) {
+function MinimalLineChart({ data, noDataLabel, dateFnsLocale }: { data: RevPoint[]; noDataLabel: string; dateFnsLocale: Locale }) {
   const [tip, setTip] = useState<{ x: number; y: number; label: string; val: string } | null>(null);
 
   if (data.length === 0)
-    return <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">No data</div>;
+    return <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">{noDataLabel}</div>;
 
   const maxVal = Math.max(...data.map((d) => d.revenue), 0.001);
   const n = data.length;
@@ -92,7 +94,7 @@ function MinimalLineChart({ data }: { data: RevPoint[] }) {
         ))}
         {xLabelIdxs.map((i) => (
           <text key={i} x={xPx(i)} y={SVG_H - 6} textAnchor="middle" fontSize={9} fill="#9ca3af">
-            {format(parseISO(data[i].date), "d MMM")}
+            {format(parseISO(data[i].date), "d MMM", { locale: dateFnsLocale })}
           </text>
         ))}
         <path d={pathD} fill="none" stroke="#3b82f6" strokeWidth={2} strokeLinejoin="round" />
@@ -110,7 +112,7 @@ function MinimalLineChart({ data }: { data: RevPoint[] }) {
               setTip({
                 x: xPx(i),
                 y: yPx(pt.revenue),
-                label: format(parseISO(pt.date), "d MMM yyyy"),
+                label: format(parseISO(pt.date), "d MMM yyyy", { locale: dateFnsLocale }),
                 val: omr(pt.revenue),
               })
             }
@@ -141,11 +143,11 @@ function MinimalLineChart({ data }: { data: RevPoint[] }) {
   );
 }
 
-function MinimalBarChart({ data }: { data: OccTrendPoint[] }) {
+function MinimalBarChart({ data, noDataLabel }: { data: OccTrendPoint[]; noDataLabel: string }) {
   const [tip, setTip] = useState<{ x: number; y: number; label: string; val: string } | null>(null);
 
   if (data.length === 0)
-    return <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">No data</div>;
+    return <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">{noDataLabel}</div>;
 
   const maxVal = Math.max(...data.map((d) => d.revenue), 0.001);
   const n = data.length;
@@ -220,14 +222,9 @@ function MinimalBarChart({ data }: { data: OccTrendPoint[] }) {
 
 function omr(n: number) { return `${n.toFixed(3)} OMR`; }
 
-const EXP_CAT_LABELS: Record<string, string> = {
-  UTILITIES: "Utilities", MAINTENANCE: "Maintenance", SALARY: "Salary",
-  MARKETING: "Marketing", SUPPLIES: "Supplies", OTHER: "Other",
-};
-
 function TrendBadge({
-  value, inverse = false,
-}: { value: number | null; inverse?: boolean }) {
+  value, inverse = false, vsLastMonthLabel,
+}: { value: number | null; inverse?: boolean; vsLastMonthLabel: string }) {
   if (value === null) return null;
   const positive = inverse ? value < 0 : value > 0;
   const pctStr   = `${value > 0 ? "+" : ""}${value}%`;
@@ -242,16 +239,16 @@ function TrendBadge({
       {positive
         ? <ArrowTrendingUpIcon className="h-3 w-3" />
         : <ArrowTrendingDownIcon className="h-3 w-3" />}
-      {pctStr} vs last month
+      <span className="ltr-numbers">{pctStr}</span> {vsLastMonthLabel}
     </span>
   );
 }
 
 function KpiCard({
-  label, value, trend, inverseTrend = false, sub, color, icon: Icon,
+  label, value, trend, inverseTrend = false, sub, color, icon: Icon, vsLastMonthLabel,
 }: {
   label: string; value: string; trend: number | null; inverseTrend?: boolean;
-  sub?: string; color: string; icon: React.ElementType;
+  sub?: string; color: string; icon: React.ElementType; vsLastMonthLabel: string;
 }) {
   return (
     <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5">
@@ -265,7 +262,7 @@ function KpiCard({
       {sub && <p className="mt-0.5 text-xs text-gray-400">{sub}</p>}
       {trend !== null && (
         <div className="mt-2">
-          <TrendBadge value={trend} inverse={inverseTrend} />
+          <TrendBadge value={trend} inverse={inverseTrend} vsLastMonthLabel={vsLastMonthLabel} />
         </div>
       )}
     </div>
@@ -284,6 +281,23 @@ const ALERT_ICONS: Record<string, string> = {
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export function ManagerView({ propertyId }: { propertyId: string }) {
+  const t        = useTranslations("dashboard.manager");
+  const tKpis    = useTranslations("dashboard.manager.kpis");
+  const tTrend   = useTranslations("dashboard.manager.trend");
+  const tCharts  = useTranslations("dashboard.manager.charts");
+  const tBP      = useTranslations("dashboard.manager.buildingPerf");
+  const tBPTbl   = useTranslations("dashboard.manager.buildingPerf.table");
+  const tExp     = useTranslations("dashboard.manager.expenses");
+  const tExpCat  = useTranslations("dashboard.manager.expenses.categories");
+  const tAge     = useTranslations("dashboard.manager.aging");
+  const tTeam    = useTranslations("dashboard.manager.team");
+  const tTeamTbl = useTranslations("dashboard.manager.team.table");
+  const tAlerts  = useTranslations("dashboard.manager.alerts");
+  const tRoles   = useTranslations("settings.roles");
+  const locale   = useLocale();
+  const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
+  const monthLabel = format(new Date(), "MMMM yyyy", { locale: dateFnsLocale });
+
   const [data, setData]       = useState<ManagerData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
@@ -296,24 +310,24 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
       setData(await res.json());
       setError(null);
     } catch {
-      setError("Failed to load manager data");
+      setError(t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [propertyId]);
+  }, [propertyId, t]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   if (loading)
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-sm text-gray-400">Loading manager data…</div>
+        <div className="text-sm text-gray-400">{t("loading")}</div>
       </div>
     );
   if (error || !data)
     return (
       <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-        {error ?? "No data"}
+        {error ?? t("noData")}
       </div>
     );
 
@@ -340,7 +354,7 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
               </div>
               {a.link && (
                 <Link href={a.link} className="text-sm font-semibold shrink-0 hover:underline">
-                  View →
+                  {tAlerts("view")}
                 </Link>
               )}
             </div>
@@ -351,53 +365,59 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
       {/* ── KPI cards ── */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KpiCard
-          label="Revenue (MTD)"
+          label={tKpis("revenueMTD")}
           value={omr(kpis.revenueMTD)}
           trend={kpis.revenueTrend}
-          sub={format(new Date(), "MMMM yyyy")}
+          sub={monthLabel}
           color="bg-green-100"
           icon={BanknotesIcon}
+          vsLastMonthLabel={tTrend("vsLastMonth")}
         />
         <KpiCard
-          label="Expenses (MTD)"
+          label={tKpis("expensesMTD")}
           value={omr(kpis.expensesMTD)}
           trend={kpis.expensesTrend}
           inverseTrend
-          sub="lower is better"
+          sub={tKpis("lowerBetter")}
           color="bg-red-100"
           icon={ArrowTrendingDownIcon}
+          vsLastMonthLabel={tTrend("vsLastMonth")}
         />
         <KpiCard
-          label="Net Income (MTD)"
+          label={tKpis("noi")}
           value={omr(kpis.noi)}
           trend={kpis.noiTrend}
-          sub="Revenue – Expenses"
+          sub={tKpis("revenueMinusExpenses")}
           color={kpis.noi >= 0 ? "bg-emerald-100" : "bg-red-100"}
           icon={ArrowTrendingUpIcon}
+          vsLastMonthLabel={tTrend("vsLastMonth")}
         />
         <KpiCard
-          label="Occupancy Rate"
+          label={tKpis("occupancyRate")}
           value={`${kpis.occupancyRate}%`}
           trend={null}
-          sub="currently checked in"
+          sub={tKpis("currentlyCheckedIn")}
           color="bg-blue-100"
           icon={HomeModernIcon}
+          vsLastMonthLabel={tTrend("vsLastMonth")}
         />
         <KpiCard
-          label="Outstanding Balances"
+          label={tKpis("outstanding")}
           value={omr(kpis.outstanding)}
           trend={null}
-          sub={`${kpis.outstandingCount} reservation${kpis.outstandingCount !== 1 ? "s" : ""}`}
+          sub={tKpis("outstandingSub", { count: kpis.outstandingCount })}
           color="bg-orange-100"
           icon={ExclamationTriangleIcon}
+          vsLastMonthLabel={tTrend("vsLastMonth")}
         />
         <KpiCard
-          label="Buildings"
+          label={tKpis("buildings")}
           value={String(buildingComparison.length)}
           trend={null}
-          sub={`${buildingComparison.reduce((s, b) => s + b.totalUnits, 0)} total units`}
+          sub={tKpis("totalUnits", { count: buildingComparison.reduce((s, b) => s + b.totalUnits, 0) })}
           color="bg-purple-100"
           icon={BuildingOfficeIcon}
+          vsLastMonthLabel={tTrend("vsLastMonth")}
         />
       </div>
 
@@ -406,17 +426,17 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
         {/* Revenue trend */}
         <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5">
           <h3 className="mb-4 text-sm font-semibold text-gray-900">
-            Revenue Trend — Last 30 Days
+            {tCharts("revenue30")}
           </h3>
-          <MinimalLineChart data={revenueTrend} />
+          <MinimalLineChart data={revenueTrend} noDataLabel={tCharts("noData")} dateFnsLocale={dateFnsLocale} />
         </div>
 
         {/* Revenue by month (6 months) */}
         <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5">
           <h3 className="mb-4 text-sm font-semibold text-gray-900">
-            Revenue — Last 6 Months
+            {tCharts("revenue6m")}
           </h3>
-          <MinimalBarChart data={occupancyTrend} />
+          <MinimalBarChart data={occupancyTrend} noDataLabel={tCharts("noData")} />
         </div>
       </div>
 
@@ -426,16 +446,16 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
           <div className="flex items-center gap-2 border-b border-gray-100 px-5 py-3">
             <BuildingOfficeIcon className="h-4 w-4 text-gray-400" />
             <h3 className="text-sm font-semibold text-gray-900">
-              Building Performance — {format(new Date(), "MMMM yyyy")}
+              {tBP("title", { month: monthLabel })}
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-100">
               <thead>
                 <tr className="bg-gray-50">
-                  {["Building", "Units", "Occupied", "Occupancy", "Revenue (MTD)", "Expenses (MTD)", "NOI"].map((h) => (
-                    <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                      {h}
+                  {(["building", "units", "occupied", "occupancy", "revenueMTD", "expensesMTD", "noi"] as const).map((k) => (
+                    <th key={k} className="px-4 py-2.5 text-start text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      {tBPTbl(k)}
                     </th>
                   ))}
                 </tr>
@@ -457,10 +477,10 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
                         {b.occupancyPct}%
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm font-semibold text-green-700">{omr(b.revenue)}</td>
-                    <td className="px-4 py-3 text-sm text-red-600">{omr(b.expenses)}</td>
+                    <td className="px-4 py-3 text-sm font-semibold text-green-700 ltr-numbers">{omr(b.revenue)}</td>
+                    <td className="px-4 py-3 text-sm text-red-600 ltr-numbers">{omr(b.expenses)}</td>
                     <td className="px-4 py-3 text-sm font-bold">
-                      <span className={b.noi >= 0 ? "text-emerald-700" : "text-red-700"}>
+                      <span className={`ltr-numbers ${b.noi >= 0 ? "text-emerald-700" : "text-red-700"}`}>
                         {omr(b.noi)}
                       </span>
                     </td>
@@ -468,7 +488,7 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
                 ))}
                 {/* Totals row */}
                 <tr className="bg-gray-50 font-semibold">
-                  <td className="px-4 py-3 text-sm text-gray-900">Total</td>
+                  <td className="px-4 py-3 text-sm text-gray-900">{tBP("total")}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">
                     {buildingComparison.reduce((s, b) => s + b.totalUnits, 0)}
                   </td>
@@ -476,13 +496,13 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
                     {buildingComparison.reduce((s, b) => s + b.occupied, 0)}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-700">{kpis.occupancyRate}%</td>
-                  <td className="px-4 py-3 text-sm text-green-700">
+                  <td className="px-4 py-3 text-sm text-green-700 ltr-numbers">
                     {omr(buildingComparison.reduce((s, b) => s + b.revenue, 0))}
                   </td>
-                  <td className="px-4 py-3 text-sm text-red-600">
+                  <td className="px-4 py-3 text-sm text-red-600 ltr-numbers">
                     {omr(buildingComparison.reduce((s, b) => s + b.expenses, 0))}
                   </td>
-                  <td className="px-4 py-3 text-sm text-emerald-700">
+                  <td className="px-4 py-3 text-sm text-emerald-700 ltr-numbers">
                     {omr(buildingComparison.reduce((s, b) => s + b.noi, 0))}
                   </td>
                 </tr>
@@ -497,21 +517,21 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
         {/* Expense breakdown */}
         <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5">
           <h3 className="mb-4 text-sm font-semibold text-gray-900">
-            Expense Breakdown — {format(new Date(), "MMMM yyyy")}
+            {tExp("title", { month: monthLabel })}
           </h3>
           {expenseBreakdown.length === 0 ? (
-            <p className="text-sm text-gray-400">No expenses this month</p>
+            <p className="text-sm text-gray-400">{tExp("none")}</p>
           ) : (
             <div className="space-y-3">
               {expenseBreakdown.map((e) => (
                 <div key={e.category}>
                   <div className="flex items-center justify-between text-sm mb-1">
                     <span className="font-medium text-gray-700">
-                      {EXP_CAT_LABELS[e.category] ?? e.category}
+                      {tExpCat.has(e.category) ? tExpCat(e.category) : e.category}
                     </span>
                     <div className="flex items-center gap-3">
                       <span className="text-gray-500">{e.pct}%</span>
-                      <span className="font-semibold text-gray-900 w-32 text-right">
+                      <span className="font-semibold text-gray-900 w-32 text-end ltr-numbers">
                         {omr(e.amount)}
                       </span>
                     </div>
@@ -525,8 +545,8 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
                 </div>
               ))}
               <div className="flex justify-between border-t border-gray-100 pt-2 mt-2 text-sm font-semibold">
-                <span className="text-gray-700">Total</span>
-                <span className="text-red-600">
+                <span className="text-gray-700">{tExp("total")}</span>
+                <span className="text-red-600 ltr-numbers">
                   {omr(expenseBreakdown.reduce((s, e) => s + e.amount, 0))}
                 </span>
               </div>
@@ -538,43 +558,43 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
         <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold text-gray-900">
-              Aging Receivables
+              {tAge("title")}
             </h3>
             <Link
               href="/dashboard/payments"
               className="text-xs font-medium text-blue-600 hover:text-blue-800"
             >
-              View all →
+              {tAge("viewAll")}
             </Link>
           </div>
 
           {totalAging < 0.001 ? (
-            <p className="text-sm text-gray-400">No outstanding balances</p>
+            <p className="text-sm text-gray-400">{tAge("noBalances")}</p>
           ) : (
             <div className="space-y-3">
               {([
-                ["Current",   "current",  aging.buckets.current,  aging.counts.current,  "bg-blue-400",   false],
-                ["1–30 days", "d1to30",   aging.buckets.d1to30,   aging.counts.d1to30,   "bg-amber-400",  false],
-                ["31–60 days","d31to60",  aging.buckets.d31to60,  aging.counts.d31to60,  "bg-orange-500", false],
-                ["61–90 days","d61to90",  aging.buckets.d61to90,  aging.counts.d61to90,  "bg-red-400",    false],
-                ["90+ days",  "d90plus",  aging.buckets.d90plus,  aging.counts.d90plus,  "bg-red-700",    true],
-              ] as [string, string, number, number, string, boolean][]).map(
-                ([label, , amount, count, barColor, urgent]) => (
-                  <div key={label} className={`rounded-lg p-3 ${urgent && amount > 0.001 ? "bg-red-50 ring-1 ring-red-200" : ""}`}>
+                ["current",  aging.buckets.current,  aging.counts.current,  "bg-blue-400",   false],
+                ["d1to30",   aging.buckets.d1to30,   aging.counts.d1to30,   "bg-amber-400",  false],
+                ["d31to60",  aging.buckets.d31to60,  aging.counts.d31to60,  "bg-orange-500", false],
+                ["d61to90",  aging.buckets.d61to90,  aging.counts.d61to90,  "bg-red-400",    false],
+                ["d90plus",  aging.buckets.d90plus,  aging.counts.d90plus,  "bg-red-700",    true],
+              ] as ["current" | "d1to30" | "d31to60" | "d61to90" | "d90plus", number, number, string, boolean][]).map(
+                ([key, amount, count, barColor, urgent]) => (
+                  <div key={key} className={`rounded-lg p-3 ${urgent && amount > 0.001 ? "bg-red-50 ring-1 ring-red-200" : ""}`}>
                     <div className="flex items-center justify-between text-sm mb-1.5">
                       <div className="flex items-center gap-2">
                         <div className={`h-2.5 w-2.5 rounded-full ${barColor}`} />
-                        <span className="font-medium text-gray-700">{label}</span>
+                        <span className="font-medium text-gray-700">{tAge(key)}</span>
                         {count > 0 && (
                           <span className="text-xs text-gray-400">
-                            {count} tenant{count !== 1 ? "s" : ""}
+                            {tAge("tenants", { count })}
                           </span>
                         )}
                         {urgent && amount > 0.001 && (
-                          <span className="text-xs font-bold text-red-700">⚠ URGENT</span>
+                          <span className="text-xs font-bold text-red-700">{tAge("urgent")}</span>
                         )}
                       </div>
-                      <span className={`font-semibold ${urgent && amount > 0.001 ? "text-red-700" : "text-gray-900"}`}>
+                      <span className={`font-semibold ltr-numbers ${urgent && amount > 0.001 ? "text-red-700" : "text-gray-900"}`}>
                         {omr(amount)}
                       </span>
                     </div>
@@ -592,8 +612,8 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
                 ),
               )}
               <div className="flex justify-between border-t border-gray-100 pt-2 text-sm font-semibold">
-                <span className="text-gray-700">Total Outstanding</span>
-                <span className="text-red-600">{omr(totalAging)}</span>
+                <span className="text-gray-700">{tAge("totalOutstanding")}</span>
+                <span className="text-red-600 ltr-numbers">{omr(totalAging)}</span>
               </div>
             </div>
           )}
@@ -606,16 +626,16 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
           <div className="flex items-center gap-2 border-b border-gray-100 px-5 py-3">
             <UserGroupIcon className="h-4 w-4 text-gray-400" />
             <h3 className="text-sm font-semibold text-gray-900">
-              Team Performance — {format(new Date(), "MMMM yyyy")}
+              {tTeam("title", { month: monthLabel })}
             </h3>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-100">
               <thead>
                 <tr className="bg-gray-50">
-                  {["#", "Name", "Role", "Reservations Created", "Check-ins", "Check-outs", "Payments Logged", "Total Actions"].map((h) => (
-                    <th key={h} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                      {h}
+                  {(["rank", "name", "role", "reservationsCreated", "checkins", "checkouts", "paymentsLogged", "totalActions"] as const).map((k) => (
+                    <th key={k} className="px-4 py-2.5 text-start text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                      {tTeamTbl(k)}
                     </th>
                   ))}
                 </tr>
@@ -634,8 +654,8 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
                     </td>
                     <td className="px-4 py-3 text-sm font-medium text-gray-900">{p.name}</td>
                     <td className="px-4 py-3">
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600 capitalize">
-                        {p.role.toLowerCase()}
+                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                        {tRoles.has(p.role) ? tRoles(p.role) : p.role}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-gray-600">{p.created}</td>

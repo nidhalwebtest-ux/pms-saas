@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import SlideOver from "@/components/ui/SlideOver";
 import UnitForm from "@/components/dashboard/UnitForm";
 import { prisma } from "@/lib/prisma";
@@ -28,8 +29,10 @@ export default async function InterceptedNewUnitPage({
     orderBy: { name: "asc" },
   });
 
+  const t = await getTranslations("dashboard.modals");
+
   return (
-    <SlideOver title="Add New Unit">
+    <SlideOver title={t("addNewUnit")}>
       <div className="pb-10 px-2 sm:px-4">
         <UnitForm properties={properties} defaultPropertyId={propertyId} />
       </div>

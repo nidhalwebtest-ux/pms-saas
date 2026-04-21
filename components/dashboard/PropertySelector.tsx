@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { BuildingOffice2Icon, ChevronDownIcon } from "@heroicons/react/24/outline";
 import { selectProperty } from "@/app/dashboard/actions/select-property";
 
@@ -13,6 +14,7 @@ interface Props {
 export default function PropertySelector({ properties, currentPropertyId }: Props) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const t = useTranslations("dashboard");
 
   const handleChange = (id: string) => {
     startTransition(async () => {
@@ -40,7 +42,7 @@ export default function PropertySelector({ properties, currentPropertyId }: Prop
         disabled={isPending}
         className="appearance-none bg-transparent text-sm font-medium focus:outline-none cursor-pointer max-w-[160px] truncate"
       >
-        <option value="">All Properties</option>
+        <option value="">{t("allProperties")}</option>
         {properties.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}

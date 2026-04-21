@@ -3162,5 +3162,161 @@
     "browsePrefix": "اسحب الصور وأفلتها هنا، أو ",
     "browse": "انقر للاستعراض",
     "constraints": "JPG, PNG, WEBP — بحد أقصى 5 ميجابايت لكل صورة"
+  },
+  "pdfs": {
+    "common": {
+      "tel": "هاتف",
+      "omr": "ر.ع",
+      "country": "عُمان",
+      "dash": "—"
+    },
+    "reservation": {
+      "title": "تأكيد الحجز",
+      "defaultOrgName": "إدارة العقارات",
+      "defaultPropertyDescription": "عقارنا",
+      "printedOn": "طُبع في: {date}",
+      "sections": {
+        "guestInfo": "معلومات الضيف",
+        "stayDetails": "تفاصيل الإقامة",
+        "units": "الوحدات",
+        "financialSummary": "الملخص المالي",
+        "notes": "ملاحظات"
+      },
+      "fields": {
+        "fullName": "الاسم الكامل",
+        "phone": "الهاتف",
+        "idDocument": "وثيقة الهوية",
+        "nationality": "الجنسية",
+        "checkIn": "تسجيل الدخول",
+        "checkOut": "تسجيل الخروج",
+        "duration": "المدة",
+        "rateType": "نوع السعر"
+      },
+      "whatsapp": "واتساب: {number}",
+      "actual": "الفعلي: {date}",
+      "rateTypes": {
+        "monthly": "شهري",
+        "daily": "يومي"
+      },
+      "duration": {
+        "months": "{count, plural, zero {# شهر} one {شهر واحد} two {شهران} few {# أشهر} many {# شهرًا} other {# شهر}}",
+        "nights": "{count, plural, zero {# ليلة} one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}}"
+      },
+      "table": {
+        "unit": "الوحدة",
+        "property": "العقار",
+        "type": "النوع",
+        "rate": "السعر (ر.ع)",
+        "nights": "الليالي",
+        "months": "الأشهر",
+        "subtotal": "المجموع الفرعي (ر.ع)"
+      },
+      "extraCharges": "رسوم إضافية",
+      "discount": "الخصم",
+      "grandTotal": "الإجمالي العام",
+      "grandTotalAmount": "{amount} ر.ع",
+      "paymentsReceived": "المدفوعات المستلمة",
+      "totalPaid": "إجمالي المدفوع",
+      "totalPaidAmount": "{amount} ر.ع",
+      "fullyPaid": "✓ مدفوع بالكامل",
+      "balanceDue": "الرصيد المستحق",
+      "signatures": {
+        "authorizedBy": "اعتمده:",
+        "guestSignature": "توقيع النزيل:"
+      },
+      "footer": {
+        "thankYou": "شكراً لاختياركم {name}"
+      }
+    },
+    "ledger": {
+      "title": "كشف حساب المستأجر",
+      "defaultOrgName": "إدارة العقارات",
+      "defaultCity": "صلالة",
+      "labels": {
+        "tenant": "المستأجر",
+        "contact": "جهة الاتصال",
+        "period": "الفترة"
+      },
+      "transactions": "{count, plural, zero {لا معاملات} one {معاملة واحدة} two {معاملتان} few {# معاملات} many {# معاملة} other {# معاملة}}",
+      "summary": {
+        "totalCharged": "إجمالي المُحمَّل",
+        "totalPaid": "إجمالي المدفوع",
+        "totalReturned": "إجمالي المُرتجع",
+        "balanceDue": "الرصيد المستحق",
+        "invoicesCount": "{count, plural, zero {لا فواتير} one {فاتورة واحدة} two {فاتورتان} few {# فواتير} many {# فاتورة} other {# فاتورة}}",
+        "paymentsCount": "{count, plural, zero {لا مدفوعات} one {دفعة واحدة} two {دفعتان} few {# دفعات} many {# دفعة} other {# دفعة}}",
+        "refundsCount": "{count, plural, zero {لا استردادات} one {استرداد واحد} two {استردادان} few {# استردادات} many {# استرداد} other {# استرداد}}",
+        "outstanding": "مستحق",
+        "credit": "رصيد دائن",
+        "settled": "مُسوّى ✓"
+      },
+      "amountWithCurrency": "ر.ع · {note}",
+      "table": {
+        "date": "التاريخ",
+        "type": "النوع",
+        "description": "الوصف",
+        "reference": "المرجع",
+        "charges": "الرسوم (ر.ع)",
+        "payments": "المدفوعات (ر.ع)",
+        "balance": "الرصيد (ر.ع)"
+      },
+      "types": {
+        "Invoice": "فاتورة",
+        "Payment": "دفعة",
+        "Refund": "استرداد"
+      },
+      "month": "الشهر {n}",
+      "noTransactions": "لا توجد معاملات لهذه الفترة.",
+      "totalsLine": "الإجماليات — {count, plural, zero {لا معاملات} one {معاملة واحدة} two {معاملتان} few {# معاملات} many {# معاملة} other {# معاملة}}",
+      "balanceCell": "{amount} ر.ع",
+      "buttons": {
+        "printSavePdf": "طباعة / حفظ PDF",
+        "close": "إغلاق"
+      },
+      "printedOn": "طُبع في: {date}",
+      "generated": "أُنشئ في {date} · وثيقة سرية",
+      "periodAllTime": "كل الفترات",
+      "periodAll": "الكل",
+      "periodToday": "اليوم",
+      "periodRange": "{from} ← {to}",
+      "footerLocation": "{org} · {city}، عُمان"
+    },
+    "receipt": {
+      "title": "إيصال دفع",
+      "defaultOrgName": "إدارة العقارات",
+      "sections": {
+        "receiptDetails": "تفاصيل الإيصال",
+        "paymentDetails": "تفاصيل الدفع",
+        "amountInWords": "المبلغ كتابةً",
+        "appliedTo": "طُبّق على"
+      },
+      "fields": {
+        "receiptNo": "رقم الإيصال",
+        "date": "التاريخ",
+        "receivedFrom": "المستلم من",
+        "phone": "الهاتف",
+        "amount": "المبلغ",
+        "method": "الطريقة: {method}",
+        "reference": "المرجع:",
+        "notes": "ملاحظات:"
+      },
+      "amountWithCurrency": "{amount} ر.ع",
+      "table": {
+        "invoice": "رقم الفاتورة",
+        "period": "الفترة",
+        "applied": "المُطبَّق (ر.ع)",
+        "status": "الحالة"
+      },
+      "statuses": {
+        "paid": "مدفوع ✓",
+        "partial": "جزئي"
+      },
+      "totalApplied": "إجمالي المُطبَّق: {amount} ر.ع",
+      "footer": {
+        "thankYou": "شكراً لكم على الدفع",
+        "computerGenerated": "إيصال صادر بواسطة النظام",
+        "recordedBy": "سجّله: {name}"
+      }
+    }
   }
 }

@@ -3162,5 +3162,161 @@
     "browsePrefix": "Drag & drop photos here, or ",
     "browse": "click to browse",
     "constraints": "JPG, PNG, WEBP — max 5 MB each"
+  },
+  "pdfs": {
+    "common": {
+      "tel": "Tel",
+      "omr": "OMR",
+      "country": "Oman",
+      "dash": "—"
+    },
+    "reservation": {
+      "title": "Reservation Confirmation",
+      "defaultOrgName": "Property Management",
+      "defaultPropertyDescription": "our property",
+      "printedOn": "Printed: {date}",
+      "sections": {
+        "guestInfo": "Guest Information",
+        "stayDetails": "Stay Details",
+        "units": "Units",
+        "financialSummary": "Financial Summary",
+        "notes": "Notes"
+      },
+      "fields": {
+        "fullName": "Full Name",
+        "phone": "Phone",
+        "idDocument": "ID Document",
+        "nationality": "Nationality",
+        "checkIn": "Check-In",
+        "checkOut": "Check-Out",
+        "duration": "Duration",
+        "rateType": "Rate Type"
+      },
+      "whatsapp": "WhatsApp: {number}",
+      "actual": "Actual: {date}",
+      "rateTypes": {
+        "monthly": "Monthly",
+        "daily": "Daily"
+      },
+      "duration": {
+        "months": "{count, plural, one {# month} other {# months}}",
+        "nights": "{count, plural, one {# night} other {# nights}}"
+      },
+      "table": {
+        "unit": "Unit",
+        "property": "Property",
+        "type": "Type",
+        "rate": "Rate (OMR)",
+        "nights": "Nights",
+        "months": "Months",
+        "subtotal": "Subtotal (OMR)"
+      },
+      "extraCharges": "Extra Charges",
+      "discount": "Discount",
+      "grandTotal": "Grand Total",
+      "grandTotalAmount": "{amount} OMR",
+      "paymentsReceived": "Payments Received",
+      "totalPaid": "Total Paid",
+      "totalPaidAmount": "{amount} OMR",
+      "fullyPaid": "✓ Fully Paid",
+      "balanceDue": "Balance Due",
+      "signatures": {
+        "authorizedBy": "Authorized by:",
+        "guestSignature": "Guest Signature:"
+      },
+      "footer": {
+        "thankYou": "Thank you for choosing {name}"
+      }
+    },
+    "ledger": {
+      "title": "Tenant Statement of Account",
+      "defaultOrgName": "Property Management",
+      "defaultCity": "Salalah",
+      "labels": {
+        "tenant": "Tenant",
+        "contact": "Contact",
+        "period": "Period"
+      },
+      "transactions": "{count, plural, one {# transaction} other {# transactions}}",
+      "summary": {
+        "totalCharged": "Total Charged",
+        "totalPaid": "Total Paid",
+        "totalReturned": "Total Returned",
+        "balanceDue": "Balance Due",
+        "invoicesCount": "{count, plural, one {# invoice} other {# invoices}}",
+        "paymentsCount": "{count, plural, one {# payment} other {# payments}}",
+        "refundsCount": "{count, plural, one {# refund} other {# refunds}}",
+        "outstanding": "Outstanding",
+        "credit": "Credit",
+        "settled": "Settled ✓"
+      },
+      "amountWithCurrency": "OMR · {note}",
+      "table": {
+        "date": "Date",
+        "type": "Type",
+        "description": "Description",
+        "reference": "Reference",
+        "charges": "Charges (OMR)",
+        "payments": "Payments (OMR)",
+        "balance": "Balance (OMR)"
+      },
+      "types": {
+        "Invoice": "Invoice",
+        "Payment": "Payment",
+        "Refund": "Refund"
+      },
+      "month": "Month {n}",
+      "noTransactions": "No transactions for this period.",
+      "totalsLine": "TOTALS — {count, plural, one {# transaction} other {# transactions}}",
+      "balanceCell": "{amount} OMR",
+      "buttons": {
+        "printSavePdf": "Print / Save PDF",
+        "close": "Close"
+      },
+      "printedOn": "Printed: {date}",
+      "generated": "Generated {date} · Confidential document",
+      "periodAllTime": "All time",
+      "periodAll": "All",
+      "periodToday": "Today",
+      "periodRange": "{from} → {to}",
+      "footerLocation": "{org} · {city}, Oman"
+    },
+    "receipt": {
+      "title": "Receipt",
+      "defaultOrgName": "Property Management",
+      "sections": {
+        "receiptDetails": "Receipt Details",
+        "paymentDetails": "Payment Details",
+        "amountInWords": "Amount in Words",
+        "appliedTo": "Applied To"
+      },
+      "fields": {
+        "receiptNo": "Receipt No",
+        "date": "Date",
+        "receivedFrom": "Received From",
+        "phone": "Phone",
+        "amount": "Amount",
+        "method": "Method: {method}",
+        "reference": "Reference:",
+        "notes": "Notes:"
+      },
+      "amountWithCurrency": "{amount} OMR",
+      "table": {
+        "invoice": "Invoice #",
+        "period": "Period",
+        "applied": "Applied (OMR)",
+        "status": "Status"
+      },
+      "statuses": {
+        "paid": "PAID ✓",
+        "partial": "Partial"
+      },
+      "totalApplied": "Total Applied: {amount} OMR",
+      "footer": {
+        "thankYou": "Thank you for your payment",
+        "computerGenerated": "Computer-generated receipt",
+        "recordedBy": "Recorded by: {name}"
+      }
+    }
   }
 }

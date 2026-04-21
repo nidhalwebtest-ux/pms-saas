@@ -1,20 +1,11 @@
 import { NextRequest } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { getPdfLocaleContext } from "@/lib/pdf-i18n";
 
 function roundOMR(n: number): number {
   return Math.round(n * 1000) / 1000;
-}
-
-function fmtDate(d: Date): string {
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-}
-
-function fmtMethod(m: string): string {
-  const map: Record<string, string> = {
-    CASH: "Cash", CARD: "Card", BANK_TRANSFER: "Bank Transfer", CHEQUE: "Cheque",
-  };
-  return map[m] ?? m;
 }
 
 export async function GET(
@@ -86,6 +77,18 @@ export async function GET(
     }),
   ]);
 
+  // ── i18n ──────────────────────────────────────────────────────────────────
+  const { locale, otherLocale, dir, fmtShort } = await getPdfLocaleContext();
+  const t        = await getTranslations({ locale, namespace: "pdfs.ledger" });
+  const tOther   = await getTranslations({ locale: otherLocale, namespace: "pdfs.ledger" });
+  const tCommon  = await getTranslations({ locale, namespace: "pdfs.common" });
+  const tMethods = await getTranslations({ locale, namespace: "payments.methods" });
+
+  const isRtl = dir === "rtl";
+  const secondaryDir = isRtl ? "ltr" : "rtl";
+
+  const fmtMethod = (m: string) => (tMethods.has(m) ? tMethods(m) : m);
+
   // Build transactions
   type TxRow = {
     date: Date; type: "Invoice" | "Payment" | "Refund";
@@ -97,9 +100,9 @@ export async function GET(
 
   for (const inv of invoices) {
     const period = inv.periodStart && inv.periodEnd
-      ? ` (${fmtDate(inv.periodStart)} – ${fmtDate(inv.periodEnd)})`
+      ? ` (${fmtShort(inv.periodStart)} – ${fmtShort(inv.periodEnd)})`
       : "";
-    const month  = inv.monthNumber ? ` — Month ${inv.monthNumber}` : "";
+    const month  = inv.monthNumber ? ` — ${t("month", { n: inv.monthNumber })}` : "";
     rows.push({
       date:        inv.issueDate,
       type:        "Invoice",
@@ -151,17 +154,29 @@ export async function GET(
 
   const tenantName     = `${tenant.firstName} ${tenant.lastName}`;
   const tenantNameAr   = tenant.fullNameArabic ?? "";
-  const printDate      = fmtDate(new Date());
+  const printDate      = fmtShort(new Date());
   const periodLabel    = dateFrom || dateTo
-    ? `${dateFrom ? fmtDate(new Date(dateFrom)) : "All"} → ${dateTo ? fmtDate(new Date(dateTo)) : "Today"}`
-    : "All time";
+    ? t("periodRange", {
+        from: dateFrom ? fmtShort(new Date(dateFrom)) : t("periodAll"),
+        to:   dateTo   ? fmtShort(new Date(dateTo))   : t("periodToday"),
+      })
+    : t("periodAllTime");
+
+  const orgName = org?.name ?? t("defaultOrgName");
+  const orgCity = org?.city ?? t("defaultCity");
+
+  const balanceState = currentBalance > 0
+    ? t("summary.outstanding")
+    : currentBalance < 0
+      ? t("summary.credit")
+      : t("summary.settled");
 
   const html = `<!DOCTYPE html>
-<html lang="en" dir="ltr">
+<html lang="${locale}" dir="${dir}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tenant Ledger — ${tenantName}</title>
+<title>${t("title")} — ${tenantName}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -197,9 +212,10 @@ export async function GET(
     font-size: 8pt;
     color: #6b7280;
     margin-top: 2px;
+    direction: ${secondaryDir};
   }
   .header-right {
-    text-align: right;
+    text-align: ${isRtl ? "left" : "right"};
   }
   .header-right .org-name {
     font-size: 11pt;
@@ -223,13 +239,19 @@ export async function GET(
     border-radius: 6px;
     padding: 10px 14px;
   }
-  .meta-block {}
   .meta-block .label {
     font-size: 7pt;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     color: #9ca3af;
     font-weight: 600;
+  }
+  .meta-block .label .sec {
+    text-transform: none;
+    letter-spacing: 0;
+    color: #cbd5e1;
+    margin-${isRtl ? "right" : "left"}: 4px;
+    direction: ${secondaryDir};
   }
   .meta-block .value {
     font-size: 9.5pt;
@@ -268,6 +290,7 @@ export async function GET(
     font-weight: 700;
     margin-top: 3px;
     color: #111827;
+    direction: ltr;
   }
   .summary-box.charged .s-value { color: #1d4ed8; }
   .summary-box.paid    .s-value { color: #15803d; }
@@ -292,14 +315,14 @@ export async function GET(
   }
   thead th {
     padding: 7px 8px;
-    text-align: left;
+    text-align: ${isRtl ? "right" : "left"};
     font-weight: 600;
     font-size: 7.5pt;
     text-transform: uppercase;
     letter-spacing: 0.4px;
     white-space: nowrap;
   }
-  thead th.num { text-align: right; }
+  thead th.num { text-align: ${isRtl ? "left" : "right"}; }
 
   tbody tr:nth-child(even) { background: #f8fafc; }
   tbody tr:hover           { background: #eff6ff; }
@@ -310,7 +333,7 @@ export async function GET(
     vertical-align: middle;
     color: #374151;
   }
-  tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody td.num { text-align: ${isRtl ? "left" : "right"}; font-variant-numeric: tabular-nums; direction: ltr; }
 
   .badge {
     display: inline-flex;
@@ -343,7 +366,7 @@ export async function GET(
     font-size: 9pt;
     border-top: 2px solid #1e3a8a;
   }
-  tfoot td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tfoot td.num { text-align: ${isRtl ? "left" : "right"}; font-variant-numeric: tabular-nums; direction: ltr; }
 
   /* ── Page footer ── */
   .page-footer {
@@ -365,64 +388,64 @@ export async function GET(
 <body>
 
 <!-- Print button (hidden on print) -->
-<div class="no-print" style="position:fixed;top:12px;right:16px;z-index:99;display:flex;gap:8px;">
-  <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(37,99,235,.35);">Print / Save PDF</button>
-  <button onclick="window.close()" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">Close</button>
+<div class="no-print" style="position:fixed;top:12px;${isRtl ? "left" : "right"}:16px;z-index:99;display:flex;gap:8px;">
+  <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(37,99,235,.35);">${t("buttons.printSavePdf")}</button>
+  <button onclick="window.close()" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">${t("buttons.close")}</button>
 </div>
 
 <!-- Header -->
 <div class="header">
   <div class="header-left">
-    <h1>Tenant Statement of Account</h1>
-    <div class="subtitle">كشف حساب المستأجر</div>
+    <h1>${t("title")}</h1>
+    <div class="subtitle">${tOther("title")}</div>
   </div>
   <div class="header-right">
-    <div class="org-name">${org?.name ?? "Property Management"}</div>
-    <div class="org-sub">${org?.city ?? "Salalah"}, Oman${org?.phone ? ` · ${org.phone}` : ""}</div>
-    <div class="org-sub" style="margin-top:4px;">Printed: ${printDate}</div>
+    <div class="org-name">${orgName}</div>
+    <div class="org-sub">${orgCity}, ${tCommon("country")}${org?.phone ? ` · <span style="direction:ltr">${org.phone}</span>` : ""}</div>
+    <div class="org-sub" style="margin-top:4px;">${t("printedOn", { date: printDate })}</div>
   </div>
 </div>
 
 <!-- Tenant & Period Info -->
 <div class="meta-row">
   <div class="meta-block">
-    <div class="label">Tenant / المستأجر</div>
+    <div class="label">${t("labels.tenant")} <span class="sec">${tOther("labels.tenant")}</span></div>
     <div class="value">${tenantName}</div>
     ${tenantNameAr ? `<div class="value-sub" dir="rtl">${tenantNameAr}</div>` : ""}
   </div>
   <div class="meta-block">
-    <div class="label">Contact</div>
-    <div class="value">${tenant.phone}</div>
-    ${tenant.email ? `<div class="value-sub">${tenant.email}</div>` : ""}
+    <div class="label">${t("labels.contact")} <span class="sec">${tOther("labels.contact")}</span></div>
+    <div class="value" style="direction:ltr">${tenant.phone}</div>
+    ${tenant.email ? `<div class="value-sub" style="direction:ltr">${tenant.email}</div>` : ""}
   </div>
   <div class="meta-block">
-    <div class="label">Period / الفترة</div>
+    <div class="label">${t("labels.period")} <span class="sec">${tOther("labels.period")}</span></div>
     <div class="value">${periodLabel}</div>
-    <div class="value-sub">${finalRows.length} transaction${finalRows.length !== 1 ? "s" : ""}</div>
+    <div class="value-sub">${t("transactions", { count: finalRows.length })}</div>
   </div>
 </div>
 
 <!-- Summary -->
 <div class="summary-row">
   <div class="summary-box charged">
-    <div class="s-label">Total Charged</div>
+    <div class="s-label">${t("summary.totalCharged")}</div>
     <div class="s-value">${totalCharged.toFixed(3)}</div>
-    <div class="s-sub">OMR · ${invoices.length} invoice${invoices.length !== 1 ? "s" : ""}</div>
+    <div class="s-sub">${tCommon("omr")} · ${t("summary.invoicesCount", { count: invoices.length })}</div>
   </div>
   <div class="summary-box paid">
-    <div class="s-label">Total Paid</div>
+    <div class="s-label">${t("summary.totalPaid")}</div>
     <div class="s-value">${totalPaid.toFixed(3)}</div>
-    <div class="s-sub">OMR · ${payments.length} payment${payments.length !== 1 ? "s" : ""}</div>
+    <div class="s-sub">${tCommon("omr")} · ${t("summary.paymentsCount", { count: payments.length })}</div>
   </div>
   <div class="summary-box returned">
-    <div class="s-label">Total Returned</div>
+    <div class="s-label">${t("summary.totalReturned")}</div>
     <div class="s-value">${totalReturned.toFixed(3)}</div>
-    <div class="s-sub">OMR · ${refunds.length} refund${refunds.length !== 1 ? "s" : ""}</div>
+    <div class="s-sub">${tCommon("omr")} · ${t("summary.refundsCount", { count: refunds.length })}</div>
   </div>
   <div class="summary-box balance">
-    <div class="s-label">Balance Due</div>
+    <div class="s-label">${t("summary.balanceDue")}</div>
     <div class="s-value">${currentBalance.toFixed(3)}</div>
-    <div class="s-sub">OMR · ${currentBalance > 0 ? "Outstanding" : currentBalance < 0 ? "Credit" : "Settled ✓"}</div>
+    <div class="s-sub">${tCommon("omr")} · ${balanceState}</div>
   </div>
 </div>
 
@@ -430,49 +453,45 @@ export async function GET(
 <table>
   <thead>
     <tr>
-      <th style="width:90px">Date</th>
-      <th style="width:70px">Type</th>
-      <th>Description</th>
-      <th style="width:90px">Reference</th>
-      <th class="num" style="width:85px">Charges (OMR)</th>
-      <th class="num" style="width:85px">Payments (OMR)</th>
-      <th class="num" style="width:90px">Balance (OMR)</th>
+      <th style="width:90px">${t("table.date")}</th>
+      <th style="width:70px">${t("table.type")}</th>
+      <th>${t("table.description")}</th>
+      <th style="width:90px">${t("table.reference")}</th>
+      <th class="num" style="width:85px">${t("table.charges")}</th>
+      <th class="num" style="width:85px">${t("table.payments")}</th>
+      <th class="num" style="width:90px">${t("table.balance")}</th>
     </tr>
   </thead>
   <tbody>
     ${finalRows.length === 0
-      ? `<tr><td colspan="7" style="text-align:center;padding:20px;color:#9ca3af;">No transactions for this period.</td></tr>`
+      ? `<tr><td colspan="7" style="text-align:center;padding:20px;color:#9ca3af;">${t("noTransactions")}</td></tr>`
       : finalRows.map((row) => `
     <tr>
-      <td style="white-space:nowrap">${fmtDate(row.date)}</td>
-      <td><span class="badge badge-${row.type.toLowerCase()}">${row.type}</span></td>
+      <td style="white-space:nowrap;direction:ltr">${fmtShort(row.date)}</td>
+      <td><span class="badge badge-${row.type.toLowerCase()}">${t(`types.${row.type}`)}</span></td>
       <td>${row.description}</td>
       <td style="color:#6b7280;font-size:8pt">${row.reference}</td>
-      <td class="num">${row.debit > 0 ? `<span class="debit">${row.debit.toFixed(3)}</span>` : '<span style="color:#d1d5db">—</span>'}</td>
-      <td class="num">${row.credit > 0 ? `<span class="credit">${row.credit.toFixed(3)}</span>` : '<span style="color:#d1d5db">—</span>'}</td>
+      <td class="num">${row.debit > 0 ? `<span class="debit">${row.debit.toFixed(3)}</span>` : `<span style="color:#d1d5db">${tCommon("dash")}</span>`}</td>
+      <td class="num">${row.credit > 0 ? `<span class="credit">${row.credit.toFixed(3)}</span>` : `<span style="color:#d1d5db">${tCommon("dash")}</span>`}</td>
       <td class="num ${row.balance > 0 ? "bal-pos" : "bal-zero"}">${row.balance.toFixed(3)}</td>
     </tr>`).join("")}
   </tbody>
   <tfoot>
     <tr>
-      <td colspan="4">TOTALS — ${finalRows.length} transaction${finalRows.length !== 1 ? "s" : ""}</td>
+      <td colspan="4">${t("totalsLine", { count: finalRows.length })}</td>
       <td class="num">${totalCharged.toFixed(3)}</td>
       <td class="num">${totalPaid.toFixed(3)}</td>
-      <td class="num">${currentBalance.toFixed(3)} OMR</td>
+      <td class="num">${t("balanceCell", { amount: currentBalance.toFixed(3) })}</td>
     </tr>
   </tfoot>
 </table>
 
 <!-- Page Footer -->
 <div class="page-footer">
-  <span>${org?.name ?? "PMS"} · Salalah, Oman</span>
-  <span>Generated ${printDate} · Confidential document</span>
+  <span>${t("footerLocation", { org: orgName, city: orgCity })}</span>
+  <span>${t("generated", { date: printDate })}</span>
 </div>
 
-<script>
-  // Auto-focus print dialog when opened in new tab
-  // window.addEventListener('load', () => setTimeout(() => window.print(), 500));
-</script>
 </body>
 </html>`;
 

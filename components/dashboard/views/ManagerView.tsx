@@ -14,6 +14,7 @@ import {
   HomeModernIcon,
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
+import { useFormatCurrency } from "@/lib/org-context";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -65,6 +66,7 @@ const PLOT_H = SVG_H - PAD.t - PAD.b;
 
 function MinimalLineChart({ data, noDataLabel, dateFnsLocale }: { data: RevPoint[]; noDataLabel: string; dateFnsLocale: Locale }) {
   const [tip, setTip] = useState<{ x: number; y: number; label: string; val: string } | null>(null);
+  const omr = useFormatCurrency();
 
   if (data.length === 0)
     return <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">{noDataLabel}</div>;
@@ -145,6 +147,7 @@ function MinimalLineChart({ data, noDataLabel, dateFnsLocale }: { data: RevPoint
 
 function MinimalBarChart({ data, noDataLabel }: { data: OccTrendPoint[]; noDataLabel: string }) {
   const [tip, setTip] = useState<{ x: number; y: number; label: string; val: string } | null>(null);
+  const omr = useFormatCurrency();
 
   if (data.length === 0)
     return <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">{noDataLabel}</div>;
@@ -219,8 +222,6 @@ function MinimalBarChart({ data, noDataLabel }: { data: OccTrendPoint[]; noDataL
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-function omr(n: number) { return `${n.toFixed(3)} OMR`; }
 
 function TrendBadge({
   value, inverse = false, vsLastMonthLabel,
@@ -297,6 +298,7 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
   const locale   = useLocale();
   const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
   const monthLabel = format(new Date(), "MMMM yyyy", { locale: dateFnsLocale });
+  const omr      = useFormatCurrency();
 
   const [data, setData]       = useState<ManagerData | null>(null);
   const [loading, setLoading] = useState(true);

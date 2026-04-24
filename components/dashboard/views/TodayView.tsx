@@ -16,6 +16,7 @@ import {
   ClockIcon,
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
+import { useFormatCurrency } from "@/lib/org-context";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -58,10 +59,6 @@ interface TodayData {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-function omr(n: number) {
-  return `${n.toFixed(3)} OMR`;
-}
 
 const ACTION_COLORS: Record<string, string> = {
   CREATED:          "bg-blue-100 text-blue-700",
@@ -110,6 +107,7 @@ function StatCard({
 
 function GuestRow({ res, type }: { res: ReservationRow; type: "arrival" | "departure" | "overstay" }) {
   const t = useTranslations("dashboard.today.guest");
+  const omr = useFormatCurrency();
   const isOverdue = type === "arrival" && new Date(res.startDate) < new Date(new Date().setHours(0,0,0,0));
   const daysOverdue = isOverdue
     ? Math.floor((Date.now() - new Date(res.startDate).getTime()) / 86400000)
@@ -230,6 +228,7 @@ export function TodayView({ propertyId }: { propertyId: string }) {
   const tActLab = useTranslations("dashboard.today.activity.labels");
   const locale  = useLocale();
   const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
+  const omr     = useFormatCurrency();
 
   const [data, setData]       = useState<TodayData | null>(null);
   const [loading, setLoading] = useState(true);

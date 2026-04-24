@@ -14,6 +14,8 @@ import {
 import { getTranslations, getLocale } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { getCurrentCurrency } from "@/lib/get-org";
+import { formatCurrency } from "@/lib/format-currency";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -113,6 +115,7 @@ export default async function InvoicesPage({
   // ── i18n ──────────────────────────────────────────────────────────────────────
   const locale  = await getLocale();
   const dfLoc   = locale === "ar" ? arLocale : enLocale;
+  const currency = await getCurrentCurrency();
   const t       = await getTranslations("invoices");
   const tStatus = await getTranslations("invoices.statuses");
   const tTabs   = await getTranslations("invoices.tabs");
@@ -398,17 +401,17 @@ export default async function InvoicesPage({
 
                       {/* Total */}
                       <td className="whitespace-nowrap px-3 py-3.5 text-sm text-end font-semibold text-gray-900 ltr-numbers">
-                        {Number(inv.totalAmount).toFixed(3)} OMR
+                        {formatCurrency(inv.totalAmount, currency)}
                       </td>
 
                       {/* Paid */}
                       <td className="whitespace-nowrap px-3 py-3.5 text-sm text-end text-green-600 font-medium ltr-numbers">
-                        {Number(inv.amountPaid).toFixed(3)} OMR
+                        {formatCurrency(inv.amountPaid, currency)}
                       </td>
 
                       {/* Balance */}
                       <td className={`whitespace-nowrap px-3 py-3.5 text-sm text-end font-semibold ltr-numbers ${balanceDue > 0 ? "text-red-600" : "text-gray-400"}`}>
-                        {balanceDue.toFixed(3)} OMR
+                        {formatCurrency(balanceDue, currency)}
                       </td>
 
                       {/* Due Date */}

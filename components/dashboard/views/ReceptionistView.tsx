@@ -12,6 +12,7 @@ import {
   BanknotesIcon,
   CalendarDaysIcon,
 } from "@heroicons/react/24/outline";
+import { useFormatCurrency } from "@/lib/org-context";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -48,8 +49,6 @@ interface ReceptionistData {
 type SubTab = "occupancy" | "guests" | "outstanding";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-function omr(n: number) { return `${n.toFixed(3)} OMR`; }
 
 function OccupancyBar({ pct, color = "bg-blue-500" }: { pct: number; color?: string }) {
   return (
@@ -98,6 +97,7 @@ export function ReceptionistView({
   const tOTbl   = useTranslations("dashboard.receptionist.outstanding.table");
   const locale  = useLocale();
   const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
+  const omr     = useFormatCurrency();
 
   const [data, setData]       = useState<ReceptionistData | null>(null);
   const [loading, setLoading] = useState(true);

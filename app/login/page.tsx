@@ -1,13 +1,9 @@
 import LoginForm from "./LoginForm";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { readAuthFlash } from "@/lib/auth-flash";
 
-export default async function LoginPage(props: {
-  searchParams: Promise<{ error?: string; success?: string; until?: string; remaining?: string }>;
-}) {
-  const params = await props.searchParams;
-
-  const lockoutUntil   = params.until     ? Number(params.until)     : undefined;
-  const remainingAttempts = params.remaining ? Number(params.remaining) : undefined;
+export default async function LoginPage() {
+  const flash = await readAuthFlash();
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 p-4">
@@ -22,10 +18,9 @@ export default async function LoginPage(props: {
       </div>
 
       <LoginForm
-        initialError={params.error}
-        initialSuccess={params.success}
-        lockoutUntil={lockoutUntil}
-        remainingAttempts={remainingAttempts}
+        initialError={flash?.error}
+        initialWarn={flash?.warn}
+        lockoutUntil={flash?.lockoutUntil}
       />
     </div>
   );

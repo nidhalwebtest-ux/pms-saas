@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 import VerifyEmailClient from "./VerifyEmailClient";
+import { readAuthFlash } from "@/lib/auth-flash";
 
 export default async function VerifyEmailPage({
   searchParams,
@@ -8,6 +9,8 @@ export default async function VerifyEmailPage({
 }) {
   const { email } = await searchParams;
   const t = await getTranslations("auth.brand");
+  const flash = await readAuthFlash();
+  const showEmailFailedWarning = flash?.warn === "email_send_failed";
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 p-4">
@@ -35,7 +38,7 @@ export default async function VerifyEmailPage({
           </div>
         </div>
 
-        <VerifyEmailClient email={email ?? ""} />
+        <VerifyEmailClient email={email ?? ""} showDeliveryWarning={showEmailFailedWarning} />
       </div>
     </div>
   );

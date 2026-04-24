@@ -8,10 +8,11 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { sendVerificationEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { LOCALE_COOKIE } from "@/i18n/config";
+import { setAuthFlash } from "@/lib/auth-flash";
 
 // ─── Rate-limit constants ──────────────────────────────────────────────────────
 const WINDOW_MS    = 15 * 60 * 1000; // 15 minutes
-const MAX_ATTEMPTS = 5;
+const MAX_ATTEMPTS = 3;
 
 /**
  * Derive the absolute origin from the incoming request headers.
@@ -36,7 +37,10 @@ export async function login(formData: FormData) {
   const password   = (formData.get("password")   as string | null) ?? "";
   const rememberMe = formData.get("rememberMe") === "on";
 
-  if (!email || !password) redirect("/login?error=invalid_credentials");
+  if (!email || !password) {
+    await setAuthFlash({ error: "invalid_credentials" });
+    redirect("/login");
+  }
 
   // ── Rate limiting ────────────────────────────────────────────────────────────
   const windowStart = new Date(Date.now() - WINDOW_MS);
@@ -54,10 +58,11 @@ export async function login(formData: FormData) {
   });
 
   if (recentAttempts.length >= MAX_ATTEMPTS) {
-    // Lockout ends 15 min after the 5th (oldest) attempt in the window
-    const fifthAttempt  = recentAttempts[MAX_ATTEMPTS - 1];
-    const lockoutUntil  = fifthAttempt.createdAt.getTime() + WINDOW_MS;
-    redirect(`/login?error=too_many_attempts&until=${lockoutUntil}`);
+    // Lockout ends 15 min after the oldest attempt in the limiting window
+    const oldestAttempt = recentAttempts[MAX_ATTEMPTS - 1];
+    const lockoutUntil  = oldestAttempt.createdAt.getTime() + WINDOW_MS;
+    await setAuthFlash({ error: "too_many_attempts", lockoutUntil });
+    redirect("/login");
   }
 
   // ── Attempt login ────────────────────────────────────────────────────────────
@@ -67,17 +72,26 @@ export async function login(formData: FormData) {
     // Record the failure
     await prisma.loginAttempt.create({ data: { email } }).catch(() => {});
 
-    const remaining = MAX_ATTEMPTS - (recentAttempts.length + 1);
     const msg = error.message.toLowerCase();
 
     if (msg.includes("email not confirmed") || msg.includes("not confirmed")) {
       redirect(`/verify-email?email=${encodeURIComponent(email)}`);
     }
-    if (msg.includes("invalid") || msg.includes("credentials") || error.status === 400) {
-      // Pass remaining attempts so the UI can warn the user
-      redirect(`/login?error=invalid_credentials&remaining=${Math.max(0, remaining)}`);
+
+    // After this failure, did we hit the limit?
+    const newCount = recentAttempts.length + 1;
+    if (newCount >= MAX_ATTEMPTS) {
+      const lockoutUntil = Date.now() + WINDOW_MS;
+      await setAuthFlash({ error: "too_many_attempts", lockoutUntil });
+      redirect("/login");
     }
-    redirect("/login?error=server_error");
+
+    if (msg.includes("invalid") || msg.includes("credentials") || error.status === 400) {
+      await setAuthFlash({ error: "invalid_credentials" });
+      redirect("/login");
+    }
+    await setAuthFlash({ error: "server_error" });
+    redirect("/login");
   }
 
   // ── Success — clear attempts ──────────────────────────────────────────────────
@@ -136,12 +150,15 @@ export async function signup(formData: FormData) {
   const email    = (formData.get("email")    as string | null)?.trim() ?? "";
   const password = (formData.get("password") as string | null) ?? "";
 
-  if (!email || !password) redirect("/login?error=invalid_credentials");
+  if (!email || !password) {
+    await setAuthFlash({ error: "invalid_credentials" });
+    redirect("/login");
+  }
 
   // Use admin generateLink — this creates the user AND returns the verification
   // URL in ONE call, without triggering Supabase's own email sending.
   // (calling signUp() first then generateLink() creates two tokens and the
-  //  first one —sent by Supabase— immediately expires when the second is made)
+  //  first one — sent by Supabase — immediately expires when the second is made)
   const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
     type: "signup",
     email,
@@ -156,22 +173,35 @@ export async function signup(formData: FormData) {
       msg.includes("already exists") ||
       msg.includes("already been registered")
     ) {
-      redirect("/login?error=email_exists");
+      await setAuthFlash({ error: "email_exists" });
+      redirect("/login");
     }
     console.error("[signup] generateLink error:", linkError.message);
-    redirect("/login?error=server_error");
+    await setAuthFlash({ error: "server_error" });
+    redirect("/login");
   }
 
   if (!linkData?.properties?.action_link) {
-    redirect("/login?error=server_error");
+    await setAuthFlash({ error: "server_error" });
+    redirect("/login");
   }
 
   // Send the single, valid verification link via Resend REST API — no SMTP.
+  // If sending fails (most often: using onboarding@resend.dev to a non-owner
+  // address, or an unverified domain), surface a warning to the user via the
+  // flash cookie so they know to check spam, contact support, or use the
+  // resend page once their address is allow-listed.
+  let emailDelivered = true;
   try {
     await sendVerificationEmail(email, linkData.properties.action_link);
   } catch (err) {
-    console.error("[signup] Resend send failed:", err);
-    // Non-fatal: user can resend from the verify-email page.
+    emailDelivered = false;
+    const detail = err instanceof Error ? err.message : String(err);
+    console.error("[signup] Resend send failed:", detail);
+  }
+
+  if (!emailDelivered) {
+    await setAuthFlash({ warn: "email_send_failed" });
   }
 
   redirect(`/verify-email?email=${encodeURIComponent(email)}`);
@@ -200,7 +230,10 @@ export async function signInWithGoogle() {
     },
   });
 
-  if (error || !data.url) redirect("/login?error=oauth_error");
+  if (error || !data.url) {
+    await setAuthFlash({ error: "oauth_error" });
+    redirect("/login");
+  }
 
   redirect(data.url);
 }

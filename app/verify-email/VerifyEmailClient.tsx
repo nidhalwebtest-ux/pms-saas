@@ -14,7 +14,13 @@ import {
 
 const RESEND_COOLDOWN = 60; // seconds
 
-export default function VerifyEmailClient({ email }: { email: string }) {
+export default function VerifyEmailClient({
+  email,
+  showDeliveryWarning = false,
+}: {
+  email: string;
+  showDeliveryWarning?: boolean;
+}) {
   const t       = useTranslations("auth.verify");
   const tCommon = useTranslations("auth.common");
   const [countdown, setCountdown] = useState(0);
@@ -79,6 +85,14 @@ export default function VerifyEmailClient({ email }: { email: string }) {
         </div>
 
         <div className="mt-6 space-y-3">
+          {/* Delivery-failure warning carried over from signup */}
+          {showDeliveryWarning && status === "idle" && (
+            <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <ExclamationCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
+              <span>{t("warnEmailFailed")}</span>
+            </div>
+          )}
+
           {/* Success banner */}
           {status === "sent" && (
             <div className="flex items-start gap-2.5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">

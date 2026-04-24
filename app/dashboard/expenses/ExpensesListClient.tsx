@@ -20,6 +20,7 @@ import {
 import RejectExpenseModal from "./modals/RejectExpenseModal";
 import ProcessExpenseModal from "./modals/ProcessExpenseModal";
 import ReceiptLightbox from "./modals/ReceiptLightbox";
+import { useFormatAmount, useOrgCurrency } from "@/lib/org-context";
 
 type Status = "PENDING" | "APPROVED" | "REJECTED" | "PROCESSED";
 
@@ -70,6 +71,8 @@ export default function ExpensesListClient({
   const tTabs = useTranslations("expenses.tabs");
   const locale = useLocale();
   const dfLoc = locale === "ar" ? arLocale : enLocale;
+  const fmtAmount = useFormatAmount();
+  const currency  = useOrgCurrency();
 
   const fmtDate = (d: string | null) => {
     if (!d) return "—";
@@ -231,7 +234,7 @@ export default function ExpensesListClient({
                 </span>
                 {active && total > 0 && (
                   <span className="text-[10px] font-medium opacity-80 ltr-numbers">
-                    · {total.toFixed(3)}
+                    · {fmtAmount(total)}
                   </span>
                 )}
               </button>
@@ -408,9 +411,9 @@ export default function ExpensesListClient({
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-end">
                         <span className="text-sm font-bold text-red-600 tabular-nums ltr-numbers">
-                          {e.amount.toFixed(3)}
+                          {fmtAmount(e.amount)}
                         </span>
-                        <span className="text-[10px] text-gray-400 ms-1">OMR</span>
+                        <span className="text-[10px] text-gray-400 ms-1">{currency}</span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-center">
                         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${cfg.bg} ${cfg.text}`}>
@@ -492,9 +495,9 @@ export default function ExpensesListClient({
                   </td>
                   <td className="px-3 py-3 text-end">
                     <span className="text-sm font-bold text-red-600 tabular-nums ltr-numbers">
-                      {footer.total.toFixed(3)}
+                      {fmtAmount(footer.total)}
                     </span>
-                    <span className="text-xs text-gray-400 ms-1">OMR</span>
+                    <span className="text-xs text-gray-400 ms-1">{currency}</span>
                   </td>
                   <td colSpan={2} />
                 </tr>

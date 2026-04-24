@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useRef } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   BuildingOffice2Icon,
@@ -104,11 +105,13 @@ function StepIndicator({ current }: { current: number }) {
 }
 
 function InputField({
-  label, name, value, onChange, placeholder, type = "text", required, hint,
+  label, name, value, onChange, placeholder, type = "text", required, hint, error,
 }: {
   label: string; name: string; value: string; onChange: (v: string) => void;
   placeholder?: string; type?: string; required?: boolean; hint?: string;
+  error?: string | null;
 }) {
+  const hasError = !!error;
   return (
     <div>
       <label className="block text-sm font-medium text-slate-300 mb-1.5">
@@ -121,9 +124,16 @@ function InputField({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         required={required}
-        className="w-full rounded-xl border border-slate-600 bg-slate-800/60 px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition"
+        aria-invalid={hasError || undefined}
+        className={`w-full rounded-xl border px-4 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 transition ${
+          hasError
+            ? "border-red-500 bg-red-950/40 focus:border-red-500 focus:ring-red-500/30"
+            : "border-slate-600 bg-slate-800/60 focus:border-blue-500 focus:ring-blue-500/30"
+        }`}
       />
-      {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
+      {error
+        ? <p className="mt-1 text-xs text-red-400">{error}</p>
+        : hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
     </div>
   );
 }
@@ -228,8 +238,10 @@ export default function OnboardingWizard() {
   const tStep    = useTranslations("auth.onboarding.steps");
   const tCommon  = useTranslations("auth.common");
 
+  const router = useRouter();
   const [step, setStep] = useState(1);
   const [error, setError]   = useState<string | null>(null);
+  const [fieldError, setFieldError] = useState<{ field: "name" | "city"; message: string } | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const [form, setForm] = useState<FormState>({
@@ -246,20 +258,22 @@ export default function OnboardingWizard() {
   function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
     setError(null);
+    if (fieldError && (key === fieldError.field)) setFieldError(null);
   }
 
   // ── Validate current step before advancing ────────────────────────────────
 
   function validateAndNext() {
     if (step === 1 && !form.name.trim()) {
-      setError(t("errors.nameRequired"));
+      setFieldError({ field: "name", message: t("errors.name_required") });
       return;
     }
     if (step === 2 && !form.city.trim()) {
-      setError(t("errors.cityRequired"));
+      setFieldError({ field: "city", message: t("errors.city_required") });
       return;
     }
     setError(null);
+    setFieldError(null);
     setStep((s) => s + 1);
   }
 
@@ -267,6 +281,7 @@ export default function OnboardingWizard() {
 
   function handleSubmit() {
     setError(null);
+    setFieldError(null);
     startTransition(async () => {
       const fd = new FormData();
       fd.append("name",     form.name.trim());
@@ -278,10 +293,35 @@ export default function OnboardingWizard() {
       fd.append("currency", form.currency);
       if (form.logo) fd.append("logo", form.logo);
 
+      let result;
       try {
-        await createOrganization(fd);
+        result = await createOrganization(fd);
       } catch {
         setError(t("errors.generic"));
+        return;
+      }
+
+      if (result.ok) {
+        router.push("/dashboard");
+        router.refresh();
+        return;
+      }
+
+      const errorKey = `errors.${result.error}` as
+        | "errors.name_required"
+        | "errors.name_too_long"
+        | "errors.duplicate_name"
+        | "errors.city_required"
+        | "errors.generic";
+      const message = t(errorKey);
+      if (result.field === "name") {
+        setStep(1);
+        setFieldError({ field: "name", message });
+      } else if (result.field === "city") {
+        setStep(2);
+        setFieldError({ field: "city", message });
+      } else {
+        setError(message);
       }
     });
   }
@@ -336,6 +376,7 @@ export default function OnboardingWizard() {
               onChange={(v) => set("name", v)}
               placeholder={tCompany("namePlaceholder")}
               required
+              error={fieldError?.field === "name" ? fieldError.message : null}
             />
             <InputField
               label={tCompany("phoneLabel")}
@@ -370,6 +411,7 @@ export default function OnboardingWizard() {
                 onChange={(v) => set("city", v)}
                 placeholder={tLoc("cityPlaceholder")}
                 required
+                error={fieldError?.field === "city" ? fieldError.message : null}
               />
               <InputField
                 label={tLoc("areaLabel")}

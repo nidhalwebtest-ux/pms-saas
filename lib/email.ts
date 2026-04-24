@@ -2,12 +2,16 @@
  * Email utility — calls Resend's REST API directly.
  * No SMTP, no extra packages. Just fetch + your RESEND_API_KEY.
  *
- * Required env var:
+ * Required env vars:
  *   RESEND_API_KEY=re_xxxxxxxxxxxxxxxxx   (from resend.com dashboard)
+ *   RESEND_FROM_EMAIL=OmRent <noreply@yourdomain.com>
  *
  * Sender address:
- *   - During testing:   onboarding@resend.dev  (Resend's shared domain, no DNS needed)
- *   - In production:    noreply@yourdomain.com  (after verifying your domain in Resend)
+ *   - The default `onboarding@resend.dev` ONLY delivers to the email
+ *     registered on the Resend account — every other recipient is dropped.
+ *     If verification emails aren't arriving in production, this is almost
+ *     always the cause: verify a domain in Resend and set
+ *     RESEND_FROM_EMAIL to something like `OmRent <noreply@yourdomain.com>`.
  */
 
 const RESEND_API = "https://api.resend.com/emails";
@@ -38,7 +42,9 @@ export async function sendVerificationEmail(
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Resend API error ${res.status}: ${body}`);
+    throw new Error(
+      `Resend API error ${res.status} (from=${FROM}, to=${to}): ${body}`,
+    );
   }
 }
 
@@ -70,7 +76,9 @@ export async function sendInvitationEmail(
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Resend API error ${res.status}: ${body}`);
+    throw new Error(
+      `Resend API error ${res.status} (from=${FROM}, to=${to}): ${body}`,
+    );
   }
 }
 

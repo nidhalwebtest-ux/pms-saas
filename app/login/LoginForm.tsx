@@ -29,6 +29,8 @@ type ServerErrorKey =
   | "server_error"
   | "session_expired";
 
+type ServerWarnKey = "email_send_failed";
+
 // ─── Password strength ─────────────────────────────────────────────────────────
 
 const PASSWORD_REQUIREMENTS = [
@@ -102,14 +104,12 @@ function GoogleIcon() {
 
 export default function LoginForm({
   initialError,
-  initialSuccess,
+  initialWarn,
   lockoutUntil,
-  remainingAttempts,
 }: {
   initialError?: string;
-  initialSuccess?: string;
+  initialWarn?: string;
   lockoutUntil?: number;   // Unix ms — when the lockout expires
-  remainingAttempts?: number; // how many attempts before lockout
 }) {
   const t        = useTranslations("auth.login");
   const tBrand   = useTranslations("auth.brand");
@@ -117,6 +117,7 @@ export default function LoginForm({
   const tReq     = useTranslations("auth.login.passwordReq");
   const tStr     = useTranslations("auth.login.strength");
   const tErr     = useTranslations("auth.login.serverErrors");
+  const tWarn    = useTranslations("auth.login.serverWarnings");
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [showPassword, setShowPassword] = useState(false);
@@ -131,13 +132,16 @@ export default function LoginForm({
     "invalid_credentials", "email_exists", "email_not_confirmed",
     "oauth_error", "auth_error", "server_error", "session_expired",
   ];
+  const knownWarnKeys: ServerWarnKey[] = ["email_send_failed"];
   const isLockedOut = initialError === "too_many_attempts" && !!lockoutUntil;
   const serverError = (initialError && !isLockedOut)
     ? (knownErrorKeys.includes(initialError as ServerErrorKey)
         ? tErr(initialError as ServerErrorKey)
-        : initialError)
+        : null)
     : null;
-  const serverSuccess = initialSuccess ?? null;
+  const serverWarn = initialWarn && knownWarnKeys.includes(initialWarn as ServerWarnKey)
+    ? tWarn(initialWarn as ServerWarnKey)
+    : null;
   const strength = getStrength(password);
 
   // Reset form state when switching modes
@@ -244,27 +248,15 @@ export default function LoginForm({
         {serverError && (
           <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             <ExclamationCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
-            <div>
-              <span>{serverError}</span>
-              {typeof remainingAttempts === "number" && remainingAttempts > 0 && (
-                <p className="mt-0.5 text-xs text-red-500">
-                  {t("remainingAttempts", { count: remainingAttempts })}
-                </p>
-              )}
-              {typeof remainingAttempts === "number" && remainingAttempts === 0 && (
-                <p className="mt-0.5 text-xs text-red-500 font-medium">
-                  {t("lastAttemptWarning")}
-                </p>
-              )}
-            </div>
+            <span>{serverError}</span>
           </div>
         )}
 
-        {/* Server success */}
-        {serverSuccess && (
-          <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-            <CheckCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
-            <span>{serverSuccess}</span>
+        {/* Server warning (non-blocking — e.g. email not delivered) */}
+        {serverWarn && (
+          <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <ExclamationCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
+            <span>{serverWarn}</span>
           </div>
         )}
 

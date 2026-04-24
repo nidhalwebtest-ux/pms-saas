@@ -6,6 +6,8 @@ import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import { getCurrentCurrency } from "@/lib/get-org";
+import { formatAmount } from "@/lib/format-currency";
 import {
   BanknotesIcon,
   PrinterIcon,
@@ -72,6 +74,7 @@ export default async function PaymentsListPage({
 
   const locale  = await getLocale();
   const dfLoc   = locale === "ar" ? arLocale : enLocale;
+  const currency = await getCurrentCurrency();
   const t       = await getTranslations("payments");
   const tList   = await getTranslations("payments.list");
   const tTabs   = await getTranslations("payments.tabs");
@@ -178,7 +181,7 @@ export default async function PaymentsListPage({
             <p className="mt-0.5 text-sm text-gray-500">
               {tList("summary", {
                 count: payments.length,
-                total: totals.all.toFixed(3),
+                total: formatAmount(totals.all, currency),
               })}
             </p>
           </div>
@@ -300,7 +303,7 @@ export default async function PaymentsListPage({
                         </Link>
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm text-end font-bold text-green-700 ltr-numbers">
-                        {Number(payment.amount).toFixed(3)}
+                        {formatAmount(payment.amount, currency)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm">
                         <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${methodBadge(payment.method)}`}>
@@ -343,14 +346,14 @@ export default async function PaymentsListPage({
                     {tList("totalsLabel", { count: payments.length })}
                   </td>
                   <td className="px-3 py-3 text-end text-sm font-bold text-green-700 ltr-numbers">
-                    {totals.all.toFixed(3)}
+                    {formatAmount(totals.all, currency)}
                   </td>
                   <td className="px-3 py-3 text-sm text-gray-500">
                     <div className="flex flex-col gap-0.5 text-xs">
-                      <span className="text-green-700 ltr-numbers">{tList("cashTotal", { total: totals.CASH.toFixed(3) })}</span>
-                      <span className="text-blue-700 ltr-numbers">{tList("cardTotal", { total: totals.CARD.toFixed(3) })}</span>
-                      <span className="text-purple-700 ltr-numbers">{tList("bankTotal", { total: totals.BANK_TRANSFER.toFixed(3) })}</span>
-                      <span className="text-orange-700 ltr-numbers">{tList("chequeTotal", { total: totals.CHEQUE.toFixed(3) })}</span>
+                      <span className="text-green-700 ltr-numbers">{tList("cashTotal", { total: formatAmount(totals.CASH, currency) })}</span>
+                      <span className="text-blue-700 ltr-numbers">{tList("cardTotal", { total: formatAmount(totals.CARD, currency) })}</span>
+                      <span className="text-purple-700 ltr-numbers">{tList("bankTotal", { total: formatAmount(totals.BANK_TRANSFER, currency) })}</span>
+                      <span className="text-orange-700 ltr-numbers">{tList("chequeTotal", { total: formatAmount(totals.CHEQUE, currency) })}</span>
                     </div>
                   </td>
                   <td colSpan={4} />

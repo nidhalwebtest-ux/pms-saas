@@ -64,8 +64,6 @@
       "lockoutTitle": "Account temporarily locked",
       "lockoutBodyNow": "Too many failed attempts. Try again now.",
       "lockoutBodyIn": "Too many failed attempts. Try again in <b>{time}</b>.",
-      "remainingAttempts": "{count, plural, =0 {No attempts left} one {# attempt left} other {# attempts left}} before 15-minute lockout.",
-      "lastAttemptWarning": "Next failure will lock your account for 15 minutes.",
       "passwordReq": {
         "minLength": "At least 8 characters",
         "uppercase": "One uppercase letter",
@@ -97,7 +95,10 @@
         "server_error": "Something went wrong on our end. Please try again later.",
         "session_expired": "Your session expired due to inactivity. Please sign in again."
       },
-      "terms": "By creating an account you agree to our <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>."
+      "terms": "By creating an account you agree to our <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>.",
+      "serverWarnings": {
+        "email_send_failed": "Account created — but the verification email couldn't be delivered. Check your spam folder, then click \"Resend it\" below. If it still doesn't arrive, contact support."
+      }
     },
     "verify": {
       "title": "Check your inbox",
@@ -109,7 +110,8 @@
       "resendButton": "Resend verification email",
       "errorEmailRequired": "Email address is required.",
       "errorGenerateFailed": "Could not generate a verification link. Make sure you signed up with this email address.",
-      "errorSendFailed": "Failed to send the email. Please try again in a moment."
+      "errorSendFailed": "Failed to send the email. Please try again in a moment.",
+      "warnEmailFailed": "We couldn't deliver the verification email automatically. This can happen with certain free email providers or restricted sender domains. Please click Resend below — and if that fails too, contact support."
     },
     "onboarding": {
       "header": {
@@ -166,9 +168,11 @@
         }
       },
       "errors": {
-        "nameRequired": "Company name is required.",
-        "cityRequired": "City is required.",
-        "generic": "Something went wrong. Please try again."
+        "generic": "Something went wrong. Please try again.",
+        "name_required": "Company name is required.",
+        "name_too_long": "Company name must be 100 characters or fewer.",
+        "duplicate_name": "A company with this name already exists. Try a different name.",
+        "city_required": "City is required."
       },
       "createButton": "Create Workspace",
       "creatingButton": "Creating workspace…",
@@ -213,6 +217,11 @@
         "createFailed": "Failed to create account. Please try again.",
         "createFailedShort": "Failed to create account."
       }
+    },
+    "accessDenied": {
+      "title": "Access denied",
+      "body": "You don't have permission to view this page. If you believe this is a mistake, contact your administrator.",
+      "backToDashboard": "Back to dashboard"
     }
   },
   "nav": {
@@ -3150,6 +3159,27 @@
         "updateFailed": "Failed to update",
         "toggleFailed": "Failed to toggle"
       }
+    },
+    "organization": {
+      "title": "Organization",
+      "subtitle": "Edit your company name, contact details, branding, and preferences.",
+      "nameLabel": "Company name",
+      "phoneLabel": "Phone",
+      "addressLabel": "Address",
+      "cityLabel": "City",
+      "areaLabel": "Area",
+      "timezoneLabel": "Timezone",
+      "currencyLabel": "Currency",
+      "logoLabel": "Logo",
+      "logoUpload": "Click to upload logo",
+      "logoChange": "Click to change logo",
+      "logoRemove": "Remove logo",
+      "logoHint": "PNG, JPG, SVG or WebP — up to 2 MB",
+      "logoTooLarge": "Logo file must be 2 MB or smaller.",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "revert": "Discard changes",
+      "savedToast": "Organization settings saved."
     }
   },
   "photoUpload": {

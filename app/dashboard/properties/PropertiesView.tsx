@@ -3,7 +3,7 @@
 import { useState, useTransition, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations, useLocale } from "next-intl";
 import {
@@ -27,6 +27,7 @@ import {
   ArrowTopRightOnSquareIcon,
   BanknotesIcon,
   HomeIcon,
+  FunnelIcon,
 } from "@heroicons/react/24/outline";
 import { quickUpdateProperty } from "./actions";
 import type { PropertyRow } from "./page";
@@ -448,12 +449,59 @@ function SummaryCard({ property }: { property: PropertyRow }) {
 
 // ── Main Component ───────────────────────────────────────────────────────────
 
+function EmptyState({
+  hasAnyBuildings,
+  hasActiveFilters,
+  clearHref,
+}: {
+  hasAnyBuildings: boolean;
+  hasActiveFilters: boolean;
+  clearHref: string;
+}) {
+  const t = useTranslations("buildings.empty");
+  if (!hasAnyBuildings) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-12">
+        <BuildingOffice2Icon className="h-10 w-10 text-gray-200" />
+        <div className="text-center">
+          <p className="text-sm font-medium text-gray-700">{t("firstTitle")}</p>
+          <p className="mt-1 text-xs text-gray-400">{t("firstBody")}</p>
+        </div>
+        <Link
+          href="/dashboard/properties/new"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition-colors"
+        >
+          <PlusIcon className="h-3.5 w-3.5" />
+          {t("firstCta")}
+        </Link>
+      </div>
+    );
+  }
+  return (
+    <div className="flex flex-col items-center gap-3 py-12">
+      <BuildingOffice2Icon className="h-10 w-10 text-gray-200" />
+      <p className="text-sm text-gray-500">{t("noMatch")}</p>
+      {hasActiveFilters && (
+        <Link
+          href={clearHref}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-blue-300 hover:text-blue-600 transition-colors"
+        >
+          <FunnelIcon className="h-3.5 w-3.5" />
+          {t("clearFilters")}
+        </Link>
+      )}
+    </div>
+  );
+}
+
 export default function PropertiesView({
   properties,
   initialSort,
+  totalUnfiltered,
 }: {
   properties: PropertyRow[];
   initialSort: string;
+  totalUnfiltered: number;
 }) {
   const t       = useTranslations("buildings");
   const tTb     = useTranslations("buildings.toolbar");
@@ -529,6 +577,16 @@ export default function PropertiesView({
 
   const printDate = new Date().toLocaleDateString(locale === "ar" ? "ar-OM" : "en-GB");
   const noUnitsLabel = tTable("noUnits");
+
+  // Distinguish "no buildings exist" vs "filters hide them" so the empty state
+  // can show the right CTA.
+  const searchParams   = useSearchParams();
+  const pathname       = usePathname();
+  const hasActiveFilters =
+    !!searchParams.get("q") ||
+    !!searchParams.get("type") ||
+    (searchParams.get("status") ?? "active") !== "active";
+  const clearFiltersHref = pathname; // strip all params
 
   return (
     <div className="space-y-3">
@@ -633,9 +691,12 @@ export default function PropertiesView({
               <tbody className="divide-y divide-gray-100 bg-white">
                 {sorted.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-16 text-center text-sm text-gray-400">
-                      <BuildingOffice2Icon className="mx-auto mb-3 h-10 w-10 text-gray-200" />
-                      {tTable("noMatch")}
+                    <td colSpan={9}>
+                      <EmptyState
+                        hasAnyBuildings={totalUnfiltered > 0}
+                        hasActiveFilters={hasActiveFilters}
+                        clearHref={clearFiltersHref}
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -774,9 +835,12 @@ export default function PropertiesView({
       {viewMode === "card" && (
         <>
           {sorted.length === 0 ? (
-            <div className="rounded-xl border border-gray-200 bg-white py-16 text-center shadow-sm">
-              <BuildingOffice2Icon className="mx-auto mb-3 h-10 w-10 text-gray-200" />
-              <p className="text-sm text-gray-400">{tTable("noMatch")}</p>
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+              <EmptyState
+                hasAnyBuildings={totalUnfiltered > 0}
+                hasActiveFilters={hasActiveFilters}
+                clearHref={clearFiltersHref}
+              />
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -800,9 +864,12 @@ export default function PropertiesView({
       {viewMode === "summary" && (
         <>
           {sorted.length === 0 ? (
-            <div className="rounded-xl border border-gray-200 bg-white py-16 text-center shadow-sm">
-              <BuildingOffice2Icon className="mx-auto mb-3 h-10 w-10 text-gray-200" />
-              <p className="text-sm text-gray-400">{tTable("noMatch")}</p>
+            <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+              <EmptyState
+                hasAnyBuildings={totalUnfiltered > 0}
+                hasActiveFilters={hasActiveFilters}
+                clearHref={clearFiltersHref}
+              />
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">

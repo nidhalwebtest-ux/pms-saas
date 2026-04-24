@@ -22,17 +22,17 @@ export default async function PropertiesLoading() {
 
   return (
     <div className="space-y-4 animate-in fade-in duration-200" aria-label={t("label")} aria-busy="true">
+      {/* Status tabs skeleton */}
+      <div className="flex flex-wrap gap-1 mb-1">
+        {[60, 80, 80, 80].map((w, i) => (
+          <div key={i} className="h-9 rounded-lg bg-gray-100 animate-pulse" style={{ width: w }} />
+        ))}
+      </div>
       {/* Filter bar skeleton */}
       <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-          <div className="h-8 w-8 rounded-lg bg-gray-100 animate-pulse flex-shrink-0" />
+        <div className="flex items-center gap-3 px-4 py-3">
           <div className="h-9 flex-1 rounded-lg bg-gray-100 animate-pulse" />
-          <div className="h-7 w-16 rounded-md bg-gray-100 animate-pulse" />
-        </div>
-        <div className="flex gap-2 px-4 py-2.5 bg-gray-50/50">
-          {[80, 90, 80, 90, 100].map((w, i) => (
-            <div key={i} className="h-7 rounded-full bg-gray-100 animate-pulse" style={{ width: w }} />
-          ))}
+          <div className="h-9 w-24 rounded-lg bg-gray-100 animate-pulse" />
         </div>
       </div>
 

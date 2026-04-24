@@ -86,8 +86,15 @@ export default async function PropertiesPage({
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // Run both queries in parallel
-  const [raw, paymentsThisMonth] = await Promise.all([
+  // Counts by status are independent of search/type filters so the tab badges
+  // and the "no buildings yet" detection stay accurate regardless of what the
+  // user typed in the search box.
+  const orgScope: Prisma.PropertyWhereInput = {
+    organizationId: dbUser.organizationId,
+    ...(selectedPropertyId && { id: selectedPropertyId }),
+  };
+
+  const [raw, paymentsThisMonth, activeCount, inactiveCount, archivedCount] = await Promise.all([
     prisma.property.findMany({
       where: whereClause,
       include: {
@@ -117,7 +124,17 @@ export default async function PropertiesPage({
         reservation: { select: { unit: { select: { propertyId: true } } } },
       },
     }),
+    prisma.property.count({ where: { ...orgScope, isArchived: false, isActive: true  } }),
+    prisma.property.count({ where: { ...orgScope, isArchived: false, isActive: false } }),
+    prisma.property.count({ where: { ...orgScope, isArchived: true } }),
   ]);
+
+  const statusCounts = {
+    all:      activeCount + inactiveCount + archivedCount,
+    active:   activeCount,
+    inactive: inactiveCount,
+    archived: archivedCount,
+  };
 
   // Build revenue map: propertyId → total OMR this month
   const revenueByProperty: Record<string, number> = {};
@@ -156,8 +173,13 @@ export default async function PropertiesPage({
         currentType={typeFilter}
         currentStatus={statusFilter}
         totalResults={properties.length}
+        statusCounts={statusCounts}
       />
-      <PropertiesView properties={properties} initialSort={sortParam} />
+      <PropertiesView
+        properties={properties}
+        initialSort={sortParam}
+        totalUnfiltered={statusCounts.all}
+      />
     </div>
   );
 }

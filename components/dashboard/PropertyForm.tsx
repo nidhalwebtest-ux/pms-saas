@@ -141,11 +141,14 @@ export default function PropertyForm({ initialData }: Props) {
         toast.error(result.error);
       } else {
         toast.success(isEditMode ? t("toasts.updated") : t("toasts.created"));
-        router.push(
-          isEditMode
-            ? `/dashboard/properties/${initialData.id}`
-            : `/dashboard/properties/${result?.id}`,
-        );
+        // replace() instead of push() so the /new entry is dropped from history.
+        // This makes the @modal slot evaluate against the destination URL,
+        // hit default.tsx (null), and unmount the SlideOver.
+        const dest = isEditMode
+          ? `/dashboard/properties/${initialData.id}`
+          : `/dashboard/properties/${result?.id}`;
+        router.replace(dest);
+        router.refresh();
       }
     });
   };

@@ -523,7 +523,8 @@
       "buildingsCount": "{count, plural, zero {لا توجد مبانٍ} one {مبنى واحد} two {مبنيان} few {# مبانٍ} many {# مبنى} other {# مبنى}}",
       "clear": "مسح",
       "typeLabel": "النوع",
-      "statusLabel": "الحالة"
+      "statusLabel": "الحالة",
+      "filters": "عوامل التصفية"
     },
     "types": {
       "all": "كل الأنواع",
@@ -763,6 +764,13 @@
       "notArchived": "المبنى غير مؤرشف.",
       "blockedByReservations": "لا يمكن الحذف: لهذا المبنى {count, plural, zero {لا حجوزات نشطة} one {حجز نشط} two {حجزان نشطان} few {# حجوزات نشطة} many {# حجزاً نشطاً} other {# حجز نشط}}. أكملها أو ألغها أولاً.",
       "deleteFailed": "فشل حذف المبنى."
+    },
+    "empty": {
+      "firstTitle": "لا توجد مبانٍ بعد",
+      "firstBody": "أضف أول مبنى لتبدأ في تتبع الوحدات والمستأجرين والإيرادات.",
+      "firstCta": "أضف أول مبنى",
+      "noMatch": "لا توجد مبانٍ تطابق عوامل التصفية.",
+      "clearFilters": "مسح عوامل التصفية"
     }
   },
   "units": {

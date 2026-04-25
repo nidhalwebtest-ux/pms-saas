@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 
 export type ActionResponse = {
@@ -116,6 +117,12 @@ export async function updateProperty(formData: FormData): Promise<ActionResponse
 }
 
 // ─── QUICK UPDATE (inline edit: name + status only) ───────────────────────────
+// `status` is the single source of truth for the inline-edit row. It maps to
+// (isArchived, isActive) so flipping from "archived" back to "active" actually
+// un-archives the building (previously isArchived stuck at true and the
+// building stayed archived even after the row claimed it was active).
+
+type QuickStatus = "active" | "inactive" | "archived";
 
 export async function quickUpdateProperty(formData: FormData): Promise<ActionResponse> {
   const tErr = await getTranslations("buildings.errors");
@@ -124,18 +131,37 @@ export async function quickUpdateProperty(formData: FormData): Promise<ActionRes
 
   const id = formData.get("id") as string;
   const name = (formData.get("name") as string)?.trim();
-  const isActive = formData.get("isActive") !== "false";
+  const status = (formData.get("status") as string) as QuickStatus;
 
   if (!name) return { error: tErr("nameRequired") };
 
   const existing = await prisma.property.findUnique({
     where: { id },
-    select: { organizationId: true },
+    select: { organizationId: true, isArchived: true, archivedAt: true },
   });
   if (existing?.organizationId !== organizationId) return { error: tErr("unauthorized") };
 
-  await prisma.property.update({ where: { id }, data: { name, isActive } });
+  let updateData: Prisma.PropertyUpdateInput;
+  if (status === "archived") {
+    updateData = {
+      name,
+      isArchived: true,
+      isActive:   false,
+      archivedAt: existing.isArchived ? existing.archivedAt : new Date(),
+    };
+  } else {
+    // active or inactive — also unarchive if currently archived
+    updateData = {
+      name,
+      isArchived: false,
+      archivedAt: null,
+      isActive:   status === "active",
+    };
+  }
+
+  await prisma.property.update({ where: { id }, data: updateData });
   revalidatePath("/dashboard/properties");
+  revalidatePath(`/dashboard/properties/${id}`);
   return { success: true };
 }
 

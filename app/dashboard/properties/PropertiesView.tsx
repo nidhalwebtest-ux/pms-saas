@@ -118,6 +118,8 @@ function SortTh({
 
 // ── Inline Edit Row ──────────────────────────────────────────────────────────
 
+type EditStatus = "active" | "inactive" | "archived";
+
 function EditableRow({
   property,
   onDone,
@@ -127,8 +129,13 @@ function EditableRow({
 }) {
   const tT = useTranslations("buildings.types");
   const tInline = useTranslations("buildings.inline");
-  const [name, setName]         = useState(property.name);
-  const [isActive, setIsActive] = useState(property.isActive);
+  const [name, setName] = useState(property.name);
+  const initialStatus: EditStatus = property.isArchived
+    ? "archived"
+    : property.isActive
+      ? "active"
+      : "inactive";
+  const [status, setStatus] = useState<EditStatus>(initialStatus);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -136,7 +143,7 @@ function EditableRow({
     const fd = new FormData();
     fd.set("id", property.id);
     fd.set("name", name);
-    fd.set("isActive", isActive ? "true" : "false");
+    fd.set("status", status);
     startTransition(async () => {
       const res = await quickUpdateProperty(fd);
       if (res?.error) {
@@ -151,6 +158,12 @@ function EditableRow({
 
   const typeStyle = TYPE_BADGE_STYLE[property.type] ?? { bg: "bg-gray-100", text: "text-gray-600" };
   const typeLabel = (() => { try { return tT(property.type); } catch { return property.type; } })();
+
+  const statusOptions: { value: EditStatus; label: string; cls: string; icon: React.ElementType }[] = [
+    { value: "active",   label: tInline("active"),   cls: "bg-green-600 text-white",   icon: CheckCircleIcon },
+    { value: "inactive", label: tInline("inactive"), cls: "bg-amber-500 text-white",   icon: WrenchScrewdriverIcon },
+    { value: "archived", label: tInline("archived"), cls: "bg-gray-600 text-white",    icon: ArchiveBoxIcon },
+  ];
 
   return (
     <tr className="bg-blue-50 ring-2 ring-inset ring-blue-300">
@@ -175,16 +188,26 @@ function EditableRow({
       <td className="px-3 py-2 hidden lg:table-cell text-sm text-center text-green-600 font-medium ltr-numbers">{property.occupiedUnits}</td>
       <td className="px-3 py-2 hidden lg:table-cell text-sm text-center text-gray-500 ltr-numbers">{property.vacantUnits}</td>
       <td className="px-3 py-2">
-        <button
-          type="button"
-          onClick={() => setIsActive((v) => !v)}
-          className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
-            isActive ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-amber-100 text-amber-700 hover:bg-amber-200"
-          }`}
-        >
-          {isActive ? <CheckCircleIcon className="h-3.5 w-3.5" /> : <WrenchScrewdriverIcon className="h-3.5 w-3.5" />}
-          {isActive ? tInline("active") : tInline("inactive")}
-        </button>
+        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
+          {statusOptions.map((opt) => {
+            const Icon = opt.icon;
+            const active = status === opt.value;
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setStatus(opt.value)}
+                className={`flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${
+                  active ? opt.cls : "text-gray-500 hover:bg-gray-50"
+                }`}
+                title={opt.label}
+              >
+                <Icon className="h-3 w-3" />
+                <span className="hidden xl:inline">{opt.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </td>
       <td className="px-3 py-2">
         <div className="flex items-center gap-2">

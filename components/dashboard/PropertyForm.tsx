@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { createProperty, updateProperty } from "@/app/dashboard/properties/actions";
+import { useSlideOver } from "@/components/ui/SlideOver";
 import {
   BuildingOffice2Icon,
   BuildingStorefrontIcon,
@@ -104,6 +105,7 @@ interface Props {
 
 export default function PropertyForm({ initialData }: Props) {
   const router = useRouter();
+  const slideOver = useSlideOver();
   const [isPending, startTransition] = useTransition();
   const t       = useTranslations("buildings.form");
   const tTypes  = useTranslations("buildings.form.types");
@@ -141,14 +143,16 @@ export default function PropertyForm({ initialData }: Props) {
         toast.error(result.error);
       } else {
         toast.success(isEditMode ? t("toasts.updated") : t("toasts.created"));
-        // replace() instead of push() so the /new entry is dropped from history.
-        // This makes the @modal slot evaluate against the destination URL,
-        // hit default.tsx (null), and unmount the SlideOver.
         const dest = isEditMode
           ? `/dashboard/properties/${initialData.id}`
           : `/dashboard/properties/${result?.id}`;
-        router.replace(dest);
-        router.refresh();
+        if (slideOver) {
+          // Inside the intercepted modal: animate the panel out, then navigate.
+          slideOver.closeAndNavigate(dest);
+        } else {
+          // Standalone /new page: just navigate.
+          router.replace(dest);
+        }
       }
     });
   };

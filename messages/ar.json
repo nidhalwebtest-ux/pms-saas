@@ -544,9 +544,9 @@
       "csvTitle": "تصدير إلى CSV",
       "print": "طباعة",
       "printTitle": "طباعة القائمة",
-      "inlineEdit": "تحرير سريع",
-      "exitEdit": "إنهاء التحرير",
-      "inlineEditTitle": "تبديل التحرير السريع",
+      "inlineEdit": "تعديل سريع",
+      "exitEdit": "إنهاء التعديل",
+      "inlineEditTitle": "تبديل التعديل السريع",
       "viewTable": "عرض الجدول",
       "viewCard": "عرض البطاقات",
       "viewSummary": "عرض الملخص"
@@ -561,7 +561,7 @@
       "colStatus": "الحالة",
       "colActions": "إجراءات",
       "noMatch": "لا توجد مبانٍ تطابق عوامل التصفية.",
-      "actionInlineEdit": "تحرير سريع",
+      "actionInlineEdit": "تعديل سريع",
       "actionViewDetails": "عرض التفاصيل",
       "footerBuildings": "{count, plural, zero {لا توجد مبانٍ} one {مبنى واحد} two {مبنيان} few {# مبانٍ} many {# مبنى} other {# مبنى}}",
       "footerTotalUnits": "{count} إجمالي الوحدات",
@@ -575,7 +575,7 @@
       "occupied": "المشغولة",
       "vacant": "الشاغرة",
       "view": "عرض",
-      "edit": "تحرير",
+      "edit": "تعديل",
       "addBuilding": "إضافة مبنى"
     },
     "summary": {
@@ -596,7 +596,8 @@
       "save": "حفظ",
       "cancel": "إلغاء",
       "active": "نشط",
-      "inactive": "غير نشط"
+      "inactive": "غير نشط",
+      "archived": "مؤرشف"
     },
     "print": {
       "title": "قائمة المباني — {date}",
@@ -632,7 +633,7 @@
       "archivedBody": "إنه مخفي من جميع العروض الافتراضية. يتم الاحتفاظ بكل الوحدات والحجوزات والبيانات التاريخية.",
       "archivedOn": "تمت الأرشفة في {date}.",
       "scrollToRestore": "مرّر للأسفل لاستعادته.",
-      "editProperty": "تحرير المبنى",
+      "editProperty": "تعديل المبنى",
       "addUnit": "+ إضافة وحدة",
       "addressLine": "{location}",
       "floorsSuffix": "{count, plural, zero {} one { · طابق واحد} two { · طابقان} few { · # طوابق} many { · # طابقاً} other { · # طابق}}",
@@ -647,7 +648,7 @@
         "basePrice": "السعر الأساسي",
         "status": "الحالة",
         "actions": "إجراءات",
-        "edit": "تحرير",
+        "edit": "تعديل",
         "photosCount": "{count, plural, zero {لا صور} one {صورة واحدة} two {صورتان} few {# صور} many {# صورة} other {# صورة}}",
         "bedsBaths": "{beds} غرفة / {baths} حمام",
         "omr": "ر.ع",
@@ -656,7 +657,8 @@
       "dangerZone": "منطقة الخطر",
       "active": "نشط",
       "inactive": "غير نشط",
-      "archived": "مؤرشف"
+      "archived": "مؤرشف",
+      "buildingsList": "قائمة المباني"
     },
     "form": {
       "newTitle": "إضافة مبنى جديد",

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { getSelectedPropertyId } from "@/lib/selected-property";
 import PropertyFilters from "./PropertyFilters";
 import PropertiesView from "./PropertiesView";
 
@@ -48,12 +47,13 @@ export default async function PropertiesPage({
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
 
-  const selectedPropertyId = await getSelectedPropertyId();
-
-  // Build WHERE
+  // The buildings list always shows every building in the org. The global
+  // property selector in the header is meant to scope content *within* a
+  // building (units, reservations, payments) — not hide buildings from
+  // their own list. Otherwise a freshly created building would never appear
+  // here when a different building was previously selected.
   const whereClause: Prisma.PropertyWhereInput = {
     organizationId: dbUser.organizationId,
-    ...(selectedPropertyId && { id: selectedPropertyId }),
     ...(q && {
       OR: [
         { name:        { contains: q, mode: "insensitive" } },
@@ -63,14 +63,14 @@ export default async function PropertiesPage({
       ],
     }),
     ...(typeFilter && { type: typeFilter as any }),
-    // Archived tab shows only archived; all other tabs exclude archived
-    ...(statusFilter === "archived"
-      ? { isArchived: true }
-      : { isArchived: false,
-          ...(statusFilter === "active"   && { isActive: true  }),
-          ...(statusFilter === "inactive" && { isActive: false }),
-        }
-    ),
+    // Status filter:
+    //   "all"      → no archive/active filter (show every building)
+    //   "active"   → not archived, isActive=true
+    //   "inactive" → not archived, isActive=false
+    //   "archived" → archived only
+    ...(statusFilter === "archived" && { isArchived: true }),
+    ...(statusFilter === "active"   && { isArchived: false, isActive: true  }),
+    ...(statusFilter === "inactive" && { isArchived: false, isActive: false }),
   };
 
   // Build ORDER BY (server-side for text fields; derived fields sorted client-side)
@@ -91,7 +91,6 @@ export default async function PropertiesPage({
   // user typed in the search box.
   const orgScope: Prisma.PropertyWhereInput = {
     organizationId: dbUser.organizationId,
-    ...(selectedPropertyId && { id: selectedPropertyId }),
   };
 
   const [raw, paymentsThisMonth, activeCount, inactiveCount, archivedCount] = await Promise.all([

@@ -12,6 +12,7 @@ import {
   ArchiveBoxIcon,
   CheckCircleIcon,
   WrenchScrewdriverIcon,
+  ListBulletIcon,
 } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
 import PropertyDangerZone from "@/components/dashboard/PropertyDangerZone";
@@ -136,6 +137,13 @@ export default async function PropertyDetailsPage({
         </div>
 
         <div className="mt-4 flex flex-wrap gap-3 sm:ms-4 sm:mt-0">
+          <Link
+            href="/dashboard/properties"
+            className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          >
+            <ListBulletIcon className="h-4 w-4" />
+            {t("buildingsList")}
+          </Link>
           <Link
             href={`/dashboard/properties/${id}/edit`}
             className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"

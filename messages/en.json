@@ -596,7 +596,8 @@
       "save": "Save",
       "cancel": "Cancel",
       "active": "Active",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "archived": "Archived"
     },
     "print": {
       "title": "Properties List — {date}",
@@ -656,7 +657,8 @@
       "dangerZone": "Danger Zone",
       "active": "Active",
       "inactive": "Inactive",
-      "archived": "Archived"
+      "archived": "Archived",
+      "buildingsList": "Buildings list"
     },
     "form": {
       "newTitle": "Add New Property",

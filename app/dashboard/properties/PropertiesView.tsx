@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { toast } from "sonner";
+import { useSearchParams, usePathname } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import {
   Squares2X2Icon,
@@ -13,8 +12,6 @@ import {
   DocumentArrowDownIcon,
   PrinterIcon,
   PencilSquareIcon,
-  CheckIcon,
-  XMarkIcon,
   CheckCircleIcon,
   WrenchScrewdriverIcon,
   ArchiveBoxIcon,
@@ -24,12 +21,12 @@ import {
   BuildingOffice2Icon,
   MapPinIcon,
   PlusIcon,
+  EyeIcon,
   ArrowTopRightOnSquareIcon,
   BanknotesIcon,
   HomeIcon,
   FunnelIcon,
 } from "@heroicons/react/24/outline";
-import { quickUpdateProperty } from "./actions";
 import type { PropertyRow } from "./page";
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -116,119 +113,6 @@ function SortTh({
   );
 }
 
-// ── Inline Edit Row ──────────────────────────────────────────────────────────
-
-type EditStatus = "active" | "inactive" | "archived";
-
-function EditableRow({
-  property,
-  onDone,
-}: {
-  property: PropertyRow;
-  onDone: () => void;
-}) {
-  const tT = useTranslations("buildings.types");
-  const tInline = useTranslations("buildings.inline");
-  const [name, setName] = useState(property.name);
-  const initialStatus: EditStatus = property.isArchived
-    ? "archived"
-    : property.isActive
-      ? "active"
-      : "inactive";
-  const [status, setStatus] = useState<EditStatus>(initialStatus);
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
-
-  const save = () => {
-    const fd = new FormData();
-    fd.set("id", property.id);
-    fd.set("name", name);
-    fd.set("status", status);
-    startTransition(async () => {
-      const res = await quickUpdateProperty(fd);
-      if (res?.error) {
-        toast.error(res.error);
-      } else {
-        toast.success(tInline("saved"));
-        router.refresh();
-        onDone();
-      }
-    });
-  };
-
-  const typeStyle = TYPE_BADGE_STYLE[property.type] ?? { bg: "bg-gray-100", text: "text-gray-600" };
-  const typeLabel = (() => { try { return tT(property.type); } catch { return property.type; } })();
-
-  const statusOptions: { value: EditStatus; label: string; cls: string; icon: React.ElementType }[] = [
-    { value: "active",   label: tInline("active"),   cls: "bg-green-600 text-white",   icon: CheckCircleIcon },
-    { value: "inactive", label: tInline("inactive"), cls: "bg-amber-500 text-white",   icon: WrenchScrewdriverIcon },
-    { value: "archived", label: tInline("archived"), cls: "bg-gray-600 text-white",    icon: ArchiveBoxIcon },
-  ];
-
-  return (
-    <tr className="bg-blue-50 ring-2 ring-inset ring-blue-300">
-      <td className="py-2.5 ps-4 pe-2 sm:ps-5">
-        <Thumbnail photos={property.photos} name={property.name} />
-      </td>
-      <td className="px-3 py-2" colSpan={2}>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-md border border-blue-400 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          autoFocus
-        />
-      </td>
-      <td className="px-3 py-2 hidden sm:table-cell">
-        <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${typeStyle.bg} ${typeStyle.text}`}>
-          {typeLabel}
-        </span>
-      </td>
-      <td className="px-3 py-2 hidden md:table-cell text-sm text-gray-500">{property.city}</td>
-      <td className="px-3 py-2 hidden lg:table-cell text-sm text-center ltr-numbers">{property.totalUnits}</td>
-      <td className="px-3 py-2 hidden lg:table-cell text-sm text-center text-green-600 font-medium ltr-numbers">{property.occupiedUnits}</td>
-      <td className="px-3 py-2 hidden lg:table-cell text-sm text-center text-gray-500 ltr-numbers">{property.vacantUnits}</td>
-      <td className="px-3 py-2">
-        <div className="inline-flex rounded-lg border border-gray-200 bg-white p-0.5">
-          {statusOptions.map((opt) => {
-            const Icon = opt.icon;
-            const active = status === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setStatus(opt.value)}
-                className={`flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold transition-colors ${
-                  active ? opt.cls : "text-gray-500 hover:bg-gray-50"
-                }`}
-                title={opt.label}
-              >
-                <Icon className="h-3 w-3" />
-                <span className="hidden xl:inline">{opt.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </td>
-      <td className="px-3 py-2">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={save}
-            disabled={isPending}
-            className="flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-60 transition-colors"
-          >
-            <CheckIcon className="h-3.5 w-3.5" /> {tInline("save")}
-          </button>
-          <button
-            onClick={onDone}
-            className="flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-          >
-            <XMarkIcon className="h-3.5 w-3.5" /> {tInline("cancel")}
-          </button>
-        </div>
-      </td>
-    </tr>
-  );
-}
 
 // ── Card ─────────────────────────────────────────────────────────────────────
 
@@ -580,11 +464,9 @@ export default function PropertiesView({
   };
   const [initKey, initDir] = parseSort(initialSort);
 
-  const [viewMode,     setViewMode]     = useState<"table" | "card" | "summary">("table");
-  const [sortKey,      setSortKey]      = useState<SortKey>(initKey);
-  const [sortDir,      setSortDir]      = useState<SortDir>(initDir);
-  const [inlineEditId, setInlineEditId] = useState<string | null>(null);
-  const [editMode,     setEditMode]     = useState(false);
+  const [viewMode, setViewMode] = useState<"table" | "card" | "summary">("table");
+  const [sortKey,  setSortKey]  = useState<SortKey>(initKey);
+  const [sortDir,  setSortDir]  = useState<SortDir>(initDir);
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -634,19 +516,6 @@ export default function PropertiesView({
           >
             <PrinterIcon className="h-3.5 w-3.5" />
             {tTb("print")}
-          </button>
-          <div className="mx-1 h-4 w-px bg-gray-200" />
-          <button
-            onClick={() => { setEditMode((v) => !v); setInlineEditId(null); }}
-            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-              editMode
-                ? "border-blue-400 bg-blue-50 text-blue-700"
-                : "border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
-            }`}
-            title={tTb("inlineEditTitle")}
-          >
-            <PencilSquareIcon className="h-3.5 w-3.5" />
-            {editMode ? tTb("exitEdit") : tTb("inlineEdit")}
           </button>
         </div>
 
@@ -723,10 +592,7 @@ export default function PropertiesView({
                     </td>
                   </tr>
                 ) : (
-                  sorted.map((p) =>
-                    editMode && inlineEditId === p.id ? (
-                      <EditableRow key={p.id} property={p} onDone={() => setInlineEditId(null)} />
-                    ) : (
+                  sorted.map((p) => (
                       <tr
                         key={p.id}
                         className="hover:bg-blue-50/50 transition-colors"
@@ -811,27 +677,25 @@ export default function PropertiesView({
                         {/* Actions */}
                         <td className="px-3 py-2.5 text-end print:hidden">
                           <div className="flex items-center justify-end gap-1">
-                            {editMode && (
-                              <button
-                                onClick={() => setInlineEditId(p.id)}
-                                className="rounded-md p-1.5 text-gray-400 hover:bg-blue-100 hover:text-blue-600 transition-colors"
-                                title={tTable("actionInlineEdit")}
-                              >
-                                <PencilSquareIcon className="h-4 w-4" />
-                              </button>
-                            )}
                             <Link
                               href={`/dashboard/properties/${p.id}`}
-                              className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                              className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 transition-colors"
                               title={tTable("actionViewDetails")}
                             >
-                              <ArrowTopRightOnSquareIcon className="h-4 w-4 rtl:-scale-x-100" />
+                              <EyeIcon className="h-3.5 w-3.5" />
+                            </Link>
+                            <Link
+                              href={`/dashboard/properties/${p.id}/edit`}
+                              className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
+                              title={tTable("actionEdit")}
+                            >
+                              <PencilSquareIcon className="h-3.5 w-3.5" />
+                              {tTable("actionEdit")}
                             </Link>
                           </div>
                         </td>
                       </tr>
-                    )
-                  )
+                  ))
                 )}
               </tbody>
             </table>

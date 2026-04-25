@@ -568,7 +568,8 @@
       "footerOccupied": "{count} مشغولة",
       "footerVacant": "{count} شاغرة",
       "footerSeparator": " · ",
-      "noUnits": "لا توجد وحدات"
+      "noUnits": "لا توجد وحدات",
+      "actionEdit": "تعديل"
     },
     "card": {
       "total": "الإجمالي",
@@ -834,7 +835,11 @@
       "statusVacant": "شاغرة",
       "statusOccupied": "مشغولة",
       "statusReserved": "محجوزة",
-      "statusMaintenance": "صيانة"
+      "statusMaintenance": "صيانة",
+      "filters": "عوامل التصفية",
+      "clearSearch": "مسح البحث",
+      "buildingLabel": "المبنى",
+      "scopedNote": "النطاق مقفل حسب اختيار المبنى في الشريط العلوي."
     },
     "types": {
       "STUDIO": "استوديو",
@@ -894,7 +899,15 @@
       "view": "عرض",
       "internalNotes": "ملاحظات داخلية",
       "pricing": "التسعير",
-      "dash": "—"
+      "dash": "—",
+      "unitsList": "قائمة الوحدات",
+      "recentTransactions": "آخر المعاملات",
+      "txDate": "التاريخ",
+      "txTenant": "المستأجر",
+      "txAmount": "المبلغ",
+      "txMethod": "الطريقة",
+      "txReservation": "الحجز",
+      "noTransactions": "لا توجد دفعات مسجلة لهذه الوحدة بعد."
     },
     "newPage": {
       "title": "إضافة وحدة / غرفة",
@@ -986,7 +999,16 @@
       "createCount": "{count, plural, one {إنشاء وحدة} two {إنشاء وحدتين} few {إنشاء # وحدات} many {إنشاء # وحدة} other {إنشاء # وحدة}}",
       "cancel": "إلغاء",
       "unitsCreatedToast": "{count, plural, zero {لم تُنشأ وحدات} one {تم إنشاء وحدة} two {تم إنشاء وحدتين} few {تم إنشاء # وحدات} many {تم إنشاء # وحدة} other {تم إنشاء # وحدة}}!",
-      "invalidBasePrice": "أدخل سعراً أساسياً صحيحاً."
+      "invalidBasePrice": "أدخل سعراً أساسياً صحيحاً.",
+      "defaultsTitle": "القيم الافتراضية للصفوف الجديدة",
+      "defaultsHelp": "تُستخدم كقيم أولية عند التوليد من نمط التسمية",
+      "colName": "الاسم",
+      "colType": "النوع",
+      "colBeds": "غرف",
+      "colBaths": "حمامات",
+      "colArea": "المساحة",
+      "colPrice": "السعر",
+      "removeRow": "حذف الصف"
     },
     "pricing": {
       "defaultPrice": "السعر الافتراضي",

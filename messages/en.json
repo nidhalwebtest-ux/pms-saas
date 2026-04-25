@@ -568,7 +568,8 @@
       "footerOccupied": "{count} occupied",
       "footerVacant": "{count} vacant",
       "footerSeparator": " · ",
-      "noUnits": "No units"
+      "noUnits": "No units",
+      "actionEdit": "Edit"
     },
     "card": {
       "total": "Total",
@@ -834,7 +835,11 @@
       "statusVacant": "Vacant",
       "statusOccupied": "Occupied",
       "statusReserved": "Reserved",
-      "statusMaintenance": "Maintenance"
+      "statusMaintenance": "Maintenance",
+      "filters": "Filters",
+      "clearSearch": "Clear search",
+      "buildingLabel": "Building",
+      "scopedNote": "Scope is locked by the building selector in the header."
     },
     "types": {
       "STUDIO": "Studio",
@@ -894,7 +899,15 @@
       "view": "View",
       "internalNotes": "Internal Notes",
       "pricing": "Pricing",
-      "dash": "—"
+      "dash": "—",
+      "unitsList": "Units list",
+      "recentTransactions": "Recent transactions",
+      "txDate": "Date",
+      "txTenant": "Tenant",
+      "txAmount": "Amount",
+      "txMethod": "Method",
+      "txReservation": "Reservation",
+      "noTransactions": "No payments recorded for this unit yet."
     },
     "newPage": {
       "title": "Add New Unit / Room",
@@ -986,7 +999,16 @@
       "createCount": "{count, plural, one {Create # Unit} other {Create # Units}}",
       "cancel": "Cancel",
       "unitsCreatedToast": "{count, plural, one {# unit} other {# units}} created!",
-      "invalidBasePrice": "Enter a valid base price."
+      "invalidBasePrice": "Enter a valid base price.",
+      "defaultsTitle": "Defaults for new rows",
+      "defaultsHelp": "Used as starting values when generating from the naming pattern",
+      "colName": "Name",
+      "colType": "Type",
+      "colBeds": "Beds",
+      "colBaths": "Baths",
+      "colArea": "Area",
+      "colPrice": "Price",
+      "removeRow": "Remove row"
     },
     "pricing": {
       "defaultPrice": "Default Price",

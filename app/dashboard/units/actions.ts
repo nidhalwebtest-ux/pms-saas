@@ -193,16 +193,20 @@ export async function updateUnit(formData: FormData): Promise<ActionResponse> {
 
 // ─── BULK CREATE ─────────────────────────────────────────────────────────────
 
+export interface BulkUnitRow {
+  name:      string;
+  unitType:  string;
+  bedrooms:  number;
+  bathrooms: number;
+  area:      number | null;
+  basePrice: number;
+}
+
 interface BulkCreateInput {
   propertyId:         string;
-  unitNames:          string[];
-  unitType:           string;
+  /** Shared floor for the batch — there's no good UX for per-row floor today. */
   floor:              number;
-  bedrooms:           number;
-  bathrooms:          number;
-  area:               number | null;
-  basePrice:          number;
-  amenities:          string[];
+  units:              BulkUnitRow[];
   createDefaultPrice: boolean;
   dailyRate:          number | null;
   weeklyRate:         number | null;
@@ -229,26 +233,25 @@ export async function bulkCreateUnits(
   if (!property || property.organizationId !== dbUser?.organizationId)
     return { created: 0, error: "Unauthorized" };
 
-  const names = input.unitNames.filter((n) => n.trim());
-  if (names.length === 0) return { created: 0, error: "No unit names provided." };
-  if (names.length > 200) return { created: 0, error: "Maximum 200 units per batch." };
+  const validUnits = input.units.filter((u) => u.name.trim() && u.basePrice >= 0);
+  if (validUnits.length === 0) return { created: 0, error: "No valid units provided." };
+  if (validUnits.length > 200) return { created: 0, error: "Maximum 200 units per batch." };
 
-  // Use a transaction: create units, then optionally create default prices
   const result = await prisma.$transaction(async (tx) => {
     const created = await Promise.all(
-      names.map((name) =>
+      validUnits.map((u) =>
         tx.unit.create({
           data: {
-            name:        name.trim(),
-            unitType:    input.unitType,
-            floor:       input.floor,
-            bedrooms:    input.bedrooms,
-            bathrooms:   input.bathrooms,
-            area:        input.area,
-            basePrice:   input.basePrice,
-            amenities:   input.amenities,
-            propertyId:  input.propertyId,
-            status:      "AVAILABLE",
+            name:       u.name.trim(),
+            unitType:   u.unitType,
+            floor:      input.floor,
+            bedrooms:   u.bedrooms,
+            bathrooms:  u.bathrooms,
+            area:       u.area,
+            basePrice:  u.basePrice,
+            amenities:  [],
+            propertyId: input.propertyId,
+            status:     "AVAILABLE",
           },
           select: { id: true },
         }),

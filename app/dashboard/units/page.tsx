@@ -54,7 +54,7 @@ export default async function UnitsPage({
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
 
-  const [properties, selectedPropertyId] = await Promise.all([
+  const [allProperties, selectedPropertyId] = await Promise.all([
     prisma.property.findMany({
       where:   { organizationId: dbUser.organizationId },
       select:  { id: true, name: true },
@@ -62,6 +62,15 @@ export default async function UnitsPage({
     }),
     getSelectedPropertyId(),
   ]);
+
+  // When the global property selector picks a specific building, the units
+  // list is restricted to that building's units. The filter dropdown must
+  // reflect that scope — show only the selected building so the user can't
+  // accidentally pick a different one without first widening their global
+  // scope. When "All buildings" is selected, the dropdown shows everything.
+  const properties = selectedPropertyId
+    ? allProperties.filter((p) => p.id === selectedPropertyId)
+    : allProperties;
 
   // ── WHERE ──────────────────────────────────────────────────────────────────
   const effectivePropertyId = selectedPropertyId || propertyFilter;
@@ -142,11 +151,12 @@ export default async function UnitsPage({
     property: { organizationId: dbUser.organizationId },
     ...(effectivePropertyId && { propertyId: effectivePropertyId }),
   };
-  const [vacantCount, occupiedCount, reservedCount, maintenanceCount] = await Promise.all([
+  const [vacantCount, occupiedCount, reservedCount, maintenanceCount, allCount] = await Promise.all([
     prisma.unit.count({ where: { ...countBase, status: "AVAILABLE", reservations: { none:  { status: { in: [...ACTIVE_STATUSES] } } } } }),
     prisma.unit.count({ where: { ...countBase, reservations: { some: { status: "CHECKED_IN" } } } }),
     prisma.unit.count({ where: { ...countBase, status: "AVAILABLE", reservations: { some: { status: { in: ["PENDING","CONFIRMED"] } } } } }),
     prisma.unit.count({ where: { ...countBase, status: "MAINTENANCE" } }),
+    prisma.unit.count({ where: countBase }),
   ]);
 
   const t = await getTranslations("units.list");
@@ -201,7 +211,8 @@ export default async function UnitsPage({
         currentFloor={floorFilter}
         properties={properties}
         availableFloors={availableFloors}
-        counts={{ vacant: vacantCount, occupied: occupiedCount, reserved: reservedCount, maintenance: maintenanceCount }}
+        scopedToBuilding={!!selectedPropertyId}
+        counts={{ all: allCount, vacant: vacantCount, occupied: occupiedCount, reserved: reservedCount, maintenance: maintenanceCount }}
       />
 
       {/* ── Table (client component with sort + quick actions) ───── */}

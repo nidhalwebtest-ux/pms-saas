@@ -12,6 +12,8 @@ import {
   ChatBubbleLeftIcon,
   BuildingOffice2Icon,
   BoltIcon,
+  ListBulletIcon,
+  BanknotesIcon,
 } from "@heroicons/react/24/outline";
 import { getTranslations, getLocale } from "next-intl/server";
 import { format } from "date-fns";
@@ -43,7 +45,7 @@ export default async function UnitDetailPage({
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
 
-  const [unit, prices, notes] = await Promise.all([
+  const [unit, prices, notes, recentPayments] = await Promise.all([
     prisma.unit.findUnique({
       where:   { id: unitId },
       include: {
@@ -67,6 +69,21 @@ export default async function UnitDetailPage({
       where:   { unitId },
       include: { user: { select: { id: true, firstName: true, lastName: true } } },
       orderBy: { createdAt: "desc" },
+    }),
+
+    // Most recent payments tied to a reservation on this unit. Limit 10 so the
+    // section stays focused on "recent" — the full history lives on the
+    // tenant ledger / payments page.
+    prisma.payment.findMany({
+      where: {
+        reservation: { unit: { id: unitId } },
+      },
+      include: {
+        tenant: { select: { id: true, firstName: true, lastName: true } },
+        reservation: { select: { id: true, reservationNumber: true } },
+      },
+      orderBy: { date: "desc" },
+      take: 10,
     }),
   ]);
 
@@ -150,6 +167,13 @@ export default async function UnitDetailPage({
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard/units"
+            className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
+          >
+            <ListBulletIcon className="h-4 w-4" />
+            {t("unitsList")}
+          </Link>
           <Link
             href={`/dashboard/units/${unitId}/edit`}
             className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
@@ -301,6 +325,69 @@ export default async function UnitDetailPage({
               </div>
             </section>
           )}
+
+          {/* Recent Transactions */}
+          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-800">
+              <BanknotesIcon className="h-4 w-4 text-gray-400" />
+              {t("recentTransactions")}
+              {recentPayments.length > 0 && (
+                <span className="ms-auto rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 ltr-numbers">
+                  {recentPayments.length}
+                </span>
+              )}
+            </h2>
+            {recentPayments.length === 0 ? (
+              <p className="text-sm text-gray-400">{t("noTransactions")}</p>
+            ) : (
+              <div className="overflow-x-auto -mx-5">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100">
+                      <th className="text-start font-medium px-5 py-2">{t("txDate")}</th>
+                      <th className="text-start font-medium px-3 py-2">{t("txTenant")}</th>
+                      <th className="text-end   font-medium px-3 py-2">{t("txAmount")}</th>
+                      <th className="text-start font-medium px-3 py-2 hidden sm:table-cell">{t("txMethod")}</th>
+                      <th className="text-start font-medium px-5 py-2 hidden md:table-cell">{t("txReservation")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {recentPayments.map((p) => (
+                      <tr key={p.id} className="hover:bg-gray-50/60 transition-colors">
+                        <td className="px-5 py-2.5 text-gray-700 ltr-numbers whitespace-nowrap">
+                          {fmtDay(p.date)}
+                        </td>
+                        <td className="px-3 py-2.5">
+                          <Link
+                            href={`/dashboard/tenants/${p.tenant.id}`}
+                            className="text-blue-600 hover:underline"
+                          >
+                            {p.tenant.firstName} {p.tenant.lastName}
+                          </Link>
+                        </td>
+                        <td className="px-3 py-2.5 text-end font-semibold text-emerald-700 ltr-numbers whitespace-nowrap">
+                          {fmt(p.amount)}
+                        </td>
+                        <td className="px-3 py-2.5 text-gray-600 hidden sm:table-cell">
+                          {p.method}
+                        </td>
+                        <td className="px-5 py-2.5 hidden md:table-cell">
+                          {p.reservation && (
+                            <Link
+                              href={`/dashboard/reservations/${p.reservation.id}`}
+                              className="font-mono text-xs text-blue-600 hover:underline ltr-numbers"
+                            >
+                              {p.reservation.reservationNumber ?? p.reservation.id.slice(0, 8)}
+                            </Link>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
 
           {/* Notes */}
           <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">

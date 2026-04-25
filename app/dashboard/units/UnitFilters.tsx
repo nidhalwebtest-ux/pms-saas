@@ -5,32 +5,26 @@ import { useCallback, useState, useEffect, useRef } from "react";
 import {
   MagnifyingGlassIcon,
   XMarkIcon,
-  HomeModernIcon,
-  FunnelIcon,
+  AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 
-const STATUS_TAB_KEYS = ["all", "vacant", "occupied", "reserved", "maintenance"] as const;
-
-const STATUS_ACTIVE_CLASSES: Record<string, string> = {
-  all:         "bg-gray-700 text-white shadow-sm",
-  vacant:      "bg-emerald-600 text-white shadow-sm",
-  occupied:    "bg-blue-600 text-white shadow-sm",
-  reserved:    "bg-violet-600 text-white shadow-sm",
-  maintenance: "bg-amber-500 text-white shadow-sm",
-};
+const STATUS_TABS = ["all", "vacant", "occupied", "reserved", "maintenance"] as const;
+type StatusKey = typeof STATUS_TABS[number];
 
 const TYPE_TAB_VALUES = ["", "STUDIO", "ONE_BR", "TWO_BR", "THREE_BR", "SUITE"] as const;
 
 interface Props {
-  currentSearch:   string;
-  currentProperty: string;
-  currentStatus:   string;
-  currentType:     string;
-  currentFloor:    string;
-  properties:      { id: string; name: string }[];
-  availableFloors: number[];
-  counts:          { vacant: number; occupied: number; reserved: number; maintenance: number };
+  currentSearch:    string;
+  currentProperty:  string;
+  currentStatus:    string;
+  currentType:      string;
+  currentFloor:     string;
+  properties:       { id: string; name: string }[];
+  availableFloors:  number[];
+  /** True when the global property selector has narrowed to one building. */
+  scopedToBuilding: boolean;
+  counts: { all: number; vacant: number; occupied: number; reserved: number; maintenance: number };
 }
 
 export default function UnitFilters({
@@ -41,6 +35,7 @@ export default function UnitFilters({
   currentFloor,
   properties,
   availableFloors,
+  scopedToBuilding,
   counts,
 }: Props) {
   const router       = useRouter();
@@ -50,20 +45,11 @@ export default function UnitFilters({
   const t            = useTranslations("units.filters");
   const tTypes       = useTranslations("units.types");
 
-  const statusLabel = (v: string) => {
-    if (v === "all")         return t("statusAll");
-    if (v === "vacant")      return t("statusVacant");
-    if (v === "occupied")    return t("statusOccupied");
-    if (v === "reserved")    return t("statusReserved");
-    if (v === "maintenance") return t("statusMaintenance");
-    return v;
-  };
-  const typeLabel = (v: string) => {
-    if (!v) return t("allTypes");
-    try { return tTypes(v as never); } catch { return v; }
-  };
+  const [searchTerm, setSearchTerm]     = useState(currentSearch);
+  const [showAdvanced, setShowAdvanced] = useState(
+    !!currentProperty || !!currentType || !!currentFloor,
+  );
 
-  const [searchTerm, setSearchTerm] = useState(currentSearch);
   useEffect(() => { setSearchTerm(currentSearch); }, [currentSearch]);
 
   const push = useCallback(
@@ -79,7 +65,7 @@ export default function UnitFilters({
     [searchParams, pathname, router],
   );
 
-  // Debounce search
+  // Debounce search → URL
   useEffect(() => {
     const t = setTimeout(() => {
       if (searchTerm !== currentSearch) push({ q: searchTerm });
@@ -87,183 +73,52 @@ export default function UnitFilters({
     return () => clearTimeout(t);
   }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const activeFilterCount = [
-    currentSearch,
-    currentProperty,
-    currentStatus !== "all" ? currentStatus : "",
-    currentType,
-    currentFloor,
-  ].filter(Boolean).length;
+  const hasAdvFilters = !!currentProperty || !!currentType || !!currentFloor;
 
-  const clearAll = () => {
-    setSearchTerm("");
-    push({ q: "", property: "", status: "", type: "", floor: "" });
+  const statusLabel = (v: StatusKey) => {
+    if (v === "all")         return t("statusAll");
+    if (v === "vacant")      return t("statusVacant");
+    if (v === "occupied")    return t("statusOccupied");
+    if (v === "reserved")    return t("statusReserved");
+    return t("statusMaintenance");
   };
+  const typeLabel = (v: string) => {
+    if (!v) return t("allTypes");
+    try { return tTypes(v as never); } catch { return v; }
+  };
+  const countFor = (v: StatusKey) => counts[v];
 
-  const countFor = (value: string): number | null => {
-    if (value === "all")         return null;
-    if (value === "vacant")      return counts.vacant;
-    if (value === "occupied")    return counts.occupied;
-    if (value === "reserved")    return counts.reserved;
-    if (value === "maintenance") return counts.maintenance;
-    return null;
-  };
+  // status param: "" or undefined ≡ "all"
+  const activeStatus: StatusKey =
+    (currentStatus as StatusKey) && STATUS_TABS.includes(currentStatus as StatusKey)
+      ? (currentStatus as StatusKey)
+      : "all";
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-
-      {/* ── Top bar: search + dropdowns ─────────────────────────── */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-blue-50">
-          <HomeModernIcon className="h-4 w-4 text-blue-600" />
-        </div>
-
-        {/* Search */}
-        <div className="relative flex-1">
-          <MagnifyingGlassIcon className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            ref={inputRef}
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={t("searchPlaceholder")}
-            className="block w-full rounded-lg border border-gray-200 bg-gray-50 py-2 ps-9 pe-8 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition"
-          />
-          {searchTerm && (
+    <>
+      {/* ── Status tabs (mirror buildings primary tab row) ───────────────── */}
+      <div className="flex flex-wrap gap-1 mb-1">
+        {STATUS_TABS.map((key) => {
+          const active = activeStatus === key;
+          const count  = countFor(key);
+          return (
             <button
+              key={key}
               type="button"
-              onClick={() => { setSearchTerm(""); push({ q: "" }); inputRef.current?.focus(); }}
-              className="absolute end-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              <XMarkIcon className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-
-        {/* Property dropdown */}
-        <select
-          value={currentProperty}
-          onChange={(e) => push({ property: e.target.value })}
-          className="hidden sm:block rounded-lg border border-gray-200 bg-gray-50 py-2 ps-3 pe-8 text-sm text-gray-700 focus:border-blue-500 focus:outline-none transition"
-        >
-          <option value="">{t("allProperties")}</option>
-          {properties.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-
-        {/* Floor dropdown */}
-        {availableFloors.length > 0 && (
-          <select
-            value={currentFloor}
-            onChange={(e) => push({ floor: e.target.value })}
-            className="hidden md:block rounded-lg border border-gray-200 bg-gray-50 py-2 ps-3 pe-8 text-sm text-gray-700 focus:border-blue-500 focus:outline-none transition"
-          >
-            <option value="">{t("allFloors")}</option>
-            {availableFloors.map((f) => (
-              <option key={f} value={String(f)}>
-                {f === 0 ? t("groundFloor") : t("floorN", { n: f })}
-              </option>
-            ))}
-          </select>
-        )}
-
-        {/* Clear */}
-        {activeFilterCount > 0 && (
-          <button
-            onClick={clearAll}
-            className="flex flex-shrink-0 items-center gap-1 rounded-md border border-gray-200 px-2.5 py-1 text-xs font-medium text-gray-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-colors"
-          >
-            <FunnelIcon className="h-3 w-3" />
-            {t("clear")}
-            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white ltr-numbers">
-              {activeFilterCount}
-            </span>
-          </button>
-        )}
-      </div>
-
-      {/* ── Property (mobile) ───────────────────────────────────── */}
-      <div className="sm:hidden border-b border-gray-100 px-4 py-2.5 bg-gray-50/50">
-        <select
-          value={currentProperty}
-          onChange={(e) => push({ property: e.target.value })}
-          className="block w-full rounded-lg border border-gray-200 bg-white py-2 ps-3 pe-8 text-sm text-gray-700 focus:border-blue-500 focus:outline-none"
-        >
-          <option value="">{t("allProperties")}</option>
-          {properties.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
-          ))}
-        </select>
-      </div>
-
-      {/* ── Type pills ──────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-1.5 px-4 py-2.5 border-b border-gray-100 bg-gray-50/30">
-        <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide pe-1">
-          {t("typeLabel")}
-        </span>
-        {TYPE_TAB_VALUES.map((value) => {
-          const active = currentType === value || (value === "" && !currentType);
-          return (
-            <button
-              key={value}
-              onClick={() => push({ type: value })}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+              onClick={() => push({ status: key === "all" ? "" : key })}
+              className={`relative inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                 active
-                  ? "bg-blue-700 text-white shadow-sm"
-                  : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:text-gray-800"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
               }`}
             >
-              {typeLabel(value)}
-            </button>
-          );
-        })}
-
-        {/* Floor pills (mobile) */}
-        {availableFloors.length > 0 && (
-          <>
-            <span className="ms-3 text-[11px] font-medium text-gray-400 uppercase tracking-wide pe-1 md:hidden">
-              {t("floorLabel")}
-            </span>
-            <select
-              value={currentFloor}
-              onChange={(e) => push({ floor: e.target.value })}
-              className="md:hidden rounded-lg border border-gray-200 bg-white py-1 ps-2 pe-6 text-xs text-gray-700 focus:border-blue-500 focus:outline-none"
-            >
-              <option value="">{t("allFloorsShort")}</option>
-              {availableFloors.map((f) => (
-                <option key={f} value={String(f)}>
-                  {f === 0 ? t("groundShort") : t("floorShort", { n: f })}
-                </option>
-              ))}
-            </select>
-          </>
-        )}
-      </div>
-
-      {/* ── Status pills ─────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-center gap-1.5 px-4 py-2.5 bg-gray-50/30">
-        <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide pe-1">
-          {t("statusLabel")}
-        </span>
-        {STATUS_TAB_KEYS.map((value) => {
-          const active = currentStatus === value || (value === "all" && currentStatus === "all");
-          const count  = countFor(value);
-          return (
-            <button
-              key={value}
-              onClick={() => push({ status: value === "all" ? "" : value })}
-              className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                active
-                  ? STATUS_ACTIVE_CLASSES[value]
-                  : "bg-white text-gray-600 border border-gray-200 hover:border-gray-300 hover:text-gray-800"
-              }`}
-            >
-              {statusLabel(value)}
-              {count !== null && count > 0 && (
-                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ltr-numbers ${
-                  active ? "bg-white/20" : "bg-gray-100 text-gray-500"
-                }`}>
+              {statusLabel(key)}
+              {count > 0 && (
+                <span
+                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold ltr-numbers ${
+                    active ? "bg-white/25 text-white" : "bg-gray-200 text-gray-700"
+                  }`}
+                >
                   {count}
                 </span>
               )}
@@ -271,6 +126,128 @@ export default function UnitFilters({
           );
         })}
       </div>
-    </div>
+
+      {/* ── Search + filter bar ──────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-3">
+          {/* Search */}
+          <div className="relative flex-1">
+            <MagnifyingGlassIcon className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={t("searchPlaceholder")}
+              className="block w-full rounded-lg border-0 py-2 ps-9 pe-8 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm("");
+                  push({ q: "" });
+                  inputRef.current?.focus();
+                }}
+                className="absolute end-2 top-1/2 -translate-y-1/2"
+                aria-label={t("clearSearch")}
+              >
+                <XMarkIcon className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+              </button>
+            )}
+          </div>
+
+          {/* Filters toggle */}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium border transition-colors ${
+              showAdvanced || hasAdvFilters
+                ? "border-blue-500 bg-blue-50 text-blue-700"
+                : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <AdjustmentsHorizontalIcon className="h-4 w-4" />
+            {t("filters")}
+            {hasAdvFilters && <span className="h-2 w-2 rounded-full bg-blue-600" />}
+          </button>
+        </div>
+
+        {/* Collapsible advanced filters */}
+        {showAdvanced && (
+          <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 space-y-3">
+            {/* Building dropdown — locked to the global selection if scoped */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                  {t("buildingLabel")}
+                </label>
+                <select
+                  value={scopedToBuilding ? properties[0]?.id ?? "" : currentProperty}
+                  onChange={(e) => push({ property: e.target.value })}
+                  disabled={scopedToBuilding}
+                  className="block w-full rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed"
+                >
+                  {!scopedToBuilding && (
+                    <option value="">{t("allProperties")}</option>
+                  )}
+                  {properties.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                {scopedToBuilding && (
+                  <p className="mt-1 text-[11px] text-gray-500">{t("scopedNote")}</p>
+                )}
+              </div>
+
+              {/* Floor dropdown */}
+              {availableFloors.length > 0 && (
+                <div>
+                  <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                    {t("floorLabel")}
+                  </label>
+                  <select
+                    value={currentFloor}
+                    onChange={(e) => push({ floor: e.target.value })}
+                    className="block w-full rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">{t("allFloors")}</option>
+                    {availableFloors.map((f) => (
+                      <option key={f} value={String(f)}>
+                        {f === 0 ? t("groundFloor") : t("floorN", { n: f })}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Type pills */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-medium text-gray-400 uppercase tracking-wide pe-1">
+                {t("typeLabel")}
+              </span>
+              {TYPE_TAB_VALUES.map((value) => {
+                const active = currentType === value || (value === "" && !currentType);
+                return (
+                  <button
+                    key={value || "ALL"}
+                    type="button"
+                    onClick={() => push({ type: value })}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                      active
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "bg-white text-gray-600 border border-gray-200 hover:border-blue-300 hover:text-blue-600"
+                    }`}
+                  >
+                    {typeLabel(value)}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

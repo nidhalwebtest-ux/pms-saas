@@ -6,7 +6,11 @@ import { PageHeader } from "@/components/ui/FormComponents";
 import BookingEngine from "@/components/dashboard/BookingEngine";
 import Link from "next/link";
 
-export default async function NewReservationPage() {
+export default async function NewReservationPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ unitId?: string; tenantId?: string }>;
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -27,6 +31,30 @@ export default async function NewReservationPage() {
   const tenantCount = await prisma.tenant.count({
     where: { organizationId: dbUser.organizationId },
   });
+
+  // Pre-selection from query params (e.g. coming from a unit detail or tenant
+  // detail page). Both are validated against the org so we never leak a tenant
+  // or unit from another company through a URL guess.
+  const { unitId, tenantId } = await searchParams;
+
+  const [defaultTenant, defaultUnit] = await Promise.all([
+    tenantId
+      ? prisma.tenant.findFirst({
+          where:  { id: tenantId, organizationId: dbUser.organizationId },
+          select: {
+            id: true, firstName: true, lastName: true,
+            phone: true, email: true,
+            classification: true, nationality: true,
+          },
+        })
+      : null,
+    unitId
+      ? prisma.unit.findFirst({
+          where:  { id: unitId, property: { organizationId: dbUser.organizationId } },
+          select: { id: true, propertyId: true },
+        })
+      : null,
+  ]);
 
   const t = await getTranslations("reservations.newPage");
 
@@ -57,7 +85,12 @@ export default async function NewReservationPage() {
         description={t("description")}
         listHref="/dashboard/reservations"
       />
-      <BookingEngine properties={properties} />
+      <BookingEngine
+        properties={properties}
+        defaultTenant={defaultTenant}
+        defaultPropertyId={defaultUnit?.propertyId}
+        defaultUnitId={defaultUnit?.id}
+      />
     </div>
   );
 }

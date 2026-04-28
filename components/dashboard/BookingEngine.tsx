@@ -125,7 +125,17 @@ function ClassBadge({ c, t }: { c: string | null; t: (k: string) => string }) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function BookingEngine({ properties }: { properties: PropertyOption[] }) {
+export default function BookingEngine({
+  properties,
+  defaultTenant,
+  defaultPropertyId,
+  defaultUnitId,
+}: {
+  properties: PropertyOption[];
+  defaultTenant?: TenantResult | null;
+  defaultPropertyId?: string;
+  defaultUnitId?: string;
+}) {
   const router = useRouter();
   const locale = useLocale();
   const dateFnsLocale: Locale = locale === "ar" ? arLocale : enLocale;
@@ -151,14 +161,14 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
   // ── Step 1: Tenant ────────────────────────────────────────────────────────
   const [tenantQuery,    setTenantQuery]    = useState("");
   const [tenantResults,  setTenantResults]  = useState<TenantResult[]>([]);
-  const [selectedTenant, setSelectedTenant] = useState<TenantResult | null>(null);
+  const [selectedTenant, setSelectedTenant] = useState<TenantResult | null>(defaultTenant ?? null);
   const [tenantLoading,  setTenantLoading]  = useState(false);
   const [showDropdown,   setShowDropdown]   = useState(false);
   const [showAddTenant,  setShowAddTenant]  = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // ── Step 2: Dates ─────────────────────────────────────────────────────────
-  const [propertyId, setPropertyId] = useState(properties[0]?.id ?? "");
+  const [propertyId, setPropertyId] = useState(defaultPropertyId ?? properties[0]?.id ?? "");
   const [startDate,  setStartDate]  = useState("");
   const [endDate,    setEndDate]    = useState("");
   const [rateType,   setRateType]   = useState<"daily" | "monthly">("daily");
@@ -358,6 +368,11 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
   }
 
   // ── Fetch units ───────────────────────────────────────────────────────────
+  // When the page is opened from a unit detail (?unitId=X), pre-select that
+  // unit on the first availability fetch — but only if it actually came back
+  // available for the chosen dates. Subsequent fetches behave normally.
+  const defaultUnitConsumed = useRef(false);
+
   const fetchUnits = useCallback(async () => {
     if (!propertyId || !startDate || !endDate) return;
     setUnitsLoading(true);
@@ -369,14 +384,20 @@ export default function BookingEngine({ properties }: { properties: PropertyOpti
       const url  = `/api/units/availability?propertyId=${propertyId}&startDate=${startDate}&endDate=${endDate}&rateType=${rateType}`;
       const res  = await fetch(url);
       const data = await res.json();
-      setUnits(data.units ?? []);
+      const fetched: UnitOption[] = data.units ?? [];
+      setUnits(fetched);
       setUnitTypeFilter("ALL");
+      if (defaultUnitId && !defaultUnitConsumed.current) {
+        defaultUnitConsumed.current = true;
+        const match = fetched.find((u) => u.id === defaultUnitId && u.available);
+        if (match) setSelectedUnits([match.id]);
+      }
     } catch {
       toast.error(tStep3("loadFailed"));
     } finally {
       setUnitsLoading(false);
     }
-  }, [propertyId, startDate, endDate, rateType, tStep3]);
+  }, [propertyId, startDate, endDate, rateType, tStep3, defaultUnitId]);
 
   // ── Toggle unit selection ─────────────────────────────────────────────────
   function toggleUnit(unitId: string) {

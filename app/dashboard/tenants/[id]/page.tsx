@@ -14,6 +14,8 @@ import {
   ShieldExclamationIcon,
   BuildingOfficeIcon,
   ArrowLeftIcon,
+  ListBulletIcon,
+  PlusIcon,
 } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
 import { getTranslations, getLocale } from "next-intl/server";
@@ -175,19 +177,33 @@ export default async function TenantProfilePage({
         </div>
 
         {/* Action buttons */}
-        <div className="mt-4 flex gap-3 md:mt-0 flex-shrink-0">
+        <div className="mt-4 flex flex-wrap gap-2 md:mt-0 flex-shrink-0">
+          <Link
+            href="/dashboard/tenants"
+            className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+          >
+            <ListBulletIcon className="h-4 w-4 text-gray-400" />
+            {t("tenantsList")}
+          </Link>
           <Link
             href={`/dashboard/tenants/${id}/edit`}
-            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
+            className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
           >
-            <PencilSquareIcon className="-ms-0.5 me-1.5 h-4 w-4 text-gray-400" />
+            <PencilSquareIcon className="h-4 w-4 text-gray-400" />
             {t("editProfile")}
           </Link>
           <Link
-            href={`/dashboard/payments/new?tenantId=${id}`}
-            className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+            href={`/dashboard/reservations/new?tenantId=${id}`}
+            className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
           >
-            <BanknotesIcon className="-ms-0.5 me-1.5 h-4 w-4 text-blue-100" />
+            <PlusIcon className="h-4 w-4 text-gray-400" />
+            {t("newReservation")}
+          </Link>
+          <Link
+            href={`/dashboard/payments/new?tenantId=${id}`}
+            className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+          >
+            <BanknotesIcon className="h-4 w-4 text-blue-100" />
             {t("acceptPayment")}
           </Link>
         </div>

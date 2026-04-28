@@ -1250,7 +1250,9 @@
         "noPayments": "لم تُسجَّل مدفوعات.",
         "multipleUnits": "وحدات متعددة",
         "inProperty": "في {property}"
-      }
+      },
+      "tenantsList": "قائمة المستأجرين",
+      "newReservation": "حجز جديد"
     },
     "ledger": {
       "summary": {

@@ -30,13 +30,6 @@ export type TenantRow = {
   activeReservations: number;
 };
 
-export type TenantStats = {
-  total: number;
-  vip: number;
-  blacklisted: number;
-  active: number;
-};
-
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default async function TenantsPage({
@@ -44,11 +37,11 @@ export default async function TenantsPage({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
-  const params         = await searchParams;
-  const q              = params.q              || "";
-  const classification = params.classification || "";
-  const tenantType     = params.tenantType     || "";
-  const source         = params.source         || "";
+  const params      = await searchParams;
+  const q           = params.q          || "";
+  const status      = params.status     || "all";   // all | active | inactive
+  const tenantType  = params.tenantType || "";
+  const source      = params.source     || "";
 
   const t = await getTranslations("tenants");
 
@@ -74,27 +67,36 @@ export default async function TenantsPage({
         { nationality: { contains: q, mode: "insensitive" } },
       ],
     }),
-    ...(classification && { classification }),
-    ...(tenantType     && { tenantType }),
-    ...(source         && { source }),
+    ...(status === "active"   && { isActive: true  }),
+    ...(status === "inactive" && { isActive: false }),
+    ...(tenantType            && { tenantType }),
+    ...(source                && { source }),
   };
 
-  const raw = await prisma.tenant.findMany({
-    where,
-    orderBy: { createdAt: "desc" },
-    select: {
-      id: true, firstName: true, lastName: true, phone: true, email: true,
-      nationality: true, idType: true, idNumber: true, tenantType: true,
-      source: true, classification: true, totalStays: true, totalSpent: true,
-      isActive: true, createdAt: true, tags: true,
-      _count: {
-        select: {
-          reservations: { where: { status: { in: ["CONFIRMED", "CHECKED_IN"] } } },
+  // Counts for the status tabs — independent of search/type/source so the
+  // badges stay accurate as the user narrows the visible list.
+  const orgScope: Prisma.TenantWhereInput = { organizationId: dbUser.organizationId };
+  const [raw, allCount, activeCount, inactiveCount] = await Promise.all([
+    prisma.tenant.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true, firstName: true, lastName: true, phone: true, email: true,
+        nationality: true, idType: true, idNumber: true, tenantType: true,
+        source: true, classification: true, totalStays: true, totalSpent: true,
+        isActive: true, createdAt: true, tags: true,
+        _count: {
+          select: {
+            reservations: { where: { status: { in: ["CONFIRMED", "CHECKED_IN"] } } },
+          },
         },
       },
-    },
-    take: 300,
-  });
+      take: 300,
+    }),
+    prisma.tenant.count({ where: orgScope }),
+    prisma.tenant.count({ where: { ...orgScope, isActive: true  } }),
+    prisma.tenant.count({ where: { ...orgScope, isActive: false } }),
+  ]);
 
   const tenants: TenantRow[] = raw.map((t) => ({
     id:                 t.id,
@@ -115,13 +117,6 @@ export default async function TenantsPage({
     tags:               t.tags,
     activeReservations: t._count.reservations,
   }));
-
-  const stats: TenantStats = {
-    total:       tenants.length,
-    vip:         tenants.filter((t) => t.classification === "vip").length,
-    blacklisted: tenants.filter((t) => t.classification === "blacklisted").length,
-    active:      tenants.filter((t) => t.isActive).length,
-  };
 
   return (
     <div className="mx-auto max-w-full px-4 sm:px-6 lg:px-8 py-8 space-y-4">
@@ -148,13 +143,14 @@ export default async function TenantsPage({
       {/* Filters */}
       <TenantFilters
         currentSearch={q}
-        currentClassification={classification}
+        currentStatus={status}
         currentTenantType={tenantType}
         currentSource={source}
+        counts={{ all: allCount, active: activeCount, inactive: inactiveCount }}
       />
 
       {/* Main view */}
-      <TenantsView tenants={tenants} stats={stats} />
+      <TenantsView tenants={tenants} />
     </div>
   );
 }

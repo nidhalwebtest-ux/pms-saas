@@ -58,10 +58,25 @@ export async function GET(req: NextRequest) {
   const sixMonthsAgo = startOfMonth(addMonths(now, -5));
 
   const resBase   = { tenant: { organizationId: orgId }, ...propResFilter(propertyId) };
-  const payBase   = { reservation: { tenant: { organizationId: orgId } } };
   const expBase   = {
     organizationId: orgId,
     status: { not: "REJECTED" as const },
+    ...(propertyId ? { propertyId } : {}),
+  };
+  // Revenue comes from invoice payment allocations (not raw payments). This
+  // ties revenue to a real, non-cancelled invoice and excludes payments that
+  // weren't allocated to anything. Outstanding/aging come from invoice
+  // balances directly.
+  const allocBase = {
+    organizationId: orgId,
+    invoice: {
+      status: { not: "CANCELLED" as const },
+      ...(propertyId ? { propertyId } : {}),
+    },
+  };
+  const invoiceBase = {
+    organizationId: orgId,
+    status: { not: "CANCELLED" as const },
     ...(propertyId ? { propertyId } : {}),
   };
 
@@ -84,12 +99,12 @@ export async function GET(req: NextRequest) {
     overstayCount,
     refundCount,
   ] = await Promise.all([
-    prisma.payment.aggregate({
-      where: { ...payBase, date: { gte: monthStart, lt: todayStart } },
+    prisma.paymentAllocation.aggregate({
+      where: { ...allocBase, payment: { date: { gte: monthStart, lt: todayStart } } },
       _sum: { amount: true },
     }),
-    prisma.payment.aggregate({
-      where: { ...payBase, date: { gte: prevStart, lt: prevSameDay } },
+    prisma.paymentAllocation.aggregate({
+      where: { ...allocBase, payment: { date: { gte: prevStart, lt: prevSameDay } } },
       _sum: { amount: true },
     }),
     prisma.expense.aggregate({
@@ -109,35 +124,30 @@ export async function GET(req: NextRequest) {
     prisma.reservation.count({
       where: { ...resBase, status: "CHECKED_IN" },
     }),
-    prisma.reservation.findMany({
+    // Outstanding = sum of invoice.balanceDue for all non-cancelled invoices
+    // with balance > 0. Driven by invoices, not reservation totals.
+    prisma.invoice.findMany({
       where: {
-        ...resBase,
-        status: { in: ["CHECKED_IN", "CONFIRMED", "PENDING"] },
+        ...invoiceBase,
+        balanceDue: { gt: 0 },
       },
-      select: { grandTotal: true, amountPaid: true },
+      select: { balanceDue: true },
     }),
-    // All payments last 30 days (for daily trend chart)
-    prisma.payment.findMany({
-      where: { ...payBase, date: { gte: thirtyAgo } },
-      select: { date: true, amount: true },
+    // Daily revenue trend: sum allocations applied in the last 30 days,
+    // keyed by the parent payment's date.
+    prisma.paymentAllocation.findMany({
+      where: { ...allocBase, payment: { date: { gte: thirtyAgo } } },
+      select: { amount: true, payment: { select: { date: true } } },
     }),
     // All expenses this month (for category breakdown)
     prisma.expense.findMany({
       where: { ...expBase, submittedAt: { gte: monthStart } },
       select: { amount: true, category: { select: { name: true } } },
     }),
-    // All reservations with potential balance (for aging)
-    prisma.reservation.findMany({
-      where: {
-        ...resBase,
-        status: { notIn: ["CANCELLED", "NO_SHOW"] },
-      },
-      select: {
-        grandTotal: true,
-        amountPaid: true,
-        endDate: true,
-        status: true,
-      },
+    // Aging receivables — driven by invoice.balanceDue + invoice.dueDate.
+    prisma.invoice.findMany({
+      where: { ...invoiceBase, balanceDue: { gt: 0 } },
+      select: { balanceDue: true, dueDate: true },
     }),
     // Receptionist performance: group by user + action this month
     prisma.reservationActivity.groupBy({
@@ -162,10 +172,10 @@ export async function GET(req: NextRequest) {
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
-    // Payments for 6-month revenue trend
-    prisma.payment.findMany({
-      where: { ...payBase, date: { gte: sixMonthsAgo } },
-      select: { date: true, amount: true },
+    // 6-month revenue trend — allocations applied to non-cancelled invoices.
+    prisma.paymentAllocation.findMany({
+      where: { ...allocBase, payment: { date: { gte: sixMonthsAgo } } },
+      select: { amount: true, payment: { select: { date: true } } },
     }),
     prisma.reservation.count({
       where: { ...resBase, status: "CHECKED_IN", endDate: { lt: todayStart } },
@@ -186,19 +196,18 @@ export async function GET(req: NextRequest) {
     totalUnits > 0
       ? Math.round((checkedInCount / totalUnits) * 1000) / 10
       : 0;
-  const outstanding = outstandingRes.reduce((s, r) => {
-    const b = Number(r.grandTotal) - Number(r.amountPaid);
-    return s + (b > 0.001 ? b : 0);
-  }, 0);
-  const outstandingCount = outstandingRes.filter(
-    (r) => Number(r.grandTotal) - Number(r.amountPaid) > 0.001,
-  ).length;
+  // outstandingRes is now an array of invoices with balanceDue > 0
+  const outstanding = outstandingRes.reduce(
+    (s, inv) => s + Number(inv.balanceDue),
+    0,
+  );
+  const outstandingCount = outstandingRes.length;
 
   // ── Revenue trend (daily, 30 days) ────────────────────────────────────────
   const revByDay = new Map<string, number>();
-  for (const p of payments30d) {
-    const key = format(new Date(p.date), "yyyy-MM-dd");
-    revByDay.set(key, (revByDay.get(key) ?? 0) + Number(p.amount));
+  for (const a of payments30d) {
+    const key = format(new Date(a.payment.date), "yyyy-MM-dd");
+    revByDay.set(key, (revByDay.get(key) ?? 0) + Number(a.amount));
   }
   const revenueTrend = eachDayOfInterval({
     start: thirtyAgo,
@@ -235,17 +244,18 @@ export async function GET(req: NextRequest) {
   const agingCounts = {
     current: 0, d1to30: 0, d31to60: 0, d61to90: 0, d90plus: 0,
   };
-  for (const r of agingRaw) {
-    const balance = Number(r.grandTotal) - Number(r.amountPaid);
+  for (const inv of agingRaw) {
+    const balance = Number(inv.balanceDue);
     if (balance <= 0.001) continue;
+    // Aging is bucketed by how many days past the invoice due date.
     const past =
-      r.endDate < todayStart
+      inv.dueDate < todayStart
         ? Math.floor(
-            (todayStart.getTime() - new Date(r.endDate).getTime()) /
+            (todayStart.getTime() - new Date(inv.dueDate).getTime()) /
               (1000 * 60 * 60 * 24),
           )
         : -1;
-    if (past < 0 || r.status === "CHECKED_IN") {
+    if (past < 0) {
       aging.current += balance;
       agingCounts.current++;
     } else if (past <= 30) {
@@ -298,9 +308,9 @@ export async function GET(req: NextRequest) {
 
   // ── 6-month revenue trend ─────────────────────────────────────────────────
   const revByMonth = new Map<string, number>();
-  for (const p of payments6m) {
-    const key = format(new Date(p.date), "yyyy-MM");
-    revByMonth.set(key, (revByMonth.get(key) ?? 0) + Number(p.amount));
+  for (const a of payments6m) {
+    const key = format(new Date(a.payment.date), "yyyy-MM");
+    revByMonth.set(key, (revByMonth.get(key) ?? 0) + Number(a.amount));
   }
   const occupancyTrend = Array.from({ length: 6 }, (_, i) => {
     const m = addMonths(now, i - 5);
@@ -320,19 +330,12 @@ export async function GET(req: NextRequest) {
 
   const [propPayments, propExpenses, allUnitsForComp, occupiedResForComp] =
     await Promise.all([
-      prisma.payment.findMany({
-        where: { ...payBase, date: { gte: monthStart } },
+      // Per-property revenue this month — invoice allocations only.
+      prisma.paymentAllocation.findMany({
+        where: { ...allocBase, payment: { date: { gte: monthStart } } },
         select: {
           amount: true,
-          reservation: {
-            select: {
-              unit: { select: { propertyId: true } },
-              reservationUnits: {
-                take: 1,
-                select: { unit: { select: { propertyId: true } } },
-              },
-            },
-          },
+          invoice: { select: { propertyId: true } },
         },
       }),
       prisma.expense.findMany({
@@ -374,12 +377,10 @@ export async function GET(req: NextRequest) {
       r.reservationUnits?.[0]?.unit?.propertyId;
     if (pid) propOccMap.set(pid, (propOccMap.get(pid) ?? 0) + 1);
   }
-  for (const p of propPayments) {
-    const pid =
-      p.reservation?.unit?.propertyId ??
-      p.reservation?.reservationUnits?.[0]?.unit?.propertyId;
+  for (const a of propPayments) {
+    const pid = a.invoice?.propertyId;
     if (pid) {
-      propRevMap.set(pid, (propRevMap.get(pid) ?? 0) + Number(p.amount));
+      propRevMap.set(pid, (propRevMap.get(pid) ?? 0) + Number(a.amount));
     }
   }
   for (const e of propExpenses) {

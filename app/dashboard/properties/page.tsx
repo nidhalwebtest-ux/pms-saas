@@ -93,7 +93,7 @@ export default async function PropertiesPage({
     organizationId: dbUser.organizationId,
   };
 
-  const [raw, paymentsThisMonth, activeCount, inactiveCount, archivedCount] = await Promise.all([
+  const [raw, allocationsThisMonth, activeCount, inactiveCount, archivedCount] = await Promise.all([
     prisma.property.findMany({
       where: whereClause,
       include: {
@@ -111,16 +111,19 @@ export default async function PropertiesPage({
       },
       orderBy: orderByClause,
     }),
-    prisma.payment.findMany({
+    // Revenue is sourced from invoice payment allocations (not raw payments
+    // via reservation→unit→property). This way cancelled invoices and
+    // payments that were never applied to any invoice are correctly
+    // excluded from the per-property revenue figure.
+    prisma.paymentAllocation.findMany({
       where: {
-        date: { gte: startOfMonth },
-        reservation: {
-          unit: { property: { organizationId: dbUser.organizationId } },
-        },
+        organizationId: dbUser.organizationId,
+        payment: { date: { gte: startOfMonth } },
+        invoice: { status: { not: "CANCELLED" } },
       },
       select: {
         amount: true,
-        reservation: { select: { unit: { select: { propertyId: true } } } },
+        invoice: { select: { propertyId: true } },
       },
     }),
     prisma.property.count({ where: { ...orgScope, isArchived: false, isActive: true  } }),
@@ -135,11 +138,11 @@ export default async function PropertiesPage({
     archived: archivedCount,
   };
 
-  // Build revenue map: propertyId → total OMR this month
+  // Build revenue map: propertyId → total OMR this month (via invoices)
   const revenueByProperty: Record<string, number> = {};
-  for (const p of paymentsThisMonth) {
-    const pid = p.reservation?.unit?.propertyId;
-    if (pid) revenueByProperty[pid] = (revenueByProperty[pid] ?? 0) + Number(p.amount);
+  for (const a of allocationsThisMonth) {
+    const pid = a.invoice?.propertyId;
+    if (pid) revenueByProperty[pid] = (revenueByProperty[pid] ?? 0) + Number(a.amount);
   }
 
   // Serialize for client (no Date objects)

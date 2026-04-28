@@ -1,181 +1,204 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { useCallback, useState, useEffect } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import {
   MagnifyingGlassIcon,
-  AdjustmentsHorizontalIcon,
-  ChevronDownIcon,
   XMarkIcon,
+  AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/outline";
+
+const STATUS_TABS = ["all", "active", "inactive"] as const;
+type StatusKey = typeof STATUS_TABS[number];
+
+const TENANT_TYPES = ["", "individual", "family", "corporate", "government"] as const;
+const SOURCE_VALUES = [
+  "", "walk_in", "referral", "online", "agent", "returning", "returning_guest", "corporate_contract",
+] as const;
+
+interface Props {
+  currentSearch:     string;
+  currentStatus:     string;
+  currentTenantType: string;
+  currentSource:     string;
+  counts: { all: number; active: number; inactive: number };
+}
 
 export default function TenantFilters({
   currentSearch,
-  currentClassification,
+  currentStatus,
   currentTenantType,
   currentSource,
-}: {
-  currentSearch: string;
-  currentClassification: string;
-  currentTenantType: string;
-  currentSource: string;
-}) {
-  const t       = useTranslations("tenants.filters");
-  const tTypes  = useTranslations("tenants.types");
-  const tSrc    = useTranslations("tenants.sources");
-  const router      = useRouter();
-  const pathname    = usePathname();
+  counts,
+}: Props) {
+  const router       = useRouter();
+  const pathname     = usePathname();
   const searchParams = useSearchParams();
-  const [search, setSearch]       = useState(currentSearch);
-  const [expanded, setExpanded]   = useState(true);
+  const inputRef     = useRef<HTMLInputElement>(null);
 
-  const buildUrl = useCallback(
+  const t      = useTranslations("tenants.filters");
+  const tTypes = useTranslations("tenants.types");
+  const tSrc   = useTranslations("tenants.sources");
+
+  const [searchTerm, setSearchTerm]     = useState(currentSearch);
+  const [showAdvanced, setShowAdvanced] = useState(!!currentTenantType || !!currentSource);
+
+  useEffect(() => { setSearchTerm(currentSearch); }, [currentSearch]);
+
+  const push = useCallback(
     (updates: Record<string, string>) => {
-      const p = new URLSearchParams(searchParams.toString());
-      Object.entries(updates).forEach(([k, v]) => {
-        if (v) p.set(k, v);
-        else   p.delete(k);
-      });
-      return pathname + "?" + p.toString();
+      const params = new URLSearchParams(searchParams.toString());
+      for (const [k, v] of Object.entries(updates)) {
+        if (v) params.set(k, v);
+        else   params.delete(k);
+      }
+      params.delete("page");
+      router.push(pathname + "?" + params.toString());
     },
-    [searchParams, pathname],
+    [searchParams, pathname, router],
   );
 
-  // Debounce search
+  // Debounce search → URL
   useEffect(() => {
     const t = setTimeout(() => {
-      if (search !== currentSearch)
-        router.push(buildUrl({ q: search }));
-    }, 400);
+      if (searchTerm !== currentSearch) push({ q: searchTerm });
+    }, 300);
     return () => clearTimeout(t);
-  }, [search, currentSearch, buildUrl, router]);
+  }, [searchTerm]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const hasFilters = currentSearch || currentClassification || currentTenantType || currentSource;
+  const hasAdvFilters = !!currentTenantType || !!currentSource;
 
-  function clearAll() {
-    setSearch("");
-    router.push(pathname);
-  }
+  const statusLabel = (k: StatusKey) =>
+    k === "all" ? t("statusAll") : k === "active" ? t("statusActive") : t("statusInactive");
 
-  function push(key: string, val: string) {
-    router.push(buildUrl({ [key]: val }));
-  }
+  const activeStatus: StatusKey =
+    (currentStatus as StatusKey) && STATUS_TABS.includes(currentStatus as StatusKey)
+      ? (currentStatus as StatusKey)
+      : "all";
+
+  const sourceLabel = (v: string) => {
+    if (!v) return t("allSources");
+    try { return tSrc(v as never); } catch { return v; }
+  };
+  const typeLabel = (v: string) => {
+    if (!v) return t("allTypes");
+    try { return tTypes(v as never); } catch { return v; }
+  };
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-      {/* Toggle bar */}
-      <button
-        onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center justify-between px-4 py-3 bg-gray-50/50 hover:bg-gray-100/50 transition-colors"
-      >
-        <div className="flex items-center gap-2">
-          <AdjustmentsHorizontalIcon className="h-4 w-4 text-gray-500" />
-          <span className="text-sm font-semibold text-gray-700">{t("filtersBtn")}</span>
-          {hasFilters && (
-            <span className="inline-flex h-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-[10px] font-bold text-white">
-              {[currentSearch, currentClassification, currentTenantType, currentSource].filter(Boolean).length}
-            </span>
-          )}
-        </div>
-        <ChevronDownIcon
-          className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      {expanded && (
-        <div className="border-t border-gray-100 bg-white px-4 py-4 space-y-3">
-          {/* Row 1: search + classification + type */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Search */}
-            <div className="relative rounded-lg shadow-sm">
-              <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3">
-                <MagnifyingGlassIcon className="h-4 w-4 text-gray-400" />
-              </div>
-              <input
-                type="text"
-                className="block w-full rounded-lg border-0 py-2 ps-9 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 sm:text-sm"
-                placeholder={t("searchPlaceholder")}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
-
-            {/* Classification pills */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {(["", "regular", "vip", "blacklisted"] as const).map((val) => {
-                const label =
-                  val === ""            ? t("all")
-                  : val === "regular"   ? t("regular")
-                  : val === "vip"       ? t("vip")
-                  :                       t("blacklisted");
-                const active = currentClassification === val;
-                return (
-                  <button
-                    key={val}
-                    onClick={() => push("classification", val)}
-                    className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
-                      active
-                        ? val === "vip"         ? "bg-yellow-100 border-yellow-400 text-yellow-800"
-                          : val === "blacklisted" ? "bg-red-100 border-red-400 text-red-700"
-                          : "bg-blue-600 border-blue-600 text-white"
-                        : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Type select */}
-            <select
-              className="block w-full rounded-lg border-0 py-2 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm"
-              value={currentTenantType}
-              onChange={(e) => push("tenantType", e.target.value)}
+    <>
+      {/* ── Status tabs (mirror buildings + units) ───────────────────────── */}
+      <div className="flex flex-wrap gap-1 mb-1">
+        {STATUS_TABS.map((key) => {
+          const active = activeStatus === key;
+          const count  = counts[key] ?? 0;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => push({ status: key === "all" ? "" : key })}
+              className={`relative inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                active
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
+              }`}
             >
-              <option value="">{t("allTypes")}</option>
-              <option value="individual">{tTypes("individual")}</option>
-              <option value="family">{tTypes("family")}</option>
-              <option value="corporate">{tTypes("corporate")}</option>
-              <option value="government">{tTypes("government")}</option>
-            </select>
-          </div>
-
-          {/* Row 2: source + clear */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-medium text-gray-500">{t("sourceLabel")}</span>
-            {(["", "walk_in", "referral", "online", "agent", "returning", "returning_guest", "corporate_contract"] as const).map((val) => {
-              const label = val === "" ? t("all") : (() => {
-                try { return tSrc(val as never); } catch { return val; }
-              })();
-              const active = currentSource === val;
-              return (
-                <button
-                  key={val}
-                  onClick={() => push("source", val)}
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors ${
-                    active
-                      ? "bg-gray-900 border-gray-900 text-white"
-                      : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50"
+              {statusLabel(key)}
+              {count > 0 && (
+                <span
+                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold ltr-numbers ${
+                    active ? "bg-white/25 text-white" : "bg-gray-200 text-gray-700"
                   }`}
                 >
-                  {label}
-                </button>
-              );
-            })}
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
 
-            {hasFilters && (
+      {/* ── Search + filter bar ──────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="flex items-center gap-3 px-4 py-3">
+          {/* Search */}
+          <div className="relative flex-1">
+            <MagnifyingGlassIcon className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder={t("searchPlaceholder")}
+              className="block w-full rounded-lg border-0 py-2 ps-9 pe-8 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
+            />
+            {searchTerm && (
               <button
-                onClick={clearAll}
-                className="ms-auto flex items-center gap-1 text-xs text-gray-400 hover:text-red-600 transition-colors"
+                type="button"
+                onClick={() => {
+                  setSearchTerm("");
+                  push({ q: "" });
+                  inputRef.current?.focus();
+                }}
+                className="absolute end-2 top-1/2 -translate-y-1/2"
+                aria-label={t("clearSearch")}
               >
-                <XMarkIcon className="h-3.5 w-3.5" /> {t("clearAll")}
+                <XMarkIcon className="h-4 w-4 text-gray-400 hover:text-gray-600" />
               </button>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium border transition-colors ${
+              showAdvanced || hasAdvFilters
+                ? "border-blue-500 bg-blue-50 text-blue-700"
+                : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+            }`}
+          >
+            <AdjustmentsHorizontalIcon className="h-4 w-4" />
+            {t("filters")}
+            {hasAdvFilters && <span className="h-2 w-2 rounded-full bg-blue-600" />}
+          </button>
         </div>
-      )}
-    </div>
+
+        {showAdvanced && (
+          <div className="px-4 py-3 border-t border-gray-100 bg-gray-50 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                  {t("typeLabel")}
+                </label>
+                <select
+                  value={currentTenantType}
+                  onChange={(e) => push({ tenantType: e.target.value })}
+                  className="block w-full rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500"
+                >
+                  {TENANT_TYPES.map((v) => (
+                    <option key={v || "ALL"} value={v}>{typeLabel(v)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+                  {t("sourceLabel")}
+                </label>
+                <select
+                  value={currentSource}
+                  onChange={(e) => push({ source: e.target.value })}
+                  className="block w-full rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500"
+                >
+                  {SOURCE_VALUES.map((v) => (
+                    <option key={v || "ALL"} value={v}>{sourceLabel(v)}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

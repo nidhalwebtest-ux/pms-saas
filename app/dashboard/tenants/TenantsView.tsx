@@ -25,7 +25,7 @@ import {
   BanknotesIcon,
 } from "@heroicons/react/24/outline";
 import { quickUpdateTenant } from "./actions";
-import type { TenantRow, TenantStats } from "./page";
+import type { TenantRow } from "./page";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -336,11 +336,6 @@ function TenantTableRow({ tenant, onEdit, editMode }: { tenant: TenantRow; onEdi
         <TypeBadge value={tenant.tenantType} />
       </td>
 
-      {/* Classification */}
-      <td className="px-3 py-2.5">
-        <ClassBadge value={tenant.classification} />
-      </td>
-
       {/* Source */}
       <td className="hidden px-3 py-2.5 text-xs text-gray-500 lg:table-cell">
         {sourceLabel(tenant.source)}
@@ -549,12 +544,9 @@ function TenantSummaryCard({ tenant }: { tenant: TenantRow }) {
 
 export default function TenantsView({
   tenants,
-  stats,
 }: {
   tenants: TenantRow[];
-  stats: TenantStats;
 }) {
-  const tStats   = useTranslations("tenants.list.stats");
   const tBar     = useTranslations("tenants.list.toolbar");
   const tTable   = useTranslations("tenants.list.table");
   const tList    = useTranslations("tenants.list");
@@ -579,21 +571,6 @@ export default function TenantsView({
 
   return (
     <div className="space-y-3">
-
-      {/* ── Stats bar ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {[
-          { label: tStats("total"),       value: stats.total,       color: "border-l-blue-400",   val: "text-blue-700" },
-          { label: tStats("vip"),         value: stats.vip,         color: "border-l-yellow-400", val: "text-yellow-700" },
-          { label: tStats("blacklisted"), value: stats.blacklisted, color: "border-l-red-400",    val: "text-red-600" },
-          { label: tStats("active"),      value: stats.active,      color: "border-l-green-400",  val: "text-green-700" },
-        ].map(({ label, value, color, val }) => (
-          <div key={label} className={`bg-white rounded-xl border border-gray-200 border-l-4 ${color} px-4 py-3 shadow-sm`}>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{label}</p>
-            <p className={`text-2xl font-bold mt-0.5 ltr-numbers ${val}`}>{value}</p>
-          </div>
-        ))}
-      </div>
 
       {/* ── Toolbar ─────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
@@ -662,7 +639,6 @@ export default function TenantsView({
                   <SortTh label={tTable("name")}    sortKey="name"           currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="min-w-[160px]" />
                   <th className="hidden px-3 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell">{tTable("contact")}</th>
                   <SortTh label={tTable("type")}    sortKey="tenantType"     currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden md:table-cell" />
-                  <SortTh label={tTable("class")}   sortKey="classification" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
                   <SortTh label={tTable("source")}  sortKey="source"         currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden lg:table-cell" />
                   <SortTh label={tTable("stays")}   sortKey="totalStays"     currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden xl:table-cell text-center" />
                   <th className="px-3 py-3 text-end text-xs font-semibold uppercase tracking-wide text-gray-500 print:hidden">{tTable("actions")}</th>
@@ -671,7 +647,7 @@ export default function TenantsView({
               <tbody className="divide-y divide-gray-100 bg-white">
                 {sorted.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-16 text-center">
+                    <td colSpan={7} className="py-16 text-center">
                       <UserGroupIcon className="mx-auto mb-3 h-10 w-10 text-gray-200" />
                       <p className="text-sm text-gray-400">{tList("empty")}</p>
                     </td>

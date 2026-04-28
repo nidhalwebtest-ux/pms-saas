@@ -1250,7 +1250,9 @@
         "noPayments": "No payments recorded.",
         "multipleUnits": "Multiple Units",
         "inProperty": "in {property}"
-      }
+      },
+      "tenantsList": "Tenants list",
+      "newReservation": "New reservation"
     },
     "ledger": {
       "summary": {

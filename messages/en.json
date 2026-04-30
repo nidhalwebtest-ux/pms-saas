@@ -246,7 +246,9 @@
     "teamManagement": "Team Management",
     "staffAccounts": "Staff Accounts",
     "myProfile": "My Profile",
-    "organization": "Organization"
+    "organization": "Organization",
+    "reservationList": "Reservations list",
+    "newReservation": "New reservation"
   },
   "dashboard": {
     "goodMorning": "Good morning, {name}",
@@ -1687,7 +1689,9 @@
         "manualRate": "Manual rate",
         "notes": "Notes",
         "cancellationReason": "Cancellation Reason",
-        "cancelledOn": "Cancelled on {date}"
+        "cancelledOn": "Cancelled on {date}",
+        "movedOutBadge": "Moved out",
+        "movedTo": "Moved to {unit}"
       },
       "invoicesSection": {
         "title": "Invoices ({count})",
@@ -1938,7 +1942,9 @@
           "foundAlternative": "Found alternative accommodation",
           "workReason": "Work / business reason",
           "other": "Other"
-        }
+        },
+        "rateLabel": "Nightly rate (per unit)",
+        "rateHint": "Defaults to the reservation rate ({rate} OMR). Edit to charge a different rate for the returned days."
       },
       "refundModal": {
         "title": "Process Refund — {ref}",
@@ -2389,7 +2395,8 @@
       "success": {
         "moved": "Guest moved from {from} to {to} successfully"
       }
-    }
+    },
+    "scopedNote": "Locked to the building selected in the header."
   },
   "invoices": {
     "title": "Invoices",

@@ -36,6 +36,11 @@ type UnitRow = {
   propertyId: string; propertyName: string;
   rateType: string; rateAmount: string; rateSource: string;
   seasonalPriceName: string | null; nights: number; subtotal: string;
+  isMovedOut?: boolean;
+  movedToUnitId?: string | null;
+  movedToUnitName?: string | null;
+  moveDate?: string | null;
+  moveReason?: string | null;
 };
 
 type PaymentRow = {
@@ -1151,6 +1156,16 @@ function ReturnModal({ res, onSuccess, onClose }: {
   const [notes, setNotes]     = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Pre-fill the rate from the reservation's first unit so the receptionist
+  // sees the same nightly rate the booking was created with. They can override
+  // before confirming and the API uses that value for the entire return.
+  const reservationRate = res.units[0]?.rateAmount
+    ? Number(res.units[0].rateAmount)
+    : 0;
+  const [rateOverride, setRateOverride] = useState<string>(
+    reservationRate > 0 ? reservationRate.toFixed(3) : "",
+  );
+
   // Preview state
   type Preview = {
     returnFrom: string; returnTo: string; returnDays: number; returnType: string;
@@ -1167,14 +1182,19 @@ function ReturnModal({ res, onSuccess, onClose }: {
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
 
-  // Fetch preview whenever newCheckout changes
+  // Fetch preview whenever newCheckout or rate override changes
   useEffect(() => {
     if (!newCheckout) return;
     const ctrl = new AbortController();
     setPreviewLoading(true);
     setPreviewError(null);
+    const overrideNum = Number(rateOverride);
+    const qs = new URLSearchParams({ newCheckoutDate: newCheckout });
+    if (!isMonthly && rateOverride && overrideNum >= 0) {
+      qs.set("rateOverride", String(overrideNum));
+    }
     fetch(
-      `/api/reservations/${res.id}/return?newCheckoutDate=${newCheckout}`,
+      `/api/reservations/${res.id}/return?${qs.toString()}`,
       { signal: ctrl.signal },
     )
       .then((r) => r.json())
@@ -1186,16 +1206,22 @@ function ReturnModal({ res, onSuccess, onClose }: {
       .finally(() => setPreviewLoading(false));
     return () => ctrl.abort();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [newCheckout, res.id]);
+  }, [newCheckout, res.id, rateOverride, isMonthly]);
 
   async function handleConfirm() {
     if (!reason) { toast.error(t("reasonRequired")); return; }
     if (!preview) { toast.error(t("noPreview")); return; }
     setLoading(true);
+    const overrideNum = Number(rateOverride);
     const r = await fetch(`/api/reservations/${res.id}/return`, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ newCheckoutDate: newCheckout, reason, notes: notes || undefined }),
+      body:    JSON.stringify({
+        newCheckoutDate: newCheckout,
+        reason,
+        notes: notes || undefined,
+        rateOverride: !isMonthly && rateOverride && overrideNum >= 0 ? overrideNum : undefined,
+      }),
     });
     const data = await r.json();
     setLoading(false);
@@ -1247,6 +1273,31 @@ function ReturnModal({ res, onSuccess, onClose }: {
             </p>
           )}
         </div>
+
+        {/* Nightly rate (daily reservations only) */}
+        {!isMonthly && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {t("rateLabel")}
+            </label>
+            <div className="relative">
+              <input
+                type="number"
+                min={0}
+                step="0.001"
+                value={rateOverride}
+                onChange={(e) => setRateOverride(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 pe-12 text-sm focus:ring-2 focus:ring-purple-500 ltr-numbers"
+              />
+              <span className="absolute end-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">
+                OMR
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              {t("rateHint", { rate: reservationRate.toFixed(3) })}
+            </p>
+          </div>
+        )}
 
         {/* Preview */}
         {previewLoading && (
@@ -1524,7 +1575,7 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
     case "Upcoming":
       return (
         <>
-          <Link href="edit" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+          <Link href={`/dashboard/reservations/${reservationId}/edit`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
             <PencilSquareIcon className="h-4 w-4" /> {t("edit")}
           </Link>
           <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
@@ -1547,7 +1598,7 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
               {t("noShow")}
             </button>
           )}
-          <Link href="edit" className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+          <Link href={`/dashboard/reservations/${reservationId}/edit`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
             <PencilSquareIcon className="h-4 w-4" /> {t("edit")}
           </Link>
           <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
@@ -1924,13 +1975,37 @@ export default function ReservationDetail({ id }: { id: string }) {
                   <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-2">{tStay("units")}</p>
                   <div className="space-y-2">
                     {res.units.map((u) => (
-                      <div key={u.id} className="p-3 rounded-lg bg-gray-50 border border-gray-100">
+                      <div
+                        key={u.id}
+                        className={`p-3 rounded-lg border ${
+                          u.isMovedOut
+                            ? "bg-amber-50 border-amber-200"
+                            : "bg-gray-50 border-gray-100"
+                        }`}
+                      >
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="font-semibold text-gray-900 text-sm">{u.name}</p>
+                            <p className={`font-semibold text-sm ${u.isMovedOut ? "text-amber-800" : "text-gray-900"}`}>
+                              {u.name}
+                              {u.isMovedOut && (
+                                <span className="ms-2 inline-flex items-center gap-1 rounded-full bg-amber-200/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                                  {tStay("movedOutBadge")}
+                                </span>
+                              )}
+                            </p>
                             <p className="text-xs text-gray-500">
                               {u.propertyName} — {tStay("floor", { n: u.floor })} — {fmtUnitType(u.unitType)}
                             </p>
+                            {u.isMovedOut && u.movedToUnitName && (
+                              <p className="mt-1 text-xs text-amber-700">
+                                {tStay("movedTo", { unit: u.movedToUnitName })}
+                                {u.moveDate && (
+                                  <span className="text-amber-600 ms-1 ltr-numbers">
+                                    · {new Date(u.moveDate).toISOString().slice(0, 10)}
+                                  </span>
+                                )}
+                              </p>
+                            )}
                           </div>
                           <p className="text-xs font-medium text-gray-700 shrink-0 ms-2 ltr-numbers">
                             {Number(u.subtotal).toFixed(3)} OMR
@@ -2211,12 +2286,6 @@ export default function ReservationDetail({ id }: { id: string }) {
                       {tFinancial("recordPayment")}
                     </button>
                   )}
-                  <button
-                    onClick={() => setActiveModal("charge")}
-                    className="w-full py-2 border border-gray-300 hover:bg-gray-50 text-gray-700 text-sm font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <PlusIcon className="h-4 w-4" /> {tFinancial("addCharge")}
-                  </button>
                 </div>
               </div>
             </div>

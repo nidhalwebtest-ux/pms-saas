@@ -71,12 +71,19 @@ export default async function UnitDetailPage({
       orderBy: { createdAt: "desc" },
     }),
 
-    // Most recent payments tied to a reservation on this unit. Limit 10 so the
-    // section stays focused on "recent" — the full history lives on the
-    // tenant ledger / payments page.
+    // Most recent payments tied to a reservation that currently has this unit
+    // attached via the reservationUnits junction table (i.e. the active stay).
+    // The legacy `reservation.unitId` FK still points to the FIRST unit ever
+    // booked, so after a move it would mis-attribute payments to the old
+    // unit. The junction-table filter excludes moved-out RUs and follows the
+    // guest to whichever unit they're actually in.
     prisma.payment.findMany({
       where: {
-        reservation: { unit: { id: unitId } },
+        reservation: {
+          reservationUnits: {
+            some: { unitId, isMovedOut: { not: true } },
+          },
+        },
       },
       include: {
         tenant: { select: { id: true, firstName: true, lastName: true } },

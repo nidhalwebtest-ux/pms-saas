@@ -100,7 +100,7 @@ function useFmtDate() {
     if (ms === todayMs) return { text: t("today"), cls: "text-orange-600 font-semibold" };
     return {
       text: fmtDateFns(new Date(iso), "d MMM yyyy", { locale: dateFnsLocale }),
-      cls: "",
+      cls: "text-gray-900",
     };
   };
 }
@@ -503,7 +503,15 @@ const SECONDARY_TABS: { key: TabKey; tKey: string }[] = [
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function ReservationsView({ properties }: { properties: PropertyOption[] }) {
+export default function ReservationsView({
+  properties,
+  defaultPropertyId = "",
+  scopedToBuilding = false,
+}: {
+  properties: PropertyOption[];
+  defaultPropertyId?: string;
+  scopedToBuilding?: boolean;
+}) {
   const router = useRouter();
   const t       = useTranslations("reservations");
   const tTabs   = useTranslations("reservations.tabs");
@@ -518,7 +526,7 @@ export default function ReservationsView({ properties }: { properties: PropertyO
   const [activeTab,    setActiveTab]    = useState<TabKey>("all");
   const [search,       setSearch]       = useState("");
   const [showFilters,  setShowFilters]  = useState(false);
-  const [advFilters,   setAdvFilters]   = useState<AdvFilters>({ propertyId: "", dateFrom: "", dateTo: "", rateType: "", source: "" });
+  const [advFilters,   setAdvFilters]   = useState<AdvFilters>({ propertyId: defaultPropertyId, dateFrom: "", dateTo: "", rateType: "", source: "" });
   const [sortKey,      setSortKey]      = useState<SortKey | null>("displayStatusPriority");
   const [sortDir,      setSortDir]      = useState<"asc" | "desc">("asc");
   const [modal,        setModal]        = useState<ModalState>(null);
@@ -753,8 +761,10 @@ export default function ReservationsView({ properties }: { properties: PropertyO
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <select value={advFilters.propertyId}
                 onChange={(e) => setAdvFilters((v) => ({ ...v, propertyId: e.target.value }))}
-                className="rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500">
-                <option value="">{t("allProperties")}</option>
+                disabled={scopedToBuilding}
+                title={scopedToBuilding ? t("scopedNote") : undefined}
+                className="rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed">
+                {!scopedToBuilding && <option value="">{t("allProperties")}</option>}
                 {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
               <input type="date" placeholder={t("from")} value={advFilters.dateFrom}

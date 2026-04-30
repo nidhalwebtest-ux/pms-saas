@@ -99,40 +99,73 @@ export async function GET(
 
   const dsInfo = getDisplayStatus(r.status as StoredStatus, r.startDate, r.endDate);
 
-  // Merge units (legacy + junction table)
+  // Merge units (legacy + junction table). The junction table is the source of
+  // truth for moved-out info; we also expose the destination unit name so the
+  // detail page can render "moved to →" alongside the old unit.
+  type ReservationUnitWithUnit = (typeof r.reservationUnits)[number];
+  const ruById = new Map<string, ReservationUnitWithUnit>(
+    r.reservationUnits.map((ru) => [ru.id, ru]),
+  );
   const seen = new Set<string>();
   const units: {
     id: string; name: string; floor: number; unitType: string;
     propertyId: string; propertyName: string;
     rateType: string; rateAmount: string; rateSource: string;
     seasonalPriceName: string | null; nights: number; subtotal: string;
+    isMovedOut: boolean;
+    movedToUnitId: string | null;
+    movedToUnitName: string | null;
+    moveDate: string | null;
+    moveReason: string | null;
   }[] = [];
+
+  function pushUnit(args: {
+    unitId: string; unitName: string; floor: number; unitType: string;
+    propertyId: string; propertyName: string;
+    ru?: ReservationUnitWithUnit | null;
+    fallbackRateType: string; fallbackNights: number; fallbackSubtotal: string;
+  }) {
+    const { ru } = args;
+    const movedTo = ru?.movedToUnitId ? ruById.get(ru.movedToUnitId) : null;
+    units.push({
+      id: args.unitId, name: args.unitName, floor: args.floor, unitType: args.unitType,
+      propertyId: args.propertyId, propertyName: args.propertyName,
+      rateType: ru?.rateType ?? args.fallbackRateType,
+      rateAmount: ru ? ru.rateAmount.toString() : "0",
+      rateSource: ru?.rateSource ?? "default_price",
+      seasonalPriceName: ru?.seasonalPriceName ?? null,
+      nights: ru?.nights ?? args.fallbackNights,
+      subtotal: ru ? ru.subtotal.toString() : args.fallbackSubtotal,
+      isMovedOut: ru?.isMovedOut ?? false,
+      movedToUnitId: movedTo?.unitId ?? null,
+      movedToUnitName: movedTo?.unit.name ?? null,
+      moveDate: ru?.moveDate ? ru.moveDate.toISOString() : null,
+      moveReason: ru?.moveReason ?? null,
+    });
+  }
 
   if (r.unit) {
     const ru = r.reservationUnits.find((x) => x.unitId === r.unit!.id);
     seen.add(r.unit.id);
-    units.push({
-      id: r.unit.id, name: r.unit.name, floor: r.unit.floor,
-      unitType: r.unit.unitType,
+    pushUnit({
+      unitId: r.unit.id, unitName: r.unit.name, floor: r.unit.floor, unitType: r.unit.unitType,
       propertyId: r.unit.property.id, propertyName: r.unit.property.name,
-      rateType: ru?.rateType ?? r.rateType,
-      rateAmount: ru ? ru.rateAmount.toString() : "0",
-      rateSource: ru?.rateSource ?? "default_price",
-      seasonalPriceName: ru?.seasonalPriceName ?? null,
-      nights: ru?.nights ?? r.totalNights,
-      subtotal: ru ? ru.subtotal.toString() : Number(r.grandTotal).toFixed(3),
+      ru,
+      fallbackRateType: r.rateType,
+      fallbackNights: r.totalNights,
+      fallbackSubtotal: Number(r.grandTotal).toFixed(3),
     });
   }
   for (const ru of r.reservationUnits) {
     if (!seen.has(ru.unitId)) {
       seen.add(ru.unitId);
-      units.push({
-        id: ru.unit.id, name: ru.unit.name, floor: ru.unit.floor,
-        unitType: ru.unit.unitType,
+      pushUnit({
+        unitId: ru.unit.id, unitName: ru.unit.name, floor: ru.unit.floor, unitType: ru.unit.unitType,
         propertyId: ru.unit.property.id, propertyName: ru.unit.property.name,
-        rateType: ru.rateType, rateAmount: ru.rateAmount.toString(),
-        rateSource: ru.rateSource, seasonalPriceName: ru.seasonalPriceName,
-        nights: ru.nights, subtotal: ru.subtotal.toString(),
+        ru,
+        fallbackRateType: ru.rateType,
+        fallbackNights: ru.nights,
+        fallbackSubtotal: ru.subtotal.toString(),
       });
     }
   }

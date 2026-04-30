@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -66,7 +66,6 @@ export default function ExtendStayModal({
   onSuccess,
 }: Props) {
   const t = useTranslations("reservations.extendStayModal");
-  const tMethods = useTranslations("payments.methods");
   const locale = useLocale();
   const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
 
@@ -91,12 +90,6 @@ export default function ExtendStayModal({
 
   // Custom rate per unit (OMR/night) — pre-filled from existingRate, user-editable
   const [customRates, setCustomRates] = useState<Record<string, string>>({});
-
-  // Payment
-  const [collectPayment, setCollectPayment] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("CASH");
-  const [paymentReference, setPaymentReference] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -128,8 +121,6 @@ export default function ExtendStayModal({
         }
         setUnitExtendMap(map);
         setCustomRates(rates);
-        // Pre-fill payment amount with balance due
-        setPaymentAmount(((data as PreviewData).summary.newBalanceDue).toFixed(3));
       } catch {
         setPreviewError(t("errors.previewNetwork"));
         setPreview(null);
@@ -182,14 +173,6 @@ export default function ExtendStayModal({
       customRates: ratesPayload,
     };
 
-    if (collectPayment && paymentAmount && Number(paymentAmount) > 0) {
-      body.payment = {
-        amount: Number(paymentAmount),
-        method: paymentMethod,
-        reference: paymentReference || null,
-      };
-    }
-
     setSubmitting(true);
     try {
       const res = await fetch(`/api/reservations/${reservationId}/extend`, {
@@ -220,6 +203,36 @@ export default function ExtendStayModal({
   const someAvailableToExtend = preview
     ? preview.units.some((u) => u.available && (unitExtendMap.get(u.unitId) ?? true))
     : false;
+
+  // Reactive financial summary that re-runs when the user toggles a unit or
+  // edits the per-unit rate, so the totals reflect the proposed extension
+  // before submitting.
+  const liveSummary = useMemo(() => {
+    if (!preview) return null;
+    let extensionTotal = 0;
+    for (const u of preview.units) {
+      const include = unitExtendMap.get(u.unitId) ?? u.available;
+      if (!include || !u.available) continue;
+      const overrideRaw = customRates[u.unitId];
+      const overrideNum = Number(overrideRaw);
+      const useOverride = overrideRaw !== undefined && overrideRaw !== "" &&
+                          Number.isFinite(overrideNum) && overrideNum !== u.existingRate;
+      const subtotal = useOverride
+        ? overrideNum * u.extensionNights
+        : u.extensionSubtotal;
+      extensionTotal += subtotal;
+    }
+    extensionTotal = Math.round(extensionTotal * 1000) / 1000;
+    const newGrandTotal = Math.round((preview.summary.previousGrandTotal + extensionTotal) * 1000) / 1000;
+    const newBalanceDue = Math.round((newGrandTotal - preview.summary.previousAmountPaid) * 1000) / 1000;
+    return {
+      previousGrandTotal: preview.summary.previousGrandTotal,
+      previousAmountPaid: preview.summary.previousAmountPaid,
+      extensionTotal,
+      newGrandTotal,
+      newBalanceDue,
+    };
+  }, [preview, unitExtendMap, customRates]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
@@ -420,96 +433,36 @@ export default function ExtendStayModal({
                 </div>
               )}
 
-              {/* Financial summary */}
-              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-2">
-                <h3 className="text-sm font-semibold text-gray-700 mb-3">{t("financialSummary")}</h3>
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>{t("previousGrandTotal")}</span>
-                  <span className="ltr-numbers">{fmtOMR(preview.summary.previousGrandTotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-green-700">
-                  <span>{t("extensionCharges")}</span>
-                  <span className="ltr-numbers">+{fmtOMR(preview.summary.extensionTotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm font-bold text-gray-900 border-t border-gray-200 pt-2">
-                  <span>{t("newGrandTotal")}</span>
-                  <span className="ltr-numbers">{fmtOMR(preview.summary.newGrandTotal)}</span>
-                </div>
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>{t("alreadyPaid")}</span>
-                  <span className="ltr-numbers">−{fmtOMR(preview.summary.previousAmountPaid)}</span>
-                </div>
-                <div
-                  className={`flex justify-between text-sm font-bold border-t border-gray-200 pt-2 ${
-                    preview.summary.newBalanceDue > 0 ? "text-red-600" : "text-green-600"
-                  }`}
-                >
-                  <span>{t("newBalanceDue")}</span>
-                  <span className="ltr-numbers">{fmtOMR(preview.summary.newBalanceDue)}</span>
-                </div>
-              </div>
-
-              {/* Optional payment */}
-              <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => setCollectPayment((v) => !v)}
-                  className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors text-start"
-                >
-                  <span>{t("collectPayment")}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full ${collectPayment ? "bg-blue-100 text-blue-700" : "bg-gray-200 text-gray-500"}`}>
-                    {collectPayment ? t("yes") : t("no")}
-                  </span>
-                </button>
-
-                {collectPayment && (
-                  <div className="px-4 py-4 space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
-                          {t("amountLabel")}
-                        </label>
-                        <input
-                          type="number"
-                          step="0.001"
-                          min="0"
-                          value={paymentAmount}
-                          onChange={(e) => setPaymentAmount(e.target.value)}
-                          placeholder={preview.summary.newBalanceDue.toFixed(3)}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 ltr-numbers"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">
-                          {t("methodLabel")}
-                        </label>
-                        <select
-                          value={paymentMethod}
-                          onChange={(e) => setPaymentMethod(e.target.value)}
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                        >
-                          <option value="CASH">{tMethods("CASH")}</option>
-                          <option value="CARD">{tMethods("CARD")}</option>
-                          <option value="BANK_TRANSFER">{tMethods("BANK_TRANSFER")}</option>
-                          <option value="CHEQUE">{tMethods("CHEQUE")}</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        {t("referenceLabel")}
-                      </label>
-                      <input
-                        type="text"
-                        value={paymentReference}
-                        onChange={(e) => setPaymentReference(e.target.value)}
-                        placeholder={t("referencePlaceholder")}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
-                      />
-                    </div>
+              {/* Financial summary (reactive: re-runs as units toggle / rate edits) */}
+              {liveSummary && (
+                <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-2">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">{t("financialSummary")}</h3>
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>{t("previousGrandTotal")}</span>
+                    <span className="ltr-numbers">{fmtOMR(liveSummary.previousGrandTotal)}</span>
                   </div>
-                )}
-              </div>
+                  <div className="flex justify-between text-sm text-green-700">
+                    <span>{t("extensionCharges")}</span>
+                    <span className="ltr-numbers">+{fmtOMR(liveSummary.extensionTotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm font-bold text-gray-900 border-t border-gray-200 pt-2">
+                    <span>{t("newGrandTotal")}</span>
+                    <span className="ltr-numbers">{fmtOMR(liveSummary.newGrandTotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>{t("alreadyPaid")}</span>
+                    <span className="ltr-numbers">−{fmtOMR(liveSummary.previousAmountPaid)}</span>
+                  </div>
+                  <div
+                    className={`flex justify-between text-sm font-bold border-t border-gray-200 pt-2 ${
+                      liveSummary.newBalanceDue > 0 ? "text-red-600" : "text-green-600"
+                    }`}
+                  >
+                    <span>{t("newBalanceDue")}</span>
+                    <span className="ltr-numbers">{fmtOMR(liveSummary.newBalanceDue)}</span>
+                  </div>
+                </div>
+              )}
 
               {/* Confirm button */}
               <button

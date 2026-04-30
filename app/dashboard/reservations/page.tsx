@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getSelectedPropertyId } from "@/lib/selected-property";
 import ReservationsView from "./ReservationsView";
 
 export default async function ReservationsPage() {
@@ -14,11 +15,26 @@ export default async function ReservationsPage() {
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
 
-  const properties = await prisma.property.findMany({
-    where:   { organizationId: dbUser.organizationId, isArchived: false },
-    select:  { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
+  const [allProperties, selectedPropertyId] = await Promise.all([
+    prisma.property.findMany({
+      where:   { organizationId: dbUser.organizationId, isArchived: false },
+      select:  { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+    getSelectedPropertyId(),
+  ]);
 
-  return <ReservationsView properties={properties} />;
+  // Same pattern as units list: when a building is globally selected, lock
+  // the dropdown to it. When "All buildings" is active, show every property.
+  const properties = selectedPropertyId
+    ? allProperties.filter((p) => p.id === selectedPropertyId)
+    : allProperties;
+
+  return (
+    <ReservationsView
+      properties={properties}
+      defaultPropertyId={selectedPropertyId ?? ""}
+      scopedToBuilding={!!selectedPropertyId}
+    />
+  );
 }

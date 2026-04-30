@@ -532,9 +532,25 @@ async function _generateShortTermInvoice(
       const unitName = _resolveUnitName(res, ui.unitId) ?? ui.unitId;
 
       if (segments.length > 0 && segments.reduce((s, seg) => s + seg.subtotal, 0) > 0) {
-        // Normal path: use the pricing-engine segments
+        // Normal path: use the pricing-engine segments. Defensive guard:
+        // segments are derived from a per-day breakdown that is built in the
+        // server's local timezone, so a daylight-saving boundary or DB date
+        // stored at a non-midnight UTC time could in rare cases yield more
+        // days than the reservation actually has. Clamp the total nights
+        // billed to the reservation's authoritative `nights` count, scaling
+        // each segment proportionally.
+        const segNightsTotal = segments.reduce((s, seg) => s + seg.nights, 0);
+        const clampRatio = segNightsTotal > nights && segNightsTotal > 0
+          ? nights / segNightsTotal
+          : 1;
+
         for (const seg of segments) {
-          const lineTotal = roundOMR(seg.subtotal);
+          const billedNights = clampRatio < 1
+            ? Math.round(seg.nights * clampRatio)
+            : seg.nights;
+          const lineTotal = clampRatio < 1
+            ? roundOMR(seg.ratePerNight * billedNights)
+            : roundOMR(seg.subtotal);
           subtotal = roundOMR(subtotal + lineTotal);
 
           lineItemsData.push({
@@ -542,7 +558,7 @@ async function _generateShortTermInvoice(
             description:       `${unitName} — ${seg.priceName ?? "Default"} rate (${seg.startDate} – ${seg.endDate})`,
             category:          "ROOM_CHARGE",
             unitId:            ui.unitId,
-            quantity:          seg.nights,
+            quantity:          billedNights,
             unitPrice:         seg.ratePerNight,
             lineTotal,
             rateType:          "DAILY",
@@ -1318,8 +1334,23 @@ export async function recordPayment(
 
     if (invoiceAllocations && invoiceAllocations.length > 0) {
       // ── 3a. Manual allocation ──────────────────────────────────────────────
+      // Cap each allocation at the invoice's current balanceDue. Anything the
+      // caller asks above that stays on `remaining` and becomes overpayment
+      // (tenant credit), so the per-invoice amountPaid never exceeds the
+      // invoice total.
       for (const alloc of invoiceAllocations) {
-        const allocAmt = roundOMR(alloc.amount);
+        const requested = roundOMR(alloc.amount);
+        if (requested <= 0) continue;
+
+        const inv = await tx.invoice.findUnique({
+          where:  { id: alloc.invoiceId },
+          select: { balanceDue: true, organizationId: true, status: true },
+        });
+        if (!inv || inv.organizationId !== orgId) continue;
+        if (inv.status === "CANCELLED") continue;
+
+        const due      = roundOMR(Number(inv.balanceDue));
+        const allocAmt = roundOMR(Math.min(requested, due, remaining));
         if (allocAmt <= 0) continue;
 
         const allocation = await tx.paymentAllocation.create({
@@ -1332,7 +1363,6 @@ export async function recordPayment(
         });
         createdAllocations.push(allocation);
 
-        // Update invoice paid amounts
         await _applyAllocationToInvoice(tx, alloc.invoiceId, allocAmt, today);
         remaining = roundOMR(remaining - allocAmt);
       }

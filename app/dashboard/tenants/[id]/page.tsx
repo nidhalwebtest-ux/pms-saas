@@ -95,16 +95,27 @@ export default async function TenantProfilePage({
     return notFound();
   }
 
-  // Compute open balance from new invoice schema
-  let openBalance = 0;
-  tenant.reservations.forEach((res) => {
-    res.invoices.forEach((inv) => {
-      if (["ISSUED", "PARTIALLY_PAID", "PENDING", "DUE"].includes(inv.status)) {
-        const bal = Number((inv as any).balanceDue ?? (inv as any).amount ?? 0);
-        if (bal > 0) openBalance += bal;
-      }
-    });
+  // Tenant balance = total charged on non-cancelled invoices − total paid (net
+  // of refunds). Allowed to go negative so customer credits (overpayments not
+  // yet applied to a future invoice) display as e.g. "-10.000 OMR".
+  const [chargedAgg, paidAgg] = await Promise.all([
+    prisma.invoice.aggregate({
+      where:  { tenantId: id, status: { notIn: ["CANCELLED", "VOID"] } },
+      _sum:   { totalAmount: true },
+    }),
+    prisma.payment.aggregate({
+      where:  { tenantId: id, isRefund: false },
+      _sum:   { amount: true },
+    }),
+  ]);
+  const refundsAgg = await prisma.payment.aggregate({
+    where:  { tenantId: id, isRefund: true },
+    _sum:   { amount: true },
   });
+  const totalCharged  = Number(chargedAgg._sum.totalAmount ?? 0);
+  const totalPaid     = Number(paidAgg._sum.amount ?? 0);
+  const totalRefunded = Number(refundsAgg._sum.amount ?? 0);
+  const openBalance   = Math.round((totalCharged - totalPaid + totalRefunded) * 1000) / 1000;
 
   const isIdExpired = tenant.idExpiryDate && new Date(tenant.idExpiryDate) < new Date();
 
@@ -262,9 +273,17 @@ export default async function TenantProfilePage({
 
       {/* ── KPI Row ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-        <div className={`bg-white rounded-lg shadow-sm p-4 border-s-4 ${openBalance > 0 ? "border-red-400" : "border-green-400"}`}>
+        <div className={`bg-white rounded-lg shadow-sm p-4 border-s-4 ${
+          openBalance > 0 ? "border-red-400"
+          : openBalance < 0 ? "border-blue-400"
+          : "border-green-400"
+        }`}>
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{tKpi("openBalance")}</p>
-          <p className={`text-xl font-bold mt-1 ltr-numbers ${openBalance > 0 ? "text-red-600" : "text-green-700"}`}>
+          <p className={`text-xl font-bold mt-1 ltr-numbers ${
+            openBalance > 0 ? "text-red-600"
+            : openBalance < 0 ? "text-blue-700"
+            : "text-green-700"
+          }`}>
             {openBalance.toFixed(3)} OMR
           </p>
         </div>

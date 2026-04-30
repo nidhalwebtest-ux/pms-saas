@@ -246,7 +246,9 @@
     "teamManagement": "إدارة الفريق",
     "staffAccounts": "حسابات الموظفين",
     "myProfile": "ملفي الشخصي",
-    "organization": "المؤسسة"
+    "organization": "المؤسسة",
+    "reservationList": "قائمة الحجوزات",
+    "newReservation": "حجز جديد"
   },
   "dashboard": {
     "goodMorning": "صباح الخير، {name}",
@@ -1687,7 +1689,9 @@
         "manualRate": "سعر يدوي",
         "notes": "ملاحظات",
         "cancellationReason": "سبب الإلغاء",
-        "cancelledOn": "أُلغي في {date}"
+        "cancelledOn": "أُلغي في {date}",
+        "movedOutBadge": "تم النقل",
+        "movedTo": "تم النقل إلى {unit}"
       },
       "invoicesSection": {
         "title": "الفواتير ({count})",
@@ -1938,7 +1942,9 @@
           "foundAlternative": "إيجاد سكن بديل",
           "workReason": "سبب عمل / أعمال",
           "other": "أخرى"
-        }
+        },
+        "rateLabel": "السعر الليلي (لكل وحدة)",
+        "rateHint": "الافتراضي هو سعر الحجز ({rate} ر.ع). عدّله لاحتساب سعر مختلف للأيام المُرتجَعة."
       },
       "refundModal": {
         "title": "معالجة استرداد — {ref}",
@@ -2389,7 +2395,8 @@
       "success": {
         "moved": "تم نقل النزيل من {from} إلى {to} بنجاح"
       }
-    }
+    },
+    "scopedNote": "مقفل على المبنى المختار في الشريط العلوي."
   },
   "invoices": {
     "title": "الفواتير",

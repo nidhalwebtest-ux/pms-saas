@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/FormComponents";
 import BookingEngine from "@/components/dashboard/BookingEngine";
+import { getSelectedPropertyId } from "@/lib/selected-property";
 import Link from "next/link";
 
 export default async function NewReservationPage({
@@ -37,7 +38,7 @@ export default async function NewReservationPage({
   // or unit from another company through a URL guess.
   const { unitId, tenantId } = await searchParams;
 
-  const [defaultTenant, defaultUnit] = await Promise.all([
+  const [defaultTenant, defaultUnit, selectedPropertyId] = await Promise.all([
     tenantId
       ? prisma.tenant.findFirst({
           where:  { id: tenantId, organizationId: dbUser.organizationId },
@@ -54,7 +55,16 @@ export default async function NewReservationPage({
           select: { id: true, propertyId: true },
         })
       : null,
+    getSelectedPropertyId(),
   ]);
+
+  // Resolved property: explicit ?unitId= wins, otherwise fall back to the
+  // global building selector in the header.
+  const defaultPropertyId =
+    defaultUnit?.propertyId ??
+    (selectedPropertyId && properties.some((p) => p.id === selectedPropertyId)
+      ? selectedPropertyId
+      : undefined);
 
   const t = await getTranslations("reservations.newPage");
 
@@ -88,7 +98,7 @@ export default async function NewReservationPage({
       <BookingEngine
         properties={properties}
         defaultTenant={defaultTenant}
-        defaultPropertyId={defaultUnit?.propertyId}
+        defaultPropertyId={defaultPropertyId}
         defaultUnitId={defaultUnit?.id}
       />
     </div>

@@ -30,6 +30,10 @@ export async function GET(
   const { id } = await params;
   const { searchParams } = new URL(req.url);
   const newCheckoutDate = searchParams.get("newCheckoutDate");
+  const rateOverrideRaw = searchParams.get("rateOverride");
+  const rateOverride    = rateOverrideRaw && Number.isFinite(Number(rateOverrideRaw))
+    ? Number(rateOverrideRaw)
+    : undefined;
 
   if (!newCheckoutDate)
     return NextResponse.json({ error: "newCheckoutDate is required" }, { status: 400 });
@@ -54,6 +58,7 @@ export async function GET(
           reservationId:   id,
           orgId:           actor.organizationId!,
           newCheckoutDate: new Date(newCheckoutDate),
+          rateOverride,
         });
 
     return NextResponse.json({ preview });
@@ -73,7 +78,10 @@ export async function POST(
 
   const { id } = await params;
   const body = await req.json();
-  const { newCheckoutDate, reason, notes } = body;
+  const { newCheckoutDate, reason, notes, rateOverride } = body;
+  const rateOverrideNum = rateOverride !== undefined && Number.isFinite(Number(rateOverride))
+    ? Number(rateOverride)
+    : undefined;
 
   if (!newCheckoutDate)
     return NextResponse.json({ error: "newCheckoutDate is required" }, { status: 400 });
@@ -116,6 +124,7 @@ export async function POST(
           newCheckoutDate: new Date(newCheckoutDate),
           reason,
           notes,
+          rateOverride: rateOverrideNum,
         });
 
     return NextResponse.json({

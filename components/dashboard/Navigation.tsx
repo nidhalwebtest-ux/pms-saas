@@ -49,7 +49,15 @@ const navigationConfig: NavItem[] = [
       { labelKey: "tenantLedger", href: "/dashboard/tenants/ledger" },
     ],
   },
-  { key: "reservations", labelKey: "reservations", href: "/dashboard/reservations" },
+  {
+    key:      "reservations",
+    labelKey: "reservations",
+    href:     "/dashboard/reservations",
+    children: [
+      { labelKey: "reservationList", href: "/dashboard/reservations" },
+      { labelKey: "newReservation",  href: "/dashboard/reservations/new" },
+    ],
+  },
   { key: "invoices",     labelKey: "invoices",     href: "/dashboard/invoices" },
   { key: "payments",     labelKey: "payments",     href: "/dashboard/payments" },
   {

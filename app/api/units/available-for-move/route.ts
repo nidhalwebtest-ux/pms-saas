@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
   // Find the active RU for the unit being moved FROM
   const fromRU = await prisma.reservationUnit.findFirst({
     where: { reservationId, unitId: fromUnitId, isMovedOut: { not: true } },
-    include: { unit: { select: { id: true, name: true } } },
+    include: { unit: { select: { id: true, name: true, propertyId: true } } },
   });
 
   if (!fromRU) {
@@ -74,9 +74,16 @@ export async function GET(req: NextRequest) {
   // Always exclude the fromUnit itself
   occupiedUnitIds.add(fromUnitId);
 
-  // Fetch all units in the org
+  // Move targets are constrained to the *same building* as the unit being
+  // moved out of. A guest moving rooms shouldn't end up in a different
+  // property, and the operational state (housekeeping, key handover, etc.)
+  // is tied to the building the rest of the reservation lives in.
   const allProperties = await prisma.property.findMany({
-    where: { organizationId: actor.organizationId, isArchived: false },
+    where: {
+      organizationId: actor.organizationId,
+      isArchived: false,
+      id: fromRU.unit.propertyId,
+    },
     select: {
       id: true, name: true,
       units: {

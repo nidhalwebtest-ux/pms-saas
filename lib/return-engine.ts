@@ -99,8 +99,15 @@ export async function previewDailyReturn(params: {
   reservationId: string;
   orgId:         string;
   newCheckoutDate: Date;   // the new (earlier) checkout date
+  /**
+   * If provided, uses this nightly rate for every returned unit instead of
+   * looking it up via the price tables. Powers the "override rate" UX in the
+   * Return Days modal where the receptionist can charge a different rate for
+   * the cancelled portion (e.g. waive the discount that originally applied).
+   */
+  rateOverride?: number;
 }): Promise<ReturnPreview> {
-  const { reservationId, orgId, newCheckoutDate } = params;
+  const { reservationId, orgId, newCheckoutDate, rateOverride } = params;
 
   const res = await prisma.reservation.findUnique({
     where: { id: reservationId },
@@ -144,6 +151,20 @@ export async function previewDailyReturn(params: {
   let returnAmount = 0;
 
   for (const ui of unitInfos) {
+    if (rateOverride !== undefined && rateOverride >= 0) {
+      // Manual override path: a single line item at the chosen nightly rate.
+      const lineTotal = roundOMR(rateOverride * returnDays);
+      returnAmount    = roundOMR(returnAmount + lineTotal);
+      lineItems.push({
+        unitId:      ui.unitId,
+        description: `Unit — ${returnDays} night(s) × ${rateOverride.toFixed(3)} OMR (manual rate)`,
+        quantity:    returnDays,
+        unitPrice:   rateOverride,
+        lineTotal,
+      });
+      continue;
+    }
+
     // Try to get actual pricing breakdown for the returned segment
     const pricing  = await getUnitPriceForRange(ui.unitId, newOut, origOut);
     const segments = collapseToSegments(pricing.dailyBreakdown);
@@ -382,9 +403,10 @@ export async function executeDailyReturn(params: {
   newCheckoutDate: Date;
   reason:          string;
   notes?:          string;
+  rateOverride?:   number;
 }) {
-  const { reservationId, orgId, userId, newCheckoutDate, reason, notes } = params;
-  const preview = await previewDailyReturn({ reservationId, orgId, newCheckoutDate });
+  const { reservationId, orgId, userId, newCheckoutDate, reason, notes, rateOverride } = params;
+  const preview = await previewDailyReturn({ reservationId, orgId, newCheckoutDate, rateOverride });
 
   return prisma.$transaction(async (tx) => {
     const ret = await _createReturnRecord(tx, {

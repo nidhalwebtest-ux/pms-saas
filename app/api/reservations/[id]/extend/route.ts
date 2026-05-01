@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getUnitPriceForRange } from "@/lib/pricing";
-import { roundOMR, calculateNights } from "@/lib/reservation-engine";
+import { roundOMR, calculateNights, countCalendarMonths } from "@/lib/reservation-engine";
 
 async function getActor() {
   const supabase = await createClient();
@@ -114,25 +114,42 @@ export async function POST(
       );
     }
 
-    // Determine extension rate (custom > DB price > existing reservation rate)
-    const extensionNights = calculateNights(extensionStart, newCheckOut);
+    // Determine extension rate (custom > DB price > existing reservation rate).
+    // Monthly reservations bill in calendar-month chunks: customRate is treated
+    // as the monthly rate and the extension is counted in calendar months, not
+    // nights. Without this branch a "+1 month" extension would charge
+    // monthlyRate × ~30 nights and inflate the invoice 30×.
+    const isMonthly = ru.rateType === "monthly" || ru.rateType === "MONTHLY";
     const customRate = customRates[ru.unitId] ? Number(customRates[ru.unitId]) : null;
 
     let additionalSubtotal: number;
-    if (customRate !== null && customRate > 0) {
-      additionalSubtotal = roundOMR(customRate * extensionNights);
+    let additionalNights:   number;
+
+    if (isMonthly) {
+      const months = countCalendarMonths(extensionStart, newCheckOut);
+      additionalNights = calculateNights(extensionStart, newCheckOut);
+      const monthlyRate = customRate !== null && customRate > 0
+        ? customRate
+        : roundOMR(Number(ru.rateAmount));
+      additionalSubtotal = roundOMR(monthlyRate * months);
     } else {
-      const pricing = await getUnitPriceForRange(ru.unitId, extensionStart, newCheckOut);
-      if (pricing.totalAmount > 0) {
-        additionalSubtotal = roundOMR(pricing.totalAmount);
+      const extensionNights = calculateNights(extensionStart, newCheckOut);
+      additionalNights = extensionNights;
+      if (customRate !== null && customRate > 0) {
+        additionalSubtotal = roundOMR(customRate * extensionNights);
       } else {
-        // Fall back to the rate already on this reservation unit
-        const fallbackRate = roundOMR(Number(ru.rateAmount));
-        additionalSubtotal = roundOMR(fallbackRate * extensionNights);
+        const pricing = await getUnitPriceForRange(ru.unitId, extensionStart, newCheckOut);
+        if (pricing.totalAmount > 0) {
+          additionalSubtotal = roundOMR(pricing.totalAmount);
+        } else {
+          // Fall back to the rate already on this reservation unit
+          const fallbackRate = roundOMR(Number(ru.rateAmount));
+          additionalSubtotal = roundOMR(fallbackRate * extensionNights);
+        }
       }
     }
 
-    extendedUnitPricings.set(ru.unitId, { additionalNights: extensionNights, additionalSubtotal });
+    extendedUnitPricings.set(ru.unitId, { additionalNights, additionalSubtotal });
   }
 
   let newGrandTotal = 0;

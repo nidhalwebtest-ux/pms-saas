@@ -2291,7 +2291,9 @@
         "dateRange": "Date Range",
         "nights": "Nights",
         "rateNight": "Rate/Night",
-        "subtotal": "Subtotal"
+        "subtotal": "Subtotal",
+        "months": "Months",
+        "rateMonth": "Rate / month"
       },
       "extensionSubtotal": "Extension Subtotal",
       "overrideRate": "Override rate (OMR/night):",
@@ -2321,7 +2323,11 @@
       },
       "success": {
         "extended": "Stay extended to {date}. Additional charges: {amount}"
-      }
+      },
+      "extendByMonths": "Extend by",
+      "monthsLabel": "{count, plural, one {# month} other {# months}}",
+      "newCheckoutWillBe": "New checkout: {date}",
+      "overrideRateMonth": "Rate per month (OMR)"
     },
     "moveUnitModal": {
       "title": "Move Unit",
@@ -2394,7 +2400,11 @@
       },
       "success": {
         "moved": "Guest moved from {from} to {to} successfully"
-      }
+      },
+      "ratePerMonth": "{amount} OMR/month",
+      "rateDiffPerMonth": "{amount}/month",
+      "unitMetaFullMonthly": "Floor {floor} — {type} — {rate} OMR/month",
+      "rateForNewUnitMonthly": "Rate for new unit (OMR/month):"
     },
     "scopedNote": "Locked to the building selected in the header."
   },

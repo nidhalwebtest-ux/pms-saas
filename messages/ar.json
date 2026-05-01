@@ -2291,7 +2291,9 @@
         "dateRange": "الفترة",
         "nights": "الليالي",
         "rateNight": "السعر/الليلة",
-        "subtotal": "المجموع الفرعي"
+        "subtotal": "المجموع الفرعي",
+        "months": "الأشهر",
+        "rateMonth": "السعر / شهر"
       },
       "extensionSubtotal": "المجموع الفرعي للتمديد",
       "overrideRate": "تعديل السعر (ر.ع/الليلة):",
@@ -2321,7 +2323,11 @@
       },
       "success": {
         "extended": "تم تمديد الإقامة حتى {date}. الرسوم الإضافية: {amount}"
-      }
+      },
+      "extendByMonths": "التمديد لـ",
+      "monthsLabel": "{count, plural, zero {لا أشهر} one {شهر واحد} two {شهران} few {# أشهر} many {# شهراً} other {# شهر}}",
+      "newCheckoutWillBe": "تاريخ المغادرة الجديد: {date}",
+      "overrideRateMonth": "السعر الشهري (ر.ع)"
     },
     "moveUnitModal": {
       "title": "نقل الوحدة",
@@ -2394,7 +2400,11 @@
       },
       "success": {
         "moved": "تم نقل النزيل من {from} إلى {to} بنجاح"
-      }
+      },
+      "ratePerMonth": "{amount} ر.ع/شهر",
+      "rateDiffPerMonth": "{amount}/شهر",
+      "unitMetaFullMonthly": "الطابق {floor} — {type} — {rate} ر.ع/شهر",
+      "rateForNewUnitMonthly": "سعر الوحدة الجديدة (ر.ع/شهر):"
     },
     "scopedNote": "مقفل على المبنى المختار في الشريط العلوي."
   },

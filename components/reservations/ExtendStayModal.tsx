@@ -40,6 +40,8 @@ interface UnitPreview {
   segments?: Segment[];
   extensionSubtotal: number;
   extensionNights: number;
+  isMonthly?: boolean;
+  extensionMonths?: number;
 }
 
 interface PreviewData {
@@ -74,13 +76,32 @@ export default function ExtendStayModal({
 
   const fmtOMR = (v: number) => `${v.toFixed(3)} OMR`;
 
+  const isMonthlyReservation = rateType === "monthly" || rateType === "MONTHLY";
+
+  // For monthly reservations the user picks an integer number of additional
+  // months. We compute the matching new checkout date locally with calendar-
+  // safe addition (Jan 31 + 1 month → Feb 28).
+  function addCalendarMonthsLocal(date: Date, months: number): Date {
+    const d = new Date(date);
+    const day = d.getDate();
+    d.setMonth(d.getMonth() + months, 1);
+    const daysInTarget = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    d.setDate(Math.min(day, daysInTarget));
+    return d;
+  }
+
   const minDate = (() => {
     const d = new Date(currentCheckOut);
     d.setDate(d.getDate() + 1);
     return d.toISOString().slice(0, 10);
   })();
 
-  const [newDate, setNewDate] = useState("");
+  const [extendMonths, setExtendMonths] = useState(isMonthlyReservation ? 1 : 0);
+  const [newDate, setNewDate] = useState(() =>
+    isMonthlyReservation
+      ? addCalendarMonthsLocal(new Date(currentCheckOut), 1).toISOString().slice(0, 10)
+      : "",
+  );
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -217,8 +238,12 @@ export default function ExtendStayModal({
       const overrideNum = Number(overrideRaw);
       const useOverride = overrideRaw !== undefined && overrideRaw !== "" &&
                           Number.isFinite(overrideNum) && overrideNum !== u.existingRate;
+      // For monthly reservations the unit-count is months (not nights) so the
+      // override math has to multiply by months — otherwise a 5,000 OMR/month
+      // override over a 1-month extension would be charged 5,000 × ~30 nights.
+      const unitCount = u.isMonthly ? (u.extensionMonths ?? 0) : u.extensionNights;
       const subtotal = useOverride
-        ? overrideNum * u.extensionNights
+        ? overrideNum * unitCount
         : u.extensionSubtotal;
       extensionTotal += subtotal;
     }
@@ -261,7 +286,46 @@ export default function ExtendStayModal({
             </p>
           </div>
 
-          {/* Date picker */}
+          {/* Date picker — months stepper for monthly reservations */}
+          {isMonthlyReservation ? (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {t("extendByMonths")} <span className="text-red-500">*</span>
+              </label>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = Math.max(1, extendMonths - 1);
+                    setExtendMonths(next);
+                    setNewDate(addCalendarMonthsLocal(new Date(currentCheckOut), next).toISOString().slice(0, 10));
+                  }}
+                  disabled={extendMonths <= 1}
+                  className="h-10 w-10 rounded-lg border border-gray-300 bg-white text-lg font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  −
+                </button>
+                <div className="flex-1 text-center">
+                  <p className="text-2xl font-bold text-gray-900 ltr-numbers">{extendMonths}</p>
+                  <p className="text-xs text-gray-500">{t("monthsLabel", { count: extendMonths })}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = extendMonths + 1;
+                    setExtendMonths(next);
+                    setNewDate(addCalendarMonthsLocal(new Date(currentCheckOut), next).toISOString().slice(0, 10));
+                  }}
+                  className="h-10 w-10 rounded-lg border border-gray-300 bg-white text-lg font-semibold text-gray-600 hover:bg-gray-50"
+                >
+                  +
+                </button>
+              </div>
+              <p className="mt-2 text-xs text-gray-500 ltr-numbers">
+                {t("newCheckoutWillBe", { date: fmtDate(newDate) })}
+              </p>
+            </div>
+          ) : (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               {t("newCheckoutDate")} <span className="text-red-500">*</span>
@@ -279,6 +343,7 @@ export default function ExtendStayModal({
               </p>
             )}
           </div>
+          )}
 
           {/* Loading state */}
           {previewLoading && (
@@ -368,8 +433,12 @@ export default function ExtendStayModal({
                             <thead>
                               <tr className="text-gray-500">
                                 <th className="text-start font-medium pb-1">{t("tableHeaders.dateRange")}</th>
-                                <th className="text-end font-medium pb-1">{t("tableHeaders.nights")}</th>
-                                <th className="text-end font-medium pb-1">{t("tableHeaders.rateNight")}</th>
+                                <th className="text-end font-medium pb-1">
+                                  {u.isMonthly ? t("tableHeaders.months") : t("tableHeaders.nights")}
+                                </th>
+                                <th className="text-end font-medium pb-1">
+                                  {u.isMonthly ? t("tableHeaders.rateMonth") : t("tableHeaders.rateNight")}
+                                </th>
                                 <th className="text-end font-medium pb-1">{t("tableHeaders.subtotal")}</th>
                               </tr>
                             </thead>
@@ -402,7 +471,7 @@ export default function ExtendStayModal({
                       {u.available && (
                         <div className="mt-3 border-t border-green-200 pt-3 flex items-center gap-3">
                           <label className="text-xs text-gray-600 shrink-0">
-                            {t("overrideRate")}
+                            {u.isMonthly ? t("overrideRateMonth") : t("overrideRate")}
                           </label>
                           <input
                             type="number"
@@ -416,7 +485,7 @@ export default function ExtendStayModal({
                           />
                           {customRates[u.unitId] && Number(customRates[u.unitId]) !== u.existingRate && (
                             <span className="text-xs text-blue-600 font-medium ltr-numbers">
-                              → {fmtOMR(Number(customRates[u.unitId]) * u.extensionNights)}
+                              → {fmtOMR(Number(customRates[u.unitId]) * (u.isMonthly ? (u.extensionMonths ?? 0) : u.extensionNights))}
                             </span>
                           )}
                         </div>

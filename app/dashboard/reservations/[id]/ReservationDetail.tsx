@@ -2420,6 +2420,7 @@ export default function ReservationDetail({ id }: { id: string }) {
             rateAmount: Number(u.rateAmount),
           }))}
           checkOutDate={res.endDate}
+          rateType={res.rateType}
           onClose={() => setActiveModal(null)}
           onSuccess={afterAction}
         />

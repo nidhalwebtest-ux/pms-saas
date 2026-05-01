@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getUnitPriceForRange } from "@/lib/pricing";
-import { collapseToSegments, calculateNights, roundOMR } from "@/lib/reservation-engine";
+import { collapseToSegments, calculateNights, countCalendarMonths, roundOMR } from "@/lib/reservation-engine";
 
 async function getActor() {
   const supabase = await createClient();
@@ -43,6 +43,8 @@ export async function GET(req: NextRequest) {
     },
   });
 
+  const isMonthly = reservation?.rateType === "monthly" || reservation?.rateType === "MONTHLY";
+
   if (!reservation || reservation.tenant.organizationId !== actor.organizationId) {
     return NextResponse.json({ error: "Reservation not found" }, { status: 404 });
   }
@@ -66,6 +68,7 @@ export async function GET(req: NextRequest) {
   periodEnd.setHours(0, 0, 0, 0);
 
   const remainingNights = calculateNights(moveDate, periodEnd);
+  const remainingMonths = isMonthly ? countCalendarMonths(moveDate, periodEnd) : 0;
 
   // All units already in this reservation — exclude from candidates
   // Include legacy unitId in addition to reservationUnits
@@ -141,7 +144,23 @@ export async function GET(req: NextRequest) {
     let segments: { startDate: string; endDate: string; nights: number; ratePerNight: number; subtotal: number; priceName: string | null }[];
     let subtotal: number;
 
-    if (priceResult.totalAmount > 0) {
+    if (isMonthly) {
+      // Monthly reservation: rateAmount on the FROM unit IS a monthly rate.
+      // Bill the candidate at the same monthly rate (so a same-rate move
+      // shows zero difference) until proper monthly pricing per unit exists.
+      rateAmount = fromRateAmount;
+      const months = remainingMonths > 0 ? remainingMonths : 1;
+      subtotal = roundOMR(fromRateAmount * months);
+      const from = moveDate.toISOString().slice(0, 10);
+      const to   = new Date(periodEnd.getTime() - 86400000).toISOString().slice(0, 10);
+      segments = [{
+        startDate: from, endDate: to,
+        // For monthly, "nights" carries the months count to keep the wire
+        // shape stable — the modal switches the column header to "Months".
+        nights: months, ratePerNight: fromRateAmount,
+        subtotal, priceName: null,
+      }];
+    } else if (priceResult.totalAmount > 0) {
       // DB prices configured for this unit
       const rawSegments = collapseToSegments(priceResult.dailyBreakdown);
       segments = rawSegments.map((s) => ({
@@ -179,6 +198,8 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     remainingNights,
+    remainingMonths,
+    isMonthly,
     periodEnd: periodEnd.toISOString(),
     fromUnit: {
       id:         fromRU.unitId,

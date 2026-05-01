@@ -458,15 +458,23 @@ export async function executeDailyReturn(params: {
       ...(reservation?.reservationUnits.map((ru) => ru.unitId) ?? []),
     ];
 
-    const now = new Date();
+    const now      = new Date();
+    const today    = toDay(now);
+    const newOut   = toDay(newCheckoutDate);
+    // Only auto-checkout if the new checkout date is today or in the past.
+    // For a future return (e.g. tenant returns the last month early but is
+    // still in the unit), keep the reservation CHECKED_IN and let the
+    // natural check-out happen on the new endDate.
+    const checkoutNow = newOut <= today;
 
-    // Checkout the reservation
     await tx.reservation.update({
       where: { id: reservationId },
       data: {
         endDate:        newCheckoutDate,
-        actualCheckOut: now,
-        status:         ReservationStatus.COMPLETED,
+        ...(checkoutNow && {
+          actualCheckOut: now,
+          status:         ReservationStatus.COMPLETED,
+        }),
         totalNights: calculateNights(
           toDay(reservation!.startDate),
           toDay(newCheckoutDate)
@@ -474,8 +482,8 @@ export async function executeDailyReturn(params: {
       },
     });
 
-    // Mark units vacant
-    if (unitIds.length > 0) {
+    // Mark units vacant only when the guest is actually leaving today.
+    if (checkoutNow && unitIds.length > 0) {
       await tx.unit.updateMany({
         where: { id: { in: unitIds } },
         data:  { status: "AVAILABLE" },
@@ -491,7 +499,9 @@ export async function executeDailyReturn(params: {
         description:    `Return processed: ${preview.returnDays} night(s) returned. ` +
                         `Return amount: ${preview.returnAmount.toFixed(3)} OMR. ` +
                         `Refund: ${preview.refundRequired ? `${preview.refundAmount.toFixed(3)} OMR required` : "not required"}. ` +
-                        `Checked out automatically.`,
+                        (checkoutNow
+                          ? `Checked out automatically.`
+                          : `Stay continues until new checkout (${newCheckoutDate.toISOString().slice(0, 10)}).`),
         performedById:  userId,
         metadata: {
           returnId:      ret.id,
@@ -499,6 +509,7 @@ export async function executeDailyReturn(params: {
           returnAmount:  preview.returnAmount,
           refundRequired: preview.refundRequired,
           refundAmount:  preview.refundAmount,
+          autoCheckedOut: checkoutNow,
         },
       },
     });
@@ -555,15 +566,23 @@ export async function executeMonthlyReturn(params: {
       ...(reservation?.reservationUnits.map((ru) => ru.unitId) ?? []),
     ];
 
-    const now = new Date();
+    const now      = new Date();
+    const today    = toDay(now);
+    const newOut   = toDay(newCheckoutDate);
+    // Same rule as the daily path: auto-checkout only if the new departure
+    // is today or earlier. A 3-month tenant returning the last month while
+    // still in May should stay CHECKED_IN; the cancelled future invoices
+    // and the new endDate are enough to reflect the change.
+    const checkoutNow = newOut <= today;
 
-    // Checkout the reservation
     await tx.reservation.update({
       where: { id: reservationId },
       data: {
         endDate:        newCheckoutDate,
-        actualCheckOut: now,
-        status:         ReservationStatus.COMPLETED,
+        ...(checkoutNow && {
+          actualCheckOut: now,
+          status:         ReservationStatus.COMPLETED,
+        }),
         totalNights: calculateNights(
           toDay(reservation!.startDate),
           toDay(newCheckoutDate)
@@ -571,8 +590,7 @@ export async function executeMonthlyReturn(params: {
       },
     });
 
-    // Mark units vacant
-    if (unitIds.length > 0) {
+    if (checkoutNow && unitIds.length > 0) {
       await tx.unit.updateMany({
         where: { id: { in: unitIds } },
         data:  { status: "AVAILABLE" },
@@ -588,7 +606,9 @@ export async function executeMonthlyReturn(params: {
         description:    `Return processed: ${preview.returnDays} month(s) returned. ` +
                         `Return amount: ${preview.returnAmount.toFixed(3)} OMR. ` +
                         `Refund: ${preview.refundRequired ? `${preview.refundAmount.toFixed(3)} OMR required` : "not required"}. ` +
-                        `Checked out automatically.`,
+                        (checkoutNow
+                          ? `Checked out automatically.`
+                          : `Stay continues until new checkout (${newCheckoutDate.toISOString().slice(0, 10)}).`),
         performedById:  userId,
         metadata: {
           returnId:       ret.id,
@@ -596,6 +616,7 @@ export async function executeMonthlyReturn(params: {
           returnAmount:   preview.returnAmount,
           refundRequired: preview.refundRequired,
           refundAmount:   preview.refundAmount,
+          autoCheckedOut: checkoutNow,
           cancelledInvoices: preview.invoicesToCancel.length,
         },
       },

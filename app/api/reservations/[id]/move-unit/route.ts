@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getUnitPriceForRange } from "@/lib/pricing";
-import { roundOMR, calculateNights } from "@/lib/reservation-engine";
+import { roundOMR, calculateNights, countCalendarMonths } from "@/lib/reservation-engine";
 
 async function getActor() {
   const supabase = await createClient();
@@ -142,12 +142,19 @@ export async function POST(
 
   const remainingNights = calculateNights(moveDate, periodEnd);
   const fromRateAmount = roundOMR(Number(fromRU.rateAmount));
+  const isMonthlyReservation = fromRU.rateType === "monthly" || fromRU.rateType === "MONTHLY";
+  const remainingMonths = isMonthlyReservation ? Math.max(1, countCalendarMonths(moveDate, periodEnd)) : 0;
 
-  // Compute new unit pricing outside TX for performance
+  // Compute new unit pricing outside TX for performance.
+  // Monthly reservations bill in months (not days), so toRatePerNight here
+  // actually means "rate for the same billing unit as fromRU" — for monthly
+  // that's a per-month figure, fallback to the existing monthly rate.
   const toUnitPricing = await getUnitPriceForRange(toUnitId, moveDate, periodEnd);
-  const toRatePerNight = toUnitPricing.nights > 0
-    ? roundOMR(toUnitPricing.totalAmount / toUnitPricing.nights)
-    : fromRateAmount;
+  const toRatePerNight = isMonthlyReservation
+    ? fromRateAmount
+    : (toUnitPricing.nights > 0
+        ? roundOMR(toUnitPricing.totalAmount / toUnitPricing.nights)
+        : fromRateAmount);
 
   // Calculate old unit revised subtotal (from its effectiveCheckIn to moveDate)
   const fromEffectiveCheckIn = fromRU.effectiveCheckIn
@@ -156,46 +163,55 @@ export async function POST(
   fromEffectiveCheckIn.setHours(0, 0, 0, 0);
 
   const oldUnitRevised = await getUnitPriceForRange(fromUnitId, fromEffectiveCheckIn, moveDate);
-  const oldUnitRevisedSubtotal = roundOMR(oldUnitRevised.totalAmount);
+  const monthsStayedOnOld = isMonthlyReservation
+    ? countCalendarMonths(fromEffectiveCheckIn, moveDate)
+    : 0;
+  const oldUnitRevisedSubtotal = isMonthlyReservation
+    ? roundOMR(fromRateAmount * monthsStayedOnOld)
+    : roundOMR(oldUnitRevised.totalAmount);
 
   // Determine new unit's rate and subtotal based on pricingOption
   let selectedRateAmount: number;
   let newUnitSubtotal: number;
   let rateSource: string;
 
+  // Monthly reservations bill the new unit at monthlyRate × remainingMonths;
+  // daily ones at toUnitPricing.totalAmount or rate × remainingNights.
+  const periodCount = isMonthlyReservation ? remainingMonths : remainingNights;
+  const monthlyMarketSubtotal = roundOMR(toRatePerNight * periodCount);
+
   switch (pricingOption) {
     case "apply_new_rate":
       selectedRateAmount = toRatePerNight;
-      newUnitSubtotal = roundOMR(toUnitPricing.totalAmount);
-      rateSource = toUnitPricing.dailyBreakdown.length > 0 ? "default_price" : "default_price";
+      newUnitSubtotal = isMonthlyReservation ? monthlyMarketSubtotal : roundOMR(toUnitPricing.totalAmount);
+      rateSource = "default_price";
       break;
     case "charge_difference":
-      // New unit at its market rate
       selectedRateAmount = toRatePerNight;
-      newUnitSubtotal = roundOMR(toUnitPricing.totalAmount);
+      newUnitSubtotal = isMonthlyReservation ? monthlyMarketSubtotal : roundOMR(toUnitPricing.totalAmount);
       rateSource = "default_price";
       break;
     case "complimentary":
-      // No charge for the move — same original rate but difference = 0 conceptually
       selectedRateAmount = fromRateAmount;
-      newUnitSubtotal = roundOMR(fromRateAmount * remainingNights);
+      newUnitSubtotal = roundOMR(fromRateAmount * periodCount);
       rateSource = "manual_override";
       break;
     case "keep_original_rate":
       selectedRateAmount = fromRateAmount;
-      newUnitSubtotal = roundOMR(fromRateAmount * remainingNights);
+      newUnitSubtotal = roundOMR(fromRateAmount * periodCount);
       rateSource = "manual_override";
       break;
     default:
       selectedRateAmount = toRatePerNight;
-      newUnitSubtotal = roundOMR(toUnitPricing.totalAmount);
+      newUnitSubtotal = isMonthlyReservation ? monthlyMarketSubtotal : roundOMR(toUnitPricing.totalAmount);
       rateSource = "default_price";
   }
 
-  // customRate overrides everything when provided
+  // customRate overrides everything when provided. For monthly it's a monthly
+  // rate; for daily it's a nightly rate.
   if (customRate !== undefined && customRate > 0) {
     selectedRateAmount = roundOMR(customRate);
-    newUnitSubtotal = roundOMR(customRate * remainingNights);
+    newUnitSubtotal = roundOMR(customRate * periodCount);
     rateSource = "manual_override";
   }
 
@@ -225,7 +241,9 @@ export async function POST(
     async (tx) => {
       const moveReason = reason + (notes ? ` — ${notes}` : "");
 
-      // a. Mark old RU as moved out
+      // a. Mark old RU as moved out. For monthly the `nights` column carries
+      // the months stayed on the old unit; the RU.subtotal is monthlyRate ×
+      // monthsStayed and was computed above.
       await tx.reservationUnit.update({
         where: { id: fromRU.id },
         data: {
@@ -233,8 +251,7 @@ export async function POST(
           effectiveCheckOut: moveDate,
           moveReason,
           moveDate,
-          // Revise old RU subtotal to reflect actual stay (check-in to move date)
-          nights: oldUnitRevised.nights,
+          nights: isMonthlyReservation ? Math.max(1, monthsStayedOnOld) : oldUnitRevised.nights,
           subtotal: oldUnitRevisedSubtotal,
         },
       });
@@ -247,7 +264,7 @@ export async function POST(
           rateType: fromRU.rateType,
           rateAmount: selectedRateAmount,
           rateSource,
-          nights: remainingNights,
+          nights: isMonthlyReservation ? remainingMonths : remainingNights,
           subtotal: newUnitSubtotal,
           effectiveCheckIn: moveDate,
         },
@@ -283,8 +300,14 @@ export async function POST(
         },
       });
 
-      // e. If moveDate is today, update unit statuses
-      if (isToday) {
+      // e. Flip unit statuses for any move whose effective date is today or
+      // earlier. Future-dated moves still wait — but a backdated or same-day
+      // move needs to free the old unit and occupy the new one immediately.
+      // Also clear the legacy reservation.unitId pointer if it still points
+      // at the unit being moved out so the units list and unit-detail pages
+      // (which derive their badge from `unit.reservations`) attribute the
+      // active stay to the new unit instead of the old one.
+      if (moveDate.getTime() <= today.getTime()) {
         await tx.unit.update({
           where: { id: fromUnitId },
           data: { status: "AVAILABLE" },
@@ -293,6 +316,12 @@ export async function POST(
           where: { id: toUnitId },
           data: { status: "OCCUPIED" },
         });
+        if (r.unitId === fromUnitId) {
+          await tx.reservation.update({
+            where: { id },
+            data:  { unitId: toUnitId },
+          });
+        }
       }
 
       // f. Create activity log

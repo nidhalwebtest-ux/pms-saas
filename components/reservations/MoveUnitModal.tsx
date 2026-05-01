@@ -20,6 +20,7 @@ interface Props {
   reservationId: string;
   reservationUnits: ReservationUnitInfo[];
   checkOutDate: string; // ISO
+  rateType?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -48,6 +49,8 @@ interface AvailableUnit {
 
 interface AvailabilityData {
   remainingNights: number;
+  remainingMonths?: number;
+  isMonthly?: boolean;
   periodEnd: string;
   fromUnit: { id: string; name: string; rateAmount: number };
   availableUnits: AvailableUnit[];
@@ -71,10 +74,12 @@ export default function MoveUnitModal({
   reservationId,
   reservationUnits,
   checkOutDate,
+  rateType,
   onClose,
   onSuccess,
 }: Props) {
   const t = useTranslations("reservations.moveUnitModal");
+  const isMonthlyReservation = rateType === "monthly" || rateType === "MONTHLY";
   const tUnitTypes = useTranslations("reservations.detail.unitTypes");
   const locale = useLocale();
   const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
@@ -261,11 +266,9 @@ export default function MoveUnitModal({
                     <div>
                       <p className="font-medium text-gray-900 text-sm">{u.unitName}</p>
                       <p className="text-xs text-gray-500 ltr-numbers">
-                        {t("unitMetaFull", {
-                          floor: u.floor,
-                          type: fmtUnitType(u.unitType),
-                          rate: u.rateAmount.toFixed(3),
-                        })}
+                        {isMonthlyReservation
+                          ? t("unitMetaFullMonthly", { floor: u.floor, type: fmtUnitType(u.unitType), rate: u.rateAmount.toFixed(3) })
+                          : t("unitMetaFull",        { floor: u.floor, type: fmtUnitType(u.unitType), rate: u.rateAmount.toFixed(3) })}
                       </p>
                     </div>
                   </label>
@@ -280,11 +283,15 @@ export default function MoveUnitModal({
               <p className="text-xs text-blue-600 font-medium">{t("movingUnit")}</p>
               <p className="font-semibold text-gray-900 text-sm">{selectedFromUnit.unitName}</p>
               <p className="text-xs text-gray-500 ltr-numbers">
-                {t("unitMetaFull", {
+                {(isMonthlyReservation ? t("unitMetaFullMonthly", {
                   floor: selectedFromUnit.floor,
                   type: fmtUnitType(selectedFromUnit.unitType),
                   rate: selectedFromUnit.rateAmount.toFixed(3),
-                })}
+                }) : t("unitMetaFull", {
+                  floor: selectedFromUnit.floor,
+                  type: fmtUnitType(selectedFromUnit.unitType),
+                  rate: selectedFromUnit.rateAmount.toFixed(3),
+                }))}
               </p>
             </div>
           )}
@@ -374,13 +381,19 @@ export default function MoveUnitModal({
                         </p>
                         <div className="flex items-center justify-between">
                           <p className="text-sm font-medium text-gray-700 ltr-numbers">
-                            {t("ratePerNight", { amount: unit.rateAmount.toFixed(3) })}
+                            {isMonthlyReservation
+                              ? t("ratePerMonth", { amount: unit.rateAmount.toFixed(3) })
+                              : t("ratePerNight", { amount: unit.rateAmount.toFixed(3) })}
                           </p>
                           {unit.rateDifference !== 0 && (
                             <p className={`text-xs font-medium ltr-numbers ${isUpgrade ? "text-green-700" : "text-orange-700"}`}>
-                              {t("rateDiffPerNight", {
+                              {(isMonthlyReservation
+                                ? t("rateDiffPerMonth", {
+                                    amount: `${isUpgrade ? "+" : ""}${unit.rateDifference.toFixed(3)}`,
+                                  })
+                                : t("rateDiffPerNight", {
                                 amount: `${isUpgrade ? "+" : ""}${unit.rateDifference.toFixed(3)}`,
-                              })}
+                              }))}
                             </p>
                           )}
                         </div>
@@ -457,13 +470,17 @@ export default function MoveUnitModal({
                   <div>
                     <p className="text-gray-400">{t("originalRate")}</p>
                     <p className="font-medium text-gray-900 ltr-numbers">
-                      {t("ratePerNight", { amount: fromRateAmount.toFixed(3) })}
+                      {isMonthlyReservation
+                        ? t("ratePerMonth", { amount: fromRateAmount.toFixed(3) })
+                        : t("ratePerNight", { amount: fromRateAmount.toFixed(3) })}
                     </p>
                   </div>
                   <div>
                     <p className="text-gray-400">{t("newRate")}</p>
                     <p className={`font-medium ltr-numbers ${toRateAmount > fromRateAmount ? "text-green-700" : toRateAmount < fromRateAmount ? "text-orange-700" : "text-gray-900"}`}>
-                      {t("ratePerNight", { amount: toRateAmount.toFixed(3) })}
+                      {isMonthlyReservation
+                        ? t("ratePerMonth", { amount: toRateAmount.toFixed(3) })
+                        : t("ratePerNight", { amount: toRateAmount.toFixed(3) })}
                     </p>
                   </div>
                   <div>
@@ -498,7 +515,7 @@ export default function MoveUnitModal({
               {/* Custom rate input */}
               <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
                 <label className="text-sm text-gray-700 shrink-0 font-medium">
-                  {t("rateForNewUnit")}
+                  {isMonthlyReservation ? t("rateForNewUnitMonthly") : t("rateForNewUnit")}
                 </label>
                 <input
                   type="number"

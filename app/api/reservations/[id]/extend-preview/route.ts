@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getUnitPriceForRange } from "@/lib/pricing";
-import { collapseToSegments, roundOMR, calculateNights } from "@/lib/reservation-engine";
+import { collapseToSegments, roundOMR, calculateNights, countCalendarMonths } from "@/lib/reservation-engine";
 
 async function getActor() {
   const supabase = await createClient();
@@ -100,6 +100,8 @@ export async function GET(
         include: { tenant: { select: { firstName: true, lastName: true } } },
       });
 
+      const isMonthly = ru.rateType === "monthly" || ru.rateType === "MONTHLY";
+
       if (conflictingReservation) {
         return {
           unitId, unitName, propertyName,
@@ -115,35 +117,51 @@ export async function GET(
           segments:          [] as { startDate: string; endDate: string; nights: number; ratePerNight: number; subtotal: number; priceName: string | null }[],
           extensionSubtotal: 0,
           extensionNights:   0,
+          isMonthly,
+          extensionMonths:   0,
         };
       }
 
       // ── Compute pricing for extension window ────────────────────────────────
+      // Monthly reservations: extension is counted in calendar months and
+      // priced as monthlyRate × months. The "segments" array still uses the
+      // nights/ratePerNight shape so the UI table stays consistent — those
+      // numbers represent the months and per-month rate when isMonthly.
       const extensionNights = calculateNights(effectiveCheckOutDate, newCheckOut);
-
-      // Try fetching configured DB prices first
-      const priceResult = await getUnitPriceForRange(unitId, effectiveCheckOutDate, newCheckOut);
       let segments: { startDate: string; endDate: string; nights: number; ratePerNight: number; subtotal: number; priceName: string | null }[];
       let extensionSubtotal: number;
 
-      if (priceResult.totalAmount > 0) {
-        // DB prices are configured — use them
-        segments = collapseToSegments(priceResult.dailyBreakdown).map((s) => ({
-          startDate: s.startDate, endDate: s.endDate,
-          nights: s.nights, ratePerNight: s.ratePerNight,
-          subtotal: s.subtotal, priceName: s.priceName,
-        }));
-        extensionSubtotal = roundOMR(priceResult.totalAmount);
-      } else {
-        // No DB prices — fall back to the reservation's existing rate
-        extensionSubtotal = roundOMR(existingRate * extensionNights);
+      if (isMonthly) {
+        const months = countCalendarMonths(effectiveCheckOutDate, newCheckOut);
+        extensionSubtotal = roundOMR(existingRate * months);
         const from = effectiveCheckOutDate.toISOString().slice(0, 10);
         const to   = new Date(newCheckOut.getTime() - 86400000).toISOString().slice(0, 10);
         segments = [{
           startDate: from, endDate: to,
-          nights: extensionNights, ratePerNight: existingRate,
+          nights: months, ratePerNight: existingRate,
           subtotal: extensionSubtotal, priceName: null,
         }];
+      } else {
+        // Try fetching configured DB prices first
+        const priceResult = await getUnitPriceForRange(unitId, effectiveCheckOutDate, newCheckOut);
+
+        if (priceResult.totalAmount > 0) {
+          segments = collapseToSegments(priceResult.dailyBreakdown).map((s) => ({
+            startDate: s.startDate, endDate: s.endDate,
+            nights: s.nights, ratePerNight: s.ratePerNight,
+            subtotal: s.subtotal, priceName: s.priceName,
+          }));
+          extensionSubtotal = roundOMR(priceResult.totalAmount);
+        } else {
+          extensionSubtotal = roundOMR(existingRate * extensionNights);
+          const from = effectiveCheckOutDate.toISOString().slice(0, 10);
+          const to   = new Date(newCheckOut.getTime() - 86400000).toISOString().slice(0, 10);
+          segments = [{
+            startDate: from, endDate: to,
+            nights: extensionNights, ratePerNight: existingRate,
+            subtotal: extensionSubtotal, priceName: null,
+          }];
+        }
       }
 
       return {
@@ -155,6 +173,10 @@ export async function GET(
         segments,
         extensionSubtotal,
         extensionNights,
+        // For monthly reservations the modal should display rate per month
+        // and count extensions in months instead of nights.
+        isMonthly,
+        extensionMonths: isMonthly ? countCalendarMonths(effectiveCheckOutDate, newCheckOut) : 0,
       };
     }),
   );

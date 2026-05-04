@@ -356,7 +356,8 @@
       "tabs": {
         "occupancy": "Occupancy ({total} units)",
         "guests": "In House ({count})",
-        "outstanding": "Outstanding ({count})"
+        "outstanding": "Outstanding ({count})",
+        "toBeIssued": "To Be Issued ({count})"
       },
       "occupancy": {
         "totalUnits": "Total Units",
@@ -414,6 +415,21 @@
           "paid": "Paid",
           "balance": "Balance",
           "daysOverdue": "Days Overdue"
+        }
+      },
+      "toBeIssued": {
+        "totalLabel": "Total Pending:",
+        "summary": "across {count, plural, one {# invoice} other {# invoices}}",
+        "viewAll": "View all →",
+        "none": "No invoices waiting to be issued",
+        "monthN": "Month {n}",
+        "issue": "Issue",
+        "table": {
+          "invoice": "Invoice",
+          "tenant": "Tenant",
+          "period": "Billing Period",
+          "due": "Due Date",
+          "amount": "Amount"
         }
       }
     },
@@ -2438,8 +2454,15 @@
       "partial": "Partial",
       "paid": "Paid",
       "draft": "Draft",
+      "toBeIssued": "To Be Issued",
       "cancelled": "Cancelled"
     },
+    "footer": {
+      "total": "Total",
+      "paid": "Paid",
+      "balance": "Balance"
+    },
+    "refresh": "Refresh",
     "statuses": {
       "pending": "Pending",
       "draft": "Draft",
@@ -2463,6 +2486,8 @@
       "tenant": "Tenant",
       "reservation": "Reservation",
       "period": "Period",
+      "issueDate": "Issue Date",
+      "notIssued": "not issued",
       "total": "Total",
       "paid": "Paid",
       "balance": "Balance",
@@ -2483,6 +2508,7 @@
     },
     "detail": {
       "breadcrumb": "Invoices",
+      "backToList": "Invoices List",
       "monthN": "Month {n}",
       "dueLabel": "Due {date}",
       "invoiceDetails": "Invoice Details",

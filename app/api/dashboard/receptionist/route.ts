@@ -43,7 +43,9 @@ export async function GET(req: NextRequest) {
     ...propResFilter(propertyId),
   };
 
-  const [units, properties, checkedInRes, upcomingRes, balanceRes] =
+  const invoicePropFilter = propertyId ? { propertyId } : {};
+
+  const [units, properties, checkedInRes, upcomingRes, balanceRes, draftInvoices] =
     await Promise.all([
       // All units for count
       prisma.unit.findMany({
@@ -136,6 +138,28 @@ export async function GET(req: NextRequest) {
           },
           unit: { select: { name: true } },
         },
+      }),
+
+      // Invoices waiting to be issued (DRAFT) — sorted by upcoming periodStart
+      prisma.invoice.findMany({
+        where: {
+          organizationId: orgId,
+          status: "DRAFT",
+          ...invoicePropFilter,
+        },
+        select: {
+          id: true,
+          invoiceNumber: true,
+          periodStart: true,
+          periodEnd: true,
+          dueDate: true,
+          totalAmount: true,
+          monthNumber: true,
+          tenant: { select: { id: true, firstName: true, lastName: true } },
+          reservation: { select: { id: true, reservationNumber: true } },
+          property: { select: { name: true } },
+        },
+        orderBy: { periodStart: "asc" },
       }),
     ]);
 
@@ -269,10 +293,30 @@ export async function GET(req: NextRequest) {
         b.daysPastCheckout - a.daysPastCheckout || b.balance - a.balance,
     );
 
+  // ── Invoices to be issued (DRAFT) ─────────────────────────────────────────
+  const invoicesToBeIssued = draftInvoices.map((inv) => ({
+    id: inv.id,
+    invoiceNumber: inv.invoiceNumber,
+    tenant: {
+      id: inv.tenant.id,
+      name: `${inv.tenant.firstName} ${inv.tenant.lastName}`,
+    },
+    reservation: inv.reservation
+      ? { id: inv.reservation.id, number: inv.reservation.reservationNumber }
+      : null,
+    propertyName: inv.property?.name ?? null,
+    periodStart: inv.periodStart.toISOString(),
+    periodEnd: inv.periodEnd.toISOString(),
+    dueDate: inv.dueDate.toISOString(),
+    totalAmount: Number(inv.totalAmount),
+    monthNumber: inv.monthNumber,
+  }));
+
   return NextResponse.json({
     unitCounts: { total: units.length, occupied, reserved, vacant, maintenance },
     buildingOccupancy,
     currentGuests,
     outstandingBalances,
+    invoicesToBeIssued,
   });
 }

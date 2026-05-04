@@ -11,6 +11,7 @@ import {
   MagnifyingGlassIcon,
   BanknotesIcon,
   CalendarDaysIcon,
+  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { useFormatCurrency } from "@/lib/org-context";
 
@@ -39,14 +40,27 @@ interface BalanceRow {
   grandTotal: number; amountPaid: number; balance: number;
   daysPastCheckout: number;
 }
+interface DraftInvoiceRow {
+  id: string;
+  invoiceNumber: string;
+  tenant: { id: string; name: string };
+  reservation: { id: string; number: string | null } | null;
+  propertyName: string | null;
+  periodStart: string;
+  periodEnd: string;
+  dueDate: string;
+  totalAmount: number;
+  monthNumber: number | null;
+}
 interface ReceptionistData {
   unitCounts: UnitCounts;
   buildingOccupancy: BuildingRow[];
   currentGuests: GuestRow[];
   outstandingBalances: BalanceRow[];
+  invoicesToBeIssued: DraftInvoiceRow[];
 }
 
-type SubTab = "occupancy" | "guests" | "outstanding";
+type SubTab = "occupancy" | "guests" | "outstanding" | "toBeIssued";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -95,6 +109,8 @@ export function ReceptionistView({
   const tGTbl   = useTranslations("dashboard.receptionist.guests.table");
   const tO      = useTranslations("dashboard.receptionist.outstanding");
   const tOTbl   = useTranslations("dashboard.receptionist.outstanding.table");
+  const tDraft  = useTranslations("dashboard.receptionist.toBeIssued");
+  const tDraftTbl = useTranslations("dashboard.receptionist.toBeIssued.table");
   const locale  = useLocale();
   const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
   const omr     = useFormatCurrency();
@@ -134,7 +150,7 @@ export function ReceptionistView({
       </div>
     );
 
-  const { unitCounts: uc, buildingOccupancy, currentGuests, outstandingBalances } = data;
+  const { unitCounts: uc, buildingOccupancy, currentGuests, outstandingBalances, invoicesToBeIssued } = data;
 
   // Filtered guests by search
   const filteredGuests = currentGuests.filter((g) => {
@@ -162,19 +178,22 @@ export function ReceptionistView({
   return (
     <div className="space-y-4">
       {/* Sub-tab nav */}
-      <div className="flex gap-1 border-b border-gray-200">
+      <div className="flex flex-wrap gap-1 border-b border-gray-200">
         {([
-          ["occupancy",   tTabs("occupancy",   { total: uc.total })],
-          ["guests",      tTabs("guests",      { count: uc.occupied })],
-          ["outstanding", tTabs("outstanding", { count: outstandingBalances.length })],
-        ] as [SubTab, string][]).map(([tab, label]) => (
+          ["occupancy",   tTabs("occupancy",   { total: uc.total }),                     false],
+          ["guests",      tTabs("guests",      { count: uc.occupied }),                  false],
+          ["outstanding", tTabs("outstanding", { count: outstandingBalances.length }),   false],
+          ["toBeIssued",  tTabs("toBeIssued",  { count: invoicesToBeIssued.length }),    invoicesToBeIssued.length > 0],
+        ] as [SubTab, string, boolean][]).map(([tab, label, highlight]) => (
           <button
             key={tab}
             onClick={() => { setSubTab(tab); setSearch(""); }}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               subTab === tab
                 ? "border-blue-600 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+                : highlight
+                  ? "border-transparent text-amber-700 hover:text-amber-800"
+                  : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
             {label}
@@ -489,6 +508,101 @@ export function ReceptionistView({
                               className="rounded-md bg-gray-50 px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 transition-colors"
                             >
                               {tO("view")}
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Invoices To Be Issued Tab ── */}
+      {subTab === "toBeIssued" && (
+        <div className="space-y-4">
+          {invoicesToBeIssued.length > 0 && (
+            <div className="flex items-center justify-between rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <DocumentTextIcon className="h-5 w-5 text-amber-500" />
+                <p className="text-sm font-semibold text-amber-800">
+                  {tDraft("totalLabel")}{" "}
+                  <span className="text-amber-700 ltr-numbers">
+                    {omr(invoicesToBeIssued.reduce((s, i) => s + i.totalAmount, 0))}
+                  </span>
+                  {" "}{tDraft("summary", { count: invoicesToBeIssued.length })}
+                </p>
+              </div>
+              <Link
+                href="/dashboard/invoices?status=DRAFT"
+                className="text-sm font-semibold text-amber-700 hover:text-amber-900"
+              >
+                {tDraft("viewAll")}
+              </Link>
+            </div>
+          )}
+
+          {invoicesToBeIssued.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-xl bg-white py-14 shadow-sm ring-1 ring-gray-900/5">
+              <CheckCircleIcon className="mb-2 h-10 w-10 text-green-300" />
+              <p className="text-sm text-gray-400">{tDraft("none")}</p>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-100">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      {(["invoice", "tenant", "period", "due", "amount"] as const).map((k) => (
+                        <th key={k} className="px-4 py-2.5 text-start text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                          {tDraftTbl(k)}
+                        </th>
+                      ))}
+                      <th className="px-4 py-2.5" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {invoicesToBeIssued.map((inv) => (
+                      <tr key={inv.id} className="hover:bg-amber-50/40 transition-colors">
+                        <td className="px-4 py-3">
+                          <Link
+                            href={`/dashboard/invoices/${inv.id}`}
+                            className="font-mono text-sm font-semibold text-indigo-600 hover:text-indigo-900 ltr-numbers"
+                          >
+                            {inv.invoiceNumber}
+                          </Link>
+                          {inv.monthNumber && (
+                            <div className="text-xs text-gray-400">
+                              {tDraft("monthN", { n: inv.monthNumber })}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-medium text-gray-900">{inv.tenant.name}</p>
+                          {inv.propertyName && (
+                            <p className="text-xs text-gray-400">{inv.propertyName}</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600 ltr-numbers whitespace-nowrap">
+                          {format(parseISO(inv.periodStart), "d MMM", { locale: dateFnsLocale })} –{" "}
+                          {format(parseISO(inv.periodEnd), "d MMM yyyy", { locale: dateFnsLocale })}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600 ltr-numbers whitespace-nowrap">
+                          {format(parseISO(inv.dueDate), "d MMM yyyy", { locale: dateFnsLocale })}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-semibold text-gray-900 ltr-numbers">
+                          {omr(inv.totalAmount)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1.5 justify-end">
+                            <Link
+                              href={`/dashboard/invoices/${inv.id}`}
+                              className="rounded-md bg-amber-500 px-2 py-1 text-xs font-semibold text-white hover:bg-amber-600 transition-colors"
+                            >
+                              {tDraft("issue")}
                             </Link>
                           </div>
                         </td>

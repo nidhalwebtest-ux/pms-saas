@@ -356,7 +356,8 @@
       "tabs": {
         "occupancy": "الإشغال ({total} وحدة)",
         "guests": "نزلاء حاليون ({count})",
-        "outstanding": "مستحقة ({count})"
+        "outstanding": "مستحقة ({count})",
+        "toBeIssued": "بانتظار الإصدار ({count})"
       },
       "occupancy": {
         "totalUnits": "إجمالي الوحدات",
@@ -414,6 +415,21 @@
           "paid": "المدفوع",
           "balance": "الرصيد",
           "daysOverdue": "أيام التأخير"
+        }
+      },
+      "toBeIssued": {
+        "totalLabel": "إجمالي بانتظار الإصدار:",
+        "summary": "في {count, plural, zero {لا فواتير} one {فاتورة واحدة} two {فاتورتان} few {# فواتير} many {# فاتورة} other {# فاتورة}}",
+        "viewAll": "عرض الكل ←",
+        "none": "لا توجد فواتير بانتظار الإصدار",
+        "monthN": "الشهر {n}",
+        "issue": "إصدار",
+        "table": {
+          "invoice": "الفاتورة",
+          "tenant": "المستأجر",
+          "period": "فترة الفوترة",
+          "due": "تاريخ الاستحقاق",
+          "amount": "المبلغ"
         }
       }
     },
@@ -2438,8 +2454,15 @@
       "partial": "جزئية",
       "paid": "مدفوعة",
       "draft": "مسودة",
+      "toBeIssued": "بانتظار الإصدار",
       "cancelled": "ملغاة"
     },
+    "footer": {
+      "total": "الإجمالي",
+      "paid": "المدفوع",
+      "balance": "المتبقي"
+    },
+    "refresh": "تحديث",
     "statuses": {
       "pending": "معلّقة",
       "draft": "مسودة",
@@ -2463,6 +2486,8 @@
       "tenant": "المستأجر",
       "reservation": "الحجز",
       "period": "الفترة",
+      "issueDate": "تاريخ الإصدار",
+      "notIssued": "لم تُصدر",
       "total": "الإجمالي",
       "paid": "المدفوع",
       "balance": "المتبقي",
@@ -2483,6 +2508,7 @@
     },
     "detail": {
       "breadcrumb": "الفواتير",
+      "backToList": "قائمة الفواتير",
       "monthN": "الشهر {n}",
       "dueLabel": "الاستحقاق {date}",
       "invoiceDetails": "تفاصيل الفاتورة",

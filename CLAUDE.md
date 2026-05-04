@@ -48,8 +48,11 @@ June-September) and long-term monthly rentals.
 - Short-term stays (daily, ≤30 nights): ONE invoice for entire stay
 - Long-term stays (monthly): ONE invoice per billing cycle. Billing cycle follows 
   check-in day (check-in on 15th = billing 15th to 15th each month)
-- Invoice statuses: PENDING, PARTIALLY_PAID, PAID, RETURNED, CANCELLED
-- Overdue is calculated (PENDING or PARTIALLY_PAID with due_date < today), never stored
+- Invoice statuses: DRAFT, PENDING, PARTIALLY_PAID, PAID, RETURNED, CANCELLED
+- DRAFT = monthly cycle pre-created but not yet issued (no revenue posted, waiting for receptionist to click "Issue")
+- Issuing a DRAFT sets status=PENDING and stamps issueDate=now() (revenue posts on issueDate)
+- For monthly stays: the first cycle (current period) is auto-issued at generation; future cycles are created as DRAFT
+- Overdue is calculated (PENDING, PARTIALLY_PAID, or legacy ISSUED with due_date < today), never stored
 - Issued invoices are immutable — cancel and recreate to fix mistakes
 - Cancelled invoices excluded from ALL financial calculations
 - Early checkout: current billing period NOT prorated (full month charged), future invoices cancelled

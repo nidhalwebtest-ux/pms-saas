@@ -28,6 +28,7 @@ import {
   BanknotesIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon, ShieldExclamationIcon } from "@heroicons/react/24/solid";
+import { Button } from "@/components/ui";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -1578,9 +1579,9 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
           <Link href={`/dashboard/reservations/${reservationId}/edit`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
             <PencilSquareIcon className="h-4 w-4" /> {t("edit")}
           </Link>
-          <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> {t("print")}
-          </button>
+          <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
+            {t("print")}
+          </Button>
           <button onClick={() => onAction("cancel")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-300 bg-white text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
             <XMarkIcon className="h-4 w-4" /> {t("cancel")}
           </button>
@@ -1601,9 +1602,9 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
           <Link href={`/dashboard/reservations/${reservationId}/edit`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
             <PencilSquareIcon className="h-4 w-4" /> {t("edit")}
           </Link>
-          <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> {t("print")}
-          </button>
+          <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
+            {t("print")}
+          </Button>
           <button onClick={() => onAction("cancel")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-300 bg-white text-sm font-medium text-red-600 hover:bg-red-50">
             <XMarkIcon className="h-4 w-4" /> {t("cancel")}
           </button>
@@ -1627,12 +1628,12 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
           <button onClick={() => onAction("extend-stay")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-300 bg-white text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors">
             {t("extendStay")}
           </button>
-          <button onClick={() => onAction("move-unit")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+          <Button variant="secondary" onClick={() => onAction("move-unit")}>
             {t("moveUnit")}
-          </button>
-          <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> {t("print")}
-          </button>
+          </Button>
+          <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
+            {t("print")}
+          </Button>
         </>
       );
     case "Overstay":
@@ -1644,24 +1645,24 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
           >
             {t("checkOut")}
           </button>
-          <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> {t("print")}
-          </button>
+          <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
+            {t("print")}
+          </Button>
         </>
       );
     case "Checked Out":
       return (
         <>
-          <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> {t("print")}
-          </button>
+          <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
+            {t("print")}
+          </Button>
         </>
       );
     default:
       return (
-        <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-          <PrinterIcon className="h-4 w-4" /> {t("print")}
-        </button>
+        <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
+          {t("print")}
+        </Button>
       );
   }
 }

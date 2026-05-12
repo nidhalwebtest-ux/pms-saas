@@ -13,20 +13,9 @@ import {
   PrinterIcon,
   MagnifyingGlassIcon,
 } from "@heroicons/react/24/outline";
+import { Badge, getPaymentMethodBadge, type PaymentMethodKey } from "@/components/ui";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-function methodBadge(method: string) {
-  const map: Record<string, string> = {
-    CASH: "bg-green-100 text-green-800",
-    CARD: "bg-blue-100 text-blue-800",
-    BANK_TRANSFER: "bg-purple-100 text-purple-800",
-    CHEQUE: "bg-orange-100 text-orange-800",
-    ONLINE: "bg-cyan-100 text-cyan-800",
-    OTHER: "bg-gray-100 text-gray-600",
-  };
-  return map[method] ?? "bg-gray-100 text-gray-600";
-}
 
 type MethodT = (key: string) => string;
 function methodLabel(method: string, t: MethodT) {
@@ -306,9 +295,9 @@ export default async function PaymentsListPage({
                         {formatAmount(payment.amount, currency)}
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm">
-                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${methodBadge(payment.method)}`}>
+                        <Badge {...getPaymentMethodBadge(payment.method as PaymentMethodKey)} size="sm">
                           {methodLabel(payment.method, tMethod)}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-sm text-gray-500">
                         {payment.reference || "—"}

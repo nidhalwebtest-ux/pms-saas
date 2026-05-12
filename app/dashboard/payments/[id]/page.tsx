@@ -13,6 +13,7 @@ import {
   BanknotesIcon,
   CalendarDaysIcon,
 } from "@heroicons/react/24/outline";
+import { Badge, getPaymentMethodBadge, type PaymentMethodKey } from "@/components/ui";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -25,18 +26,6 @@ const tryT = (fn: Trans, key: string, fallback?: string) => {
     return fallback ?? key;
   }
 };
-
-function methodBadgeClass(m: string) {
-  const map: Record<string, string> = {
-    CASH: "bg-green-100 text-green-800",
-    CARD: "bg-blue-100 text-blue-800",
-    BANK_TRANSFER: "bg-purple-100 text-purple-800",
-    CHEQUE: "bg-orange-100 text-orange-800",
-    ONLINE: "bg-cyan-100 text-cyan-800",
-    OTHER: "bg-gray-100 text-gray-600",
-  };
-  return map[m] ?? "bg-gray-100 text-gray-600";
-}
 
 function invoiceStatusBadge(status: string) {
   const map: Record<string, string> = {
@@ -192,9 +181,12 @@ export default async function PaymentDetailPage({
           <div className="text-end">
             <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-1">{tDet("amountLabel")}</p>
             <p className="text-3xl font-bold ltr-numbers">{amount.toFixed(3)} <span className="text-xl font-normal text-blue-200">OMR</span></p>
-            <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${methodBadgeClass(payment.method)} bg-opacity-90`}>
+            <Badge
+              {...getPaymentMethodBadge(payment.method as PaymentMethodKey)}
+              className="mt-2"
+            >
               {methodLabelText}
-            </span>
+            </Badge>
           </div>
         </div>
       </div>
@@ -220,9 +212,12 @@ export default async function PaymentDetailPage({
             <div className="flex justify-between py-2.5">
               <dt className="text-gray-500">{tDet("paymentMethod")}</dt>
               <dd>
-                <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${methodBadgeClass(payment.method)}`}>
+                <Badge
+                  {...getPaymentMethodBadge(payment.method as PaymentMethodKey)}
+                  size="sm"
+                >
                   {methodLabelText}
-                </span>
+                </Badge>
               </dd>
             </div>
             {payment.reference && (

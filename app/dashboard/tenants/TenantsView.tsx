@@ -26,7 +26,13 @@ import {
 } from "@heroicons/react/24/outline";
 import { quickUpdateTenant } from "./actions";
 import type { TenantRow } from "./page";
-import { Badge, getTenantTypeBadge, type TenantTypeKey } from "@/components/ui";
+import {
+  Badge,
+  getTenantTypeBadge,
+  getTenantClassBadge,
+  type TenantTypeKey,
+  type TenantClassKey,
+} from "@/components/ui";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -132,11 +138,16 @@ function Avatar({ t, size = "sm" }: { t: TenantRow; size?: "sm" | "lg" }) {
 
 function ClassBadge({ value }: { value: string | null }) {
   const tCls = useTranslations("tenants.classifications");
-  if (value === "vip")
-    return <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800">{tCls("vipBadge")}</span>;
-  if (value === "blacklisted")
-    return <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">{tCls("blacklistedBadge")}</span>;
-  return <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">{tCls("regular")}</span>;
+  const key = (value === "vip" || value === "blacklisted" ? value : "regular") as TenantClassKey;
+  const labelKey =
+    key === "vip"         ? "vipBadge" :
+    key === "blacklisted" ? "blacklistedBadge" :
+                            "regular";
+  return (
+    <Badge {...getTenantClassBadge(key)} size="sm">
+      {tCls(labelKey)}
+    </Badge>
+  );
 }
 
 function TypeBadge({ value }: { value: string | null }) {

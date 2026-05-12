@@ -19,11 +19,14 @@ import {
   XMarkIcon,
   PlusIcon,
   UserIcon,
-  StarIcon,
-  NoSymbolIcon,
   PencilSquareIcon,
 } from "@heroicons/react/24/outline";
 import { CheckCircleIcon as CheckCircleSolid } from "@heroicons/react/24/solid";
+import {
+  Badge,
+  getTenantClassBadge,
+  type TenantClassKey,
+} from "@/components/ui";
 import {
   calculateNights,
   addCalendarMonths,
@@ -116,11 +119,16 @@ function parseLocalDate(s: string): Date {
 }
 
 function ClassBadge({ c, t }: { c: string | null; t: (k: string) => string }) {
-  if (c === "vip")
-    return <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-full px-1.5 py-0.5"><StarIcon className="h-2.5 w-2.5" />{t("vipBadge")}</span>;
-  if (c === "blacklisted")
-    return <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded-full px-1.5 py-0.5"><NoSymbolIcon className="h-2.5 w-2.5" />{t("blacklistedBadge")}</span>;
-  return null;
+  const key = (c === "vip" || c === "blacklisted" ? c : "regular") as TenantClassKey;
+  const label =
+    key === "vip"         ? t("vipBadge") :
+    key === "blacklisted" ? t("blacklistedBadge") :
+                            "Regular"; // i18n key not yet in this namespace
+  return (
+    <Badge {...getTenantClassBadge(key)} size="sm">
+      {label}
+    </Badge>
+  );
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────

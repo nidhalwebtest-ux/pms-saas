@@ -27,8 +27,12 @@ import {
   UserIcon,
   BanknotesIcon,
 } from "@heroicons/react/24/outline";
-import { StarIcon, ShieldExclamationIcon } from "@heroicons/react/24/solid";
-import { Button } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  getTenantClassBadge,
+  type TenantClassKey,
+} from "@/components/ui";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -227,11 +231,16 @@ function useFmtUnitType() {
 
 function ClassBadge({ c }: { c: string | null }) {
   const t = useTranslations("reservations.detail.guest");
-  if (c === "vip")
-    return <span className="inline-flex items-center gap-0.5 text-xs font-medium text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full"><StarIcon className="h-3 w-3" /> {t("vip")}</span>;
-  if (c === "blacklisted")
-    return <span className="inline-flex items-center gap-0.5 text-xs font-medium text-red-700 bg-red-100 px-2 py-0.5 rounded-full"><ShieldExclamationIcon className="h-3 w-3" /> {t("blacklisted")}</span>;
-  return null;
+  const key = (c === "vip" || c === "blacklisted" ? c : "regular") as TenantClassKey;
+  const label =
+    key === "vip"         ? t("vip") :
+    key === "blacklisted" ? t("blacklisted") :
+                            "Regular"; // i18n key not yet in this namespace
+  return (
+    <Badge {...getTenantClassBadge(key)} size="sm">
+      {label}
+    </Badge>
+  );
 }
 
 function StatusBadge({ label, badgeClass, pulse }: { label: string; badgeClass: string; pulse: boolean }) {

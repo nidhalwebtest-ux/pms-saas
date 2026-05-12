@@ -13,7 +13,12 @@ import {
   BanknotesIcon,
   CalendarDaysIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, getPaymentMethodBadge, type PaymentMethodKey } from "@/components/ui";
+import {
+  Badge,
+  getPaymentMethodBadge,
+  resolveInvoiceBadge,
+  type PaymentMethodKey,
+} from "@/components/ui";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -26,20 +31,6 @@ const tryT = (fn: Trans, key: string, fallback?: string) => {
     return fallback ?? key;
   }
 };
-
-function invoiceStatusBadge(status: string) {
-  const map: Record<string, string> = {
-    PAID:           "bg-green-100 text-green-800",
-    PARTIALLY_PAID: "bg-orange-100 text-orange-800",
-    PENDING:        "bg-yellow-100 text-yellow-800",
-    CANCELLED:      "bg-gray-100 text-gray-500",
-    RETURNED:       "bg-red-100 text-red-700",
-    PARTIAL:        "bg-orange-100 text-orange-800",
-    ISSUED:         "bg-yellow-100 text-yellow-800",
-    DUE:            "bg-yellow-100 text-yellow-800",
-  };
-  return map[status] ?? "bg-gray-100 text-gray-600";
-}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -332,9 +323,9 @@ export default async function PaymentDetailPage({
                       {Number(alloc.amount).toFixed(3)} OMR
                     </td>
                     <td className="px-3 py-3 text-sm text-center">
-                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${invoiceStatusBadge(inv.status)}`}>
+                      <Badge {...resolveInvoiceBadge(inv.status, null).props} size="sm">
                         {invoiceStatusLabel(inv.status)}
-                      </span>
+                      </Badge>
                     </td>
                   </tr>
                 );

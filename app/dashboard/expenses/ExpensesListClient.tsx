@@ -21,6 +21,7 @@ import RejectExpenseModal from "./modals/RejectExpenseModal";
 import ProcessExpenseModal from "./modals/ProcessExpenseModal";
 import ReceiptLightbox from "./modals/ReceiptLightbox";
 import { useFormatAmount, useOrgCurrency } from "@/lib/org-context";
+import { Badge, getExpenseStatusBadge, type ExpenseStatusKey } from "@/components/ui";
 
 type Status = "PENDING" | "APPROVED" | "REJECTED" | "PROCESSED";
 
@@ -56,12 +57,6 @@ interface Props {
   categories: { id: string; name: string; icon: string | null; isActive: boolean }[];
 }
 
-const STATUS_STYLE = {
-  PENDING:   { bg: "bg-amber-100",    text: "text-amber-800",   dot: "bg-amber-500" },
-  APPROVED:  { bg: "bg-blue-100",     text: "text-blue-800",    dot: "bg-blue-500"  },
-  REJECTED:  { bg: "bg-red-100",      text: "text-red-800",     dot: "bg-red-500"   },
-  PROCESSED: { bg: "bg-emerald-100",  text: "text-emerald-800", dot: "bg-emerald-500" },
-} as const;
 
 export default function ExpensesListClient({
   role, userId, initialStatus, initialPropertyId, initialCategoryId, properties, categories,
@@ -350,7 +345,6 @@ export default function ExpensesListClient({
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {expenses.map((e, idx) => {
-                  const cfg = STATUS_STYLE[e.status];
                   const isOwn = e.submittedBy.id === userId;
                   const canEdit   = e.status === "PENDING" && isOwn;
                   const canDelete = e.status === "PENDING" && (isOwn || role === "OWNER");
@@ -416,10 +410,13 @@ export default function ExpensesListClient({
                         <span className="text-[10px] text-gray-400 ms-1">{currency}</span>
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 text-center">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${cfg.bg} ${cfg.text}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot} ${e.status === "PENDING" ? "animate-pulse" : ""}`} />
+                        <Badge
+                          {...getExpenseStatusBadge(e.status as ExpenseStatusKey)}
+                          size="sm"
+                          pulse={e.status === "PENDING"}
+                        >
                           {tStatus(e.status)}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 pe-5 text-end">
                         <div className="inline-flex items-center gap-1">

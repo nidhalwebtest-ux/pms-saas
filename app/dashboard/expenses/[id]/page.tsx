@@ -20,13 +20,7 @@ import {
   XCircleIcon,
 } from "@heroicons/react/24/outline";
 import ExpenseActionPanel from "./ExpenseActionPanel";
-
-const STATUS_STYLE: Record<string, { bg: string; text: string; ring: string; icon: typeof ClockIcon }> = {
-  PENDING:   { bg: "bg-amber-50",    text: "text-amber-700",   ring: "ring-amber-200",   icon: ClockIcon },
-  APPROVED:  { bg: "bg-blue-50",     text: "text-blue-700",    ring: "ring-blue-200",    icon: CheckCircleIcon },
-  REJECTED:  { bg: "bg-red-50",      text: "text-red-700",     ring: "ring-red-200",     icon: XCircleIcon },
-  PROCESSED: { bg: "bg-emerald-50",  text: "text-emerald-700", ring: "ring-emerald-200", icon: ClipboardDocumentCheckIcon },
-};
+import { Badge, getExpenseStatusBadge, type ExpenseStatusKey } from "@/components/ui";
 
 function fullName(u: { firstName: string | null; lastName: string | null } | null) {
   if (!u) return "—";
@@ -82,9 +76,6 @@ export default async function ExpenseDetailsPage({
     return format(new Date(d), "dd MMM yyyy, HH:mm", { locale: dfLoc });
   };
 
-  const cfg = STATUS_STYLE[expense.status] ?? STATUS_STYLE.PENDING;
-  const StatusIcon = cfg.icon;
-
   const amount = Number(expense.amount);
   const isOwn = expense.submittedById === user.id;
   const canApprove = ["OWNER", "MANAGER"].includes(dbUser.role) && expense.status === "PENDING";
@@ -108,10 +99,9 @@ export default async function ExpenseDetailsPage({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-gray-900 font-mono ltr-numbers">{expense.expenseNumber}</h1>
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${cfg.bg} ${cfg.text} ${cfg.ring}`}>
-              <StatusIcon className="h-3.5 w-3.5" />
+            <Badge {...getExpenseStatusBadge(expense.status as ExpenseStatusKey)} size="md">
               {tStatusFull(expense.status)}
-            </span>
+            </Badge>
           </div>
           <p className="text-sm text-gray-500 mt-1">
             {tDet("submittedOn", { date: fmtDateTime(expense.submittedAt) ?? "—" })}

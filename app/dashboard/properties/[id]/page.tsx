@@ -17,14 +17,12 @@ import {
 import { prisma } from "@/lib/prisma";
 import PropertyDangerZone from "@/components/dashboard/PropertyDangerZone";
 import { getUnitDisplayStatus } from "@/lib/unit-status";
-import { Badge, getPropertyTypeBadge, type PropertyTypeKey } from "@/components/ui";
-
-const STATUS_BADGE_STYLE: Record<string, { badge: string; dot: string }> = {
-  vacant:      { badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
-  occupied:    { badge: "bg-blue-100 text-blue-700",       dot: "bg-blue-500"    },
-  reserved:    { badge: "bg-violet-100 text-violet-700",   dot: "bg-violet-500"  },
-  maintenance: { badge: "bg-amber-100 text-amber-700",     dot: "bg-amber-500"   },
-};
+import {
+  Badge,
+  getPropertyTypeBadge,
+  getUnitStatusBadge,
+  type PropertyTypeKey,
+} from "@/components/ui";
 
 export default async function PropertyDetailsPage({
   params,
@@ -201,7 +199,6 @@ export default async function PropertyDetailsPage({
               ) : (
                 property.units.map((unit) => {
                   const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations);
-                  const cfg = STATUS_BADGE_STYLE[displayStatus];
                   const statusLabel = tryT((k) => tStat(k), displayStatus, displayStatus);
                   return (
                   <tr key={unit.id} className="hover:bg-blue-50/40 transition-colors">
@@ -225,10 +222,9 @@ export default async function PropertyDetailsPage({
                       <span className="text-xs font-normal text-gray-500">{t("table.omr")}</span>
                     </td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.badge}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                      <Badge {...getUnitStatusBadge(displayStatus)} size="sm">
                         {statusLabel}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="relative whitespace-nowrap py-4 ps-3 pe-4 text-end text-sm font-medium sm:pe-6">
                       <Link href={`/dashboard/units/${unit.id}/edit`} className="text-blue-600 hover:text-blue-900">

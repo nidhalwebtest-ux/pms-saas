@@ -84,9 +84,9 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
               <p className="text-xs text-gray-500 mt-0.5 ltr-numbers">{expense.expenseNumber} · {expense.amount.toFixed(3)} OMR</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-white/50">
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close">
             <XMarkIcon className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
 
         {/* Body */}

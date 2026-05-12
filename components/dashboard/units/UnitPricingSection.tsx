@@ -22,6 +22,7 @@ import {
 import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
 import { ar, enGB } from "date-fns/locale";
+import { Button } from "@/components/ui";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -312,9 +313,9 @@ function PriceModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 transition-colors">
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close">
             <XCircleIcon className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 p-6">

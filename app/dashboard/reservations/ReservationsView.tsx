@@ -20,6 +20,7 @@ import {
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import type { DisplayStatus, TabKey } from "@/lib/reservation-status";
+import { Button } from "@/components/ui";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -410,9 +411,9 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-          <button onClick={onClose} className="rounded-full p-1 hover:bg-gray-100 transition-colors">
-            <XMarkIcon className="h-5 w-5 text-gray-500" />
-          </button>
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close">
+            <XMarkIcon className="h-5 w-5" />
+          </Button>
         </div>
         <div className="px-5 py-4">{children}</div>
       </div>

@@ -77,3 +77,6 @@ export type { DatePickerProps } from "./form";
 
 export { DateRangePicker } from "./form";
 export type { DateRangePickerProps, DateRangeValue } from "./form";
+
+export { SearchableSelect } from "./form";
+export type { SearchableSelectProps, SearchableSelectOption } from "./form";

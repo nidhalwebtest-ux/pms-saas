@@ -28,15 +28,9 @@ import {
   FunnelIcon,
 } from "@heroicons/react/24/outline";
 import type { PropertyRow } from "./page";
+import { Badge, getPropertyTypeBadge, type PropertyTypeKey } from "@/components/ui";
 
 // ── Constants ────────────────────────────────────────────────────────────────
-
-const TYPE_BADGE_STYLE: Record<string, { bg: string; text: string }> = {
-  RESIDENTIAL: { bg: "bg-blue-100",   text: "text-blue-700"   },
-  MIXED:       { bg: "bg-violet-100", text: "text-violet-700" },
-  HOTEL:       { bg: "bg-amber-100",  text: "text-amber-700"  },
-  COMMERCIAL:  { bg: "bg-green-100",  text: "text-green-700"  },
-};
 
 type SortKey = "name" | "type" | "city" | "totalUnits" | "occupiedUnits" | "vacantUnits" | "isActive" | "createdAt" | "revenueThisMonth";
 type SortDir = "asc" | "desc";
@@ -121,7 +115,6 @@ function PropertyCard({ property }: { property: PropertyRow }) {
   const tDet = useTranslations("buildings.detail");
   const tTable = useTranslations("buildings.table");
   const tT = useTranslations("buildings.types");
-  const typeStyle = TYPE_BADGE_STYLE[property.type] ?? { bg: "bg-gray-100", text: "text-gray-600" };
   const typeLabel = (() => { try { return tT(property.type); } catch { return property.type; } })();
   const hasPhoto = property.photos.length > 0;
 
@@ -137,9 +130,13 @@ function PropertyCard({ property }: { property: PropertyRow }) {
           </div>
         )}
         {/* Type badge overlay */}
-        <span className={`absolute top-2 start-2 inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold shadow-sm ${typeStyle.bg} ${typeStyle.text}`}>
+        <Badge
+          {...getPropertyTypeBadge(property.type as PropertyTypeKey)}
+          size="sm"
+          className="absolute top-2 start-2 shadow-sm"
+        >
           {typeLabel}
-        </span>
+        </Badge>
         {/* Status overlay */}
         <span className={`absolute top-2 end-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold shadow-sm ${
           property.isArchived ? "bg-gray-200 text-gray-600"
@@ -216,7 +213,6 @@ function SummaryCard({ property }: { property: PropertyRow }) {
   const tDet = useTranslations("buildings.detail");
   const tT = useTranslations("buildings.types");
 
-  const typeStyle = TYPE_BADGE_STYLE[property.type] ?? { bg: "bg-gray-100", text: "text-gray-600" };
   const typeLabel = (() => { try { return tT(property.type); } catch { return property.type; } })();
   const hasPhoto  = property.photos.length > 0;
   const pct       = property.totalUnits > 0
@@ -279,9 +275,13 @@ function SummaryCard({ property }: { property: PropertyRow }) {
         {/* Gradient overlay for text legibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
         {/* Type badge */}
-        <span className={`absolute top-3 start-3 inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-semibold shadow ${typeStyle.bg} ${typeStyle.text}`}>
+        <Badge
+          {...getPropertyTypeBadge(property.type as PropertyTypeKey)}
+          size="md"
+          className="absolute top-3 start-3 shadow"
+        >
           {typeLabel}
-        </span>
+        </Badge>
         {/* Status badge */}
         <span className={`absolute top-3 end-3 inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold shadow ${
           property.isArchived ? "bg-gray-200 text-gray-700"
@@ -620,13 +620,12 @@ export default function PropertiesView({
                         {/* Type */}
                         <td className="hidden sm:table-cell px-3 py-2.5">
                           {(() => {
-                            const style = TYPE_BADGE_STYLE[p.type] ?? { bg: "bg-gray-100", text: "text-gray-600" };
                             let label: string;
                             try { label = tT(p.type); } catch { label = p.type; }
                             return (
-                              <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${style.bg} ${style.text}`}>
+                              <Badge {...getPropertyTypeBadge(p.type as PropertyTypeKey)} size="sm">
                                 {label}
-                              </span>
+                              </Badge>
                             );
                           })()}
                         </td>

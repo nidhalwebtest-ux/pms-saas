@@ -17,13 +17,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import PropertyDangerZone from "@/components/dashboard/PropertyDangerZone";
 import { getUnitDisplayStatus } from "@/lib/unit-status";
-
-const TYPE_BADGE_STYLE: Record<string, string> = {
-  RESIDENTIAL: "bg-blue-100 text-blue-700",
-  MIXED:       "bg-violet-100 text-violet-700",
-  HOTEL:       "bg-amber-100 text-amber-700",
-  COMMERCIAL:  "bg-green-100 text-green-700",
-};
+import { Badge, getPropertyTypeBadge, type PropertyTypeKey } from "@/components/ui";
 
 const STATUS_BADGE_STYLE: Record<string, { badge: string; dot: string }> = {
   vacant:      { badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
@@ -109,9 +103,9 @@ export default async function PropertyDetailsPage({
               <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl sm:tracking-tight">
                 {property.name}
               </h2>
-              <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${TYPE_BADGE_STYLE[property.type] ?? "bg-gray-100 text-gray-600"}`}>
+              <Badge {...getPropertyTypeBadge(property.type as PropertyTypeKey)} size="md">
                 {typeLabel}
-              </span>
+              </Badge>
               {property.isArchived ? (
                 <span className="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-semibold text-gray-600">
                   <ArchiveBoxIcon className="h-3.5 w-3.5" /> {t("archived")}

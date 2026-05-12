@@ -21,6 +21,7 @@ import { useTranslations } from "next-intl";
 import { UNIT_STATUS_CONFIG } from "@/lib/unit-status";
 import { quickUpdateUnit } from "./actions";
 import type { UnitRow } from "./page";
+import { Badge, getUnitTypeBadge, type UnitTypeKey } from "@/components/ui";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -31,14 +32,6 @@ const TYPE_LABEL_EN: Record<string, string> = {
   TWO_BR:   "2 BR",
   THREE_BR: "3 BR",
   SUITE:    "Suite",
-};
-
-const TYPE_BADGE: Record<string, string> = {
-  STUDIO:   "bg-gray-100 text-gray-700",
-  ONE_BR:   "bg-blue-100 text-blue-700",
-  TWO_BR:   "bg-violet-100 text-violet-700",
-  THREE_BR: "bg-emerald-100 text-emerald-700",
-  SUITE:    "bg-amber-100 text-amber-700",
 };
 
 type SortKey = "name" | "unitType" | "floor" | "bedrooms" | "basePrice" | "displayStatus";
@@ -179,9 +172,9 @@ function EditableRow({ unit, onDone }: { unit: UnitRow; onDone: () => void }) {
       </td>
       {/* Type */}
       <td className="hidden px-3 py-2 md:table-cell">
-        <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${TYPE_BADGE[unit.unitType] ?? "bg-gray-100 text-gray-600"}`}>
+        <Badge {...getUnitTypeBadge(unit.unitType as UnitTypeKey)} size="sm">
           {typeLabel}
-        </span>
+        </Badge>
       </td>
       {/* Floor */}
       <td className="hidden px-3 py-2 text-sm text-gray-500 lg:table-cell ltr-numbers">
@@ -268,9 +261,9 @@ function UnitRow({ unit, onEdit }: { unit: UnitRow; onEdit: () => void }) {
 
       {/* Type */}
       <td className="hidden px-3 py-2.5 md:table-cell">
-        <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${TYPE_BADGE[unit.unitType] ?? "bg-gray-100 text-gray-600"}`}>
+        <Badge {...getUnitTypeBadge(unit.unitType as UnitTypeKey)} size="sm">
           {typeLabel}
-        </span>
+        </Badge>
       </td>
 
       {/* Floor */}

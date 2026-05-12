@@ -26,15 +26,9 @@ import {
 } from "@heroicons/react/24/outline";
 import { quickUpdateTenant } from "./actions";
 import type { TenantRow } from "./page";
+import { Badge, getTenantTypeBadge, type TenantTypeKey } from "@/components/ui";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-
-const TYPE_BADGE: Record<string, string> = {
-  individual: "bg-blue-50 text-blue-700",
-  family:     "bg-purple-50 text-purple-700",
-  corporate:  "bg-orange-50 text-orange-700",
-  government: "bg-teal-50 text-teal-700",
-};
 
 const CLASS_BORDER: Record<string, string> = {
   vip:         "border-l-yellow-400",
@@ -147,11 +141,17 @@ function ClassBadge({ value }: { value: string | null }) {
 
 function TypeBadge({ value }: { value: string | null }) {
   const typeLabel = useTypeLabel();
-  const cls = TYPE_BADGE[value ?? ""] ?? "bg-gray-100 text-gray-600";
+  if (!value) {
+    return (
+      <Badge tone="neutral" appearance="subtle" size="sm">
+        {typeLabel(value)}
+      </Badge>
+    );
+  }
   return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>
+    <Badge {...getTenantTypeBadge(value as TenantTypeKey)} size="sm">
       {typeLabel(value)}
-    </span>
+    </Badge>
   );
 }
 

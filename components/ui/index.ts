@@ -86,3 +86,6 @@ export type { MultiSelectProps, MultiSelectOption } from "./form";
 
 export { FileUpload } from "./form";
 export type { FileUploadProps } from "./form";
+
+export { ImageUpload } from "./form";
+export type { ImageUploadProps } from "./form";

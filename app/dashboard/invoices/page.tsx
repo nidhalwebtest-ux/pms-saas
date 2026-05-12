@@ -18,6 +18,7 @@ import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { getCurrentCurrency } from "@/lib/get-org";
 import { formatCurrency } from "@/lib/format-currency";
+import { Badge, resolveInvoiceBadge } from "@/components/ui";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -48,52 +49,20 @@ function isOverdue(status: string, dueDate: Date): boolean {
 type StatusT = (key: string) => string;
 
 function StatusBadge({ status, dueDate, t }: { status: string; dueDate: Date; t: StatusT }) {
-  if (isOverdue(status, dueDate)) {
-    return (
-      <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-600/20">
-        {t("overdue")}
-      </span>
-    );
-  }
-  switch (status) {
-    case "DRAFT":
-      return (
-        <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-500/20">
-          {t("draft")}
-        </span>
-      );
-    case "ISSUED":
-    case "PENDING":
-      return (
-        <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-700/20">
-          {status === "PENDING" ? t("pending") : t("issued")}
-        </span>
-      );
-    case "PARTIALLY_PAID":
-      return (
-        <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
-          {t("partial")}
-        </span>
-      );
-    case "PAID":
-      return (
-        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">
-          {t("paid")}
-        </span>
-      );
-    case "CANCELLED":
-      return (
-        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-500 ring-1 ring-inset ring-gray-400/20">
-          {t("cancelled")}
-        </span>
-      );
-    default:
-      return (
-        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-500 ring-1 ring-inset ring-gray-400/20">
-          {status}
-        </span>
-      );
-  }
+  const { props, key } = resolveInvoiceBadge(status, dueDate);
+  const labelKey =
+    key === "overdue"        ? "overdue" :
+    key === "draft"          ? "draft" :
+    key === "pending"        ? (status === "PENDING" ? "pending" : "issued") :
+    key === "partially-paid" ? "partial" :
+    key === "paid"           ? "paid" :
+    key === "returned"       ? "returned" :
+                               "cancelled";
+  return (
+    <Badge {...props} size="sm">
+      {t(labelKey)}
+    </Badge>
+  );
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────

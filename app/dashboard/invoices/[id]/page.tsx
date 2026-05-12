@@ -15,6 +15,7 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import InvoiceActions from "./InvoiceActions";
+import { Badge, resolveInvoiceBadge } from "@/components/ui";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -39,40 +40,19 @@ function StatusBadge({
   dueDate: Date;
   t: StatusT;
 }) {
-  const overdue =
-    (status === "ISSUED" || status === "PARTIALLY_PAID") &&
-    new Date(dueDate) < new Date();
-
-  if (overdue) {
-    return (
-      <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-sm font-semibold text-red-700 ring-1 ring-inset ring-red-600/20">
-        {t("overdue")}
-      </span>
-    );
-  }
-
-  const map: Record<string, string> = {
-    DRAFT:          "bg-gray-100 text-gray-600 ring-gray-500/20",
-    ISSUED:         "bg-blue-100 text-blue-700 ring-blue-700/20",
-    PARTIALLY_PAID: "bg-amber-100 text-amber-700 ring-amber-600/20",
-    PAID:           "bg-green-100 text-green-700 ring-green-600/20",
-    CANCELLED:      "bg-red-50 text-red-400 ring-red-400/20",
-  };
-
-  const labelKey: Record<string, string> = {
-    DRAFT:          "draft",
-    ISSUED:         "issued",
-    PARTIALLY_PAID: "partiallyPaid",
-    PAID:           "paid",
-    CANCELLED:      "cancelled",
-  };
-
-  const cls = map[status] || "bg-gray-100 text-gray-600 ring-gray-400/20";
-  const key = labelKey[status];
+  const { props, key } = resolveInvoiceBadge(status, dueDate);
+  const labelKey =
+    key === "overdue"        ? "overdue" :
+    key === "draft"          ? "draft" :
+    key === "pending"        ? (status === "PENDING" ? "pending" : "issued") :
+    key === "partially-paid" ? "partiallyPaid" :
+    key === "paid"           ? "paid" :
+    key === "returned"       ? "returned" :
+                               "cancelled";
   return (
-    <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ring-1 ring-inset ${cls}`}>
-      {key ? t(key) : status}
-    </span>
+    <Badge {...props} size="md">
+      {t(labelKey)}
+    </Badge>
   );
 }
 

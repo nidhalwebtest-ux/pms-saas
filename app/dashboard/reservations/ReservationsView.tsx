@@ -20,7 +20,12 @@ import {
   ArrowPathIcon,
 } from "@heroicons/react/24/outline";
 import type { DisplayStatus, TabKey } from "@/lib/reservation-status";
-import { Button } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  getReservationStatusBadge,
+  reservationStatusKeyFromDisplayLabel,
+} from "@/components/ui";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -896,9 +901,12 @@ function ReservationTableRow({
 
       {/* Status badge */}
       <td className="px-3 py-3 whitespace-nowrap">
-        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${res.displayStatusBadgeClass} ${res.displayStatusPulse ? "animate-pulse" : ""}`}>
+        <Badge
+          {...getReservationStatusBadge(reservationStatusKeyFromDisplayLabel(res.displayStatus))}
+          size="sm"
+        >
           {translateDisplayStatus(ds, tStatus)}
-        </span>
+        </Badge>
       </td>
 
       {/* Guest */}

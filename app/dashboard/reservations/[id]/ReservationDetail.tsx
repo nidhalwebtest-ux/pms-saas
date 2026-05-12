@@ -30,7 +30,9 @@ import {
 import {
   Badge,
   Button,
+  getReservationStatusBadge,
   getTenantClassBadge,
+  reservationStatusKeyFromDisplayLabel,
   type TenantClassKey,
 } from "@/components/ui";
 
@@ -243,11 +245,12 @@ function ClassBadge({ c }: { c: string | null }) {
   );
 }
 
-function StatusBadge({ label, badgeClass, pulse }: { label: string; badgeClass: string; pulse: boolean }) {
+function StatusBadge({ label }: { label: string }) {
+  const key = reservationStatusKeyFromDisplayLabel(label);
   return (
-    <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-sm font-semibold ${badgeClass} ${pulse ? "animate-pulse" : ""}`}>
+    <Badge {...getReservationStatusBadge(key)} size="md">
       {label}
-    </span>
+    </Badge>
   );
 }
 
@@ -1779,11 +1782,7 @@ export default function ReservationDetail({ id }: { id: string }) {
                   <h1 className={`text-xl font-bold font-mono ${res.status === "CANCELLED" ? "line-through text-gray-400" : "text-gray-900"}`}>
                     {res.reservationNumber ?? res.id.slice(0, 8).toUpperCase()}
                   </h1>
-                  <StatusBadge
-                    label={res.displayStatus}
-                    badgeClass={res.displayStatusBadgeClass}
-                    pulse={res.displayStatusPulse}
-                  />
+                  <StatusBadge label={res.displayStatus} />
                 </div>
                 <p className="text-xs text-gray-400 mt-0.5">
                   {res.createdByName

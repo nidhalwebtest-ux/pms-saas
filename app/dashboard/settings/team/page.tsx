@@ -12,6 +12,7 @@ import {
   PaperAirplaneIcon,
   ClockIcon,
 } from "@heroicons/react/24/outline";
+import { Badge, type BadgeTone } from "@/components/ui";
 
 function StatCard({ label, count, color }: { label: string; count: number; color: string }) {
   return (
@@ -65,10 +66,11 @@ export default async function TeamPage() {
 
   const permissionRows = (["admin", "receptionist", "accountant"] as const).map((key) => ({
     key,
-    color:
-      key === "admin"        ? "bg-blue-100 text-blue-700"
-      : key === "receptionist" ? "bg-green-100 text-green-700"
-      : "bg-amber-100 text-amber-700",
+    tone: (key === "admin"
+      ? "info"
+      : key === "receptionist"
+      ? "success"
+      : "warning") as BadgeTone,
     label: tPerm(`${key}.label`),
     perms: [1, 2, 3, 4].map((n) => tPerm(`${key}.perm${n}` as any)),
   }));
@@ -139,9 +141,9 @@ export default async function TeamPage() {
         <div className="divide-y divide-gray-100">
           {permissionRows.map((r) => (
             <div key={r.key} className="flex items-start gap-4 px-6 py-4">
-              <span className={`mt-0.5 flex-shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold ${r.color}`}>
+              <Badge tone={r.tone} appearance="subtle" size="md" className="mt-0.5 flex-shrink-0">
                 {r.label}
-              </span>
+              </Badge>
               <ul className="flex flex-wrap gap-x-6 gap-y-1">
                 {r.perms.map((p) => (
                   <li key={p} className="text-xs text-gray-600 flex items-center gap-1">

@@ -1,0 +1,276 @@
+/* ============================================================================
+   Binaya PMS — globals.css
+   ----------------------------------------------------------------------------
+   Imported once from app/layout.tsx:
+
+       import "@/styles/globals.css";
+
+   Order matters:
+   1. Tokens (CSS variables, no class output)
+   2. Tailwind base/components/utilities
+   3. Base element styles
+   4. RTL + Arabic typography
+   5. Legacy compatibility block (react-day-picker, scrollbar-hide,
+      hero animations, print styles) — preserves classes referenced
+      by existing components while the design system rolls out.
+   ============================================================================ */
+
+@import "./design-tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Font loading ──────────────────────────────────────────
+   IBM Plex is loaded via next/font in app/layout.tsx. Those font loaders
+   expose CSS variables that override the family names in design-tokens.css
+   automatically. */
+
+/* ============================================================================
+   Base layer
+   ============================================================================ */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--bg-canvas);
+    color: var(--fg-default);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--leading-normal);
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Native form controls should inherit family, not fall back to system */
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  /* Sensible defaults for headings (Tailwind preflight strips these) */
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: var(--font-semibold);
+    letter-spacing: var(--tracking-tight);
+    color: var(--fg-default);
+  }
+
+  /* Monospace numerics — tabular figures everywhere */
+  .tabular,
+  code,
+  kbd,
+  samp,
+  pre {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Selection color */
+  ::selection {
+    background-color: var(--brand-100);
+    color: var(--brand-700);
+  }
+
+  /* Visible focus for keyboard users */
+  :focus-visible {
+    outline: 2px solid var(--brand-500);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* Remove the default focus outline that the :focus-visible polyfill
+     would otherwise overwrite */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Scrollbar — subtle, system-feeling */
+  * {
+    scrollbar-color: var(--gray-300) transparent;
+    scrollbar-width: thin;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--gray-300);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--gray-400);
+  }
+}
+
+/* ============================================================================
+   RTL / Arabic
+   ----------------------------------------------------------------------------
+   We support both directions on the same domain. The convention:
+
+   • `<html dir="rtl" lang="ar">` toggles the whole document
+   • `<div dir="rtl">` toggles a subtree (use for previews, mixed layouts)
+   • Use Tailwind's logical-property utilities for spacing:
+        ms-4 / me-4    →  margin-inline-start / -end
+        ps-4 / pe-4    →  padding-inline-start / -end
+        start-0 / end-0 → inset-inline-start / -end
+        rtl:flex-row-reverse, rtl:text-right for explicit reversals
+   ============================================================================ */
+@layer base {
+  /* Document direction */
+  [dir="rtl"] {
+    font-family: var(--font-arabic);
+  }
+
+  /* Arabic glyph rendering — slight optical bump to match Latin x-height */
+  [dir="rtl"] body,
+  [lang="ar"] body,
+  :lang(ar) {
+    font-feature-settings: "ss01", "cv11", "kern", "calt";
+    letter-spacing: 0; /* never track Arabic positive */
+  }
+
+  /* Numbers always stay LTR even inside RTL paragraphs.
+     Apply to spans wrapping prices, phone numbers, IDs, dates. */
+  .ltr-num,
+  [dir="rtl"] .tabular,
+  [dir="rtl"] code,
+  [dir="rtl"] kbd {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  /* Inputs that accept numeric / phone / currency input always stay LTR */
+  [dir="rtl"] input[type="tel"],
+  [dir="rtl"] input[type="number"],
+  [dir="rtl"] input[type="email"],
+  [dir="rtl"] input[type="url"],
+  [dir="rtl"] input[inputmode="numeric"],
+  [dir="rtl"] input[inputmode="decimal"],
+  [dir="rtl"] input[inputmode="tel"] {
+    direction: ltr;
+    text-align: end; /* end = right in LTR but stays visually right */
+  }
+
+  /* SVG icons that imply directionality (chevrons, arrows) — flip them */
+  [dir="rtl"] [data-icon-flip="true"] {
+    transform: scaleX(-1);
+  }
+}
+
+/* ============================================================================
+   Component layer — re-usable utilities tied to tokens
+   ============================================================================ */
+@layer components {
+  /* Card — every panel / dialog / surface in the app */
+  .card {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* Focus ring helper for custom controls */
+  .focus-ring {
+    box-shadow: var(--shadow-focus);
+    border-color: var(--brand-500);
+  }
+  .focus-ring-error {
+    box-shadow: var(--shadow-focus-error);
+    border-color: var(--error-500);
+  }
+}
+
+/* ============================================================================
+   Legacy compatibility — classes & overrides referenced by existing
+   components. Kept verbatim so this foundation update stays component-safe.
+   These should be migrated to token-driven equivalents during the rollout.
+   ============================================================================ */
+
+/* Arabic font alias — components still apply `.font-arabic` or `.font-cairo`. */
+.font-arabic,
+.font-cairo {
+  font-family: var(--font-arabic);
+}
+
+/* Hide scrollbars where requested */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* react-day-picker overrides (used by ReservationDatePicker etc.) */
+.rdp {
+  --rdp-cell-size: 40px;
+  --rdp-accent-color: var(--brand-600);
+  --rdp-background-color: var(--brand-50);
+  margin: 0;
+}
+.rdp-day_selected:not([disabled]),
+.rdp-day_selected:focus:not([disabled]),
+.rdp-day_selected:active:not([disabled]),
+.rdp-day_selected:hover:not([disabled]) {
+  background-color: var(--rdp-accent-color);
+  color: var(--fg-on-brand);
+}
+.rdp-day_range_middle {
+  background-color: var(--rdp-background-color) !important;
+  color: var(--brand-700) !important;
+}
+.rdp-button:hover:not([disabled]):not(.rdp-day_selected) {
+  background-color: var(--bg-subtle);
+}
+.rdp-weekday,
+.rdp-month_caption {
+  color: var(--fg-default) !important;
+  font-weight: var(--font-bold) !important;
+}
+
+/* Hero entrance & float animations — referenced by landing page */
+@keyframes heroFadeUp {
+  from { opacity: 0; transform: translateY(22px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+@keyframes heroFadeInRight {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+@keyframes heroSlideLeft {
+  from { opacity: 0; transform: translateX(-28px); }
+  to   { opacity: 1; transform: translateX(0);     }
+}
+@keyframes heroSlideRight {
+  from { opacity: 0; transform: translateX(28px); }
+  to   { opacity: 1; transform: translateX(0);    }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px);  }
+  50%      { transform: translateY(-9px); }
+}
+
+/* Print rules used by invoice / reservation print pages */
+@media print {
+  body {
+    background-color: white !important;
+  }
+  .print\:hidden {
+    display: none !important;
+  }
+  /* Forces colored headers to print in color */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

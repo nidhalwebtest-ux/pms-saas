@@ -1,26 +1,29 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
-import { Cairo } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Sans_Arabic, IBM_Plex_Mono } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
-import "./globals.css";
+import "@/styles/globals.css";
 import { Toaster } from "sonner";
 import { dirFor, type Locale } from "@/i18n/config";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
+const sans = IBM_Plex_Sans({
+  subsets: ["latin", "latin-ext"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-sans",
+  display: "swap",
 });
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
+
+const arabic = IBM_Plex_Sans_Arabic({
+  subsets: ["arabic"],
+  weight: ["400", "500", "600"],
+  variable: "--font-arabic",
+  display: "swap",
 });
-const cairo = Cairo({
-  subsets: ["arabic", "latin"],
-  variable: "--font-cairo",
-  weight: ["400", "500", "600", "700", "800"],
+
+const mono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-mono",
   display: "swap",
 });
 
@@ -40,10 +43,8 @@ export default async function RootLayout({
   const dir = dirFor(locale);
 
   return (
-    <html lang={locale} dir={dir}>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} ${cairo.variable} antialiased ${locale === "ar" ? "font-arabic" : ""}`}
-      >
+    <html lang={locale} dir={dir} className={`${sans.variable} ${arabic.variable} ${mono.variable}`}>
+      <body className={`antialiased ${locale === "ar" ? "font-arabic" : ""}`}>
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
           <Toaster position="top-center" richColors dir={dir} />

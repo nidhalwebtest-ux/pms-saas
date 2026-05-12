@@ -38,3 +38,19 @@ export type {
   PropertyTypeKey,
   UserRoleKey,
 } from "./badge-helpers";
+
+/* ── Form fields (Tier 1) ───────────────────────────────────────────── */
+export { FormField, useFieldA11y } from "./form";
+export type { FormFieldProps, FieldSize, BaseFieldProps } from "./form";
+
+export { TextField } from "./form";
+export type { TextFieldProps } from "./form";
+
+export { TextArea } from "./form";
+export type { TextAreaProps } from "./form";
+
+export { Select } from "./form";
+export type { SelectProps, SelectOption } from "./form";
+
+export { NumberField } from "./form";
+export type { NumberFieldProps } from "./form";

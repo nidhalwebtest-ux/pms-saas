@@ -341,6 +341,122 @@ const [tenant, setTenant] = useState<{ value: string; label: string } | null>(nu
 />
 ```
 
+### Rich-row tenant search (the BookingEngine pattern)
+
+Async combobox with custom row rendering — used in `BookingEngine` for tenant
+selection. The `renderOption` prop unlocks any list shape you need (avatar +
+badge + multi-line meta), the `loadOptions` callback does the fetch, and
+`onCreate` opens a quick-add modal when the user types a name that doesn't
+match an existing record.
+
+```tsx
+const [selectedTenant, setSelectedTenant] = useState<TenantResult | null>(null);
+
+<SearchableSelect
+  label="Tenant"
+  placeholder="Search by name, phone, or ID..."
+  debounceMs={350}          // tighter than the 250 ms default
+  loadOptions={async (q) => {
+    if (!q.trim()) return [];
+    const res = await fetch(`/api/tenants?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    return data.tenants.map((tn) => ({
+      value: tn.id,
+      label: `${tn.firstName} ${tn.lastName}`,
+      description: `${tn.phone}${tn.nationality ? ` · ${tn.nationality}` : ""}`,
+      raw: tn,                // ← attach the full record for renderOption
+    }));
+  }}
+  onCreate={() => openQuickAddTenantModal()}
+  emptyText="No tenants found"
+  value={selectedTenant?.id ?? null}
+  selectedOption={selectedTenant ? { value: selectedTenant.id, label: `${selectedTenant.firstName} ${selectedTenant.lastName}` } : null}
+  onValueChange={async (v) => {
+    if (!v) return setSelectedTenant(null);
+    // Re-hydrate if the cache doesn't have the full record
+    const { tenants } = await fetch(`/api/tenants?q=${v}`).then(r => r.json());
+    setSelectedTenant(tenants.find((t) => t.id === v) ?? null);
+  }}
+  renderOption={(opt) => {
+    const tn = (opt as any).raw;
+    return (
+      <span className="flex items-center gap-3">
+        <span className={`h-8 w-8 rounded-full flex items-center justify-center font-bold ${
+          tn.classification === "vip" ? "bg-yellow-100 text-yellow-800" :
+          tn.classification === "blacklisted" ? "bg-red-100 text-red-700" :
+          "bg-blue-100 text-blue-700"
+        }`}>
+          {tn.firstName[0]}{tn.lastName[0]}
+        </span>
+        <span className="flex-1">
+          <span className="flex items-center gap-2">
+            <span className="font-medium text-sm">{tn.firstName} {tn.lastName}</span>
+            <ClassBadge c={tn.classification} />
+          </span>
+          <span className="block text-xs text-fg-tertiary">{tn.phone}</span>
+        </span>
+      </span>
+    );
+  }}
+/>
+```
+
+Key idea: stash the full record in `option.raw` (or any custom property) so
+`renderOption` and `onValueChange` can rehydrate it without an extra round-trip.
+
+### Period stepper (the NumberField stepper pattern)
+
+For counts (nights, months, occupants), pair `NumberField` with `stepper`:
+
+```tsx
+<NumberField
+  label="Number of nights"
+  stepper
+  min={1}
+  max={730}
+  step={1}
+  precision={0}
+  value={period}
+  onValueChange={(v) => handlePeriodChange(v ?? 1)}
+  reserveMessageSpace={false}
+/>
+```
+
+The minus/plus buttons auto-disable at min/max. Drop `currency` and keep `precision={0}` for whole-number counts.
+
+### Daily date range vs monthly date with auto-computed end (the BookingEngine pattern)
+
+For reservation-style flows where the user picks either a date range OR a
+start date + count, branch on the mode:
+
+```tsx
+{rateType === "daily" ? (
+  <DateRangePicker
+    label="Stay"
+    value={range}
+    onValueChange={(r) => {
+      if (!r) return clearRange();
+      setStartDate(toIso(r.from));
+      setEndDate(toIso(r.to));
+      setPeriod(calculateNights(r.from, r.to));
+    }}
+    minDate={new Date()}
+    locale={dateFnsLocale}
+  />
+) : (
+  <div className="grid sm:grid-cols-3 gap-4">
+    <DatePicker label="Check-in" value={start} onValueChange={...} locale={dateFnsLocale} />
+    <NumberField label="Months" stepper min={1} max={24} value={period} ... />
+    <ReadOnlyDateDisplay value={endDate} hint="Auto-computed from check-in + months" />
+  </div>
+)}
+```
+
+Daily mode is one component (`DateRangePicker`); monthly mode keeps the
+manual-input pattern because the end date is locked to a snap-to-complete-
+months computation. The previous `calMode` toggle is gone — `DateRangePicker`
+handles both list-style and calendar-style entry internally.
+
 ### Reservation dates with Khareef season preset
 
 ```tsx
@@ -683,7 +799,8 @@ The remaining inline form fields to migrate (counts from
 | `SubmitExpenseForm.tsx` | 8 | Pending |
 | `BulkCreateForm.tsx` | 8 | Pending |
 | `UnitPricingSection.tsx` | 8 | Pending |
-| `ProfileForm.tsx` | 6 | ✅ **Migrated (Phase 5 of this work)** |
+| `ProfileForm.tsx` | 6 | ✅ **Migrated** |
+| `BookingEngine.tsx` | 20+ | ✅ **Migrated** (1286 → 1203 lines, all 4 form-component additions landed) |
 | Others (filters, dialogs) | 30+ across ~15 files | Pending |
 
 Total remaining: ~140 inline fields across ~20 files. Page-migration phase

@@ -260,6 +260,27 @@
   50%      { transform: translateY(-9px); }
 }
 
+/* ============================================================================
+   Badge — pulse animation (Overstay reservation indicator)
+   ============================================================================ */
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1);   opacity: 1;   }
+  50%      { transform: scale(1.6); opacity: 0.4; }
+}
+
+.badge-pulse-dot {
+  animation: badge-pulse 1.2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge-pulse-dot {
+    animation: none;
+    box-shadow: 0 0 0 2px currentColor;
+    opacity: 0.85;
+  }
+}
+
 /* Print rules used by invoice / reservation print pages */
 @media print {
   body {

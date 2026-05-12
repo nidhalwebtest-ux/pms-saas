@@ -1,15 +1,17 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState } from "react";
 import { useTranslations } from "next-intl";
 import {
   CheckCircleIcon,
   ExclamationCircleIcon,
-  EyeIcon,
-  EyeSlashIcon,
 } from "@heroicons/react/24/outline";
 import { updateProfile, changePassword } from "./actions";
-import { Button } from "@/components/ui";
+import {
+  Button,
+  PasswordField,
+  TextField,
+} from "@/components/ui";
 
 // ── Tiny helpers ──────────────────────────────────────────────────────────────
 
@@ -29,82 +31,6 @@ function StatusBanner({ state }: { state: { error?: string; success?: string } }
       </div>
     );
   return null;
-}
-
-function Field({
-  label,
-  name,
-  type = "text",
-  defaultValue,
-  placeholder,
-  required,
-  autoComplete,
-  addon,
-}: {
-  label:         string;
-  name:          string;
-  type?:         string;
-  defaultValue?: string;
-  placeholder?:  string;
-  required?:     boolean;
-  autoComplete?: string;
-  addon?:        React.ReactNode;
-}) {
-  return (
-    <div>
-      <label htmlFor={name} className="block text-sm font-medium text-gray-700 mb-1.5">
-        {label} {required && <span className="text-red-500">*</span>}
-      </label>
-      <div className="relative">
-        <input
-          id={name}
-          name={name}
-          type={type}
-          defaultValue={defaultValue}
-          placeholder={placeholder}
-          required={required}
-          autoComplete={autoComplete ?? "off"}
-          className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-400"
-        />
-        {addon && (
-          <div className="absolute end-3 top-1/2 -translate-y-1/2">{addon}</div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Password field with show/hide ─────────────────────────────────────────────
-
-function PasswordField({
-  label,
-  name,
-  autoComplete,
-}: {
-  label:        string;
-  name:         string;
-  autoComplete: string;
-}) {
-  const [show, setShow] = useState(false);
-  return (
-    <Field
-      label={label}
-      name={name}
-      type={show ? "text" : "password"}
-      required
-      autoComplete={autoComplete}
-      addon={
-        <button
-          type="button"
-          tabIndex={-1}
-          onClick={() => setShow((v) => !v)}
-          className="text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          {show ? <EyeSlashIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}
-        </button>
-      }
-    />
-  );
 }
 
 // ── Profile info card ─────────────────────────────────────────────────────────
@@ -134,43 +60,40 @@ export function ProfileInfoForm({
         <StatusBanner state={state} />
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <Field
+          <TextField
             label={t("firstNameLabel")}
             name="firstName"
             defaultValue={firstName ?? ""}
             placeholder={t("firstNamePlaceholder")}
             required
+            reserveMessageSpace={false}
           />
-          <Field
+          <TextField
             label={t("lastNameLabel")}
             name="lastName"
             defaultValue={lastName ?? ""}
             placeholder={t("lastNamePlaceholder")}
+            reserveMessageSpace={false}
           />
         </div>
 
-        <Field
+        <TextField
           label={t("phoneLabel")}
           name="phone"
           type="tel"
           defaultValue={phone ?? ""}
           placeholder={t("phonePlaceholder")}
           autoComplete="tel"
+          reserveMessageSpace={false}
         />
 
-        {/* Email — read-only */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            {t("emailLabel")}
-          </label>
-          <input
-            type="email"
-            value={email}
-            disabled
-            className="block w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-400 cursor-not-allowed"
-          />
-          <p className="mt-1 text-xs text-gray-400">{t("emailNote")}</p>
-        </div>
+        <TextField
+          label={t("emailLabel")}
+          type="email"
+          value={email}
+          readOnly
+          helperText={t("emailNote")}
+        />
 
         <div className="flex justify-end pt-1">
           <Button type="submit" loading={isPending}>
@@ -202,6 +125,8 @@ export function ChangePasswordForm() {
           label={t("currentLabel")}
           name="currentPassword"
           autoComplete="current-password"
+          required
+          reserveMessageSpace={false}
         />
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -209,11 +134,15 @@ export function ChangePasswordForm() {
             label={t("newLabel")}
             name="newPassword"
             autoComplete="new-password"
+            required
+            reserveMessageSpace={false}
           />
           <PasswordField
             label={t("confirmLabel")}
             name="confirmPassword"
             autoComplete="new-password"
+            required
+            reserveMessageSpace={false}
           />
         </div>
 

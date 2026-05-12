@@ -659,17 +659,17 @@ export default function PropertiesView({
                         {/* Status */}
                         <td className="px-3 py-2.5">
                           {p.isArchived ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2 py-0.5 text-xs font-semibold text-gray-600">
-                              <ArchiveBoxIcon className="h-3 w-3" /> {tDet("archived")}
-                            </span>
+                            <Badge tone="neutral" appearance="subtle" size="sm" icon={<ArchiveBoxIcon className="h-full w-full" />}>
+                              {tDet("archived")}
+                            </Badge>
                           ) : p.isActive ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
-                              <CheckCircleIcon className="h-3 w-3" /> {tDet("active")}
-                            </span>
+                            <Badge tone="success" appearance="subtle" size="sm" icon={<CheckCircleIcon className="h-full w-full" />}>
+                              {tDet("active")}
+                            </Badge>
                           ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
-                              <WrenchScrewdriverIcon className="h-3 w-3" /> {tDet("inactive")}
-                            </span>
+                            <Badge tone="warning" appearance="subtle" size="sm" icon={<WrenchScrewdriverIcon className="h-full w-full" />}>
+                              {tDet("inactive")}
+                            </Badge>
                           )}
                         </td>
 

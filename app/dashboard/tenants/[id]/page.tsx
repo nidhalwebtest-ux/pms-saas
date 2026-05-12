@@ -15,7 +15,12 @@ import {
   ListBulletIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, getTenantClassBadge } from "@/components/ui";
+import {
+  Badge,
+  getTenantClassBadge,
+  getPaymentMethodBadge,
+  type PaymentMethodKey,
+} from "@/components/ui";
 import { prisma } from "@/lib/prisma";
 import { getTranslations, getLocale } from "next-intl/server";
 import { format } from "date-fns";
@@ -494,9 +499,9 @@ export default async function TenantProfilePage({
                       </p>
                     </div>
                     <div className="text-end">
-                      <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600">
+                      <Badge {...getPaymentMethodBadge(pay.method as PaymentMethodKey)} size="sm">
                         {tryT(tPay, pay.method.toLowerCase()) ?? pay.method}
-                      </span>
+                      </Badge>
                       {pay.reference && (
                         <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[120px]">{pay.reference}</p>
                       )}

@@ -79,7 +79,7 @@ export default function MemberRow({
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
             {isCurrentUser && (
-              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600">{t("you")}</span>
+              <Badge tone="info" appearance="subtle" size="sm">{t("you")}</Badge>
             )}
           </div>
           <p className="text-xs text-gray-500 truncate">{member.email}</p>

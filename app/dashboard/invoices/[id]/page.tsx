@@ -15,7 +15,12 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import InvoiceActions from "./InvoiceActions";
-import { Badge, resolveInvoiceBadge } from "@/components/ui";
+import {
+  Badge,
+  resolveInvoiceBadge,
+  getPaymentMethodBadge,
+  type PaymentMethodKey,
+} from "@/components/ui";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -381,13 +386,13 @@ export default async function InvoiceDetailPage({
                         {fmtDate(alloc.payment.date)}
                       </td>
                       <td className="px-3 py-3 text-sm">
-                        <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                        <Badge {...getPaymentMethodBadge(alloc.payment.method as PaymentMethodKey)} size="sm">
                           {methodLabel(alloc.payment.method)}
-                        </span>
+                        </Badge>
                         {alloc.payment.isRefund && (
-                          <span className="ms-1.5 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
+                          <Badge tone="danger" appearance="subtle" size="sm" className="ms-1.5">
                             {tDet("refund")}
-                          </span>
+                          </Badge>
                         )}
                       </td>
                       <td className="px-3 py-3 text-sm text-gray-500 ltr-numbers">

@@ -105,17 +105,17 @@ export default async function PropertyDetailsPage({
                 {typeLabel}
               </Badge>
               {property.isArchived ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-semibold text-gray-600">
-                  <ArchiveBoxIcon className="h-3.5 w-3.5" /> {t("archived")}
-                </span>
+                <Badge tone="neutral" appearance="subtle" size="md" icon={<ArchiveBoxIcon className="h-full w-full" />}>
+                  {t("archived")}
+                </Badge>
               ) : property.isActive ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
-                  <CheckCircleIcon className="h-3.5 w-3.5" /> {t("active")}
-                </span>
+                <Badge tone="success" appearance="subtle" size="md" icon={<CheckCircleIcon className="h-full w-full" />}>
+                  {t("active")}
+                </Badge>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-                  <WrenchScrewdriverIcon className="h-3.5 w-3.5" /> {t("inactive")}
-                </span>
+                <Badge tone="warning" appearance="subtle" size="md" icon={<WrenchScrewdriverIcon className="h-full w-full" />}>
+                  {t("inactive")}
+                </Badge>
               )}
             </div>
             <p className="mt-1 text-sm text-gray-500">

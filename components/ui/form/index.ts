@@ -55,3 +55,9 @@ export type {
   SearchableSelectProps,
   SearchableSelectOption,
 } from "./SearchableSelect";
+
+export { MultiSelect } from "./MultiSelect";
+export type {
+  MultiSelectProps,
+  MultiSelectOption,
+} from "./MultiSelect";

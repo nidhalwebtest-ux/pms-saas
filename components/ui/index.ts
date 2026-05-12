@@ -80,3 +80,6 @@ export type { DateRangePickerProps, DateRangeValue } from "./form";
 
 export { SearchableSelect } from "./form";
 export type { SearchableSelectProps, SearchableSelectOption } from "./form";
+
+export { MultiSelect } from "./form";
+export type { MultiSelectProps, MultiSelectOption } from "./form";

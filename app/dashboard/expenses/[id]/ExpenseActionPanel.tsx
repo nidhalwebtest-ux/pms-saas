@@ -12,6 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 import RejectExpenseModal from "../modals/RejectExpenseModal";
 import ProcessExpenseModal from "../modals/ProcessExpenseModal";
+import { Button } from "@/components/ui";
 
 interface Expense {
   id: string;
@@ -91,14 +92,14 @@ export default function ExpenseActionPanel({
           )}
 
           {canProcess && (
-            <button
+            <Button
               onClick={() => setShowProcess(true)}
               disabled={busy}
-              className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
+              fullWidth
+              leftIcon={<ClipboardDocumentCheckIcon className="h-4 w-4" />}
             >
-              <ClipboardDocumentCheckIcon className="h-4 w-4" />
               {t("processBtn")}
-            </button>
+            </Button>
           )}
 
           {canDelete && (

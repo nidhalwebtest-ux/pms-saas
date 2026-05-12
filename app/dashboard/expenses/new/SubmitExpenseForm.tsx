@@ -14,6 +14,7 @@ import {
   DocumentTextIcon,
   PaperAirplaneIcon,
 } from "@heroicons/react/24/outline";
+import { Button } from "@/components/ui";
 
 interface Property { id: string; name: string }
 interface Category {
@@ -417,14 +418,13 @@ export default function SubmitExpenseForm({ properties, defaultPropertyId }: Pro
         >
           {t("submitAndAnother")}
         </button>
-        <button
+        <Button
           type="submit"
-          disabled={submitting}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50 transition-colors"
+          loading={submitting}
+          leftIcon={<PaperAirplaneIcon className="h-4 w-4" />}
         >
-          <PaperAirplaneIcon className="h-4 w-4" />
-          {submitting ? t("submitting") : t("submitBtn")}
-        </button>
+          {t("submitBtn")}
+        </Button>
       </div>
     </form>
   );

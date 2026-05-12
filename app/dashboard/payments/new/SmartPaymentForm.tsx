@@ -17,6 +17,7 @@ import {
   ChevronUpDownIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
+import { Button } from "@/components/ui";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -644,14 +645,13 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
           >
             {tForm("cancel")}
           </button>
-          <button
+          <Button
             type="button"
-            disabled={submitting}
             onClick={() => handleSubmit(false)}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
+            loading={submitting}
           >
-            {submitting ? tForm("recording") : tForm("recordPayment")}
-          </button>
+            {tForm("recordPayment")}
+          </Button>
           <button
             type="button"
             disabled={submitting}

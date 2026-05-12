@@ -12,6 +12,7 @@ import {
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { updateOrganization } from "./actions";
+import { Button } from "@/components/ui";
 
 const TIMEZONES = [
   { value: "Asia/Muscat",       label: "(GMT+4) Asia/Muscat — Oman" },
@@ -327,27 +328,15 @@ export default function OrgSettingsForm({ org }: { org: FormState }) {
             {t("revert")}
           </button>
         )}
-        <button
+        <Button
           type="button"
           onClick={handleSave}
-          disabled={isPending || !dirty}
-          className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-blue-600 transition"
+          loading={isPending}
+          disabled={!dirty}
+          leftIcon={<CheckIcon className="h-4 w-4" />}
         >
-          {isPending ? (
-            <>
-              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-              </svg>
-              {t("saving")}
-            </>
-          ) : (
-            <>
-              <CheckIcon className="h-4 w-4" />
-              {t("save")}
-            </>
-          )}
-        </button>
+          {t("save")}
+        </Button>
       </div>
     </div>
   );

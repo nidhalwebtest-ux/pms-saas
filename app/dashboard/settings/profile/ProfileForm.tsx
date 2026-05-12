@@ -9,6 +9,7 @@ import {
   EyeSlashIcon,
 } from "@heroicons/react/24/outline";
 import { updateProfile, changePassword } from "./actions";
+import { Button } from "@/components/ui";
 
 // ── Tiny helpers ──────────────────────────────────────────────────────────────
 
@@ -172,13 +173,9 @@ export function ProfileInfoForm({
         </div>
 
         <div className="flex justify-end pt-1">
-          <button
-            type="submit"
-            disabled={isPending}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-          >
-            {isPending ? t("saving") : t("saveButton")}
-          </button>
+          <Button type="submit" loading={isPending}>
+            {t("saveButton")}
+          </Button>
         </div>
       </div>
     </form>
@@ -221,13 +218,9 @@ export function ChangePasswordForm() {
         </div>
 
         <div className="flex justify-end pt-1">
-          <button
-            type="submit"
-            disabled={isPending}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-          >
-            {isPending ? t("updating") : t("updateButton")}
-          </button>
+          <Button type="submit" loading={isPending}>
+            {t("updateButton")}
+          </Button>
         </div>
       </div>
     </form>

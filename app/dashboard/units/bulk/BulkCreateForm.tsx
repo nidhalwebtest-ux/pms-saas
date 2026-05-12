@@ -18,6 +18,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { bulkCreateUnits } from "@/app/dashboard/units/actions";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -571,24 +572,15 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
           <ArrowLeftIcon className="h-4 w-4" />
           {t("cancel")}
         </Link>
-        <button
+        <Button
           type="button"
           onClick={handleSubmit}
-          disabled={!canSubmit || isPending}
-          className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-40 transition-colors shadow-sm"
+          loading={isPending}
+          disabled={!canSubmit}
+          leftIcon={<CheckCircleIcon className="h-4 w-4" />}
         >
-          {isPending ? (
-            <>
-              <ArrowPathIcon className="h-4 w-4 animate-spin" />
-              {t("creating")}
-            </>
-          ) : (
-            <>
-              <CheckCircleIcon className="h-4 w-4" />
-              {validCount > 0 ? t("createCount", { count: validCount }) : t("createCountZero")}
-            </>
-          )}
-        </button>
+          {validCount > 0 ? t("createCount", { count: validCount }) : t("createCountZero")}
+        </Button>
       </div>
     </div>
   );

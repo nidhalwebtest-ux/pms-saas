@@ -10,6 +10,7 @@ import {
   BuildingLibraryIcon,
   CheckBadgeIcon,
 } from "@heroicons/react/24/outline";
+import { Button } from "@/components/ui";
 
 interface Expense {
   id: string;
@@ -158,13 +159,13 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
           >
             {t("cancel")}
           </button>
-          <button
+          <Button
             onClick={handleProcess}
-            disabled={saving || !paymentMethod}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
+            loading={saving}
+            disabled={!paymentMethod}
           >
-            {saving ? t("processing") : t("processBtn")}
-          </button>
+            {t("processBtn")}
+          </Button>
         </div>
       </div>
     </div>

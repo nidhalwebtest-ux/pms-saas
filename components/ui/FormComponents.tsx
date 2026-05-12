@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import clsx from "clsx";
 import Link from "next/link";
 import { ListBulletIcon } from "@heroicons/react/24/outline";
+import { Button } from "./Button";
 
 // 1. The White Card Wrapper
 export function FormCard({ children }: { children: ReactNode }) {
@@ -147,13 +148,9 @@ export function FormActions({
       >
         Cancel
       </Link>
-      <button
-        type="submit"
-        disabled={isPending}
-        className="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isPending ? "Saving..." : submitLabel}
-      </button>
+      <Button type="submit" loading={isPending}>
+        {submitLabel}
+      </Button>
     </div>
   );
 }

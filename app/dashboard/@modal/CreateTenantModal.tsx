@@ -6,6 +6,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { createQuickTenant } from "@/app/dashboard/reservations/actions";
 import { toast } from "sonner";
+import { Button } from "@/components/ui";
 
 interface CreateTenantModalProps {
   isOpen: boolean;
@@ -91,13 +92,13 @@ export default function CreateTenantModal({
                   />
 
                   <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-                    <button
+                    <Button
                       type="submit"
-                      disabled={isPending}
-                      className="inline-flex w-full justify-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 sm:ms-3 sm:w-auto disabled:opacity-50"
+                      loading={isPending}
+                      className="w-full sm:ms-3 sm:w-auto"
                     >
-                      {isPending ? t("saving") : t("createTenant")}
-                    </button>
+                      {t("createTenant")}
+                    </Button>
                     <button
                       type="button"
                       onClick={onClose}

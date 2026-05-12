@@ -37,3 +37,6 @@ export type { RadioProps } from "./Radio";
 
 export { RadioGroup } from "./RadioGroup";
 export type { RadioGroupProps } from "./RadioGroup";
+
+export { Toggle } from "./Toggle";
+export type { ToggleProps } from "./Toggle";

@@ -67,3 +67,7 @@ export type { CheckboxProps, CheckboxGroupProps } from "./form";
 
 export { Radio, RadioGroup } from "./form";
 export type { RadioProps, RadioGroupProps } from "./form";
+
+/* ── Form fields (Tier 3) ───────────────────────────────────────────── */
+export { Toggle } from "./form";
+export type { ToggleProps } from "./form";

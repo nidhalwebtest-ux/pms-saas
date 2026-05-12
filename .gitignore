@@ -41,3 +41,6 @@ next-env.d.ts
 
 # claude code local state
 .claude/worktrees/
+
+# design handoff (kept locally, not part of the app)
+/design/

@@ -43,3 +43,9 @@ export type { ToggleProps } from "./Toggle";
 
 export { DatePicker } from "./DatePicker";
 export type { DatePickerProps } from "./DatePicker";
+
+export { DateRangePicker } from "./DateRangePicker";
+export type {
+  DateRangePickerProps,
+  DateRangeValue,
+} from "./DateRangePicker";

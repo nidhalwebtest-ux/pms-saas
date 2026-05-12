@@ -53,8 +53,11 @@ export interface SearchableSelectProps extends BaseFieldProps {
   /** Static option list for client-side filtering. */
   options?: SearchableSelectOption[];
 
-  /** Async loader for server-driven options. Debounced 250 ms. */
+  /** Async loader for server-driven options. */
   loadOptions?: (query: string) => Promise<SearchableSelectOption[]>;
+
+  /** Debounce window in ms for `loadOptions` calls. Default 250. */
+  debounceMs?: number;
 
   /** Recent options shown above results when the query is empty. Max 5 rendered. */
   recentOptions?: SearchableSelectOption[];
@@ -116,6 +119,7 @@ export const SearchableSelect = forwardRef<HTMLInputElement, SearchableSelectPro
       onValueChange,
       options,
       loadOptions,
+      debounceMs = 250,
       recentOptions,
       onCreate,
       emptyText = "No matches",
@@ -168,9 +172,9 @@ export const SearchableSelect = forwardRef<HTMLInputElement, SearchableSelectPro
           .finally(() => {
             if (requestIdRef.current === myId) setIsLoading(false);
           });
-      }, 250);
+      }, debounceMs);
       return () => clearTimeout(t);
-    }, [loadOptions, query]);
+    }, [loadOptions, query, debounceMs]);
 
     const handleChange = useCallback(
       (next: string | null) => {

@@ -643,13 +643,16 @@ function CancelModal({ res, onSuccess, onClose }: {
             placeholder={t("notesPlaceholder")}
           />
         </div>
-        <button
+        <Button
+          variant="destructive"
+          size="lg"
+          fullWidth
           onClick={handleConfirm}
-          disabled={loading || !reason || (reason === "Other" && !notes.trim())}
-          className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
+          loading={loading}
+          disabled={!reason || (reason === "Other" && !notes.trim())}
         >
-          {loading ? t("cancelling") : t("confirm")}
-        </button>
+          {t("confirm")}
+        </Button>
       </div>
     </Modal>
   );
@@ -839,13 +842,9 @@ function PaymentModal({ res, onSuccess, onClose }: {
           </div>
         )}
 
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
-        >
-          {loading ? t("recording") : t("confirm")}
-        </button>
+        <Button variant="primary" size="lg" fullWidth onClick={handleSubmit} loading={loading}>
+          {t("confirm")}
+        </Button>
       </div>
     </Modal>
   );
@@ -1023,13 +1022,9 @@ function GenerateInvoicesModal({ res, onSuccess, onClose }: {
             </span>
           </div>
         </div>
-        <button
-          onClick={handleConfirm}
-          disabled={loading}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
-        >
-          {loading ? t("generating") : t("confirm")}
-        </button>
+        <Button variant="primary" size="lg" fullWidth onClick={handleConfirm} loading={loading}>
+          {t("confirm")}
+        </Button>
       </div>
     </Modal>
   );
@@ -1116,13 +1111,9 @@ function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
 
         <PaymentForm balanceDue={invoice.balanceDue} value={form} onChange={setForm} />
 
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
-        >
-          {loading ? t("recording") : t("confirm")}
-        </button>
+        <Button variant="primary" size="lg" fullWidth onClick={handleSubmit} loading={loading}>
+          {t("confirm")}
+        </Button>
       </div>
     </Modal>
   );

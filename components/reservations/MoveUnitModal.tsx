@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import { XMarkIcon, ArrowRightIcon } from "@heroicons/react/24/outline";
+import { Button } from "@/components/ui";
 
 interface ReservationUnitInfo {
   id: string;
@@ -589,13 +590,16 @@ export default function MoveUnitModal({
               </div>
 
               {/* Confirm */}
-              <button
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
                 onClick={handleConfirm}
+                loading={submitting}
                 disabled={!canSubmit}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors"
               >
-                {submitting ? t("processing") : t("confirmButton")}
-              </button>
+                {t("confirmButton")}
+              </Button>
             </div>
           )}
         </div>

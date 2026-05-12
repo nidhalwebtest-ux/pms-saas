@@ -80,6 +80,20 @@ export interface SearchableSelectProps extends BaseFieldProps {
    * `options` mode (lookup happens client-side).
    */
   selectedOption?: SearchableSelectOption | null;
+
+  /**
+   * Custom renderer for each option row in the listbox. When omitted, the
+   * default rendering (label + highlighted match + optional description +
+   * selected-check) is used. Useful for rich rows (avatar + badge + name +
+   * meta) like the tenant search in the reservation booking flow.
+   *
+   * The renderer receives the raw option and a context object with the
+   * current `query` (for match highlighting) and `selected` flag.
+   */
+  renderOption?: (
+    option: SearchableSelectOption,
+    ctx: { selected: boolean; query: string },
+  ) => ReactNode;
 }
 
 /** Highlights the matched substring within a label, case-insensitive. */
@@ -125,6 +139,7 @@ export const SearchableSelect = forwardRef<HTMLInputElement, SearchableSelectPro
       emptyText = "No matches",
       placeholder,
       selectedOption: selectedOptionProp,
+      renderOption,
     },
     ref,
   ) {
@@ -293,18 +308,24 @@ export const SearchableSelect = forwardRef<HTMLInputElement, SearchableSelectPro
                 >
                   {({ selected }) => (
                     <>
-                      <span className="flex flex-1 flex-col">
-                        <span className="leading-tight">
-                          {highlightMatch(opt.label, query)}
-                        </span>
-                        {opt.description && (
-                          <span className="text-xs text-fg-tertiary mt-0.5">
-                            {opt.description}
+                      {renderOption ? (
+                        renderOption(opt, { selected, query })
+                      ) : (
+                        <>
+                          <span className="flex flex-1 flex-col">
+                            <span className="leading-tight">
+                              {highlightMatch(opt.label, query)}
+                            </span>
+                            {opt.description && (
+                              <span className="text-xs text-fg-tertiary mt-0.5">
+                                {opt.description}
+                              </span>
+                            )}
                           </span>
-                        )}
-                      </span>
-                      {selected && (
-                        <CheckIcon className="mt-0.5 h-4 w-4 text-brand-600 shrink-0" />
+                          {selected && (
+                            <CheckIcon className="mt-0.5 h-4 w-4 text-brand-600 shrink-0" />
+                          )}
+                        </>
                       )}
                     </>
                   )}

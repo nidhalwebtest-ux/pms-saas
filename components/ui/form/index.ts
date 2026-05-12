@@ -40,3 +40,6 @@ export type { RadioGroupProps } from "./RadioGroup";
 
 export { Toggle } from "./Toggle";
 export type { ToggleProps } from "./Toggle";
+
+export { DatePicker } from "./DatePicker";
+export type { DatePickerProps } from "./DatePicker";

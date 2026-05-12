@@ -71,3 +71,6 @@ export type { RadioProps, RadioGroupProps } from "./form";
 /* ── Form fields (Tier 3) ───────────────────────────────────────────── */
 export { Toggle } from "./form";
 export type { ToggleProps } from "./form";
+
+export { DatePicker } from "./form";
+export type { DatePickerProps } from "./form";

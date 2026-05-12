@@ -10,13 +10,12 @@ import {
   CalendarDaysIcon,
   MapPinIcon,
   ExclamationTriangleIcon,
-  StarIcon,
-  ShieldExclamationIcon,
   BuildingOfficeIcon,
   ArrowLeftIcon,
   ListBulletIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
+import { Badge, getTenantClassBadge } from "@/components/ui";
 import { prisma } from "@/lib/prisma";
 import { getTranslations, getLocale } from "next-intl/server";
 import { format } from "date-fns";
@@ -143,19 +142,19 @@ export default async function TenantProfilePage({
                 {tenant.firstName} {tenant.lastName}
               </h1>
               {tenant.classification === "vip" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
-                  <StarIcon className="h-3.5 w-3.5" /> {tCls("vipFull")}
-                </span>
+                <Badge {...getTenantClassBadge("vip")} size="md">
+                  {tCls("vipFull")}
+                </Badge>
               )}
               {tenant.classification === "blacklisted" && (
-                <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
-                  <ShieldExclamationIcon className="h-3.5 w-3.5" /> {tCls("blacklisted")}
-                </span>
+                <Badge {...getTenantClassBadge("blacklisted")} size="md">
+                  {tCls("blacklisted")}
+                </Badge>
               )}
               {!tenant.isActive && (
-                <span className="inline-flex items-center rounded-full bg-gray-200 px-2 py-0.5 text-xs font-medium text-gray-600">
+                <Badge tone="neutral" appearance="subtle" size="md">
                   {t("inactive")}
-                </span>
+                </Badge>
               )}
             </div>
             {tenant.fullNameArabic && (

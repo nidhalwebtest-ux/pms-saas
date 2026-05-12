@@ -152,13 +152,9 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
 
         {/* Footer */}
         <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-2">
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-          >
+          <Button variant="ghost" onClick={onClose} disabled={saving}>
             {t("cancel")}
-          </button>
+          </Button>
           <Button
             onClick={handleProcess}
             loading={saving}

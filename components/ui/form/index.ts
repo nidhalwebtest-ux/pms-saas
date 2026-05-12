@@ -19,3 +19,21 @@ export type { SelectProps, SelectOption } from "./Select";
 
 export { NumberField } from "./NumberField";
 export type { NumberFieldProps } from "./NumberField";
+
+export { PasswordField } from "./PasswordField";
+export type { PasswordFieldProps } from "./PasswordField";
+
+export { PhoneField } from "./PhoneField";
+export type { PhoneFieldProps } from "./PhoneField";
+
+export { Checkbox } from "./Checkbox";
+export type { CheckboxProps } from "./Checkbox";
+
+export { CheckboxGroup } from "./CheckboxGroup";
+export type { CheckboxGroupProps } from "./CheckboxGroup";
+
+export { Radio } from "./Radio";
+export type { RadioProps } from "./Radio";
+
+export { RadioGroup } from "./RadioGroup";
+export type { RadioGroupProps } from "./RadioGroup";

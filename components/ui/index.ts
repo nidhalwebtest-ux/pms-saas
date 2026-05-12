@@ -54,3 +54,16 @@ export type { SelectProps, SelectOption } from "./form";
 
 export { NumberField } from "./form";
 export type { NumberFieldProps } from "./form";
+
+/* ── Form fields (Tier 2) ───────────────────────────────────────────── */
+export { PasswordField } from "./form";
+export type { PasswordFieldProps } from "./form";
+
+export { PhoneField } from "./form";
+export type { PhoneFieldProps } from "./form";
+
+export { Checkbox, CheckboxGroup } from "./form";
+export type { CheckboxProps, CheckboxGroupProps } from "./form";
+
+export { Radio, RadioGroup } from "./form";
+export type { RadioProps, RadioGroupProps } from "./form";

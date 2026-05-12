@@ -6,6 +6,7 @@ import { PencilSquareIcon, TrashIcon, CheckIcon, XMarkIcon } from "@heroicons/re
 import { ROLE_BADGE, type Role } from "@/lib/permissions";
 import { updateMemberRole, removeTeamMember } from "./actions";
 import type { UserRole } from "@prisma/client";
+import { Button } from "@/components/ui";
 
 const ASSIGNABLE_ROLES: UserRole[] = ["MANAGER", "STAFF", "ACCOUNTANT"];
 
@@ -148,13 +149,9 @@ export default function MemberRow({
         {confirming && (
           <div className="flex items-center gap-1.5">
             <span className="text-xs text-red-600 font-medium">{t("removeConfirm")}</span>
-            <button
-              onClick={handleRemove}
-              disabled={isPending}
-              className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-500 disabled:opacity-50"
-            >
+            <Button variant="destructive" size="sm" onClick={handleRemove} disabled={isPending}>
               {t("yes")}
-            </button>
+            </Button>
             <button
               onClick={() => setConfirming(false)}
               disabled={isPending}

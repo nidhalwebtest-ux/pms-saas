@@ -23,6 +23,7 @@ export {
   getPaymentMethodBadge,
   getExpenseStatusBadge,
   getPropertyTypeBadge,
+  getUserRoleBadge,
 } from "./badge-helpers";
 export type {
   BadgeVariantProps,
@@ -35,4 +36,5 @@ export type {
   PaymentMethodKey,
   ExpenseStatusKey,
   PropertyTypeKey,
+  UserRoleKey,
 } from "./badge-helpers";

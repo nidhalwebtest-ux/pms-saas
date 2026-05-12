@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { ClockIcon, ArrowPathIcon, XMarkIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
-import { ROLE_BADGE, type Role } from "@/lib/permissions";
+import { type Role } from "@/lib/permissions";
 import { cancelInvitation, resendInvitation } from "./actions";
 import type { UserRole } from "@prisma/client";
-import { Button } from "@/components/ui";
+import { Badge, Button, getUserRoleBadge } from "@/components/ui";
 
 interface Invitation {
   id:        string;
@@ -67,9 +67,9 @@ export default function InvitationRow({ invite }: { invite: Invitation }) {
       {/* Right */}
       <div className="flex items-center gap-2 flex-shrink-0">
         {/* Role */}
-        <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${ROLE_BADGE[invite.role as Role]}`}>
+        <Badge {...getUserRoleBadge(invite.role as Role)} size="sm">
           {tRoles(invite.role)}
-        </span>
+        </Badge>
 
         {/* Expiry */}
         <span className={`flex items-center gap-1 text-xs font-medium ${expired ? "text-red-500" : "text-amber-600"}`}>

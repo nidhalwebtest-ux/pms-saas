@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
-import { ROLE_BADGE, type Role } from "@/lib/permissions";
+import { type Role } from "@/lib/permissions";
+import { Badge, getUserRoleBadge } from "@/components/ui";
 import AcceptForm from "./AcceptForm";
 import { BuildingOffice2Icon, ClockIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
@@ -77,9 +78,9 @@ export default async function InvitePage({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5">
                 <span className="text-xs text-slate-400">{t("roleLabel")}</span>
-                <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${ROLE_BADGE[role]}`}>
+                <Badge {...getUserRoleBadge(role)} size="sm">
                   {tRoles(role)}
-                </span>
+                </Badge>
               </div>
               <span className="text-xs text-slate-500">{t("invitedBy", { name: inviterName })}</span>
             </div>

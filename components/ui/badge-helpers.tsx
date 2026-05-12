@@ -294,6 +294,22 @@ export function getExpenseStatusBadge(
 }
 
 /* ----------------------------------------------------------------------------
+ *  User roles — moved into the design system from lib/permissions.ts.
+ *  OWNER kept on accent (violet) to preserve the existing purple tint.
+ * ------------------------------------------------------------------------- */
+
+export type UserRoleKey = "OWNER" | "MANAGER" | "STAFF" | "ACCOUNTANT";
+
+export function getUserRoleBadge(role: UserRoleKey): BadgeVariantProps {
+  switch (role) {
+    case "OWNER":      return { tone: "accent",  appearance: "subtle" };
+    case "MANAGER":    return { tone: "info",    appearance: "subtle" };
+    case "STAFF":      return { tone: "success", appearance: "subtle" };
+    case "ACCOUNTANT": return { tone: "warning", appearance: "subtle" };
+  }
+}
+
+/* ----------------------------------------------------------------------------
  *  Property types (per user decision 8: add wrapper even though spec
  *  did not enumerate this domain)
  * ------------------------------------------------------------------------- */

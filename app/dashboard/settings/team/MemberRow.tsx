@@ -3,10 +3,10 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { PencilSquareIcon, TrashIcon, CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { ROLE_BADGE, type Role } from "@/lib/permissions";
+import { type Role } from "@/lib/permissions";
 import { updateMemberRole, removeTeamMember } from "./actions";
 import type { UserRole } from "@prisma/client";
-import { Button } from "@/components/ui";
+import { Badge, Button, getUserRoleBadge } from "@/components/ui";
 
 const ASSIGNABLE_ROLES: UserRole[] = ["MANAGER", "STAFF", "ACCOUNTANT"];
 
@@ -119,9 +119,9 @@ export default function MemberRow({
             </button>
           </div>
         ) : (
-          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${ROLE_BADGE[member.role]}`}>
+          <Badge {...getUserRoleBadge(member.role)} size="sm">
             {tRoles(member.role)}
-          </span>
+          </Badge>
         )}
 
         {/* Edit role button */}

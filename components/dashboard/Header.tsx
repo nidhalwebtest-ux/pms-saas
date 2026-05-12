@@ -1,7 +1,8 @@
 import { BellIcon, ArrowRightStartOnRectangleIcon } from "@heroicons/react/24/outline";
 import { getTranslations } from "next-intl/server";
 import { logout } from "@/app/login/actions";
-import { ROLE_BADGE, type Role } from "@/lib/permissions";
+import { type Role } from "@/lib/permissions";
+import { Badge, getUserRoleBadge } from "@/components/ui";
 import PropertySelector from "./PropertySelector";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
@@ -60,9 +61,9 @@ export default async function Header({ userEmail, userName, role, properties, se
           </div>
           <div className="hidden sm:block text-end">
             <p className="text-sm font-semibold text-gray-900 leading-tight">{displayName}</p>
-            <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium ring-1 ring-inset ${ROLE_BADGE[role]}`}>
+            <Badge {...getUserRoleBadge(role)} size="sm">
               {tRoles(role)}
-            </span>
+            </Badge>
           </div>
         </div>
 

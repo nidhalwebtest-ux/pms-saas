@@ -401,9 +401,9 @@ function CheckInModal({ res, onSuccess, onClose }: {
           <p className="text-sm font-medium text-gray-600 mb-2">{t("unitsBeingAssigned")}</p>
           <div className="flex flex-wrap gap-2">
             {res.units.map((u) => (
-              <span key={u.id} className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-100 text-sm font-medium text-gray-800">
+              <Badge key={u.id} tone="neutral" appearance="subtle" size="md">
                 {u.name} — {u.propertyName}
-              </span>
+              </Badge>
             ))}
           </div>
         </div>
@@ -1956,17 +1956,17 @@ export default function ReservationDetail({ id }: { id: string }) {
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 ltr-numbers">
+                    <Badge tone="neutral" appearance="subtle" size="md" className="ltr-numbers">
                       {res.rateType === "monthly"
                         ? t("generateInvoicesModal.durationMonths", { count: Math.round(res.totalNights / 30) })
                         : t("generateInvoicesModal.durationNights", { count: res.totalNights })}
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                    </Badge>
+                    <Badge tone="info" appearance="subtle" size="md">
                       {res.rateType === "monthly" ? tStay("monthlyRate") : tStay("dailyRate")}
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                    </Badge>
+                    <Badge tone="accent" appearance="subtle" size="md">
                       {fmtSource(res.source)}
-                    </span>
+                    </Badge>
                   </div>
                 </div>
 
@@ -1988,9 +1988,9 @@ export default function ReservationDetail({ id }: { id: string }) {
                             <p className={`font-semibold text-sm ${u.isMovedOut ? "text-amber-800" : "text-gray-900"}`}>
                               {u.name}
                               {u.isMovedOut && (
-                                <span className="ms-2 inline-flex items-center gap-1 rounded-full bg-amber-200/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                                <Badge tone="warning" appearance="subtle" size="sm" className="ms-2">
                                   {tStay("movedOutBadge")}
-                                </span>
+                                </Badge>
                               )}
                             </p>
                             <p className="text-xs text-gray-500">

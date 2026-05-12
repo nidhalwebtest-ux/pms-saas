@@ -925,9 +925,9 @@ function ReservationTableRow({
       <td className="px-3 py-3">
         <div className="flex flex-wrap gap-1">
           {res.units.slice(0, 3).map((u) => (
-            <span key={u.id} className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-700">
+            <Badge key={u.id} tone="neutral" appearance="subtle" size="sm">
               {u.name}
-            </span>
+            </Badge>
           ))}
           {res.units.length > 3 && (
             <span className="text-xs text-gray-500">{t("moreUnits", { n: res.units.length - 3 })}</span>

@@ -3,13 +3,10 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { DayPicker, DateRange } from "react-day-picker";
-import "react-day-picker/style.css";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ar as arLocale, enUS as enLocale, type Locale } from "date-fns/locale";
 import {
-  MagnifyingGlassIcon,
   CalendarIcon,
   HomeIcon,
   CurrencyDollarIcon,
@@ -24,7 +21,16 @@ import {
 import { CheckCircleIcon as CheckCircleSolid } from "@heroicons/react/24/solid";
 import {
   Badge,
+  Button,
+  DatePicker,
+  DateRangePicker,
   getTenantClassBadge,
+  NumberField,
+  SearchableSelect,
+  Select,
+  TextArea,
+  type DateRangeValue,
+  type SearchableSelectOption,
   type TenantClassKey,
 } from "@/components/ui";
 import {
@@ -167,13 +173,8 @@ export default function BookingEngine({
   const [step, setStep] = useState(1);
 
   // ── Step 1: Tenant ────────────────────────────────────────────────────────
-  const [tenantQuery,    setTenantQuery]    = useState("");
-  const [tenantResults,  setTenantResults]  = useState<TenantResult[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<TenantResult | null>(defaultTenant ?? null);
-  const [tenantLoading,  setTenantLoading]  = useState(false);
-  const [showDropdown,   setShowDropdown]   = useState(false);
   const [showAddTenant,  setShowAddTenant]  = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // ── Step 2: Dates ─────────────────────────────────────────────────────────
   const [propertyId, setPropertyId] = useState(defaultPropertyId ?? properties[0]?.id ?? "");
@@ -181,8 +182,6 @@ export default function BookingEngine({
   const [endDate,    setEndDate]    = useState("");
   const [rateType,   setRateType]   = useState<"daily" | "monthly">("daily");
   const [period,     setPeriod]     = useState(1); // nights OR months
-  const [calMode,    setCalMode]    = useState(false);
-  const [calRange,   setCalRange]   = useState<DateRange | undefined>();
 
   // ── Step 3: Units ─────────────────────────────────────────────────────────
   const [units,         setUnits]         = useState<UnitOption[]>([]);
@@ -262,53 +261,6 @@ export default function BookingEngine({
     if (unitTypeFilter === "ALL") return units;
     return units.filter((u) => u.unitType === unitTypeFilter);
   }, [units, unitTypeFilter]);
-
-  // ── Outside click for dropdown ────────────────────────────────────────────
-  useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
-        setShowDropdown(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  // ── Tenant search (debounced) ─────────────────────────────────────────────
-  useEffect(() => {
-    if (!tenantQuery.trim()) { setTenantResults([]); return; }
-    const timer = setTimeout(async () => {
-      setTenantLoading(true);
-      try {
-        const res  = await fetch(`/api/tenants?q=${encodeURIComponent(tenantQuery)}`);
-        const data = await res.json();
-        setTenantResults(data.tenants ?? []);
-        setShowDropdown(true);
-      } finally {
-        setTenantLoading(false);
-      }
-    }, 350);
-    return () => clearTimeout(timer);
-  }, [tenantQuery]);
-
-  // ── Sync calendar range → text inputs ────────────────────────────────────
-  useEffect(() => {
-    if (calRange?.from) {
-      const newStart = toDateInput(calRange.from);
-      setStartDate(newStart);
-      if (calRange.to) {
-        if (rateType === "monthly") {
-          // Snap to complete months from the new start
-          const m = countCalendarMonths(calRange.from, calRange.to);
-          const snapped = addCalendarMonths(calRange.from, Math.max(1, m));
-          setEndDate(toDateInput(snapped));
-          setPeriod(Math.max(1, m));
-        } else {
-          setEndDate(toDateInput(calRange.to));
-          setPeriod(calculateNights(calRange.from, calRange.to));
-        }
-      }
-    }
-  }, [calRange, rateType]);
 
   // ── Period change handler ─────────────────────────────────────────────────
   function handlePeriodChange(val: number) {
@@ -559,67 +511,80 @@ export default function BookingEngine({
           {!showAddTenant && (
             <>
               {/* Search */}
-              <div className="relative" ref={dropdownRef}>
-                <div className="relative">
-                  <MagnifyingGlassIcon className="pointer-events-none absolute start-3 top-2.5 h-4 w-4 text-gray-400" />
-                  <input
-                    type="text"
-                    className="block w-full rounded-lg border-0 py-2.5 ps-9 pe-9 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-600 sm:text-sm"
-                    placeholder={tStep1("searchPlaceholder")}
-                    value={selectedTenant ? `${selectedTenant.firstName} ${selectedTenant.lastName}` : tenantQuery}
-                    onChange={(e) => {
-                      if (selectedTenant) setSelectedTenant(null);
-                      setTenantQuery(e.target.value);
-                      setShowDropdown(true);
-                    }}
-                    onFocus={() => { if (tenantResults.length) setShowDropdown(true); }}
-                  />
-                  {selectedTenant && (
-                    <button
-                      onClick={() => { setSelectedTenant(null); setTenantQuery(""); }}
-                      className="absolute end-2.5 top-2.5 text-gray-400 hover:text-gray-600"
-                    >
-                      <XMarkIcon className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-
-                {showDropdown && !selectedTenant && (
-                  <div className="absolute z-50 mt-1 w-full rounded-lg border border-gray-200 bg-white shadow-lg max-h-64 overflow-y-auto">
-                    {tenantLoading && <div className="px-4 py-3 text-sm text-gray-500">{tStep1("searching")}</div>}
-                    {!tenantLoading && tenantResults.length === 0 && tenantQuery && (
-                      <div className="px-4 py-3 text-sm text-gray-500">
-                        {tStep1("noTenantsFound")}{" "}
-                        <button className="text-blue-600 hover:underline" onClick={() => setShowAddTenant(true)}>
-                          {tStep1("createOne")}
-                        </button>
-                      </div>
-                    )}
-                    {tenantResults.map((tn) => (
-                      <button
-                        key={tn.id}
-                        className="flex w-full items-center gap-3 px-4 py-2.5 text-start hover:bg-gray-50"
-                        onClick={() => { setSelectedTenant(tn); setShowDropdown(false); setTenantQuery(""); }}
+              <SearchableSelect
+                label={tStep1("searchPlaceholder")}
+                placeholder={tStep1("searchPlaceholder")}
+                debounceMs={350}
+                loadOptions={async (q) => {
+                  if (!q.trim()) return [];
+                  const res = await fetch(`/api/tenants?q=${encodeURIComponent(q)}`);
+                  const data = await res.json();
+                  return (data.tenants ?? []).map((tn: TenantResult) => ({
+                    value: tn.id,
+                    label: `${tn.firstName} ${tn.lastName}`,
+                    description: `${tn.phone}${tn.nationality ? ` · ${tn.nationality}` : ""}`,
+                    // attach raw data so renderOption + onValueChange can re-hydrate
+                    raw: tn,
+                  } as SearchableSelectOption & { raw: TenantResult }));
+                }}
+                onCreate={() => setShowAddTenant(true)}
+                emptyText={tStep1("noTenantsFound")}
+                value={selectedTenant?.id ?? null}
+                selectedOption={
+                  selectedTenant
+                    ? {
+                        value: selectedTenant.id,
+                        label: `${selectedTenant.firstName} ${selectedTenant.lastName}`,
+                      }
+                    : null
+                }
+                onValueChange={async (v) => {
+                  if (!v) { setSelectedTenant(null); return; }
+                  // Fetch single tenant if we don't already have the full record.
+                  if (selectedTenant?.id === v) return;
+                  try {
+                    const res = await fetch(`/api/tenants?q=${encodeURIComponent(v)}`);
+                    const data = await res.json();
+                    const found = (data.tenants ?? []).find(
+                      (t: TenantResult) => t.id === v,
+                    );
+                    if (found) setSelectedTenant(found);
+                  } catch {
+                    /* swallow — selectedOption already shows the label */
+                  }
+                }}
+                renderOption={(opt) => {
+                  const tn = (opt as SearchableSelectOption & { raw: TenantResult }).raw;
+                  return (
+                    <span className="flex w-full items-center gap-3">
+                      <span
+                        className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                          tn.classification === "vip"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : tn.classification === "blacklisted"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-blue-100 text-blue-700"
+                        }`}
                       >
-                        <div className={`flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold ${
-                          tn.classification === "vip" ? "bg-yellow-100 text-yellow-800" :
-                          tn.classification === "blacklisted" ? "bg-red-100 text-red-700" :
-                          "bg-blue-100 text-blue-700"
-                        }`}>
-                          {tn.firstName[0]}{tn.lastName[0]}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium text-sm text-gray-900">{tn.firstName} {tn.lastName}</span>
-                            <ClassBadge c={tn.classification} t={tStep1} />
-                          </div>
-                          <div className="text-xs text-gray-500 ltr-numbers">{tn.phone}{tn.nationality ? ` · ${tn.nationality}` : ""}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
+                        {tn.firstName[0]}
+                        {tn.lastName[0]}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center gap-2">
+                          <span className="font-medium text-sm text-fg">
+                            {tn.firstName} {tn.lastName}
+                          </span>
+                          <ClassBadge c={tn.classification} t={tStep1} />
+                        </span>
+                        <span className="block text-xs text-fg-tertiary ltr-numbers">
+                          {tn.phone}
+                          {tn.nationality ? ` · ${tn.nationality}` : ""}
+                        </span>
+                      </span>
+                    </span>
+                  );
+                }}
+              />
 
               {/* Selected tenant card */}
               {selectedTenant && (
@@ -662,19 +627,15 @@ export default function BookingEngine({
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-5">
           <h2 className="text-lg font-semibold text-gray-900">{tStep2("title")}</h2>
 
-          {/* Property */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">{tStep2("property")}</label>
-            <select
-              className="block w-full rounded-lg border-0 py-2.5 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm"
-              value={propertyId}
-              onChange={(e) => setPropertyId(e.target.value)}
-            >
-              {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-          </div>
+          <Select
+            label={tStep2("property")}
+            value={propertyId}
+            onChange={(e) => setPropertyId(e.target.value)}
+            options={properties.map((p) => ({ value: p.id, label: p.name }))}
+            reserveMessageSpace={false}
+          />
 
-          {/* Rate type */}
+          {/* Rate type — workflow switch, kept inline */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">{tStep2("billingMode")}</label>
             <div className="flex gap-2">
@@ -699,94 +660,64 @@ export default function BookingEngine({
             )}
           </div>
 
-          {/* Date + Period inputs */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">{tStep2("checkInAndDuration")}</span>
-            {rateType === "daily" && (
-              <button
-                onClick={() => setCalMode((v) => !v)}
-                className="text-xs text-blue-600 hover:underline flex items-center gap-1"
-              >
-                <CalendarIcon className="h-3.5 w-3.5" />
-                {calMode ? tStep2("useInputs") : tStep2("openCalendar")}
-              </button>
-            )}
-          </div>
-
-          {!calMode || rateType === "monthly" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              {/* Check-In */}
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">{tStep2("checkInDate")}</label>
-                <input
-                  type="date"
-                  className="block w-full rounded-lg border-0 py-2.5 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm"
-                  value={startDate}
-                  onChange={(e) => handleStartDateChange(e.target.value)}
-                />
-              </div>
-
-              {/* Period */}
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">
-                  {rateType === "daily" ? tStep2("numberOfNights") : tStep2("numberOfMonths")}
-                </label>
-                <div className="flex">
-                  <button
-                    onClick={() => handlePeriodChange(Math.max(1, period - 1))}
-                    className="flex items-center justify-center w-9 rounded-s-lg border border-e-0 border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 text-sm font-bold"
-                  >−</button>
-                  <input
-                    type="number"
-                    min={1}
-                    max={rateType === "daily" ? 730 : 24}
-                    className="block flex-1 min-w-0 border-y border-gray-300 py-2.5 text-center focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm ltr-numbers"
-                    value={period}
-                    onChange={(e) => handlePeriodChange(parseInt(e.target.value) || 1)}
-                  />
-                  <button
-                    onClick={() => handlePeriodChange(period + 1)}
-                    className="flex items-center justify-center w-9 rounded-e-lg border border-s-0 border-gray-300 bg-gray-50 text-gray-600 hover:bg-gray-100 text-sm font-bold"
-                  >+</button>
-                </div>
-                <p className="text-[10px] text-gray-400 mt-0.5 text-center">
-                  {rateType === "monthly" ? tStep2("calendarMonthsOnly") : tStep2("nightsHint")}
-                </p>
-              </div>
-
-              {/* Check-Out */}
-              <div>
-                <label className="block text-xs text-gray-500 mb-1">{tStep2("checkOutDate")}</label>
-                {rateType === "monthly" ? (
-                  <div className="block w-full rounded-lg border-0 py-2.5 px-3 ring-1 ring-inset ring-gray-200 bg-gray-50 sm:text-sm text-gray-700 font-medium">
-                    {endDate
-                      ? <span className="ltr-numbers">{endDate}</span>
-                      : <span className="text-gray-400">{tStep2("autoComputed")}</span>}
-                    <div className="text-[10px] text-gray-400 font-normal">{tStep2("lockedHint")}</div>
-                  </div>
-                ) : (
-                  <input
-                    type="date"
-                    min={startDate}
-                    className="block w-full rounded-lg border-0 py-2.5 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm"
-                    value={endDate}
-                    onChange={(e) => handleEndDateChange(e.target.value)}
-                  />
-                )}
-              </div>
-            </div>
+          {rateType === "daily" ? (
+            <DateRangePicker
+              label={tStep2("checkInAndDuration")}
+              value={
+                startDate && endDate
+                  ? { from: parseLocalDate(startDate), to: parseLocalDate(endDate) }
+                  : null
+              }
+              onValueChange={(range: DateRangeValue | null) => {
+                if (!range) {
+                  setStartDate("");
+                  setEndDate("");
+                  setPeriod(1);
+                  return;
+                }
+                setStartDate(toDateInput(range.from));
+                setEndDate(toDateInput(range.to));
+                setPeriod(calculateNights(range.from, range.to));
+              }}
+              minDate={new Date()}
+              locale={dateFnsLocale}
+              helperText={
+                currentPeriod > 0
+                  ? tStep2("nightsSummary", { count: currentPeriod })
+                  : tStep2("nightsHint")
+              }
+            />
           ) : (
-            /* Calendar range picker (daily mode only) */
-            <div className="flex justify-center">
-              <DayPicker
-                mode="range"
-                selected={calRange}
-                onSelect={setCalRange}
-                disabled={{ before: new Date() }}
-                numberOfMonths={2}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <DatePicker
+                label={tStep2("checkInDate")}
+                value={startDate ? parseLocalDate(startDate) : null}
+                onValueChange={(d) => handleStartDateChange(d ? toDateInput(d) : "")}
+                minDate={new Date()}
                 locale={dateFnsLocale}
-                className="border border-gray-200 rounded-xl p-4"
+                reserveMessageSpace={false}
               />
+              <NumberField
+                label={tStep2("numberOfMonths")}
+                stepper
+                min={1}
+                max={24}
+                step={1}
+                precision={0}
+                value={period}
+                onValueChange={(v) => handlePeriodChange(v ?? 1)}
+                helperText={tStep2("calendarMonthsOnly")}
+                reserveMessageSpace={false}
+              />
+              <div>
+                <label className="block text-[13px] font-medium text-fg leading-5">{tStep2("checkOutDate")}</label>
+                <div className="mt-1 block w-full rounded-md border border-border-default bg-bg-subtle px-3 py-2 text-sm text-fg-secondary h-[38px] flex items-center">
+                  {endDate
+                    ? <span className="ltr-numbers font-medium">{endDate}</span>
+                    : <span className="text-fg-tertiary">{tStep2("autoComputed")}</span>}
+                </div>
+                <p className="mt-1 text-xs text-fg-tertiary">{tStep2("lockedHint")}</p>
+              </div>
             </div>
           )}
 
@@ -995,26 +926,22 @@ export default function BookingEngine({
                         </div>
 
                         {/* Rate per night/month */}
-                        <div>
-                          <label className="block text-[10px] text-gray-500 mb-0.5">
-                            {rateType === "daily" ? tStep3("ratePerNight") : tStep3("ratePerMonth")}
-                          </label>
-                          <input
-                            type="number" min={0} step="0.001"
-                            className={`block w-full rounded-lg border-0 py-1.5 px-2.5 text-sm ring-1 ring-inset focus:ring-2 focus:ring-purple-500 ltr-numbers ${
-                              hasTotal ? "bg-gray-50 ring-gray-200 text-gray-400" : "ring-purple-300"
-                            }`}
-                            placeholder={hasTotal
-                              ? tStep3("ratePlaceholderFromTotal", { amount: fmtOMR(displayRate) })
-                              : tStep3("ratePlaceholderDefault", { amount: fmtOMR(unit.rateAmount) })}
-                            value={hasTotal ? "" : rateStr}
-                            disabled={hasTotal}
-                            onChange={(e) => {
-                              setCustomRates((p) => ({ ...p, [unit.id]: e.target.value }));
-                              setCustomTotals((p) => { const n = { ...p }; delete n[unit.id]; return n; });
-                            }}
-                          />
-                        </div>
+                        <NumberField
+                          label={rateType === "daily" ? tStep3("ratePerNight") : tStep3("ratePerMonth")}
+                          size="sm"
+                          currency="OMR"
+                          min={0}
+                          placeholder={hasTotal
+                            ? tStep3("ratePlaceholderFromTotal", { amount: fmtOMR(displayRate) })
+                            : tStep3("ratePlaceholderDefault", { amount: fmtOMR(unit.rateAmount) })}
+                          value={hasTotal ? "" : rateStr}
+                          disabled={hasTotal}
+                          onValueChange={(v) => {
+                            setCustomRates((p) => ({ ...p, [unit.id]: v === null ? "" : String(v) }));
+                            setCustomTotals((p) => { const n = { ...p }; delete n[unit.id]; return n; });
+                          }}
+                          reserveMessageSpace={false}
+                        />
 
                         {/* OR divider */}
                         <div className="flex items-center gap-2">
@@ -1024,28 +951,24 @@ export default function BookingEngine({
                         </div>
 
                         {/* Total amount for the full period */}
-                        <div>
-                          <label className="block text-[10px] text-gray-500 mb-0.5">
-                            {rateType === "daily"
-                              ? tStep3("totalForPeriodNights", { count: periodCount })
-                              : tStep3("totalForPeriodMonths", { count: periodCount })}
-                          </label>
-                          <input
-                            type="number" min={0} step="0.001"
-                            className={`block w-full rounded-lg border-0 py-1.5 px-2.5 text-sm ring-1 ring-inset focus:ring-2 focus:ring-purple-500 ltr-numbers ${
-                              hasRate ? "bg-gray-50 ring-gray-200 text-gray-400" : "ring-purple-300"
-                            }`}
-                            placeholder={hasRate
-                              ? tStep3("totalPlaceholderFromRate", { amount: fmtOMR(displaySubtotal) })
-                              : tStep3("totalPlaceholderDefault", { amount: fmtOMR(unit.subtotal) })}
-                            value={hasRate ? "" : totalStr}
-                            disabled={hasRate}
-                            onChange={(e) => {
-                              setCustomTotals((p) => ({ ...p, [unit.id]: e.target.value }));
-                              setCustomRates((p) => { const n = { ...p }; delete n[unit.id]; return n; });
-                            }}
-                          />
-                        </div>
+                        <NumberField
+                          label={rateType === "daily"
+                            ? tStep3("totalForPeriodNights", { count: periodCount })
+                            : tStep3("totalForPeriodMonths", { count: periodCount })}
+                          size="sm"
+                          currency="OMR"
+                          min={0}
+                          placeholder={hasRate
+                            ? tStep3("totalPlaceholderFromRate", { amount: fmtOMR(displaySubtotal) })
+                            : tStep3("totalPlaceholderDefault", { amount: fmtOMR(unit.subtotal) })}
+                          value={hasRate ? "" : totalStr}
+                          disabled={hasRate}
+                          onValueChange={(v) => {
+                            setCustomTotals((p) => ({ ...p, [unit.id]: v === null ? "" : String(v) }));
+                            setCustomRates((p) => { const n = { ...p }; delete n[unit.id]; return n; });
+                          }}
+                          reserveMessageSpace={false}
+                        />
                       </div>
                     )}
                   </div>
@@ -1137,39 +1060,32 @@ export default function BookingEngine({
           <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm space-y-4">
             <h3 className="font-semibold text-gray-900">{tStep4("bookingDetails")}</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{tStep4("discount")}</label>
-                <input
-                  type="number" min="0" step="0.001"
-                  className="block w-full rounded-lg border-0 py-2.5 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm ltr-numbers"
-                  placeholder={tStep4("discountPlaceholder")}
-                  value={discount}
-                  onChange={(e) => setDiscount(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">{tStep4("source")}</label>
-                <select
-                  className="block w-full rounded-lg border-0 py-2.5 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm"
-                  value={source}
-                  onChange={(e) => setSource(e.target.value)}
-                >
-                  {SOURCE_KEYS.map((k) => (
-                    <option key={k} value={k}>{tSrc(k)}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">{tStep4("notes")}</label>
-              <textarea
-                rows={2}
-                className="block w-full rounded-lg border-0 py-2.5 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-600 sm:text-sm resize-none"
-                placeholder={tStep4("notesPlaceholder")}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
+              <NumberField
+                label={tStep4("discount")}
+                placeholder={tStep4("discountPlaceholder")}
+                currency="OMR"
+                min={0}
+                value={discount === "" ? "" : parseFloat(discount)}
+                onValueChange={(v) => setDiscount(v === null ? "" : String(v))}
+                reserveMessageSpace={false}
+              />
+              <Select
+                label={tStep4("source")}
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                options={SOURCE_KEYS.map((k) => ({ value: k, label: tSrc(k) }))}
+                reserveMessageSpace={false}
               />
             </div>
+            <TextArea
+              label={tStep4("notes")}
+              placeholder={tStep4("notesPlaceholder")}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              minRows={2}
+              maxRows={6}
+              reserveMessageSpace={false}
+            />
           </div>
 
           {/* Grand total */}
@@ -1248,37 +1164,38 @@ export default function BookingEngine({
             </div>
           </div>
 
-          <button
+          <Button
+            type="button"
             onClick={handleSubmit}
-            disabled={submitting}
-            className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors disabled:opacity-60"
+            loading={submitting}
+            size="lg"
+            fullWidth
+            rightIcon={<CheckCircleIcon className="h-5 w-5" />}
           >
-            {submitting ? tStep5("submitting") : tStep5("submit")}
-            {!submitting && <CheckCircleIcon className="h-5 w-5" />}
-          </button>
+            {tStep5("submit")}
+          </Button>
         </div>
       )}
 
       {/* ── Navigation ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
-        <button
+        <Button
+          variant="secondary"
           onClick={() => setStep((s) => s - 1)}
           disabled={step === 1}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+          leftIcon={<ChevronLeftIcon className="h-4 w-4 rtl:rotate-180" />}
         >
-          <ChevronLeftIcon className="h-4 w-4 rtl:rotate-180" />
           {tNav("back")}
-        </button>
+        </Button>
 
         {step < 5 && (
-          <button
+          <Button
             onClick={advance}
             disabled={!canAdvance()}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            rightIcon={<ChevronRightIcon className="h-4 w-4 rtl:rotate-180" />}
           >
             {step === 4 ? tNav("reviewConfirm") : tNav("next")}
-            <ChevronRightIcon className="h-4 w-4 rtl:rotate-180" />
-          </button>
+          </Button>
         )}
       </div>
     </div>

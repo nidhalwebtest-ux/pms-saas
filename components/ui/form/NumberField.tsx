@@ -9,6 +9,7 @@ import {
   type FocusEvent,
   type InputHTMLAttributes,
 } from "react";
+import { MinusIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { Spinner } from "../Spinner";
 import {
   borderState,
@@ -61,8 +62,14 @@ export interface NumberFieldProps extends BaseFieldProps, NativeInputProps {
   /** Maximum value (inclusive). */
   max?: number;
 
-  /** Step for keyboard ↑↓. Default 1. */
+  /** Step for keyboard ↑↓ and stepper buttons. Default 1. */
   step?: number;
+
+  /**
+   * Show `−` / `+` stepper buttons flanking the input. Each click adds /
+   * subtracts `step` and clamps to `min` / `max`. Defaults to false.
+   */
+  stepper?: boolean;
 
   /** Fires with the parsed numeric value (or `null` for empty). */
   onValueChange?: (value: number | null) => void;
@@ -121,6 +128,7 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(
       min,
       max,
       step = 1,
+      stepper = false,
       onValueChange,
       placeholder,
       onFocus,
@@ -193,9 +201,31 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(
       variantCls,
       showRightSlot ? controlPaddingWithRightIcon : "",
       "text-end tabular-nums ltr-num",
+      // When stepper is on, the input is sandwiched between buttons — drop
+      // its rounded corners on both ends so the segmented control reads as one.
+      stepper ? "rounded-none border-x-0 focus:border-x" : "",
     ]
       .filter(Boolean)
       .join(" ");
+
+    const adjustBy = useCallback(
+      (delta: number) => {
+        if (disabled || readOnly) return;
+        const current = parseLooseNumber(display) ?? 0;
+        let next = current + delta;
+        if (min !== undefined) next = Math.max(min, next);
+        if (max !== undefined) next = Math.min(max, next);
+        setDisplay(formatForDisplay(next, precision));
+        onValueChange?.(next);
+      },
+      [display, disabled, readOnly, min, max, precision, onValueChange],
+    );
+
+    const stepperButton = stepper
+      ? "inline-flex items-center justify-center bg-bg-subtle text-fg-secondary border border-border-default transition-colors duration-fast ease-out hover:bg-bg-muted disabled:opacity-50 disabled:cursor-not-allowed"
+      : "";
+    const stepperHeight = controlSize[size].match(/h-\[?[0-9]+(?:px)?\]?/)?.[0] ?? "h-[38px]";
+    const stepperSize = `${stepperHeight} w-9`;
 
     // Hidden field for the *parsed* numeric value when the component is used
     // with server-actions (uncontrolled). Keeps form submission strict.
@@ -215,7 +245,22 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(
         className={className}
         reserveMessageSpace={reserveMessageSpace}
       >
-        <div className="relative" dir="ltr">
+        <div className={stepper ? "flex" : "relative"} dir="ltr">
+          {stepper && (
+            <button
+              type="button"
+              onClick={() => adjustBy(-step)}
+              disabled={
+                disabled ||
+                readOnly ||
+                (min !== undefined && (parseLooseNumber(display) ?? 0) <= min)
+              }
+              aria-label="Decrease"
+              className={`${stepperButton} ${stepperSize} rounded-s-md`}
+            >
+              <MinusIcon className="h-4 w-4" />
+            </button>
+          )}
           <input
             ref={ref}
             name={value !== undefined ? undefined : `${name ?? ""}__display`}
@@ -249,7 +294,7 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(
               value={parsedValue === null ? "" : String(parsedValue)}
             />
           )}
-          {showRightSlot && (
+          {showRightSlot && !stepper && (
             <span className={`${iconSlot} end-0 pe-3`} aria-hidden="true">
               {showSpinner ? (
                 <span className="inline-flex h-4 w-4 items-center justify-center">
@@ -261,6 +306,21 @@ export const NumberField = forwardRef<HTMLInputElement, NumberFieldProps>(
                 </span>
               )}
             </span>
+          )}
+          {stepper && (
+            <button
+              type="button"
+              onClick={() => adjustBy(step)}
+              disabled={
+                disabled ||
+                readOnly ||
+                (max !== undefined && (parseLooseNumber(display) ?? 0) >= max)
+              }
+              aria-label="Increase"
+              className={`${stepperButton} ${stepperSize} rounded-e-md`}
+            >
+              <PlusIcon className="h-4 w-4" />
+            </button>
           )}
         </div>
       </FormField>

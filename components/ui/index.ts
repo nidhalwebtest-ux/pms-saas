@@ -83,3 +83,6 @@ export type { SearchableSelectProps, SearchableSelectOption } from "./form";
 
 export { MultiSelect } from "./form";
 export type { MultiSelectProps, MultiSelectOption } from "./form";
+
+export { FileUpload } from "./form";
+export type { FileUploadProps } from "./form";

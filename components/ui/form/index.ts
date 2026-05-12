@@ -61,3 +61,6 @@ export type {
   MultiSelectProps,
   MultiSelectOption,
 } from "./MultiSelect";
+
+export { FileUpload } from "./FileUpload";
+export type { FileUploadProps } from "./FileUpload";

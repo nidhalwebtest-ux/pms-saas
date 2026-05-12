@@ -15,6 +15,7 @@ import {
   subDays,
   subMonths,
 } from "date-fns";
+import type { Locale } from "date-fns";
 import { CalendarIcon } from "@heroicons/react/24/outline";
 import {
   DayPicker,
@@ -54,6 +55,11 @@ export interface DateRangePickerProps extends BaseFieldProps {
   showPresets?: boolean;
   /** Placeholder for the trigger when empty. */
   placeholder?: string;
+  /**
+   * date-fns locale for calendar weekday headers / month labels.
+   * Pass `arLocale` to render Arabic-localized weekdays.
+   */
+  locale?: Locale;
 }
 
 const DEFAULT_FORMAT = "dd MMM yyyy";
@@ -113,6 +119,7 @@ export const DateRangePicker = forwardRef<HTMLInputElement, DateRangePickerProps
       maxDate,
       showPresets = true,
       placeholder,
+      locale,
     },
     ref,
   ) {
@@ -310,6 +317,7 @@ export const DateRangePicker = forwardRef<HTMLInputElement, DateRangePickerProps
                 disabled={disabledMatchers.length ? disabledMatchers : undefined}
                 defaultMonth={selected?.from ?? today}
                 numberOfMonths={2}
+                locale={locale}
               />
             </div>
           )}

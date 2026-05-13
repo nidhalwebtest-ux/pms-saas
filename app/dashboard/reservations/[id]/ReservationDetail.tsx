@@ -30,6 +30,9 @@ import {
 import {
   Badge,
   Button,
+  Modal,
+  ModalBody,
+  ModalHeader,
   getReservationStatusBadge,
   getTenantClassBadge,
   reservationStatusKeyFromDisplayLabel,
@@ -272,26 +275,6 @@ function Collapsible({ title, defaultOpen = true, children }: {
   );
 }
 
-// ── Modal wrapper ──────────────────────────────────────────────────────────────
-
-function Modal({ title, onClose, children }: {
-  title: string; onClose: () => void; children: React.ReactNode;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close">
-            <XMarkIcon className="h-5 w-5" />
-          </Button>
-        </div>
-        <div className="px-6 py-5">{children}</div>
-      </div>
-    </div>
-  );
-}
-
 // ── Payment form (reused in check-in/check-out modals) ────────────────────────
 
 function PaymentForm({
@@ -375,7 +358,7 @@ function CheckInModal({ res, onSuccess, onClose }: {
   const whenText = daysUntil === 1 ? t("tomorrow") : t("inDays", { count: daysUntil });
 
   return (
-    <Modal title={t("title", { ref })} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title", { ref })} /><ModalBody>
       <div className="space-y-5">
         {/* Guest */}
         <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl">
@@ -423,7 +406,7 @@ function CheckInModal({ res, onSuccess, onClose }: {
           {loading ? t("checking") : t("confirm")}
         </button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -485,7 +468,7 @@ function CheckOutModal({ res, onSuccess, onClose }: {
   ];
 
   return (
-    <Modal title={t("title", { ref })} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title", { ref })} /><ModalBody>
       <div className="space-y-5">
         {/* Stay summary */}
         <div className={`p-4 rounded-xl ${isOverstay ? "bg-red-50 border border-red-200" : isEarly ? "bg-blue-50 border border-blue-200" : "bg-green-50 border border-green-200"}`}>
@@ -584,7 +567,7 @@ function CheckOutModal({ res, onSuccess, onClose }: {
           {loading ? t("processing") : t("confirm")}
         </button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -615,7 +598,7 @@ function CancelModal({ res, onSuccess, onClose }: {
   }
 
   return (
-    <Modal title={t("title")} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title")} /><ModalBody>
       <div className="space-y-4">
         <div className="p-4 bg-red-50 rounded-xl text-sm text-red-700 border border-red-200">
           {t("warning")}
@@ -666,7 +649,7 @@ function CancelModal({ res, onSuccess, onClose }: {
           {t("confirm")}
         </Button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -760,7 +743,7 @@ function PaymentModal({ res, onSuccess, onClose }: {
     new Date(inv.dueDate) < new Date() && !["PAID", "CANCELLED", "VOID"].includes(inv.status);
 
   return (
-    <Modal title={t("title")} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title")} /><ModalBody>
       <div className="space-y-4">
         {/* Amount + method */}
         <PaymentForm balanceDue={res.balanceDue} value={form} onChange={setForm} />
@@ -858,7 +841,7 @@ function PaymentModal({ res, onSuccess, onClose }: {
           {t("confirm")}
         </Button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -889,7 +872,7 @@ function ChargeModal({ res, onSuccess, onClose }: {
   }
 
   return (
-    <Modal title={t("title")} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title")} /><ModalBody>
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">{t("description")}</label>
@@ -935,7 +918,7 @@ function ChargeModal({ res, onSuccess, onClose }: {
           {loading ? t("adding") : t("confirm")}
         </button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -964,7 +947,7 @@ function NoteModal({ res, onSuccess, onClose }: {
   }
 
   return (
-    <Modal title={t("title")} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title")} /><ModalBody>
       <div className="space-y-4">
         <textarea
           rows={4}
@@ -982,7 +965,7 @@ function NoteModal({ res, onSuccess, onClose }: {
           {loading ? t("saving") : t("confirm")}
         </button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -1011,7 +994,7 @@ function GenerateInvoicesModal({ res, onSuccess, onClose }: {
   const months = Math.round(res.totalNights / 30);
 
   return (
-    <Modal title={t("title")} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title")} /><ModalBody>
       <div className="space-y-4">
         <div className="p-4 bg-blue-50 rounded-xl text-sm text-blue-800 border border-blue-200">
           {t("body")}
@@ -1038,7 +1021,7 @@ function GenerateInvoicesModal({ res, onSuccess, onClose }: {
           {t("confirm")}
         </Button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -1094,7 +1077,7 @@ function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
   }
 
   return (
-    <Modal title={t("title", { invoice: invoice.invoiceNumber })} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title", { invoice: invoice.invoiceNumber })} /><ModalBody>
       <div className="space-y-4">
         <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
           <div className="flex items-center justify-between">
@@ -1127,7 +1110,7 @@ function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
           {t("confirm")}
         </Button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -1238,7 +1221,7 @@ function ReturnModal({ res, onSuccess, onClose }: {
   const title = isMonthly ? t("titleMonthly", { ref }) : t("titleDaily", { ref });
 
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={title} /><ModalBody>
       <div className="space-y-5">
         {/* Current stay summary */}
         <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-1">
@@ -1427,7 +1410,7 @@ function ReturnModal({ res, onSuccess, onClose }: {
           {loading ? t("processing") : t("confirm")}
         </button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -1473,7 +1456,7 @@ function ProcessRefundModal({ ret, onSuccess, onClose }: {
   }
 
   return (
-    <Modal title={t("title", { ref: ret.returnNumber })} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title", { ref: ret.returnNumber })} /><ModalBody>
       <div className="space-y-4">
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm space-y-1">
           <div className="flex justify-between">
@@ -1560,7 +1543,7 @@ function ProcessRefundModal({ ret, onSuccess, onClose }: {
           {loading ? t("processing") : t("confirm")}
         </button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 

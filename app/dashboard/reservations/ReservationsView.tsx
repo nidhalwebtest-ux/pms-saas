@@ -28,6 +28,7 @@ import {
   ModalHeader,
   getReservationStatusBadge,
   reservationStatusKeyFromDisplayLabel,
+  useConfirmDialog,
 } from "@/components/ui";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -88,7 +89,6 @@ type ModalState =
   | { type: "check-in";  res: ReservationRow }
   | { type: "check-out"; res: ReservationRow }
   | { type: "cancel";    res: ReservationRow }
-  | { type: "no-show";   res: ReservationRow }
   | null;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -381,48 +381,6 @@ function CancelModal({
   );
 }
 
-function NoShowModal({
-  res, onClose, onDone,
-}: { res: ReservationRow; onClose: () => void; onDone: () => void }) {
-  const t = useTranslations("reservations.noShowModal");
-  const [loading, setLoading] = useState(false);
-
-  async function confirm() {
-    setLoading(true);
-    try {
-      const r    = await fetch(`/api/reservations/${res.id}/no-show`, { method: "PATCH" });
-      const data = await r.json();
-      if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
-      toast.success(data.message);
-      onDone();
-    } finally { setLoading(false); }
-  }
-
-  return (
-    <Modal open onClose={onClose} size="sm">
-      <ModalHeader title={t("title")} />
-      <ModalBody>
-      <div className="space-y-4">
-        <GuestInfo res={res} />
-        <p className="text-sm text-gray-600">
-          {t.rich("prompt", {
-            name: `${res.tenant.firstName} ${res.tenant.lastName}`,
-            b: (chunks) => <strong>{chunks}</strong>,
-          })}
-        </p>
-        <ModalActions
-          confirmLabel={t("confirm")}
-          confirmClass="bg-gray-700 hover:bg-gray-800 text-white"
-          loading={loading}
-          onCancel={onClose}
-          onConfirm={confirm}
-        />
-      </div>
-      </ModalBody>
-    </Modal>
-  );
-}
-
 // ── Shared modal UI sub-components ────────────────────────────────────────────
 
 function GuestInfo({ res }: { res: ReservationRow }) {
@@ -522,6 +480,8 @@ export default function ReservationsView({
   const tTabs   = useTranslations("reservations.tabs");
   const tTable  = useTranslations("reservations.table");
   const tSrc    = useTranslations("reservations.sources");
+  const tNoShow = useTranslations("reservations.noShowModal");
+  const confirm = useConfirmDialog();
   const locale  = useLocale();
   const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
 
@@ -639,7 +599,29 @@ export default function ReservationsView({
     else { setSortKey(k); setSortDir("asc"); }
   }
 
-  function handleAction(type: "check-in" | "check-out" | "cancel" | "no-show", res: ReservationRow) {
+  async function handleAction(type: "check-in" | "check-out" | "cancel" | "no-show", res: ReservationRow) {
+    if (type === "no-show") {
+      await confirm({
+        title: tNoShow("title"),
+        description: tNoShow.rich("prompt", {
+          name: `${res.tenant.firstName} ${res.tenant.lastName}`,
+          b: (chunks) => <strong>{chunks}</strong>,
+        }),
+        tone: "warning",
+        confirmLabel: tNoShow("confirm"),
+        onConfirm: async () => {
+          const r    = await fetch(`/api/reservations/${res.id}/no-show`, { method: "PATCH" });
+          const data = await r.json();
+          if (!r.ok) {
+            toast.error(data.error ?? tNoShow("failed"));
+            throw new Error(data.error ?? tNoShow("failed"));
+          }
+          toast.success(data.message);
+          fetchData();
+        },
+      });
+      return;
+    }
     setModal({ type, res } as ModalState);
   }
 
@@ -861,7 +843,6 @@ export default function ReservationsView({
       {modal?.type === "check-in"  && <CheckInModal  res={modal.res} onClose={() => setModal(null)} onDone={onActionDone} />}
       {modal?.type === "check-out" && <CheckOutModal res={modal.res} onClose={() => setModal(null)} onDone={onActionDone} />}
       {modal?.type === "cancel"    && <CancelModal   res={modal.res} onClose={() => setModal(null)} onDone={onActionDone} />}
-      {modal?.type === "no-show"   && <NoShowModal   res={modal.res} onClose={() => setModal(null)} onDone={onActionDone} />}
     </div>
   );
 }

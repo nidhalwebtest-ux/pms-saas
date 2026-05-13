@@ -89,3 +89,22 @@ export type { FileUploadProps } from "./form";
 
 export { ImageUpload } from "./form";
 export type { ImageUploadProps } from "./form";
+
+/* ── Modal ───────────────────────────────────────────────────────────── */
+export {
+  Modal,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  useModal,
+  useModalContext,
+} from "./modal";
+export type {
+  ModalProps,
+  ModalSize,
+  ModalVariant,
+  ModalTone,
+  ModalHeaderProps,
+  ModalBodyProps,
+  ModalFooterProps,
+} from "./modal";

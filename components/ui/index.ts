@@ -108,3 +108,21 @@ export type {
   ModalBodyProps,
   ModalFooterProps,
 } from "./modal";
+
+/* ── ConfirmDialog ───────────────────────────────────────────────────── */
+export {
+  ConfirmDialog,
+  ConfirmDialogProvider,
+  ConfirmDialogContext,
+  useConfirmDialog,
+} from "./confirm-dialog";
+export type {
+  ConfirmDialogProps,
+  ConfirmDialogContextValue,
+  ConfirmDialogOptions,
+  ConfirmDialogResult,
+  ConfirmDialogTone,
+  ConfirmDialogReasonConfig,
+  ConfirmDialogReasonOption,
+  ConfirmDialogTypeToConfirmConfig,
+} from "./confirm-dialog";

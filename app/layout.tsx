@@ -5,6 +5,7 @@ import { getLocale, getMessages } from "next-intl/server";
 import "@/styles/globals.css";
 import { Toaster } from "sonner";
 import { dirFor, type Locale } from "@/i18n/config";
+import { ConfirmDialogProvider } from "@/components/ui";
 
 const sans = IBM_Plex_Sans({
   subsets: ["latin", "latin-ext"],
@@ -46,7 +47,9 @@ export default async function RootLayout({
     <html lang={locale} dir={dir} className={`${sans.variable} ${arabic.variable} ${mono.variable}`}>
       <body className={`antialiased ${locale === "ar" ? "font-arabic" : ""}`}>
         <NextIntlClientProvider locale={locale} messages={messages}>
-          {children}
+          <ConfirmDialogProvider>
+            {children}
+          </ConfirmDialogProvider>
           <Toaster position="top-center" richColors dir={dir} />
         </NextIntlClientProvider>
       </body>

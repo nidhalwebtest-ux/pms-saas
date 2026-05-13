@@ -21,9 +21,9 @@ import {
   DocumentTextIcon,
   CalendarDaysIcon,
   HomeIcon,
-  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import TenantForm from "./TenantForm";
+import { Modal, ModalHeader, ModalBody } from "@/components/ui";
 
 // ... keep your existing PropertyWithUnits and Tenant types ...
 
@@ -292,38 +292,28 @@ export default function ReservationForm({
           }
         }}
       />
-      {isTenantModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative animate-in zoom-in duration-200">
-            <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center z-10">
-              <h2 className="text-lg font-bold text-gray-900">
-                Add Quick Tenant
-              </h2>
-              <button
-                onClick={() => setIsTenantModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="p-6">
-              {/* Pass the onSuccess callback to handle the modal close and auto-select */}
-              <TenantForm
-                onSuccess={(newTenant) => {
-                  const newOption = {
-                    id: newTenant.id,
-                    name: `${newTenant.firstName} ${newTenant.lastName}`,
-                  };
-                  setTenantOptions((prev) => [...prev, newOption]); // Add to dropdown
-                  setSelectedTenant(newOption); // Auto-select it
-                  setIsTenantModalOpen(false); // Close the modal
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={isTenantModalOpen}
+        onClose={() => setIsTenantModalOpen(false)}
+        size="lg"
+        backdropBlur
+      >
+        <ModalHeader title="Add Quick Tenant" />
+        <ModalBody>
+          {/* Pass the onSuccess callback to handle the modal close and auto-select */}
+          <TenantForm
+            onSuccess={(newTenant) => {
+              const newOption = {
+                id: newTenant.id,
+                name: `${newTenant.firstName} ${newTenant.lastName}`,
+              };
+              setTenantOptions((prev) => [...prev, newOption]); // Add to dropdown
+              setSelectedTenant(newOption); // Auto-select it
+              setIsTenantModalOpen(false); // Close the modal
+            }}
+          />
+        </ModalBody>
+      </Modal>
     </>
   );
 }

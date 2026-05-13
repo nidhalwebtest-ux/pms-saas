@@ -17,9 +17,17 @@ import {
   ArrowPathIcon,
   ClipboardDocumentCheckIcon,
 } from "@heroicons/react/24/outline";
-import RejectExpenseModal from "./modals/RejectExpenseModal";
 import ProcessExpenseModal from "./modals/ProcessExpenseModal";
 import ReceiptLightbox from "./modals/ReceiptLightbox";
+
+const REJECT_REASON_KEYS = [
+  "insufficient_receipt",
+  "amount_too_high",
+  "not_authorized",
+  "wrong_category",
+  "duplicate_expense",
+  "other",
+] as const;
 import { useFormatAmount, useOrgCurrency } from "@/lib/org-context";
 import { Badge, getExpenseStatusBadge, useConfirmDialog, type ExpenseStatusKey } from "@/components/ui";
 
@@ -64,6 +72,9 @@ export default function ExpensesListClient({
   const tList = useTranslations("expenses.list");
   const tStatus = useTranslations("expenses.statuses");
   const tTabs = useTranslations("expenses.tabs");
+  const tReject = useTranslations("expenses.rejectModal");
+  const tReason = useTranslations("expenses.rejectModal.reasons");
+  const tRejectErr = useTranslations("expenses.rejectModal.errors");
   const confirm = useConfirmDialog();
   const locale = useLocale();
   const dfLoc = locale === "ar" ? arLocale : enLocale;
@@ -95,7 +106,6 @@ export default function ExpensesListClient({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Modals
-  const [rejectExpense, setRejectExpense]   = useState<Expense | null>(null);
   const [processExpense, setProcessExpense] = useState<Expense | null>(null);
   const [lightboxImages, setLightboxImages] = useState<string[] | null>(null);
 
@@ -182,6 +192,46 @@ export default function ExpensesListClient({
       toast.success(tList("toasts.deleted"));
       fetchExpenses();
     } catch { toast.error(tList("toasts.deleteFailed")); }
+  }
+
+  async function handleReject(e: Expense) {
+    const nonOther = REJECT_REASON_KEYS.filter((k) => k !== "other") as readonly string[];
+    await confirm({
+      title: tReject("title"),
+      description: `${e.expenseNumber} · ${e.amount.toFixed(3)} OMR`,
+      tone: "destructive",
+      reason: {
+        label: tReject("reasonLabel"),
+        placeholder: tReject("reasonPlaceholder"),
+        options: REJECT_REASON_KEYS.map((k) => ({ value: k, label: tReason(k) })),
+        notesFor: [...nonOther],
+        notesRequiredFor: ["other"],
+        notesLabel: tReject("notesLabel"),
+        notesPlaceholder: tReject("notesPlaceholder"),
+      },
+      confirmLabel: tReject("rejectBtn"),
+      cancelLabel: tReject("cancel"),
+      onConfirm: async ({ reason, notes }) => {
+        let res, data;
+        try {
+          res = await fetch(`/api/expenses/${e.id}/reject`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reason: tReason(reason as string), notes: notes ?? "" }),
+          });
+          data = await res.json();
+        } catch {
+          toast.error(tRejectErr("networkError"));
+          throw new Error("network");
+        }
+        if (!res.ok) {
+          toast.error(data.error ?? tRejectErr("rejectFailed"));
+          throw new Error(data.error ?? "reject failed");
+        }
+        toast.success(tRejectErr("rejected"));
+        fetchExpenses();
+      },
+    });
   }
 
   // ── Selection ─────────────────────────────────────────────────────────
@@ -440,7 +490,7 @@ export default function ExpensesListClient({
                                 {tList("rowActions.approve")}
                               </button>
                               <button
-                                onClick={() => setRejectExpense(e)}
+                                onClick={() => handleReject(e)}
                                 className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded text-red-700 bg-white border border-red-200 hover:bg-red-50"
                                 title={tList("rowActions.reject")}
                               >
@@ -513,13 +563,6 @@ export default function ExpensesListClient({
       </div>
 
       {/* ── Modals ──────────────────────────────────────────────────── */}
-      {rejectExpense && (
-        <RejectExpenseModal
-          expense={rejectExpense}
-          onClose={() => setRejectExpense(null)}
-          onDone={() => { setRejectExpense(null); fetchExpenses(); }}
-        />
-      )}
       {processExpense && (
         <ProcessExpenseModal
           expense={processExpense}

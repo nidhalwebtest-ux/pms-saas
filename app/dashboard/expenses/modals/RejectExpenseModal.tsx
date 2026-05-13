@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { XMarkIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { Button } from "@/components/ui";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
 
 interface Expense {
   id: string;
@@ -67,73 +67,57 @@ export default function RejectExpenseModal({ expense, onClose, onDone }: Props) 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl ring-1 ring-gray-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="px-5 py-4 bg-red-50 border-b border-red-100 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <ExclamationTriangleIcon className="h-5 w-5 text-red-600" />
-            </div>
-            <div>
-              <h3 className="text-base font-semibold text-gray-900">{t("title")}</h3>
-              <p className="text-xs text-gray-500 mt-0.5 ltr-numbers">{expense.expenseNumber} · {expense.amount.toFixed(3)} OMR</p>
-            </div>
+    <Modal open onClose={onClose} size="sm" tone="destructive">
+      <ModalHeader
+        title={t("title")}
+        subtitle={`${expense.expenseNumber} · ${expense.amount.toFixed(3)} OMR`}
+        icon={
+          <div className="p-2 bg-error-100 rounded-md">
+            <ExclamationTriangleIcon className="h-5 w-5 text-error-600" />
           </div>
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close">
-            <XMarkIcon className="h-5 w-5" />
-          </Button>
-        </div>
+        }
+      />
+      <ModalBody>
+        <p className="text-sm text-fg-secondary truncate" title={expense.description}>
+          {expense.description}
+        </p>
 
-        {/* Body */}
-        <div className="px-5 py-4 space-y-4">
-          <div>
-            <p className="text-sm text-gray-700 mb-1 truncate" title={expense.description}>{expense.description}</p>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              {t("reasonLabel")} <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:outline-none"
-            >
-              <option value="">{t("reasonPlaceholder")}</option>
-              {REASON_KEYS.map((r) => <option key={r} value={r}>{tReason(r)}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              {t("notesLabel")} {reason === "other" && <span className="text-red-500">*</span>}
-              <span className="text-gray-400 font-normal"> {t("notesHint")}</span>
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder={reason === "other" ? t("notesPlaceholderOther") : t("notesPlaceholder")}
-              rows={3}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-red-500 focus:border-red-500 focus:outline-none resize-none"
-            />
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-2">
-          <Button variant="ghost" onClick={onClose} disabled={saving}>
-            {t("cancel")}
-          </Button>
-          <button
-            onClick={handleReject}
-            disabled={saving || !reason}
-            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-semibold rounded-lg bg-red-600 text-white hover:bg-red-500 disabled:opacity-50 transition-colors"
+        <div className="mt-4">
+          <label className="block text-xs font-semibold text-fg-secondary mb-1.5">
+            {t("reasonLabel")} <span className="text-error-500">*</span>
+          </label>
+          <select
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="w-full rounded-md border border-border-default px-3 py-2 text-sm focus:ring-2 focus:ring-error-500 focus:border-error-500 focus:outline-none"
           >
-            {saving ? t("rejecting") : t("rejectBtn")}
-          </button>
+            <option value="">{t("reasonPlaceholder")}</option>
+            {REASON_KEYS.map((r) => <option key={r} value={r}>{tReason(r)}</option>)}
+          </select>
         </div>
-      </div>
-    </div>
+
+        <div className="mt-4">
+          <label className="block text-xs font-semibold text-fg-secondary mb-1.5">
+            {t("notesLabel")} {reason === "other" && <span className="text-error-500">*</span>}
+            <span className="text-fg-tertiary font-normal"> {t("notesHint")}</span>
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={reason === "other" ? t("notesPlaceholderOther") : t("notesPlaceholder")}
+            rows={3}
+            className="w-full rounded-md border border-border-default px-3 py-2 text-sm focus:ring-2 focus:ring-error-500 focus:border-error-500 focus:outline-none resize-none"
+          />
+        </div>
+      </ModalBody>
+      <ModalFooter>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>
+          {t("cancel")}
+        </Button>
+        <Button variant="destructive" onClick={handleReject} loading={saving} disabled={!reason}>
+          {t("rejectBtn")}
+        </Button>
+      </ModalFooter>
+    </Modal>
   );
 }

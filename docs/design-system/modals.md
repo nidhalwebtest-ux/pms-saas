@@ -39,7 +39,7 @@ import {
 | Detail view that shouldn't lose page context | `drawer-end` (or `drawer-start` rarely) |
 | Mobile-first quick action | `bottom-sheet` |
 | Full-screen lightbox / media viewer | `size="full"` `variant="centered"` `backdropBlur` |
-| Destructive confirmation | `size="sm"` `tone="destructive"` (until `ConfirmDialog` ships) |
+| Destructive confirmation | Use [`ConfirmDialog`](./confirm-dialog.md) — not `Modal` directly |
 
 **Below the `sm` breakpoint (< 640 px):**
 - `centered` / `top-aligned` auto-convert to a bottom-sheet (full-width, slides up from the bottom). Override with `fullScreenOnMobile={false}` if you really want the desktop look.
@@ -112,29 +112,27 @@ this example.
 In LTR the drawer slides in from the right; in RTL it slides in from the
 left — via logical `ms-auto` / `me-auto` + direction-aware `translate`.
 
-### 3. Destructive confirmation (until ConfirmDialog ships)
+### 3. Destructive confirmation — use ConfirmDialog
+
+Reach for [`ConfirmDialog`](./confirm-dialog.md) instead of building this
+shape by hand. It composes `<Modal tone="destructive">` plus the
+header icon, the Cancel/Confirm pair, and an imperative
+`await confirm(...)` API. It also handles reason fields, type-to-confirm
+guards, and async loading.
 
 ```tsx
-<Modal open={open} onClose={close} size="sm" tone="destructive">
-  <ModalHeader
-    title="Cancel reservation?"
-    subtitle="This voids 2 invoices totaling 1,540.000 OMR."
-    icon={
-      <div className="p-2 bg-error-100 rounded-md">
-        <ExclamationTriangleIcon className="h-5 w-5 text-error-600" />
-      </div>
-    }
-  />
-  <ModalFooter>
-    <Button variant="ghost" onClick={close}>Keep reservation</Button>
-    <Button variant="destructive" onClick={confirm}>Cancel reservation</Button>
-  </ModalFooter>
-</Modal>
-```
+const confirm = useConfirmDialog();
 
-`tone="destructive"` paints the header `bg-error-50 border-error-200`. The
-ConfirmDialog component (next on the design-system roadmap) will be a
-prebuilt version of this exact shape.
+if ((await confirm({
+  title: "Cancel reservation?",
+  description: "This voids 2 invoices totaling 1,540.000 OMR.",
+  tone: "destructive",
+  confirmLabel: "Cancel reservation",
+  cancelLabel: "Keep reservation",
+})).confirmed) {
+  // …
+}
+```
 
 ### 4. Multi-step with progress bar
 

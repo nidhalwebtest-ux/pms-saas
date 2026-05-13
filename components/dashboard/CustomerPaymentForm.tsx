@@ -26,7 +26,7 @@ import {
   UserIcon,
 } from "@heroicons/react/24/outline";
 import TenantForm from "@/components/dashboard/TenantForm";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { Modal, ModalHeader, ModalBody } from "@/components/ui";
 
 interface Props {
   tenants: { id: string; firstName: string; lastName: string }[];
@@ -322,37 +322,27 @@ export default function CustomerPaymentForm({ tenants, initialData }: Props) {
           isPending={isPending}
         />
       </form>
-      {isTenantModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto relative animate-in zoom-in duration-200">
-            <div className="sticky top-0 bg-white px-6 py-4 border-b border-gray-100 flex justify-between items-center z-10">
-              <h2 className="text-lg font-bold text-gray-900">
-                {t("addQuickTenant")}
-              </h2>
-              <button
-                onClick={() => setIsTenantModalOpen(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="p-6">
-              <TenantForm
-                onSuccess={(newTenant) => {
-                  const newOption = {
-                    id: newTenant.id,
-                    name: `${newTenant.firstName} ${newTenant.lastName}`,
-                  };
-                  setTenantOptions((prev) => [...prev, newOption]);
-                  setSelectedTenant(newOption);
-                  setIsTenantModalOpen(false);
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
+      <Modal
+        open={isTenantModalOpen}
+        onClose={() => setIsTenantModalOpen(false)}
+        size="lg"
+        backdropBlur
+      >
+        <ModalHeader title={t("addQuickTenant")} />
+        <ModalBody>
+          <TenantForm
+            onSuccess={(newTenant) => {
+              const newOption = {
+                id: newTenant.id,
+                name: `${newTenant.firstName} ${newTenant.lastName}`,
+              };
+              setTenantOptions((prev) => [...prev, newOption]);
+              setSelectedTenant(newOption);
+              setIsTenantModalOpen(false);
+            }}
+          />
+        </ModalBody>
+      </Modal>
     </>
   );
 }

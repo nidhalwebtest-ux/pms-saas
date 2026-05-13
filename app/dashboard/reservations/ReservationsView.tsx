@@ -23,6 +23,9 @@ import type { DisplayStatus, TabKey } from "@/lib/reservation-status";
 import {
   Badge,
   Button,
+  Modal,
+  ModalBody,
+  ModalHeader,
   getReservationStatusBadge,
   reservationStatusKeyFromDisplayLabel,
 } from "@/components/ui";
@@ -173,7 +176,9 @@ function CheckInModal({
   }
 
   return (
-    <ModalShell title={t("title")} onClose={onClose}>
+    <Modal open onClose={onClose} size="sm">
+      <ModalHeader title={t("title")} />
+      <ModalBody>
       <div className="space-y-4">
         <GuestInfo res={res} />
         {isEarly && (
@@ -195,7 +200,8 @@ function CheckInModal({
           onConfirm={confirm}
         />
       </div>
-    </ModalShell>
+      </ModalBody>
+    </Modal>
   );
 }
 
@@ -234,7 +240,9 @@ function CheckOutModal({
   }
 
   return (
-    <ModalShell title={t("title")} onClose={onClose}>
+    <Modal open onClose={onClose} size="sm">
+      <ModalHeader title={t("title")} />
+      <ModalBody>
       <div className="space-y-4">
         <GuestInfo res={res} />
 
@@ -283,7 +291,8 @@ function CheckOutModal({
           onConfirm={confirm}
         />
       </div>
-    </ModalShell>
+      </ModalBody>
+    </Modal>
   );
 }
 
@@ -318,7 +327,9 @@ function CancelModal({
   }
 
   return (
-    <ModalShell title={t("title")} onClose={onClose}>
+    <Modal open onClose={onClose} size="sm">
+      <ModalHeader title={t("title")} />
+      <ModalBody>
       <div className="space-y-4">
         <GuestInfo res={res} />
 
@@ -365,7 +376,8 @@ function CancelModal({
           disabled={!reason}
         />
       </div>
-    </ModalShell>
+      </ModalBody>
+    </Modal>
   );
 }
 
@@ -387,7 +399,9 @@ function NoShowModal({
   }
 
   return (
-    <ModalShell title={t("title")} onClose={onClose}>
+    <Modal open onClose={onClose} size="sm">
+      <ModalHeader title={t("title")} />
+      <ModalBody>
       <div className="space-y-4">
         <GuestInfo res={res} />
         <p className="text-sm text-gray-600">
@@ -404,27 +418,12 @@ function NoShowModal({
           onConfirm={confirm}
         />
       </div>
-    </ModalShell>
+      </ModalBody>
+    </Modal>
   );
 }
 
 // ── Shared modal UI sub-components ────────────────────────────────────────────
-
-function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-          <h3 className="text-base font-semibold text-gray-900">{title}</h3>
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close">
-            <XMarkIcon className="h-5 w-5" />
-          </Button>
-        </div>
-        <div className="px-5 py-4">{children}</div>
-      </div>
-    </div>
-  );
-}
 
 function GuestInfo({ res }: { res: ReservationRow }) {
   const t = useTranslations("reservations.guestInfo");

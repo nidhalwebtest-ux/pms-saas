@@ -3119,7 +3119,11 @@
         "cancelTitle": "Cancel invitation",
         "cancelConfirm": "Cancel?",
         "yes": "Yes",
-        "no": "No"
+        "no": "No",
+        "cancelDialogTitle": "Cancel invitation?",
+        "cancelDialogDescription": "The invitation sent to {email} will be voided. You can invite them again later.",
+        "cancelDialogConfirm": "Cancel invitation",
+        "cancelDialogKeep": "Keep invitation"
       },
       "permissions": {
         "title": "Role Permissions",
@@ -3155,7 +3159,11 @@
         "cancelTitle": "Cancel",
         "removeConfirm": "Remove?",
         "yes": "Yes",
-        "no": "No"
+        "no": "No",
+        "removeDialogTitle": "Remove team member?",
+        "removeDialogDescription": "{name} will lose access to this organization. You can invite them again later.",
+        "removeDialogConfirm": "Remove",
+        "removeDialogCancel": "Keep member"
       },
       "errors": {
         "noPermission": "You do not have permission to invite team members.",

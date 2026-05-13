@@ -3119,7 +3119,11 @@
         "cancelTitle": "إلغاء الدعوة",
         "cancelConfirm": "إلغاء؟",
         "yes": "نعم",
-        "no": "لا"
+        "no": "لا",
+        "cancelDialogTitle": "إلغاء الدعوة؟",
+        "cancelDialogDescription": "سيتم إبطال الدعوة المرسلة إلى {email}. يمكنك دعوتهم مرة أخرى لاحقاً.",
+        "cancelDialogConfirm": "إلغاء الدعوة",
+        "cancelDialogKeep": "الإبقاء على الدعوة"
       },
       "permissions": {
         "title": "صلاحيات الأدوار",
@@ -3155,7 +3159,11 @@
         "cancelTitle": "إلغاء",
         "removeConfirm": "حذف؟",
         "yes": "نعم",
-        "no": "لا"
+        "no": "لا",
+        "removeDialogTitle": "حذف عضو الفريق؟",
+        "removeDialogDescription": "سيفقد {name} الوصول إلى هذه المنظمة. يمكنك دعوتهم مرة أخرى لاحقاً.",
+        "removeDialogConfirm": "حذف",
+        "removeDialogCancel": "الإبقاء على العضو"
       },
       "errors": {
         "noPermission": "ليس لديك صلاحية لدعوة أعضاء الفريق.",

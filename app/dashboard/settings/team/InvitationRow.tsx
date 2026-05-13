@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { ClockIcon, ArrowPathIcon, XMarkIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
 import { type Role } from "@/lib/permissions";
 import { cancelInvitation, resendInvitation } from "./actions";
 import type { UserRole } from "@prisma/client";
-import { Badge, Button, getUserRoleBadge } from "@/components/ui";
+import { Badge, getUserRoleBadge, useConfirmDialog } from "@/components/ui";
 
 interface Invitation {
   id:        string;
@@ -20,8 +20,8 @@ interface Invitation {
 export default function InvitationRow({ invite }: { invite: Invitation }) {
   const t      = useTranslations("settings.team.pending");
   const tRoles = useTranslations("settings.roles");
+  const confirm = useConfirmDialog();
 
-  const [confirming, setConfirming] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   function timeLeftLabel(expiresAt: Date): { label: string; expired: boolean } {
@@ -36,7 +36,15 @@ export default function InvitationRow({ invite }: { invite: Invitation }) {
   const { label, expired } = timeLeftLabel(invite.expiresAt);
   const inviterName = invite.invitedBy.firstName ?? invite.invitedBy.email.split("@")[0];
 
-  function handleCancel() {
+  async function handleCancel() {
+    const { confirmed } = await confirm({
+      title: t("cancelDialogTitle"),
+      description: t("cancelDialogDescription", { email: invite.email }),
+      tone: "destructive",
+      confirmLabel: t("cancelDialogConfirm"),
+      cancelLabel: t("cancelDialogKeep"),
+    });
+    if (!confirmed) return;
     startTransition(async () => {
       await cancelInvitation(invite.id);
     });
@@ -45,7 +53,6 @@ export default function InvitationRow({ invite }: { invite: Invitation }) {
   function handleResend() {
     startTransition(async () => {
       await resendInvitation(invite.id);
-      setConfirming(false);
     });
   }
 
@@ -78,42 +85,24 @@ export default function InvitationRow({ invite }: { invite: Invitation }) {
         </span>
 
         {/* Resend */}
-        {!confirming && (
-          <button
-            onClick={handleResend}
-            disabled={isPending}
-            title={t("resendTitle")}
-            className="rounded p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors disabled:opacity-50"
-          >
-            <ArrowPathIcon className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`} />
-          </button>
-        )}
+        <button
+          onClick={handleResend}
+          disabled={isPending}
+          title={t("resendTitle")}
+          className="rounded p-1.5 text-gray-400 hover:bg-blue-50 hover:text-blue-600 transition-colors disabled:opacity-50"
+        >
+          <ArrowPathIcon className={`h-4 w-4 ${isPending ? "animate-spin" : ""}`} />
+        </button>
 
         {/* Cancel */}
-        {!confirming ? (
-          <button
-            onClick={() => setConfirming(true)}
-            disabled={isPending}
-            title={t("cancelTitle")}
-            className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
-          >
-            <XMarkIcon className="h-4 w-4" />
-          </button>
-        ) : (
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-red-600 font-medium">{t("cancelConfirm")}</span>
-            <Button variant="destructive" size="sm" onClick={handleCancel} disabled={isPending}>
-              {t("yes")}
-            </Button>
-            <button
-              onClick={() => setConfirming(false)}
-              disabled={isPending}
-              className="rounded bg-gray-200 px-2 py-1 text-xs text-gray-700 hover:bg-gray-300 disabled:opacity-50"
-            >
-              {t("no")}
-            </button>
-          </div>
-        )}
+        <button
+          onClick={handleCancel}
+          disabled={isPending}
+          title={t("cancelTitle")}
+          className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
+        >
+          <XMarkIcon className="h-4 w-4" />
+        </button>
       </div>
     </li>
   );

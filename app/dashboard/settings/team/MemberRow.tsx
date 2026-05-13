@@ -6,7 +6,7 @@ import { PencilSquareIcon, TrashIcon, CheckIcon, XMarkIcon } from "@heroicons/re
 import { type Role } from "@/lib/permissions";
 import { updateMemberRole, removeTeamMember } from "./actions";
 import type { UserRole } from "@prisma/client";
-import { Badge, Button, getUserRoleBadge } from "@/components/ui";
+import { Badge, Button, getUserRoleBadge, useConfirmDialog } from "@/components/ui";
 
 const ASSIGNABLE_ROLES: UserRole[] = ["MANAGER", "STAFF", "ACCOUNTANT"];
 
@@ -29,10 +29,10 @@ export default function MemberRow({
 }) {
   const t      = useTranslations("settings.team.staff");
   const tRoles = useTranslations("settings.roles");
+  const confirm = useConfirmDialog();
 
   const [editing, setEditing]     = useState(false);
   const [selected, setSelected]   = useState<UserRole>(member.role);
-  const [confirming, setConfirming] = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -56,14 +56,21 @@ export default function MemberRow({
     });
   }
 
-  function handleRemove() {
+  async function handleRemove() {
+    const { confirmed } = await confirm({
+      title: t("removeDialogTitle"),
+      description: t("removeDialogDescription", { name: displayName }),
+      tone: "destructive",
+      confirmLabel: t("removeDialogConfirm"),
+      cancelLabel: t("removeDialogCancel"),
+    });
+    if (!confirmed) return;
     setError(null);
     startTransition(async () => {
       try {
         await removeTeamMember(member.id);
       } catch (e: any) {
         setError(e.message);
-        setConfirming(false);
       }
     });
   }
@@ -135,31 +142,16 @@ export default function MemberRow({
           </button>
         )}
 
-        {/* Remove button / confirm */}
-        {canDelete && !editing && !confirming && (
+        {/* Remove button */}
+        {canDelete && !editing && (
           <button
-            onClick={() => setConfirming(true)}
-            className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+            onClick={handleRemove}
+            disabled={isPending}
+            className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
             title={t("removeTitle")}
           >
             <TrashIcon className="h-4 w-4" />
           </button>
-        )}
-
-        {confirming && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-red-600 font-medium">{t("removeConfirm")}</span>
-            <Button variant="destructive" size="sm" onClick={handleRemove} disabled={isPending}>
-              {t("yes")}
-            </Button>
-            <button
-              onClick={() => setConfirming(false)}
-              disabled={isPending}
-              className="rounded bg-gray-200 px-2 py-1 text-xs text-gray-700 hover:bg-gray-300 disabled:opacity-50"
-            >
-              {t("no")}
-            </button>
-          </div>
         )}
       </div>
 

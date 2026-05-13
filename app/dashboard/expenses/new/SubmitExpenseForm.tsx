@@ -127,7 +127,7 @@ export default function SubmitExpenseForm({ properties, defaultPropertyId }: Pro
     if (!description.trim()) return toast.error(tErr("descriptionRequired"));
     const amt = parseFloat(amount);
     if (isNaN(amt) || amt <= 0) return toast.error(tErr("amountInvalid"));
-    if (receipts.length === 0) return toast.error(tErr("receiptRequired"));
+    // Receipt image is optional for now while the Storage RLS is sorted out.
 
     setSubmitting(true);
     try {
@@ -166,7 +166,7 @@ export default function SubmitExpenseForm({ properties, defaultPropertyId }: Pro
     if (!description.trim()) return toast.error(tErr("descriptionRequired"));
     const amt = parseFloat(amount);
     if (isNaN(amt) || amt <= 0) return toast.error(tErr("amountPositive"));
-    if (receipts.length === 0) return toast.error(tErr("receiptRequiredShort"));
+    // Receipt image is optional for now while the Storage RLS is sorted out.
 
     setSubmitting(true);
     try {
@@ -324,7 +324,7 @@ export default function SubmitExpenseForm({ properties, defaultPropertyId }: Pro
         <div className="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
           <CameraIcon className="h-4 w-4 text-gray-400" />
           <h3 className="text-sm font-semibold text-gray-700">{t("receiptHeading")}</h3>
-          <span className="text-xs text-red-500 font-medium">*</span>
+          <span className="text-xs text-gray-400 font-normal">(optional)</span>
           <span className="ms-auto text-xs text-gray-400 ltr-numbers">{t("receiptCount", { count: receipts.length, max: 2 })}</span>
         </div>
 

@@ -753,7 +753,7 @@ model Expense {
   property       Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   // --- Receipt ---
-  receiptImage   String          // file URL
+  receiptImage   String?         // file URL — optional for now (storage RLS rollout)
   receiptImage2  String?         // second receipt image
 
   // --- Workflow ---

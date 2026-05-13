@@ -4,13 +4,12 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
-  XMarkIcon,
   ClipboardDocumentCheckIcon,
   BanknotesIcon,
   BuildingLibraryIcon,
   CheckBadgeIcon,
 } from "@heroicons/react/24/outline";
-import { Button } from "@/components/ui";
+import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
 
 interface Expense {
   id: string;
@@ -71,99 +70,83 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-xl ring-1 ring-gray-200 w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-        {/* Header */}
-        <div className="px-5 py-4 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <ClipboardDocumentCheckIcon className="h-5 w-5 text-blue-600" />
-            </div>
-            <div>
-              <h3 className="text-base font-semibold text-gray-900">{t("title")}</h3>
-              <p className="text-xs text-gray-500 mt-0.5 ltr-numbers">{expense.expenseNumber} · {expense.amount.toFixed(3)} OMR</p>
-            </div>
+    <Modal open onClose={onClose} size="sm">
+      <ModalHeader
+        title={t("title")}
+        subtitle={`${expense.expenseNumber} · ${expense.amount.toFixed(3)} OMR`}
+        icon={
+          <div className="p-2 bg-info-50 rounded-md">
+            <ClipboardDocumentCheckIcon className="h-5 w-5 text-info-600" />
           </div>
-          <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close">
-            <XMarkIcon className="h-5 w-5" />
-          </Button>
+        }
+      />
+      <ModalBody>
+        <p className="text-sm text-fg-secondary truncate" title={expense.description}>{expense.description}</p>
+
+        <div className="mt-4">
+          <label className="block text-xs font-semibold text-fg-secondary mb-2">
+            {t("methodLabel")} <span className="text-error-500">*</span>
+          </label>
+          <div className="space-y-2">
+            {METHODS.map((m) => {
+              const Icon = m.icon;
+              const active = paymentMethod === m.key;
+              return (
+                <button
+                  key={m.key}
+                  type="button"
+                  onClick={() => setPaymentMethod(m.key)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md border transition-colors duration-fast ease-out text-start ${
+                    active
+                      ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500"
+                      : "border-border-default hover:border-border-strong hover:bg-subtle"
+                  }`}
+                >
+                  <Icon className={`h-5 w-5 ${active ? "text-brand-600" : "text-fg-tertiary"}`} />
+                  <span className={`text-sm font-medium ${active ? "text-brand-700" : "text-fg-secondary"}`}>
+                    {tMethod(m.key)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Body */}
-        <div className="px-5 py-4 space-y-4">
-          <p className="text-sm text-gray-700 truncate" title={expense.description}>{expense.description}</p>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-2">
-              {t("methodLabel")} <span className="text-red-500">*</span>
+        {paymentMethod === "bank_transfer" && (
+          <div className="mt-4">
+            <label className="block text-xs font-semibold text-fg-secondary mb-1.5">
+              {t("bankRefLabel")} <span className="text-error-500">*</span>
             </label>
-            <div className="space-y-2">
-              {METHODS.map((m) => {
-                const Icon = m.icon;
-                const active = paymentMethod === m.key;
-                return (
-                  <button
-                    key={m.key}
-                    type="button"
-                    onClick={() => setPaymentMethod(m.key)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all text-start ${
-                      active
-                        ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500"
-                        : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                    }`}
-                  >
-                    <Icon className={`h-5 w-5 ${active ? "text-blue-600" : "text-gray-400"}`} />
-                    <span className={`text-sm font-medium ${active ? "text-blue-900" : "text-gray-700"}`}>
-                      {tMethod(m.key)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {paymentMethod === "bank_transfer" && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-                {t("bankRefLabel")} <span className="text-red-500">*</span>
-              </label>
-              <input
-                value={bankReference}
-                onChange={(e) => setBankReference(e.target.value)}
-                placeholder={t("bankRefPlaceholder")}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-          )}
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              {t("notesLabel")} <span className="text-gray-400 font-normal">{t("notesOptional")}</span>
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder={t("notesPlaceholder")}
-              rows={2}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none resize-none"
+            <input
+              value={bankReference}
+              onChange={(e) => setBankReference(e.target.value)}
+              placeholder={t("bankRefPlaceholder")}
+              className="w-full rounded-md border border-border-default px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 focus:outline-none"
             />
           </div>
-        </div>
+        )}
 
-        {/* Footer */}
-        <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-2">
-          <Button variant="ghost" onClick={onClose} disabled={saving}>
-            {t("cancel")}
-          </Button>
-          <Button
-            onClick={handleProcess}
-            loading={saving}
-            disabled={!paymentMethod}
-          >
-            {t("processBtn")}
-          </Button>
+        <div className="mt-4">
+          <label className="block text-xs font-semibold text-fg-secondary mb-1.5">
+            {t("notesLabel")} <span className="text-fg-tertiary font-normal">{t("notesOptional")}</span>
+          </label>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={t("notesPlaceholder")}
+            rows={2}
+            className="w-full rounded-md border border-border-default px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 focus:outline-none resize-none"
+          />
         </div>
-      </div>
-    </div>
+      </ModalBody>
+      <ModalFooter>
+        <Button variant="ghost" onClick={onClose} disabled={saving}>
+          {t("cancel")}
+        </Button>
+        <Button onClick={handleProcess} loading={saving} disabled={!paymentMethod}>
+          {t("processBtn")}
+        </Button>
+      </ModalFooter>
+    </Modal>
   );
 }

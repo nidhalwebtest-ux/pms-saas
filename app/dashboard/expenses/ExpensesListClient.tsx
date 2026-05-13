@@ -21,7 +21,7 @@ import RejectExpenseModal from "./modals/RejectExpenseModal";
 import ProcessExpenseModal from "./modals/ProcessExpenseModal";
 import ReceiptLightbox from "./modals/ReceiptLightbox";
 import { useFormatAmount, useOrgCurrency } from "@/lib/org-context";
-import { Badge, getExpenseStatusBadge, type ExpenseStatusKey } from "@/components/ui";
+import { Badge, getExpenseStatusBadge, useConfirmDialog, type ExpenseStatusKey } from "@/components/ui";
 
 type Status = "PENDING" | "APPROVED" | "REJECTED" | "PROCESSED";
 
@@ -64,6 +64,7 @@ export default function ExpensesListClient({
   const tList = useTranslations("expenses.list");
   const tStatus = useTranslations("expenses.statuses");
   const tTabs = useTranslations("expenses.tabs");
+  const confirm = useConfirmDialog();
   const locale = useLocale();
   const dfLoc = locale === "ar" ? arLocale : enLocale;
   const fmtAmount = useFormatAmount();
@@ -166,7 +167,14 @@ export default function ExpensesListClient({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(tList("toasts.deleteConfirm"))) return;
+    const { confirmed } = await confirm({
+      title: tList("toasts.deleteTitle"),
+      description: tList("toasts.deleteConfirm"),
+      tone: "destructive",
+      confirmLabel: tList("toasts.deleteCta"),
+      cancelLabel: tList("toasts.cancelCta"),
+    });
+    if (!confirmed) return;
     try {
       const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" });
       const d = await res.json();

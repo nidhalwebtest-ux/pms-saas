@@ -12,7 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 import RejectExpenseModal from "../modals/RejectExpenseModal";
 import ProcessExpenseModal from "../modals/ProcessExpenseModal";
-import { Button } from "@/components/ui";
+import { Button, useConfirmDialog } from "@/components/ui";
 
 interface Expense {
   id: string;
@@ -34,6 +34,7 @@ export default function ExpenseActionPanel({
 }: Props) {
   const router = useRouter();
   const t = useTranslations("expenses.actionPanel");
+  const confirm = useConfirmDialog();
   const [showReject, setShowReject]   = useState(false);
   const [showProcess, setShowProcess] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -51,7 +52,14 @@ export default function ExpenseActionPanel({
   }
 
   async function handleDelete() {
-    if (!confirm(t("deleteConfirm"))) return;
+    const { confirmed } = await confirm({
+      title: t("deleteTitle"),
+      description: t("deleteConfirm"),
+      tone: "destructive",
+      confirmLabel: t("deleteCta"),
+      cancelLabel: t("cancelCta"),
+    });
+    if (!confirmed) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/expenses/${expense.id}`, { method: "DELETE" });

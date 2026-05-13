@@ -2898,7 +2898,10 @@
         "bulkApproveFailed": "Bulk approve failed",
         "deleted": "Expense deleted",
         "deleteFailed": "Delete failed",
-        "deleteConfirm": "Delete this pending expense?"
+        "deleteConfirm": "Delete this pending expense?",
+        "deleteTitle": "Delete expense?",
+        "deleteCta": "Delete",
+        "cancelCta": "Cancel"
       }
     },
     "detail": {
@@ -2941,6 +2944,9 @@
       "deleteBtn": "Delete",
       "noActions": "No actions available",
       "deleteConfirm": "Delete this pending expense? This cannot be undone.",
+      "deleteTitle": "Delete expense?",
+      "deleteCta": "Delete",
+      "cancelCta": "Cancel",
       "deleted": "Expense deleted",
       "deleteFailed": "Failed to delete",
       "approved": "Expense approved",

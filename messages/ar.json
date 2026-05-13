@@ -2898,7 +2898,10 @@
         "bulkApproveFailed": "تعذر الاعتماد الجماعي",
         "deleted": "تم حذف المصروف",
         "deleteFailed": "تعذر الحذف",
-        "deleteConfirm": "هل تريد حذف هذا المصروف قيد المراجعة؟"
+        "deleteConfirm": "هل تريد حذف هذا المصروف قيد المراجعة؟",
+        "deleteTitle": "حذف المصروف؟",
+        "deleteCta": "حذف",
+        "cancelCta": "إلغاء"
       }
     },
     "detail": {
@@ -2941,6 +2944,9 @@
       "deleteBtn": "حذف",
       "noActions": "لا توجد إجراءات متاحة",
       "deleteConfirm": "هل تريد حذف هذا المصروف قيد المراجعة؟ لا يمكن التراجع عن هذا الإجراء.",
+      "deleteTitle": "حذف المصروف؟",
+      "deleteCta": "حذف",
+      "cancelCta": "إلغاء",
       "deleted": "تم حذف المصروف",
       "deleteFailed": "تعذر الحذف",
       "approved": "تم اعتماد المصروف",

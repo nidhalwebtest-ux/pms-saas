@@ -770,7 +770,8 @@
         "confirmYes": "احذف نهائياً",
         "working": "جارٍ الحذف…",
         "successToast": "تم حذف \"{name}\" نهائياً.",
-        "cancel": "إلغاء"
+        "cancel": "إلغاء",
+        "typeToConfirmLabel": "اكتب \"{name}\" للتأكيد"
       }
     },
     "errors": {

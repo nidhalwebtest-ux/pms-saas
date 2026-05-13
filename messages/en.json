@@ -770,7 +770,8 @@
         "confirmYes": "Delete Forever",
         "working": "Deleting…",
         "successToast": "\"{name}\" has been permanently deleted.",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "typeToConfirmLabel": "Type \"{name}\" to confirm"
       }
     },
     "errors": {

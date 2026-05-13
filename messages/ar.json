@@ -1591,12 +1591,12 @@
     "cancelModal": {
       "title": "إلغاء الحجز",
       "totalPaidRefund": "إجمالي المدفوع: <b>{amount} ر.ع.</b> — قد يلزم استرداد المبلغ.",
-      "reasonLabel": "السبب *",
+      "reasonLabel": "السبب",
       "selectReason": "اختر السبب…",
-      "notesLabelRequired": "ملاحظات *",
-      "notesLabelOptional": "ملاحظات (اختياري)",
+      "notesLabel": "ملاحظات",
       "notesPlaceholder": "أضف أي تفاصيل إضافية…",
       "confirm": "إلغاء الحجز",
+      "keep": "الإبقاء على الحجز",
       "errors": {
         "selectReason": "يرجى اختيار سبب الإلغاء.",
         "notesRequired": "الملاحظات مطلوبة عند اختيار سبب 'أخرى'.",

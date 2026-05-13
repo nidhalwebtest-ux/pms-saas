@@ -88,7 +88,6 @@ interface AdvFilters {
 type ModalState =
   | { type: "check-in";  res: ReservationRow }
   | { type: "check-out"; res: ReservationRow }
-  | { type: "cancel";    res: ReservationRow }
   | null;
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -304,83 +303,6 @@ const CANCEL_REASONS: { value: string; labelKey: string }[] = [
   { value: "Other",              labelKey: "other" },
 ];
 
-function CancelModal({
-  res, onClose, onDone,
-}: { res: ReservationRow; onClose: () => void; onDone: () => void }) {
-  const t = useTranslations("reservations.cancelModal");
-  const [loading, setLoading] = useState(false);
-  const [reason,  setReason]  = useState("");
-  const [notes,   setNotes]   = useState("");
-  const totalPaid = Number(res.amountPaid);
-
-  async function confirm() {
-    if (!reason) { toast.error(t("errors.selectReason")); return; }
-    if (reason === "Other" && !notes.trim()) { toast.error(t("errors.notesRequired")); return; }
-    setLoading(true);
-    try {
-      const r    = await fetch(`/api/reservations/${res.id}/cancel`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason, notes }) });
-      const data = await r.json();
-      if (!r.ok) { toast.error(data.error ?? t("errors.cancelFailed")); return; }
-      toast.success(data.message ?? t("successDefault"));
-      onDone();
-    } finally { setLoading(false); }
-  }
-
-  return (
-    <Modal open onClose={onClose} size="sm">
-      <ModalHeader title={t("title")} />
-      <ModalBody>
-      <div className="space-y-4">
-        <GuestInfo res={res} />
-
-        {totalPaid > 0 && (
-          <div className="flex gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
-            <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-amber-500 mt-0.5" />
-            <span>
-              {t.rich("totalPaidRefund", {
-                amount: totalPaid.toFixed(3),
-                b: (chunks) => <strong>{chunks}</strong>,
-              })}
-            </span>
-          </div>
-        )}
-
-        <div>
-          <label className="block text-xs font-medium text-gray-700 mb-1">{t("reasonLabel")}</label>
-          <select value={reason} onChange={(e) => setReason(e.target.value)}
-            className="block w-full rounded-md border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-red-500">
-            <option value="">{t("selectReason")}</option>
-            {CANCEL_REASONS.map((r) => (
-              <option key={r.value} value={r.value}>{t(`reasons.${r.labelKey}`)}</option>
-            ))}
-          </select>
-        </div>
-
-        {(reason === "Other" || reason) && (
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              {reason === "Other" ? t("notesLabelRequired") : t("notesLabelOptional")}
-            </label>
-            <textarea rows={3} value={notes} onChange={(e) => setNotes(e.target.value)}
-              className="block w-full rounded-md border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-red-500"
-              placeholder={t("notesPlaceholder")} />
-          </div>
-        )}
-
-        <ModalActions
-          confirmLabel={t("confirm")}
-          confirmClass="bg-red-600 hover:bg-red-700 text-white"
-          loading={loading}
-          onCancel={onClose}
-          onConfirm={confirm}
-          disabled={!reason}
-        />
-      </div>
-      </ModalBody>
-    </Modal>
-  );
-}
-
 // ── Shared modal UI sub-components ────────────────────────────────────────────
 
 function GuestInfo({ res }: { res: ReservationRow }) {
@@ -481,6 +403,7 @@ export default function ReservationsView({
   const tTable  = useTranslations("reservations.table");
   const tSrc    = useTranslations("reservations.sources");
   const tNoShow = useTranslations("reservations.noShowModal");
+  const tCancel = useTranslations("reservations.cancelModal");
   const confirm = useConfirmDialog();
   const locale  = useLocale();
   const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
@@ -617,6 +540,55 @@ export default function ReservationsView({
             throw new Error(data.error ?? tNoShow("failed"));
           }
           toast.success(data.message);
+          fetchData();
+        },
+      });
+      return;
+    }
+    if (type === "cancel") {
+      const totalPaid = Number(res.amountPaid);
+      const refundBody = totalPaid > 0 ? (
+        <div className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-amber-500 mt-0.5" />
+          <span>
+            {tCancel.rich("totalPaidRefund", {
+              amount: totalPaid.toFixed(3),
+              b: (chunks) => <strong>{chunks}</strong>,
+            })}
+          </span>
+        </div>
+      ) : undefined;
+      const nonOther = CANCEL_REASONS.filter((r) => r.value !== "Other").map((r) => r.value);
+      await confirm({
+        title: tCancel("title"),
+        tone: "destructive",
+        body: refundBody,
+        reason: {
+          label: tCancel("reasonLabel"),
+          placeholder: tCancel("selectReason"),
+          options: CANCEL_REASONS.map((r) => ({
+            value: r.value,
+            label: tCancel(`reasons.${r.labelKey}`),
+          })),
+          notesFor: nonOther,
+          notesRequiredFor: ["Other"],
+          notesLabel: tCancel("notesLabel"),
+          notesPlaceholder: tCancel("notesPlaceholder"),
+        },
+        confirmLabel: tCancel("confirm"),
+        cancelLabel: tCancel("keep"),
+        onConfirm: async ({ reason, notes }) => {
+          const r = await fetch(`/api/reservations/${res.id}/cancel`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reason, notes: notes ?? "" }),
+          });
+          const data = await r.json();
+          if (!r.ok) {
+            toast.error(data.error ?? tCancel("errors.cancelFailed"));
+            throw new Error(data.error ?? tCancel("errors.cancelFailed"));
+          }
+          toast.success(data.message ?? tCancel("successDefault"));
           fetchData();
         },
       });
@@ -842,7 +814,6 @@ export default function ReservationsView({
       {/* ── Modals ─────────────────────────────────────────────────────────── */}
       {modal?.type === "check-in"  && <CheckInModal  res={modal.res} onClose={() => setModal(null)} onDone={onActionDone} />}
       {modal?.type === "check-out" && <CheckOutModal res={modal.res} onClose={() => setModal(null)} onDone={onActionDone} />}
-      {modal?.type === "cancel"    && <CancelModal   res={modal.res} onClose={() => setModal(null)} onDone={onActionDone} />}
     </div>
   );
 }

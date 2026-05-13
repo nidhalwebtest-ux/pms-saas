@@ -1591,12 +1591,12 @@
     "cancelModal": {
       "title": "Cancel Reservation",
       "totalPaidRefund": "Total paid: <b>{amount} OMR</b> — a refund may be required.",
-      "reasonLabel": "Reason *",
+      "reasonLabel": "Reason",
       "selectReason": "Select reason…",
-      "notesLabelRequired": "Notes *",
-      "notesLabelOptional": "Notes (optional)",
+      "notesLabel": "Notes",
       "notesPlaceholder": "Add any additional details…",
       "confirm": "Cancel Reservation",
+      "keep": "Keep Reservation",
       "errors": {
         "selectReason": "Please select a cancellation reason.",
         "notesRequired": "Notes are required when reason is 'Other'.",

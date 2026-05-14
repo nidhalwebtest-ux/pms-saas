@@ -12,24 +12,30 @@ import {
   MagnifyingGlassIcon,
   AdjustmentsHorizontalIcon,
   PlusIcon,
-  ArrowUpIcon,
-  ArrowDownIcon,
-  ChevronUpDownIcon,
   XMarkIcon,
   ExclamationTriangleIcon,
   ArrowPathIcon,
+  ArrowLeftOnRectangleIcon,
+  ArrowRightOnRectangleIcon,
+  NoSymbolIcon,
+  XCircleIcon,
 } from "@heroicons/react/24/outline";
+import type { SortingState } from "@tanstack/react-table";
 import type { DisplayStatus, TabKey } from "@/lib/reservation-status";
 import {
   Badge,
   Button,
+  DataTable,
   Modal,
   ModalBody,
   ModalHeader,
-  getReservationStatusBadge,
-  reservationStatusKeyFromDisplayLabel,
   useConfirmDialog,
 } from "@/components/ui";
+import {
+  buildReservationColumns,
+  countryFlag,
+  reservationRowVariant,
+} from "./columns";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -78,8 +84,6 @@ interface SummaryData {
   upcoming: number; checkedOut: number; cancelled: number; noShow: number;
 }
 
-type SortKey = "startDate" | "endDate" | "grandTotal" | "balanceDue" | "displayStatusPriority";
-
 interface AdvFilters {
   propertyId: string; dateFrom: string; dateTo: string;
   rateType: string; source: string;
@@ -126,15 +130,6 @@ function useFmtDuration() {
     }
     return t("nights", { count: row.totalNights });
   };
-}
-
-function countryFlag(nationality: string | null): string {
-  if (!nationality) return "";
-  const code = nationality.trim().toUpperCase().slice(0, 2);
-  if (code.length !== 2) return "";
-  return String.fromCodePoint(
-    ...code.split("").map((c) => 0x1f1e6 + c.charCodeAt(0) - 65),
-  );
 }
 
 const EMPTY_EMOJI: Partial<Record<TabKey, string>> = {
@@ -349,25 +344,6 @@ function ModalActions({
 
 // ── Sort header ───────────────────────────────────────────────────────────────
 
-function SortTh({
-  label, sk, sortKey, sortDir, onSort, className = "",
-}: {
-  label: string; sk: SortKey; sortKey: SortKey | null; sortDir: "asc" | "desc";
-  onSort: (k: SortKey) => void; className?: string;
-}) {
-  const active = sortKey === sk;
-  return (
-    <th onClick={() => onSort(sk)} className={`px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide cursor-pointer select-none hover:text-gray-900 ${className}`}>
-      <span className="inline-flex items-center gap-1">
-        {label}
-        {active
-          ? (sortDir === "asc" ? <ArrowUpIcon className="h-3 w-3" /> : <ArrowDownIcon className="h-3 w-3" />)
-          : <ChevronUpDownIcon className="h-3 w-3 text-gray-400" />}
-      </span>
-    </th>
-  );
-}
-
 // ── Tab definitions ───────────────────────────────────────────────────────────
 
 const PRIMARY_TABS: { key: TabKey; tKey: string }[] = [
@@ -398,15 +374,20 @@ export default function ReservationsView({
   scopedToBuilding?: boolean;
 }) {
   const router = useRouter();
-  const t       = useTranslations("reservations");
-  const tTabs   = useTranslations("reservations.tabs");
-  const tTable  = useTranslations("reservations.table");
-  const tSrc    = useTranslations("reservations.sources");
-  const tNoShow = useTranslations("reservations.noShowModal");
-  const tCancel = useTranslations("reservations.cancelModal");
-  const confirm = useConfirmDialog();
-  const locale  = useLocale();
+  const t        = useTranslations("reservations");
+  const tTabs    = useTranslations("reservations.tabs");
+  const tTable   = useTranslations("reservations.table");
+  const tStatus  = useTranslations("reservations.statuses");
+  const tActions = useTranslations("reservations.actions");
+  const tEmpty   = useTranslations("reservations.empty");
+  const tSrc     = useTranslations("reservations.sources");
+  const tNoShow  = useTranslations("reservations.noShowModal");
+  const tCancel  = useTranslations("reservations.cancelModal");
+  const confirm  = useConfirmDialog();
+  const locale   = useLocale();
   const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
+  const fmtDate     = useFmtDate();
+  const fmtDuration = useFmtDuration();
 
   const [reservations, setReservations] = useState<ReservationRow[]>([]);
   const [summary,      setSummary]      = useState<SummaryData | null>(null);
@@ -415,8 +396,9 @@ export default function ReservationsView({
   const [search,       setSearch]       = useState("");
   const [showFilters,  setShowFilters]  = useState(false);
   const [advFilters,   setAdvFilters]   = useState<AdvFilters>({ propertyId: defaultPropertyId, dateFrom: "", dateTo: "", rateType: "", source: "" });
-  const [sortKey,      setSortKey]      = useState<SortKey | null>("displayStatusPriority");
-  const [sortDir,      setSortDir]      = useState<"asc" | "desc">("asc");
+  const [sorting,      setSorting]      = useState<SortingState>([
+    { id: "startDate", desc: false },
+  ]);
   const [modal,        setModal]        = useState<ModalState>(null);
 
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -500,27 +482,8 @@ export default function ReservationsView({
       });
     }
 
-    // Sort
-    if (sortKey) {
-      rows.sort((a, b) => {
-        let av: number | string = 0, bv: number | string = 0;
-        if (sortKey === "displayStatusPriority") { av = a.displayStatusPriority; bv = b.displayStatusPriority; }
-        else if (sortKey === "startDate")   { av = a.startDate;   bv = b.startDate; }
-        else if (sortKey === "endDate")     { av = a.endDate;     bv = b.endDate; }
-        else if (sortKey === "grandTotal")  { av = Number(a.grandTotal);  bv = Number(b.grandTotal); }
-        else if (sortKey === "balanceDue")  { av = a.balanceDue;  bv = b.balanceDue; }
-        const cmp = av < bv ? -1 : av > bv ? 1 : 0;
-        return sortDir === "asc" ? cmp : -cmp;
-      });
-    }
-
     return rows;
-  }, [reservations, activeTab, search, sortKey, sortDir]);
-
-  function handleSort(k: SortKey) {
-    if (sortKey === k) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(k); setSortDir("asc"); }
-  }
+  }, [reservations, activeTab, search]);
 
   async function handleAction(type: "check-in" | "check-out" | "cancel" | "no-show", res: ReservationRow) {
     if (type === "no-show") {
@@ -605,6 +568,62 @@ export default function ReservationsView({
   const totalRevenue  = filtered.reduce((s, r) => s + Number(r.grandTotal), 0);
   const totalBalance  = filtered.reduce((s, r) => s + r.balanceDue, 0);
   const hasAdvFilters = Object.values(advFilters).some(Boolean);
+  const hasActiveFilters = activeTab !== "all" || !!search.trim() || hasAdvFilters;
+
+  // ── Column defs + row actions ─────────────────────────────────────────────
+
+  const columns = useMemo(
+    () => buildReservationColumns({ t, tTable, tStatus, fmtDate, fmtDuration }),
+    [t, tTable, tStatus, fmtDate, fmtDuration],
+  );
+
+  const rowActions = useCallback(
+    (r: ReservationRow) => {
+      const ds = r.displayStatus;
+      const canCheckIn   = ds === "Arriving Today" || ds === "Overdue Arrival";
+      const canCheckOut  = ds === "In House" || ds === "Due Checkout" || ds === "Overstay";
+      const canNoShow    = ds === "Overdue Arrival";
+      const canCancel    = ds === "Upcoming" || ds === "Arriving Today" || ds === "Overdue Arrival";
+      return [
+        {
+          id: "check-in",
+          label: tActions("checkIn"),
+          icon: <ArrowRightOnRectangleIcon className="h-4 w-4" />,
+          visible: canCheckIn,
+          onClick: () => handleAction("check-in", r),
+        },
+        {
+          id: "check-out",
+          label: ds === "Overstay" ? tActions("checkOutUrgent") : tActions("checkOut"),
+          icon: <ArrowLeftOnRectangleIcon className="h-4 w-4" />,
+          variant: ds === "Overstay" ? ("destructive" as const) : ("default" as const),
+          visible: canCheckOut,
+          onClick: () => handleAction("check-out", r),
+        },
+        {
+          id: "no-show",
+          label: tActions("markNoShow"),
+          icon: <XCircleIcon className="h-4 w-4" />,
+          variant: "destructive" as const,
+          visible: canNoShow,
+          onClick: () => handleAction("no-show", r),
+        },
+        {
+          id: "cancel",
+          label: tActions("cancel"),
+          icon: <NoSymbolIcon className="h-4 w-4" />,
+          variant: "destructive" as const,
+          visible: canCancel,
+          onClick: () => handleAction("cancel", r),
+        },
+      ];
+    },
+    // handleAction is defined in the same component but captures `confirm`,
+    // `fetchData`, and the translators — those are stable enough that
+    // re-deriving rowActions on every render is fine.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tActions],
+  );
 
   const today = new Date();
   const todayLabel = fmtDateFns(today, "EEEE, d MMMM yyyy", { locale: dateFnsLocale });
@@ -761,55 +780,39 @@ export default function ReservationsView({
       </div>
 
       {/* ── Table ──────────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        {loading && reservations.length === 0 ? (
-          <div className="flex items-center justify-center py-20 text-gray-400">
-            <ArrowPathIcon className="h-6 w-6 animate-spin me-2" />
-            <span className="text-sm">{t("loading")}</span>
-          </div>
-        ) : filtered.length === 0 ? (
-          <EmptyState tab={activeTab} />
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="ps-4 pe-2 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTable("resNumber")}</th>
-                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTable("status")}</th>
-                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTable("guest")}</th>
-                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTable("units")}</th>
-                  <SortTh label={tTable("checkIn")}  sk="startDate"  sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <SortTh label={tTable("checkOut")} sk="endDate"    sortKey={sortKey} sortDir={sortDir} onSort={handleSort} />
-                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTable("duration")}</th>
-                  <SortTh label={tTable("total")}    sk="grandTotal" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="text-end" />
-                  <SortTh label={tTable("balance")}  sk="balanceDue" sortKey={sortKey} sortDir={sortDir} onSort={handleSort} className="text-end" />
-                  <th className="ps-3 pe-4 py-3 text-end text-xs font-semibold text-gray-600 uppercase tracking-wide">{tTable("actions")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {filtered.map((res) => (
-                  <ReservationTableRow
-                    key={res.id}
-                    res={res}
-                    onAction={handleAction}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+      {(() => {
+        const emptyKey   = EMPTY_KEY[activeTab] ?? "default";
+        const emptyEmoji = EMPTY_EMOJI[activeTab] ?? "📋";
+        return (
+          <DataTable<ReservationRow>
+            data={filtered}
+            columns={columns}
+            mode="client"
+            sorting={{ state: sorting, onChange: setSorting }}
+            rowActions={rowActions}
+            rowVariant={reservationRowVariant}
+            loading={loading}
+            hasActiveFilters={hasActiveFilters}
+            emptyState={{
+              title: tEmpty(`${emptyKey}.title`),
+              description: tEmpty(`${emptyKey}.sub`),
+              illustration: <span className="text-4xl">{emptyEmoji}</span>,
+            }}
+            aria-label={t("title")}
+          />
+        );
+      })()}
 
-        {/* Footer */}
-        {filtered.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 bg-gray-50 border-t border-gray-200 text-xs text-gray-500">
-            <span>{t("showingCount", { shown: filtered.length, total: reservations.length })}</span>
-            <div className="flex gap-4">
-              <span>{t("revenue")}: <strong className="text-gray-800 ltr-numbers">{totalRevenue.toFixed(3)} OMR</strong></span>
-              <span>{t("outstanding")}: <strong className={`ltr-numbers ${totalBalance > 0 ? "text-red-600" : "text-green-600"}`}>{totalBalance.toFixed(3)} OMR</strong></span>
-            </div>
+      {/* Footer */}
+      {filtered.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-4 px-4 py-3 mt-2 text-xs text-fg-tertiary">
+          <span>{t("showingCount", { shown: filtered.length, total: reservations.length })}</span>
+          <div className="flex gap-4">
+            <span>{t("revenue")}: <strong className="text-fg ltr-numbers">{totalRevenue.toFixed(3)} OMR</strong></span>
+            <span>{t("outstanding")}: <strong className={`ltr-numbers ${totalBalance > 0 ? "text-error-600" : "text-success-600"}`}>{totalBalance.toFixed(3)} OMR</strong></span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ── Modals ─────────────────────────────────────────────────────────── */}
       {modal?.type === "check-in"  && <CheckInModal  res={modal.res} onClose={() => setModal(null)} onDone={onActionDone} />}
@@ -818,177 +821,3 @@ export default function ReservationsView({
   );
 }
 
-// ── Table row ──────────────────────────────────────────────────────────────────
-
-function ReservationTableRow({
-  res, onAction,
-}: {
-  res:      ReservationRow;
-  onAction: (type: "check-in" | "check-out" | "cancel" | "no-show", res: ReservationRow) => void;
-}) {
-  const t        = useTranslations("reservations");
-  const tStatus  = useTranslations("reservations.statuses");
-  const fmtDate  = useFmtDate();
-  const fmtDuration = useFmtDuration();
-
-  const ds         = res.displayStatus;
-  const checkIn    = fmtDate(res.startDate);
-  const checkOut   = fmtDate(res.endDate);
-  const isCancelled = res.status === "CANCELLED" || res.status === "NO_SHOW";
-
-  const checkInCls = res.status === "CONFIRMED" && toLocalDay(res.startDate) < todayMs
-    ? "text-red-600 font-semibold"
-    : checkIn.cls;
-
-  return (
-    <tr className={`text-sm transition-colors hover:bg-blue-50/30 ${res.displayStatusRowClass}`}>
-      {/* Res # */}
-      <td className="ps-4 pe-2 py-3 whitespace-nowrap">
-        <Link href={`/dashboard/reservations/${res.id}`}
-          className={`font-mono text-xs font-semibold text-blue-600 hover:underline ltr-numbers ${isCancelled ? "line-through text-gray-400" : ""}`}>
-          {res.reservationNumber ?? res.id.slice(0, 8).toUpperCase()}
-        </Link>
-      </td>
-
-      {/* Status badge */}
-      <td className="px-3 py-3 whitespace-nowrap">
-        <Badge
-          {...getReservationStatusBadge(reservationStatusKeyFromDisplayLabel(res.displayStatus))}
-          size="sm"
-        >
-          {translateDisplayStatus(ds, tStatus)}
-        </Badge>
-      </td>
-
-      {/* Guest */}
-      <td className="px-3 py-3 whitespace-nowrap">
-        <Link href={`/dashboard/tenants/${res.tenant.id}`} className="hover:underline">
-          <p className={`font-medium text-gray-900 ${isCancelled ? "text-gray-400" : ""}`}>
-            {countryFlag(res.tenant.nationality)} {res.tenant.firstName} {res.tenant.lastName}
-          </p>
-        </Link>
-        {res.tenant.classification === "vip" && (
-          <span className="inline-flex text-[10px] font-bold bg-yellow-100 text-yellow-700 rounded px-1">⭐ {t("vip")}</span>
-        )}
-      </td>
-
-      {/* Units */}
-      <td className="px-3 py-3">
-        <div className="flex flex-wrap gap-1">
-          {res.units.slice(0, 3).map((u) => (
-            <Badge key={u.id} tone="neutral" appearance="subtle" size="sm">
-              {u.name}
-            </Badge>
-          ))}
-          {res.units.length > 3 && (
-            <span className="text-xs text-gray-500">{t("moreUnits", { n: res.units.length - 3 })}</span>
-          )}
-          {res.units.length === 0 && <span className="text-xs text-gray-400">—</span>}
-        </div>
-      </td>
-
-      {/* Check-in */}
-      <td className={`px-3 py-3 whitespace-nowrap text-sm ${checkInCls}`}>{checkIn.text}</td>
-
-      {/* Check-out */}
-      <td className={`px-3 py-3 whitespace-nowrap text-sm ${checkOut.cls}`}>{checkOut.text}</td>
-
-      {/* Duration */}
-      <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500">{fmtDuration(res)}</td>
-
-      {/* Total */}
-      <td className="px-3 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 text-end ltr-numbers">
-        {Number(res.grandTotal).toFixed(3)}
-      </td>
-
-      {/* Balance */}
-      <td className="px-3 py-3 whitespace-nowrap text-sm text-end">
-        {res.balanceDue === 0
-          ? <span className="text-green-600 font-medium">{t("paid")}</span>
-          : <span className="text-red-600 font-semibold ltr-numbers">{res.balanceDue.toFixed(3)}</span>}
-      </td>
-
-      {/* Actions */}
-      <td className="ps-3 pe-4 py-3 whitespace-nowrap text-end">
-        <ActionButtons ds={ds} res={res} onAction={onAction} />
-      </td>
-    </tr>
-  );
-}
-
-// Map DisplayStatus (English literal from server) → translated label.
-function translateDisplayStatus(ds: DisplayStatus, t: (k: string) => string): string {
-  const map: Partial<Record<DisplayStatus, string>> = {
-    "Upcoming":         "upcoming",
-    "Arriving Today":   "arrivingToday",
-    "Overdue Arrival":  "overdueArrival",
-    "In House":         "inHouse",
-    "Due Checkout":     "dueCheckout",
-    "Overstay":         "overstay",
-    "Checked Out":      "checkedOut",
-    "Cancelled":        "cancelled",
-    "No Show":          "noShow",
-  };
-  const key = map[ds];
-  return key ? t(key) : ds;
-}
-
-function ActionButtons({
-  ds, res, onAction,
-}: {
-  ds: DisplayStatus;
-  res: ReservationRow;
-  onAction: (type: "check-in" | "check-out" | "cancel" | "no-show", res: ReservationRow) => void;
-}) {
-  const t = useTranslations("reservations.actions");
-  const btn = "rounded-md px-2 py-1 text-xs font-semibold transition-colors";
-
-  if (ds === "Arriving Today" || ds === "Overdue Arrival") return (
-    <div className="flex gap-1 justify-end">
-      <button onClick={() => onAction("check-in", res)} className={`${btn} bg-green-600 text-white hover:bg-green-700`}>{t("checkIn")}</button>
-      {ds === "Overdue Arrival" && (
-        <button onClick={() => onAction("no-show", res)} className={`${btn} bg-gray-600 text-white hover:bg-gray-700`}>{t("markNoShow")}</button>
-      )}
-      <button onClick={() => onAction("cancel", res)} className={`${btn} bg-white border border-gray-300 text-gray-700 hover:bg-gray-50`}>{t("cancel")}</button>
-    </div>
-  );
-
-  if (ds === "In House") return (
-    <button onClick={() => onAction("check-out", res)} className={`${btn} bg-blue-600 text-white hover:bg-blue-700`}>{t("checkOut")}</button>
-  );
-
-  if (ds === "Due Checkout") return (
-    <button onClick={() => onAction("check-out", res)} className={`${btn} bg-orange-600 text-white hover:bg-orange-700 animate-pulse`}>{t("checkOut")}</button>
-  );
-
-  if (ds === "Overstay") return (
-    <button onClick={() => onAction("check-out", res)} className={`${btn} bg-red-600 text-white hover:bg-red-700`}>{t("checkOutUrgent")}</button>
-  );
-
-  if (ds === "Upcoming") return (
-    <div className="flex gap-1 justify-end">
-      <Link href={`/dashboard/reservations/${res.id}`} className={`${btn} bg-white border border-gray-300 text-gray-700 hover:bg-gray-50`}>{t("edit")}</Link>
-      <button onClick={() => onAction("cancel", res)} className={`${btn} bg-white border border-gray-300 text-gray-700 hover:bg-gray-50`}>{t("cancel")}</button>
-    </div>
-  );
-
-  // Checked Out / Cancelled / No Show
-  return (
-    <Link href={`/dashboard/reservations/${res.id}`} className={`${btn} bg-white border border-gray-200 text-gray-600 hover:bg-gray-50`}>{t("view")}</Link>
-  );
-}
-
-function EmptyState({ tab }: { tab: TabKey }) {
-  const t = useTranslations("reservations.empty");
-  const key = EMPTY_KEY[tab] ?? "default";
-  const emoji = EMPTY_EMOJI[tab] ?? "📋";
-  const title = t(`${key}.title`);
-  const sub   = t(`${key}.sub`);
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-gray-400">
-      <span className="text-4xl mb-3">{emoji}</span>
-      <p className="text-base font-semibold text-gray-600">{title}</p>
-      {sub && <p className="text-sm mt-1">{sub}</p>}
-    </div>
-  );
-}

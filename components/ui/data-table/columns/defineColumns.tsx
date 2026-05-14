@@ -279,12 +279,8 @@ function user<T>(opts: UserOpts<T>): ColumnDef<T, UserAccessor> {
 }
 
 /* ============================================================================
- *  custom — escape hatch
+ *  custom — escape hatch (V remains generic at the call site)
  * ========================================================================= */
-
-function custom<T, V = unknown>(def: ColumnDef<T, V>): ColumnDef<T, V> {
-  return def;
-}
 
 /* ============================================================================
  *  Factory
@@ -313,6 +309,7 @@ export function defineColumns<T>() {
     date: date<T>,
     status: status<T>,
     user: user<T>,
-    custom: custom<T>,
+    /** Escape hatch — pass any TanStack ColumnDef. `V` is the accessor value type. */
+    custom: <V = unknown>(def: ColumnDef<T, V>): ColumnDef<T, V> => def,
   };
 }

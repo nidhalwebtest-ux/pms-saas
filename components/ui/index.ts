@@ -126,3 +126,36 @@ export type {
   ConfirmDialogReasonOption,
   ConfirmDialogTypeToConfirmConfig,
 } from "./confirm-dialog";
+
+/* ── DataTable ───────────────────────────────────────────────────────── */
+export {
+  DataTable,
+  useDataTable,
+  TextCell,
+  NumberCell,
+  CurrencyCell,
+  DateCell,
+  StatusCell,
+  UserCell,
+  ActionsCell,
+} from "./data-table";
+export type {
+  DataTableProps,
+  TableMode,
+  TableDensity,
+  RowVariant,
+  PaginationConfig,
+  SortingConfig,
+  SelectionConfig,
+  BulkAction,
+  RowAction,
+  EmptyStateConfig,
+  TableErrorState,
+  TextCellProps,
+  NumberCellProps,
+  CurrencyCellProps,
+  DateCellProps,
+  StatusCellProps,
+  UserCellProps,
+  ActionsCellProps,
+} from "./data-table";

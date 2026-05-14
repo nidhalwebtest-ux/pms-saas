@@ -219,6 +219,30 @@ export interface DataTableProps<T> {
   /** Below this width (px) the component switches to the mobile card list. Default 768. */
   mobileBreakpoint?: number;
 
+  /**
+   * Virtual mode only — max height of the scrollable region. Accepts any CSS
+   * value. Default `"600px"`. The virtualizer measures the scroll container,
+   * so this must be a definite height for windowing to work.
+   */
+  virtualMaxHeight?: number | string;
+
+  /**
+   * Virtual mode only — fixed row height in px used by the virtualizer's
+   * size estimator. Default 52 (comfortable) / 40 (compact). Override only
+   * when rows render at a non-default height.
+   */
+  virtualRowHeight?: number;
+
+  /**
+   * Virtual mode only — fires when the user has scrolled to within the
+   * last `endReachedThreshold` rows. Wire it up for infinite scroll: fetch
+   * the next page and append to `data`.
+   */
+  onEndReached?: () => void;
+
+  /** Default 5 rows from the end. */
+  endReachedThreshold?: number;
+
   className?: string;
   "aria-label"?: string;
 }

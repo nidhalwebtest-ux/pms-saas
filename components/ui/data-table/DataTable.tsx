@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useDataTable } from "./hooks/useDataTable";
 import { useIsMobile } from "./hooks/useIsMobile";
@@ -15,6 +15,7 @@ import {
 } from "./parts/DataTableLoading";
 import { DataTableError } from "./parts/DataTableError";
 import { DataTableMobile } from "./parts/DataTableMobile";
+import { DataTableVirtualBody } from "./parts/DataTableVirtualBody";
 import { ActionsCell } from "./cells/ActionsCell";
 import { ExclamationCircleIcon, InboxIcon } from "@heroicons/react/24/outline";
 import { Button } from "../Button";
@@ -102,10 +103,16 @@ export function DataTable<T>({
   density = "comfortable",
   stickyHeader = true,
   mobileBreakpoint = 768,
+  virtualMaxHeight = "600px",
+  virtualRowHeight,
+  onEndReached,
+  endReachedThreshold,
   className = "",
   "aria-label": ariaLabel,
 }: DataTableProps<T>) {
   const isMobile = useIsMobile(mobileBreakpoint);
+  const isVirtual = mode === "virtual";
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   /* ── Compose columns: selection + caller + actions ───────────────────── */
 
@@ -228,12 +235,27 @@ export function DataTable<T>({
           </div>
         </div>
       ) : (
-        <div className="relative overflow-x-auto">
+        <div
+          ref={isVirtual ? scrollRef : undefined}
+          className="relative overflow-x-auto"
+          style={
+            isVirtual
+              ? {
+                  maxHeight:
+                    typeof virtualMaxHeight === "number"
+                      ? `${virtualMaxHeight}px`
+                      : virtualMaxHeight,
+                  overflowY: "auto",
+                }
+              : undefined
+          }
+        >
           {showRefetchBar && <DataTableRefetchBar />}
           <table
             className="w-full text-sm"
             aria-label={ariaLabel}
             aria-busy={loading || undefined}
+            aria-rowcount={isVirtual ? data.length : undefined}
           >
             <DataTableHeader
               table={table}
@@ -250,15 +272,31 @@ export function DataTable<T>({
                   density={density}
                 />
               ) : hasData ? (
-                table.getRowModel().rows.map((row) => (
-                  <DataTableRow
-                    key={row.id}
-                    row={row}
+                isVirtual ? (
+                  <DataTableVirtualBody
+                    table={table}
+                    scrollRef={scrollRef}
                     density={density}
-                    variant={rowVariant ? rowVariant(row.original) : "default"}
-                    onClick={onRowClick}
+                    rowHeight={
+                      virtualRowHeight ?? (density === "compact" ? 40 : 52)
+                    }
+                    onRowClick={onRowClick}
+                    rowVariant={rowVariant}
+                    colspan={colspan}
+                    onEndReached={onEndReached}
+                    endReachedThreshold={endReachedThreshold}
                   />
-                ))
+                ) : (
+                  table.getRowModel().rows.map((row) => (
+                    <DataTableRow
+                      key={row.id}
+                      row={row}
+                      density={density}
+                      variant={rowVariant ? rowVariant(row.original) : "default"}
+                      onClick={onRowClick}
+                    />
+                  ))
+                )
               ) : (
                 <DataTableEmpty
                   state={emptyState}
@@ -271,8 +309,8 @@ export function DataTable<T>({
         </div>
       )}
 
-      {/* Pagination */}
-      {pagination && (
+      {/* Pagination — hidden in virtual mode (infinite scroll instead) */}
+      {pagination && !isVirtual && (
         <DataTablePagination
           pageIndex={pagination.pageIndex}
           pageSize={pagination.pageSize}

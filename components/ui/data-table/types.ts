@@ -2,8 +2,47 @@ import type { ReactNode } from "react";
 import type {
   ColumnDef,
   OnChangeFn,
+  RowData,
   SortingState,
 } from "@tanstack/react-table";
+
+/* ============================================================================
+ *  Column meta — typed extension of TanStack's ColumnMeta<TData, TValue>.
+ *  Cells, headers, and the mobile card renderer all consume these hints.
+ * ========================================================================= */
+
+declare module "@tanstack/react-table" {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  interface ColumnMeta<TData extends RowData, TValue> {
+    /** Logical cell alignment. Default `"start"`. */
+    align?: "start" | "center" | "end";
+    /** Apply `tabular-nums` to the cell — for currency / counts. */
+    numeric?: boolean;
+    /** Pin the column to the start or end edge of the table. */
+    sticky?: "start" | "end";
+
+    /**
+     * Role on the mobile card variant. Default `"detail"`.
+     * - `"title"`   — large primary heading (one per card).
+     * - `"status"`  — top-end pill (one per card).
+     * - `"detail"`  — secondary line; rendered in column declaration order.
+     * - `"hide"`    — never shown on mobile.
+     */
+    mobile?: "title" | "status" | "detail" | "hide";
+
+    /**
+     * When `mobile: "detail"`, lower numbers render first. Columns without an
+     * explicit priority fall back to declaration order.
+     */
+    mobilePriority?: number;
+
+    /**
+     * Short label shown alongside the detail value on mobile (e.g.
+     * `"Check-in"`). Defaults to the desktop header when omitted.
+     */
+    mobileLabel?: ReactNode;
+  }
+}
 
 /* ============================================================================
  *  Modes — drives how sort/pagination state moves between table and consumer

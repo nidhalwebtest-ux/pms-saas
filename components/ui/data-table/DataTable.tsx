@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useDataTable } from "./hooks/useDataTable";
+import { useIsMobile } from "./hooks/useIsMobile";
 import { DataTableHeader } from "./parts/DataTableHeader";
 import { DataTableRow } from "./parts/DataTableRow";
 import { DataTablePagination } from "./parts/DataTablePagination";
@@ -13,7 +14,10 @@ import {
   DataTableRefetchBar,
 } from "./parts/DataTableLoading";
 import { DataTableError } from "./parts/DataTableError";
+import { DataTableMobile } from "./parts/DataTableMobile";
 import { ActionsCell } from "./cells/ActionsCell";
+import { ExclamationCircleIcon, InboxIcon } from "@heroicons/react/24/outline";
+import { Button } from "../Button";
 import type { DataTableProps } from "./types";
 
 /* ============================================================================
@@ -97,9 +101,12 @@ export function DataTable<T>({
   rowVariant,
   density = "comfortable",
   stickyHeader = true,
+  mobileBreakpoint = 768,
   className = "",
   "aria-label": ariaLabel,
 }: DataTableProps<T>) {
+  const isMobile = useIsMobile(mobileBreakpoint);
+
   /* ── Compose columns: selection + caller + actions ───────────────────── */
 
   const composedColumns = useMemo(() => {
@@ -109,6 +116,11 @@ export function DataTable<T>({
     if (rowActions) cols.push(buildActionsColumn<T>(rowActions as any));
     return cols;
   }, [columns, selection?.enabled, rowActions]);
+
+  const internalColumnIds = useMemo(
+    () => new Set<string>(["__select", "__actions"]),
+    [],
+  );
 
   const { table } = useDataTable<T>({
     data,
@@ -155,48 +167,109 @@ export function DataTable<T>({
         />
       )}
 
-      {/* Scroll container */}
-      <div className="relative overflow-x-auto">
-        {showRefetchBar && <DataTableRefetchBar />}
-        <table
-          className="w-full text-sm"
-          aria-label={ariaLabel}
-          aria-busy={loading || undefined}
-        >
-          <DataTableHeader
-            table={table}
-            sticky={stickyHeader}
-            density={density}
-          />
-          <tbody className={showRefetchBar ? "opacity-60" : ""}>
+      {/* Body — switches between table and mobile card list */}
+      {isMobile ? (
+        <div className="relative" aria-busy={loading || undefined}>
+          {showRefetchBar && <DataTableRefetchBar />}
+          <div className={showRefetchBar ? "opacity-60" : ""}>
             {error ? (
-              <DataTableError state={error} colspan={colspan} />
+              <MobileMessage>
+                <ExclamationCircleIcon className="h-8 w-8 text-error-500" />
+                <p className="text-sm text-fg max-w-sm">{error.message}</p>
+                {error.onRetry && (
+                  <Button size="sm" variant="secondary" onClick={error.onRetry}>
+                    Retry
+                  </Button>
+                )}
+              </MobileMessage>
             ) : showInitialLoading ? (
-              <DataTableLoading
-                columnCount={composedColumns.length - (selection?.enabled ? 1 : 0)}
-                hasSelection={selection?.enabled}
-                density={density}
-              />
+              <ul className="divide-y divide-border-subtle">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <li key={i} className="px-4 py-3 space-y-2" aria-hidden="true">
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 w-1/3 rounded bg-subtle animate-pulse" />
+                      <div className="ms-auto h-4 w-12 rounded bg-subtle animate-pulse" />
+                    </div>
+                    <div className="h-3 w-1/2 rounded bg-subtle animate-pulse" />
+                    <div className="h-3 w-1/4 rounded bg-subtle animate-pulse" />
+                  </li>
+                ))}
+              </ul>
             ) : hasData ? (
-              table.getRowModel().rows.map((row) => (
-                <DataTableRow
-                  key={row.id}
-                  row={row}
-                  density={density}
-                  variant={rowVariant ? rowVariant(row.original) : "default"}
-                  onClick={onRowClick}
-                />
-              ))
-            ) : (
-              <DataTableEmpty
-                state={emptyState}
-                hasActiveFilters={hasActiveFilters}
-                colspan={colspan}
+              <DataTableMobile
+                table={table}
+                hasSelection={!!selection?.enabled}
+                hasActions={!!rowActions}
+                onRowClick={onRowClick}
+                rowVariant={rowVariant}
+                density={density}
+                internalColumnIds={internalColumnIds}
+                rowActions={rowActions}
               />
+            ) : (
+              <MobileMessage>
+                <InboxIcon className="h-10 w-10 text-fg-tertiary" />
+                <p className="text-sm font-semibold text-fg">
+                  {emptyState?.title ??
+                    (hasActiveFilters ? "No matches" : "No data yet")}
+                </p>
+                {emptyState?.description && (
+                  <p className="text-xs text-fg-tertiary max-w-sm">
+                    {emptyState.description}
+                  </p>
+                )}
+                {emptyState?.action && (
+                  <Button size="sm" variant="secondary" onClick={emptyState.action.onClick}>
+                    {emptyState.action.label}
+                  </Button>
+                )}
+              </MobileMessage>
             )}
-          </tbody>
-        </table>
-      </div>
+          </div>
+        </div>
+      ) : (
+        <div className="relative overflow-x-auto">
+          {showRefetchBar && <DataTableRefetchBar />}
+          <table
+            className="w-full text-sm"
+            aria-label={ariaLabel}
+            aria-busy={loading || undefined}
+          >
+            <DataTableHeader
+              table={table}
+              sticky={stickyHeader}
+              density={density}
+            />
+            <tbody className={showRefetchBar ? "opacity-60" : ""}>
+              {error ? (
+                <DataTableError state={error} colspan={colspan} />
+              ) : showInitialLoading ? (
+                <DataTableLoading
+                  columnCount={composedColumns.length - (selection?.enabled ? 1 : 0)}
+                  hasSelection={selection?.enabled}
+                  density={density}
+                />
+              ) : hasData ? (
+                table.getRowModel().rows.map((row) => (
+                  <DataTableRow
+                    key={row.id}
+                    row={row}
+                    density={density}
+                    variant={rowVariant ? rowVariant(row.original) : "default"}
+                    onClick={onRowClick}
+                  />
+                ))
+              ) : (
+                <DataTableEmpty
+                  state={emptyState}
+                  hasActiveFilters={hasActiveFilters}
+                  colspan={colspan}
+                />
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Pagination */}
       {pagination && (
@@ -219,6 +292,14 @@ export function DataTable<T>({
           }
         />
       )}
+    </div>
+  );
+}
+
+function MobileMessage({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center gap-3 px-4 py-16">
+      {children}
     </div>
   );
 }

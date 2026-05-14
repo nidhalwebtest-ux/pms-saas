@@ -1,0 +1,185 @@
+import type { ReactNode } from "react";
+import type {
+  ColumnDef,
+  OnChangeFn,
+  SortingState,
+} from "@tanstack/react-table";
+
+/* ============================================================================
+ *  Modes — drives how sort/pagination state moves between table and consumer
+ * ========================================================================= */
+
+/**
+ * - `client`: TanStack owns sort + pagination. Use for ≤ ~500 rows.
+ * - `server`: caller owns sort + pagination state and refetches. Default for
+ *   any list page that paginates over a real database.
+ * - `virtual`: row windowing via `@tanstack/react-virtual`. Pagination is
+ *   ignored — the data prop is the entire fetched window. Use for ≥ 10,000
+ *   rows or autocomplete pickers.
+ */
+export type TableMode = "client" | "server" | "virtual";
+
+/* ============================================================================
+ *  Row variants — drives row-level tint / start-border accent
+ * ========================================================================= */
+
+export type RowVariant = "default" | "urgent" | "inactive" | "pinned";
+
+/* ============================================================================
+ *  Density
+ * ========================================================================= */
+
+export type TableDensity = "compact" | "comfortable";
+
+/* ============================================================================
+ *  Sub-configs
+ * ========================================================================= */
+
+export interface PaginationConfig {
+  /** Current page index (0-based). */
+  pageIndex: number;
+  /** Rows per page. */
+  pageSize: number;
+  /**
+   * Total matching rows in the dataset. Required for `server` mode (drives
+   * the pager). Optional in `client` mode (TanStack derives it).
+   */
+  totalCount?: number;
+  /** Selectable page sizes for the dropdown. Default `[10, 25, 50, 100]`. */
+  pageSizes?: number[];
+  /** Called with the next state. The caller is responsible for re-fetching. */
+  onChange: (next: { pageIndex: number; pageSize: number }) => void;
+}
+
+export interface SortingConfig {
+  state: SortingState;
+  onChange: OnChangeFn<SortingState>;
+  /** Allow shift-click to add secondary sort. Default `false`. */
+  multiSort?: boolean;
+}
+
+export interface SelectionConfig<T> {
+  /** Master switch — adds the checkbox column. */
+  enabled?: boolean;
+  /** Controlled selected row IDs. */
+  selected?: ReadonlySet<string>;
+  /** Called whenever the selection changes. */
+  onSelectionChange: (next: Set<string>) => void;
+  /** Persist selection across pagination boundaries. Default `true`. */
+  persistAcrossPages?: boolean;
+  /** Singular noun for "5 selected" pluralization. E.g. `"reservation"`. */
+  entityLabel?: string;
+  /**
+   * "Select all matching filters" — the consumer fetches every ID. Used when
+   * server-side pagination means the table only sees the current page.
+   */
+  onSelectAllMatching?: () => Promise<string[]>;
+  /** Per-row override to disable selection (e.g. locked records). */
+  isRowSelectable?: (row: T) => boolean;
+}
+
+/* ============================================================================
+ *  Actions
+ * ========================================================================= */
+
+export interface BulkAction<T = unknown> {
+  id: string;
+  label: string;
+  icon?: ReactNode;
+  /** Drives button styling — destructive flips it red. */
+  variant?: "default" | "destructive";
+  /**
+   * Optional inline confirm. When set, the toolbar awaits a ConfirmDialog
+   * confirmation before calling `onClick`. The shape matches
+   * `ConfirmDialogOptions` (minus the imperative bits).
+   */
+  confirm?: {
+    title: ReactNode;
+    description?: ReactNode;
+    confirmLabel?: string;
+    cancelLabel?: string;
+    tone?: "destructive" | "warning" | "info" | "default";
+  };
+  /** Hide the action when called with the selected rows. */
+  visible?: (selectedRows: T[]) => boolean;
+  /** Async action — toolbar shows a spinner while pending. */
+  onClick: (selectedIds: string[]) => void | Promise<void>;
+}
+
+export interface RowAction<T = unknown> {
+  id: string;
+  label: string;
+  icon?: ReactNode;
+  variant?: "default" | "destructive";
+  /** Hide vs disable for inapplicable actions. */
+  visible?: boolean;
+  disabled?: boolean;
+  onClick: (row: T) => void | Promise<void>;
+}
+
+/* ============================================================================
+ *  Empty / error states
+ * ========================================================================= */
+
+export interface EmptyStateConfig {
+  title: ReactNode;
+  description?: ReactNode;
+  illustration?: ReactNode;
+  action?: { label: string; onClick: () => void };
+}
+
+export interface TableErrorState {
+  message: string;
+  onRetry?: () => void;
+}
+
+/* ============================================================================
+ *  Main props
+ * ========================================================================= */
+
+export interface DataTableProps<T> {
+  /** Row data. Identity is taken from `getRowId(row)` — see below. */
+  data: T[];
+
+  /**
+   * Column definitions. Build with the column factory helpers (Phase 5) or
+   * with TanStack's `ColumnDef<T>` directly.
+   */
+  columns: ColumnDef<T, any>[];
+
+  /**
+   * Stable unique ID resolver. Default uses `row.id` if present. Required for
+   * selection to survive sort / pagination.
+   */
+  getRowId?: (row: T) => string;
+
+  /** Default `"client"`. */
+  mode?: TableMode;
+
+  pagination?: PaginationConfig;
+  sorting?: SortingConfig;
+  selection?: SelectionConfig<T>;
+
+  bulkActions?: BulkAction<T>[];
+  rowActions?: (row: T) => RowAction<T>[];
+
+  emptyState?: EmptyStateConfig;
+  /** Surfaced when `data.length === 0` and filters/search are active. */
+  hasActiveFilters?: boolean;
+
+  loading?: boolean;
+  error?: TableErrorState;
+
+  /** Whole-row click handler. Cells with their own buttons stop propagation. */
+  onRowClick?: (row: T) => void;
+  rowVariant?: (row: T) => RowVariant;
+
+  density?: TableDensity;
+  stickyHeader?: boolean;
+
+  /** Below this width (px) the component switches to the mobile card list. Default 768. */
+  mobileBreakpoint?: number;
+
+  className?: string;
+  "aria-label"?: string;
+}

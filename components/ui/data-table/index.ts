@@ -2,6 +2,8 @@ export { DataTable } from "./DataTable";
 
 export { useDataTable } from "./hooks/useDataTable";
 
+export { defineColumns } from "./columns/defineColumns";
+
 export type {
   DataTableProps,
   TableMode,

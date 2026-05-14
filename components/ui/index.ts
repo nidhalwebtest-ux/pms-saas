@@ -131,6 +131,7 @@ export type {
 export {
   DataTable,
   useDataTable,
+  defineColumns,
   TextCell,
   NumberCell,
   CurrencyCell,

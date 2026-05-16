@@ -1,6 +1,7 @@
 "use client";
 
 import { ExclamationCircleIcon } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 import { Button } from "../../Button";
 import type { TableErrorState } from "../types";
 
@@ -15,6 +16,7 @@ export interface DataTableErrorProps {
  * different filters or pages.
  */
 export function DataTableError({ state, colspan }: DataTableErrorProps) {
+  const t = useTranslations("dataTable.error");
   return (
     <tr>
       <td colSpan={colspan} className="px-4 py-12">
@@ -23,7 +25,7 @@ export function DataTableError({ state, colspan }: DataTableErrorProps) {
           <p className="text-sm text-fg max-w-md">{state.message}</p>
           {state.onRetry && (
             <Button size="sm" variant="secondary" onClick={state.onRetry}>
-              Retry
+              {t("retry")}
             </Button>
           )}
         </div>

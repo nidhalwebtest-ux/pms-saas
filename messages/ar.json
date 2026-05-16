@@ -1,4 +1,44 @@
 {
+  "dataTable": {
+    "pagination": {
+      "rowsLabel": "صفوف",
+      "rowsPerPageAriaLabel": "الصفوف لكل صفحة",
+      "firstPage": "الصفحة الأولى",
+      "previousPage": "الصفحة السابقة",
+      "nextPage": "الصفحة التالية",
+      "lastPage": "الصفحة الأخيرة",
+      "pageAriaLabel": "الصفحة {page}",
+      "range": "{start}–{end} من {total}",
+      "navAriaLabel": "ترقيم الصفحات"
+    },
+    "toolbar": {
+      "deselectAll": "إلغاء التحديد",
+      "rowsSelected": "{count, plural, zero {لم يتم تحديد أي صف} one {تم تحديد صف واحد} two {تم تحديد صفّين} few {تم تحديد # صفوف} many {تم تحديد # صفّاً} other {تم تحديد # صف}}"
+    },
+    "empty": {
+      "noData": "لا توجد بيانات بعد",
+      "noMatches": "لا توجد نتائج مطابقة",
+      "noMatchesHint": "حاول مسح أو تعديل عوامل التصفية.",
+      "clearFilters": "مسح عوامل التصفية"
+    },
+    "error": {
+      "retry": "إعادة المحاولة"
+    },
+    "mobile": {
+      "sortLabel": "ترتيب",
+      "sortColumnAriaLabel": "عمود الترتيب",
+      "sortNone": "لا شيء",
+      "sortAsc": "تصاعدي",
+      "sortDesc": "تنازلي",
+      "rowActionsAriaLabel": "إجراءات الصف",
+      "selectRowAriaLabel": "تحديد الصف"
+    },
+    "header": {
+      "selectAllAriaLabel": "تحديد جميع الصفوف في هذه الصفحة",
+      "selectRowAriaLabel": "تحديد الصف"
+    },
+    "loading": "جارٍ التحميل"
+  },
   "common": {
     "save": "حفظ",
     "cancel": "إلغاء",

@@ -7,6 +7,7 @@ import {
   EllipsisHorizontalIcon,
 } from "@heroicons/react/24/outline";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import { useTranslations } from "next-intl";
 import {
   flexRender,
   type Column,
@@ -166,6 +167,7 @@ function MobileCard<T>({
   density,
   rowActions,
 }: MobileCardProps<T>) {
+  const t = useTranslations("dataTable.mobile");
   const variant = rowVariant ? rowVariant(row.original) : "default";
   const isSelected = row.getIsSelected();
   const clickable = !!onRowClick;
@@ -193,7 +195,7 @@ function MobileCard<T>({
         {hasSelection && (
           <input
             type="checkbox"
-            aria-label="Select row"
+            aria-label={t("selectRowAriaLabel")}
             className="mt-1 h-4 w-4 rounded border-border-default text-brand-500 focus:ring-brand-300"
             checked={isSelected}
             disabled={!row.getCanSelect()}
@@ -261,13 +263,14 @@ function CardActionsMenu<T>({
   actions: RowAction<T>[];
   row: T;
 }) {
+  const t = useTranslations("dataTable.mobile");
   const visible = actions.filter((a) => a.visible !== false);
   if (visible.length === 0) return null;
 
   return (
     <Menu as="div" className="relative flex-shrink-0">
       <MenuButton
-        aria-label="Row actions"
+        aria-label={t("rowActionsAriaLabel")}
         onClick={(e: React.MouseEvent) => e.stopPropagation()}
         className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-tertiary hover:bg-subtle hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
       >
@@ -313,6 +316,7 @@ function MobileSortBar<T>({
   table: Table<T>;
   columns: Column<T, unknown>[];
 }) {
+  const t = useTranslations("dataTable.mobile");
   const sorting = table.getState().sorting;
   const current = sorting[0];
   const currentId = current?.id ?? "";
@@ -328,14 +332,14 @@ function MobileSortBar<T>({
 
   return (
     <div className="flex items-center gap-2 px-3 py-2 border-b border-border-subtle bg-subtle/40">
-      <label className="text-xs text-fg-tertiary">Sort</label>
+      <label className="text-xs text-fg-tertiary">{t("sortLabel")}</label>
       <select
         value={currentId}
         onChange={(e) => applySort(e.target.value, currentDir === "desc")}
         className="h-7 rounded-md border border-border-default bg-surface text-xs px-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
-        aria-label="Sort column"
+        aria-label={t("sortColumnAriaLabel")}
       >
-        <option value="">None</option>
+        <option value="">{t("sortNone")}</option>
         {columns.map((c) => (
           <option key={c.id} value={c.id}>
             {typeof c.columnDef.header === "string"
@@ -347,7 +351,7 @@ function MobileSortBar<T>({
       <Button
         size="sm"
         variant="ghost"
-        aria-label={currentDir === "asc" ? "Ascending" : "Descending"}
+        aria-label={currentDir === "asc" ? t("sortAsc") : t("sortDesc")}
         onClick={() => applySort(currentId, currentDir === "asc")}
         disabled={!currentId}
         leftIcon={
@@ -358,7 +362,7 @@ function MobileSortBar<T>({
           )
         }
       >
-        {currentDir === "asc" ? "Asc" : "Desc"}
+        {currentDir === "asc" ? t("sortAsc") : t("sortDesc")}
       </Button>
     </div>
   );

@@ -1,4 +1,44 @@
 {
+  "dataTable": {
+    "pagination": {
+      "rowsLabel": "Rows",
+      "rowsPerPageAriaLabel": "Rows per page",
+      "firstPage": "First page",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "lastPage": "Last page",
+      "pageAriaLabel": "Page {page}",
+      "range": "{start}–{end} of {total}",
+      "navAriaLabel": "Pagination"
+    },
+    "toolbar": {
+      "deselectAll": "Deselect all",
+      "rowsSelected": "{count, plural, =1 {1 row selected} other {# rows selected}}"
+    },
+    "empty": {
+      "noData": "No data yet",
+      "noMatches": "No matches",
+      "noMatchesHint": "Try clearing or adjusting your filters.",
+      "clearFilters": "Clear filters"
+    },
+    "error": {
+      "retry": "Retry"
+    },
+    "mobile": {
+      "sortLabel": "Sort",
+      "sortColumnAriaLabel": "Sort column",
+      "sortNone": "None",
+      "sortAsc": "Asc",
+      "sortDesc": "Desc",
+      "rowActionsAriaLabel": "Row actions",
+      "selectRowAriaLabel": "Select row"
+    },
+    "header": {
+      "selectAllAriaLabel": "Select all rows on this page",
+      "selectRowAriaLabel": "Select row"
+    },
+    "loading": "Loading"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",

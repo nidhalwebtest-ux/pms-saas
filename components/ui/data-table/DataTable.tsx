@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useRef } from "react";
+import { useTranslations } from "next-intl";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useDataTable } from "./hooks/useDataTable";
 import { useIsMobile } from "./hooks/useIsMobile";
@@ -28,37 +29,47 @@ import type { DataTableProps } from "./types";
 function buildSelectionColumn<T>(): ColumnDef<T, unknown> {
   return {
     id: "__select",
-    header: ({ table }) => (
-      <input
-        type="checkbox"
-        aria-label="Select all rows on this page"
-        className="h-4 w-4 rounded border-border-default text-brand-500 focus:ring-brand-300"
-        checked={table.getIsAllPageRowsSelected()}
-        ref={(el) => {
-          if (el)
-            el.indeterminate =
-              !table.getIsAllPageRowsSelected() &&
-              table.getIsSomePageRowsSelected();
-        }}
-        onChange={table.getToggleAllPageRowsSelectedHandler()}
-        onClick={(e) => e.stopPropagation()}
-      />
-    ),
-    cell: ({ row }) => (
-      <input
-        type="checkbox"
-        aria-label="Select row"
-        className="h-4 w-4 rounded border-border-default text-brand-500 focus:ring-brand-300"
-        checked={row.getIsSelected()}
-        disabled={!row.getCanSelect()}
-        onChange={row.getToggleSelectedHandler()}
-        onClick={(e) => e.stopPropagation()}
-      />
-    ),
+    header: ({ table }) => <HeaderSelectCheckbox table={table} />,
+    cell: ({ row }) => <RowSelectCheckbox row={row} />,
     size: 40,
     enableSorting: false,
     meta: { align: "center", sticky: "start" } as Record<string, unknown>,
   };
+}
+
+function HeaderSelectCheckbox<T>({ table }: { table: import("@tanstack/react-table").Table<T> }) {
+  const t = useTranslations("dataTable.header");
+  return (
+    <input
+      type="checkbox"
+      aria-label={t("selectAllAriaLabel")}
+      className="h-4 w-4 rounded border-border-default text-brand-500 focus:ring-brand-300"
+      checked={table.getIsAllPageRowsSelected()}
+      ref={(el) => {
+        if (el)
+          el.indeterminate =
+            !table.getIsAllPageRowsSelected() &&
+            table.getIsSomePageRowsSelected();
+      }}
+      onChange={table.getToggleAllPageRowsSelectedHandler()}
+      onClick={(e) => e.stopPropagation()}
+    />
+  );
+}
+
+function RowSelectCheckbox<T>({ row }: { row: import("@tanstack/react-table").Row<T> }) {
+  const t = useTranslations("dataTable.header");
+  return (
+    <input
+      type="checkbox"
+      aria-label={t("selectRowAriaLabel")}
+      className="h-4 w-4 rounded border-border-default text-brand-500 focus:ring-brand-300"
+      checked={row.getIsSelected()}
+      disabled={!row.getCanSelect()}
+      onChange={row.getToggleSelectedHandler()}
+      onClick={(e) => e.stopPropagation()}
+    />
+  );
 }
 
 /* ============================================================================
@@ -114,6 +125,8 @@ export function DataTable<T>({
   const isMobile = useIsMobile(mobileBreakpoint);
   const isVirtual = mode === "virtual";
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const tEmpty = useTranslations("dataTable.empty");
+  const tError = useTranslations("dataTable.error");
 
   /* ── Compose columns: selection + caller + actions ───────────────────── */
 
@@ -169,7 +182,7 @@ export function DataTable<T>({
         <DataTableToolbar
           selectedIds={selectedIds}
           selectedRows={selectedRows}
-          entityLabel={selection.entityLabel}
+          selectionLabel={selection.selectionLabel}
           onClear={() => selection.onSelectionChange(new Set())}
           actions={bulkActions}
         />
@@ -186,7 +199,7 @@ export function DataTable<T>({
                 <p className="text-sm text-fg max-w-sm">{error.message}</p>
                 {error.onRetry && (
                   <Button size="sm" variant="secondary" onClick={error.onRetry}>
-                    Retry
+                    {tError("retry")}
                   </Button>
                 )}
               </MobileMessage>
@@ -219,7 +232,7 @@ export function DataTable<T>({
                 <InboxIcon className="h-10 w-10 text-fg-tertiary" />
                 <p className="text-sm font-semibold text-fg">
                   {emptyState?.title ??
-                    (hasActiveFilters ? "No matches" : "No data yet")}
+                    (hasActiveFilters ? tEmpty("noMatches") : tEmpty("noData"))}
                 </p>
                 {emptyState?.description && (
                   <p className="text-xs text-fg-tertiary max-w-sm">

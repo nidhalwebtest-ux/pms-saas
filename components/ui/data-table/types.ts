@@ -113,8 +113,14 @@ export interface SelectionConfig<T> {
   onSelectionChange: (next: Set<string>) => void;
   /** Persist selection across pagination boundaries. Default `true`. */
   persistAcrossPages?: boolean;
-  /** Singular noun for "5 selected" pluralization. E.g. `"reservation"`. */
-  entityLabel?: string;
+  /**
+   * Optional callback that produces the "X rows selected" label in the bulk
+   * action toolbar. When omitted, falls back to the default `dataTable.
+   * toolbar.rowsSelected` translation (which has full Arabic plurals).
+   * Use to customize the noun for a specific page, e.g.
+   * `(count) => tList("expensesSelected", { count })`.
+   */
+  selectionLabel?: (count: number) => string;
   /**
    * "Select all matching filters" — the consumer fetches every ID. Used when
    * server-side pagination means the table only sees the current page.

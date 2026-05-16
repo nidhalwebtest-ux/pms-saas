@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { InboxIcon } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 import { Button } from "../../Button";
 import type { EmptyStateConfig } from "../types";
 
@@ -33,6 +34,8 @@ export function DataTableEmpty({
   onClearFilters,
   colspan,
 }: DataTableEmptyProps) {
+  const t = useTranslations("dataTable.empty");
+
   // Resolve content. Caller-supplied state always wins.
   let title: ReactNode = state?.title;
   let description: ReactNode = state?.description;
@@ -41,13 +44,13 @@ export function DataTableEmpty({
 
   if (!state) {
     if (hasActiveFilters) {
-      title = "No matches";
-      description = "Try clearing or adjusting your filters.";
+      title = t("noMatches");
+      description = t("noMatchesHint");
       if (onClearFilters) {
-        action = { label: "Clear filters", onClick: onClearFilters };
+        action = { label: t("clearFilters"), onClick: onClearFilters };
       }
     } else {
-      title = "No data yet";
+      title = t("noData");
     }
     illustration = <InboxIcon className="h-10 w-10 text-fg-tertiary" />;
   }

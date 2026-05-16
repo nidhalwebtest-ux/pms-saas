@@ -6,7 +6,7 @@ import {
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
 } from "@heroicons/react/24/outline";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 export interface DataTablePaginationProps {
   pageIndex: number;
@@ -49,6 +49,7 @@ export function DataTablePagination({
   hidePageSize,
 }: DataTablePaginationProps) {
   const locale = useLocale();
+  const t = useTranslations("dataTable.pagination");
   const isRTL = locale === "ar";
 
   const totalPages = Math.max(1, Math.ceil(totalCount / Math.max(1, pageSize)));
@@ -70,16 +71,20 @@ export function DataTablePagination({
       {/* Range + page-size */}
       <div className="flex items-center gap-4 text-xs text-fg-tertiary">
         <span dir="ltr" className="tabular-nums">
-          {firstRow.toLocaleString()}–{lastRow.toLocaleString()} of {totalCount.toLocaleString()}
+          {t("range", {
+            start: firstRow.toLocaleString(),
+            end: lastRow.toLocaleString(),
+            total: totalCount.toLocaleString(),
+          })}
         </span>
         {!hidePageSize && (
           <label className="inline-flex items-center gap-2">
-            <span>Rows</span>
+            <span>{t("rowsLabel")}</span>
             <select
               value={pageSize}
               onChange={(e) => onPageSizeChange(Number(e.target.value))}
               className="h-7 rounded-md border border-border-default bg-surface px-2 text-xs text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-300"
-              aria-label="Rows per page"
+              aria-label={t("rowsPerPageAriaLabel")}
             >
               {pageSizes.map((s) => (
                 <option key={s} value={s}>
@@ -94,18 +99,18 @@ export function DataTablePagination({
       {/* Pager */}
       {totalPages > 1 && (
         <nav
-          aria-label="Pagination"
+          aria-label={t("navAriaLabel")}
           className={`flex items-center gap-1 ${directionClass}`}
         >
           <PagerButton
             icon={<ChevronDoubleLeftIcon className="h-4 w-4" />}
-            label="First page"
+            label={t("firstPage")}
             disabled={!canPrev}
             onClick={() => onPageChange(0)}
           />
           <PagerButton
             icon={<ChevronLeftIcon className="h-4 w-4" />}
-            label="Previous page"
+            label={t("previousPage")}
             disabled={!canPrev}
             onClick={() => onPageChange(pageIndex - 1)}
           />
@@ -125,7 +130,7 @@ export function DataTablePagination({
                   type="button"
                   onClick={() => onPageChange(p - 1)}
                   aria-current={p === currentPage ? "page" : undefined}
-                  aria-label={`Page ${p}`}
+                  aria-label={t("pageAriaLabel", { page: p })}
                   className={
                     p === currentPage
                       ? "h-7 min-w-7 px-2 rounded-md bg-brand-500 text-white text-xs font-semibold"
@@ -139,13 +144,13 @@ export function DataTablePagination({
           </div>
           <PagerButton
             icon={<ChevronRightIcon className="h-4 w-4" />}
-            label="Next page"
+            label={t("nextPage")}
             disabled={!canNext}
             onClick={() => onPageChange(pageIndex + 1)}
           />
           <PagerButton
             icon={<ChevronDoubleRightIcon className="h-4 w-4" />}
-            label="Last page"
+            label={t("lastPage")}
             disabled={!canNext}
             onClick={() => onPageChange(totalPages - 1)}
           />

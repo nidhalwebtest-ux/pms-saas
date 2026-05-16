@@ -384,7 +384,7 @@ export default function ExpensesListClient({
                 enabled: true,
                 selected: selectedIds,
                 onSelectionChange: setSelectedIds,
-                entityLabel: "expense",
+                selectionLabel: (count) => tList("selected", { count }),
                 isRowSelectable: (e) => e.status === "PENDING",
               }
             : undefined

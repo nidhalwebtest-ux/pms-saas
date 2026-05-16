@@ -62,7 +62,14 @@ export type TableMode = "client" | "server" | "virtual";
  *  Row variants — drives row-level tint / start-border accent
  * ========================================================================= */
 
-export type RowVariant = "default" | "urgent" | "inactive" | "pinned";
+/**
+ * Row-level visual emphasis. Same physical accents as the badge tones:
+ * - `urgent`   → red border + faint red tint (overstay, overdue invoice)
+ * - `warning`  → amber border + faint amber tint (draft invoice, awaiting action)
+ * - `inactive` → muted text only (cancelled, archived)
+ * - `pinned`   → amber border, no tint (VIP, flagged)
+ */
+export type RowVariant = "default" | "urgent" | "warning" | "inactive" | "pinned";
 
 /* ============================================================================
  *  Density

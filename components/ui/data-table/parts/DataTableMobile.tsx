@@ -34,6 +34,7 @@ export interface DataTableMobileProps<T> {
 const variantBorderClass: Record<RowVariant, string> = {
   default: "",
   urgent: "border-s-2 border-s-error-500",
+  warning: "border-s-2 border-s-warning-500",
   inactive: "opacity-70",
   pinned: "border-s-2 border-s-warning-500",
 };

@@ -14,6 +14,8 @@ const variantClass: Record<RowVariant, string> = {
   default: "",
   urgent:
     "bg-error-50/30 shadow-[inset_3px_0_0_0_var(--error-500)] rtl:shadow-[inset_-3px_0_0_0_var(--error-500)]",
+  warning:
+    "bg-warning-50/30 shadow-[inset_3px_0_0_0_var(--warning-500)] rtl:shadow-[inset_-3px_0_0_0_var(--warning-500)]",
   inactive: "text-fg-tertiary",
   pinned:
     "shadow-[inset_3px_0_0_0_var(--warning-500)] rtl:shadow-[inset_-3px_0_0_0_var(--warning-500)]",

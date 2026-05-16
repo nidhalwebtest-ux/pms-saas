@@ -13,26 +13,29 @@ import {
   PrinterIcon,
   PencilSquareIcon,
   EyeIcon,
+  BoltIcon,
   CheckIcon,
   XMarkIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
-  ChevronUpDownIcon,
   UserGroupIcon,
   PhoneIcon,
   EnvelopeIcon,
   CalendarDaysIcon,
   BanknotesIcon,
 } from "@heroicons/react/24/outline";
+import type { SortingState } from "@tanstack/react-table";
 import { quickUpdateTenant } from "./actions";
 import type { TenantRow } from "./page";
+import { DataTable } from "@/components/ui";
 import {
-  Badge,
-  getTenantTypeBadge,
-  getTenantClassBadge,
-  type TenantTypeKey,
-  type TenantClassKey,
-} from "@/components/ui";
+  Avatar,
+  ClassBadge,
+  TagPills,
+  TypeBadge,
+  buildTenantColumns,
+  tenantRowVariant,
+  useSourceLabel,
+  useTypeLabel,
+} from "./columns";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -41,39 +44,6 @@ const CLASS_BORDER: Record<string, string> = {
   blacklisted: "border-l-red-400",
   regular:     "border-l-blue-200",
 };
-
-const CLASS_AVATAR: Record<string, string> = {
-  vip:         "bg-yellow-100 text-yellow-800",
-  blacklisted: "bg-red-100 text-red-700",
-  regular:     "bg-blue-100 text-blue-700",
-};
-
-type SortKey = "name" | "tenantType" | "classification" | "source" | "totalStays" | "totalSpent" | "createdAt" | "activeReservations";
-type SortDir = "asc" | "desc";
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-function sortTenants(items: TenantRow[], key: SortKey, dir: SortDir): TenantRow[] {
-  return [...items].sort((a, b) => {
-    let av: any;
-    let bv: any;
-    if (key === "name") {
-      av = `${a.firstName} ${a.lastName}`.toLowerCase();
-      bv = `${b.firstName} ${b.lastName}`.toLowerCase();
-    } else if (key === "totalSpent") {
-      av = parseFloat(a.totalSpent);
-      bv = parseFloat(b.totalSpent);
-    } else {
-      av = (a as any)[key];
-      bv = (b as any)[key];
-    }
-    if (typeof av === "string") av = av.toLowerCase();
-    if (typeof bv === "string") bv = bv.toLowerCase();
-    if (av < bv) return dir === "asc" ? -1 :  1;
-    if (av > bv) return dir === "asc" ?  1 : -1;
-    return 0;
-  });
-}
 
 function exportCSV(rows: TenantRow[]) {
   const headers = [
@@ -108,111 +78,31 @@ function exportCSV(rows: TenantRow[]) {
   URL.revokeObjectURL(url);
 }
 
-function useTypeLabel() {
-  const tTypes = useTranslations("tenants.types");
-  return (v: string | null) => {
-    if (!v) return "—";
-    try { return tTypes(v as never); } catch { return v; }
-  };
-}
-
-function useSourceLabel() {
-  const tSrc = useTranslations("tenants.sources");
-  return (v: string | null) => {
-    if (!v) return "—";
-    try { return tSrc(v as never); } catch { return v; }
-  };
-}
-
-// ── Sub-components ─────────────────────────────────────────────────────────────
-
-function Avatar({ t, size = "sm" }: { t: TenantRow; size?: "sm" | "lg" }) {
-  const cls  = CLASS_AVATAR[t.classification ?? "regular"] ?? CLASS_AVATAR.regular;
-  const dim  = size === "lg" ? "h-14 w-14 text-lg" : "h-8 w-8 text-xs";
-  return (
-    <div className={`${dim} rounded-full flex items-center justify-center flex-shrink-0 font-bold ${cls}`}>
-      {t.firstName[0]}{t.lastName[0]}
-    </div>
-  );
-}
-
-function ClassBadge({ value }: { value: string | null }) {
-  const tCls = useTranslations("tenants.classifications");
-  const key = (value === "vip" || value === "blacklisted" ? value : "regular") as TenantClassKey;
-  const labelKey =
-    key === "vip"         ? "vipBadge" :
-    key === "blacklisted" ? "blacklistedBadge" :
-                            "regular";
-  return (
-    <Badge {...getTenantClassBadge(key)} size="sm">
-      {tCls(labelKey)}
-    </Badge>
-  );
-}
-
-function TypeBadge({ value }: { value: string | null }) {
-  const typeLabel = useTypeLabel();
-  if (!value) {
-    return (
-      <Badge tone="neutral" appearance="subtle" size="sm">
-        {typeLabel(value)}
-      </Badge>
-    );
-  }
-  return (
-    <Badge {...getTenantTypeBadge(value as TenantTypeKey)} size="sm">
-      {typeLabel(value)}
-    </Badge>
-  );
-}
-
-function TagPills({ tags }: { tags: string[] }) {
-  if (!tags.length) return null;
-  return (
-    <div className="flex flex-wrap gap-1 mt-1">
-      {tags.slice(0, 3).map((tag) => (
-        <span key={tag} className="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] text-gray-600">{tag}</span>
-      ))}
-      {tags.length > 3 && <span className="text-[10px] text-gray-400">+{tags.length - 3}</span>}
-    </div>
-  );
-}
-
-function SortTh({
-  label, sortKey, currentKey, currentDir, onSort, className = "",
-}: {
-  label: string; sortKey: SortKey; currentKey: SortKey; currentDir: SortDir;
-  onSort: (k: SortKey) => void; className?: string;
-}) {
-  const active = currentKey === sortKey;
-  return (
-    <th
-      onClick={() => onSort(sortKey)}
-      className={`cursor-pointer select-none px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-100 transition-colors group ${className}`}
-    >
-      <div className="flex items-center gap-1">
-        {label}
-        {active
-          ? currentDir === "asc"
-            ? <ChevronUpIcon   className="h-3.5 w-3.5 text-blue-600 stroke-[2.5]" />
-            : <ChevronDownIcon className="h-3.5 w-3.5 text-blue-600 stroke-[2.5]" />
-          : <ChevronUpDownIcon className="h-3.5 w-3.5 text-gray-300 group-hover:text-gray-500" />}
-      </div>
-    </th>
-  );
-}
-
 // ── Inline Edit Row ────────────────────────────────────────────────────────────
 
 const CLASS_CYCLE = ["regular", "vip", "blacklisted"];
 
-function EditableRow({ tenant, onDone }: { tenant: TenantRow; onDone: () => void }) {
+/**
+ * Inline edit row — rendered via DataTable's `renderRow` override. Seven
+ * cells map 1-to-1 onto the column order: avatar / name / contact / type /
+ * source / stays / actions. Type and Stays stay display-only; Source visually
+ * becomes the classification cycle button while editing.
+ */
+function EditableRow({
+  tenant,
+  onDone,
+}: {
+  tenant: TenantRow;
+  onDone: () => void;
+}) {
   const tRow = useTranslations("tenants.list.row");
   const tCls = useTranslations("tenants.classifications");
-  const [firstName,      setFirstName]      = useState(tenant.firstName);
-  const [lastName,       setLastName]       = useState(tenant.lastName);
-  const [phone,          setPhone]          = useState(tenant.phone);
-  const [classification, setClassification] = useState(tenant.classification ?? "regular");
+  const [firstName, setFirstName] = useState(tenant.firstName);
+  const [lastName, setLastName] = useState(tenant.lastName);
+  const [phone, setPhone] = useState(tenant.phone);
+  const [classification, setClassification] = useState(
+    tenant.classification ?? "regular",
+  );
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
@@ -223,165 +113,115 @@ function EditableRow({ tenant, onDone }: { tenant: TenantRow; onDone: () => void
 
   const save = () => {
     const fd = new FormData();
-    fd.set("id",             tenant.id);
-    fd.set("firstName",      firstName);
-    fd.set("lastName",       lastName);
-    fd.set("phone",          phone);
+    fd.set("id", tenant.id);
+    fd.set("firstName", firstName);
+    fd.set("lastName", lastName);
+    fd.set("phone", phone);
     fd.set("classification", classification);
     startTransition(async () => {
       const res = await quickUpdateTenant(fd);
-      if (res?.error) { toast.error(res.error); return; }
+      if (res?.error) {
+        toast.error(res.error);
+        return;
+      }
       toast.success(tRow("saved"));
       router.refresh();
       onDone();
     });
   };
 
+  const inputCls =
+    "w-full rounded-md border border-brand-400 bg-surface px-2 py-1 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-brand-500";
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") save();
+    if (e.key === "Escape") onDone();
+  };
+
   return (
-    <tr className="bg-blue-50 ring-2 ring-inset ring-blue-300">
-      {/* Avatar */}
-      <td className="py-2.5 pl-4 pr-2">
+    <tr className="bg-brand-50/40">
+      {/* Avatar — reflects pending classification color */}
+      <td className="py-2.5 ps-4 pe-2">
         <Avatar t={{ ...tenant, classification }} />
       </td>
-      {/* First + Last name */}
-      <td className="px-3 py-2" colSpan={2}>
-        <div className="flex gap-1.5">
+      {/* Name — first + last stacked */}
+      <td className="px-3 py-2 min-w-[200px]">
+        <div className="flex flex-col gap-1.5">
           <input
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") onDone(); }}
+            onKeyDown={onKey}
             placeholder={tRow("firstNamePlaceholder")}
-            className="w-1/2 rounded-md border border-blue-400 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={inputCls}
             autoFocus
           />
           <input
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") onDone(); }}
+            onKeyDown={onKey}
             placeholder={tRow("lastNamePlaceholder")}
-            className="w-1/2 rounded-md border border-blue-400 bg-white px-2.5 py-1.5 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={inputCls}
           />
         </div>
       </td>
-      {/* Phone */}
-      <td className="hidden px-3 py-2 md:table-cell">
+      {/* Contact — phone input */}
+      <td className="px-3 py-2">
         <input
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") onDone(); }}
-          className="w-full rounded-md border border-blue-400 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          onKeyDown={onKey}
+          className={inputCls}
         />
       </td>
-      {/* Type */}
-      <td className="hidden px-3 py-2 lg:table-cell">
+      {/* Type — read-only display */}
+      <td className="px-3 py-2">
         <TypeBadge value={tenant.tenantType} />
       </td>
-      {/* Classification cycle */}
+      {/* Source slot → classification cycle */}
       <td className="px-3 py-2">
         <button
           type="button"
           onClick={cycleClass}
           title={tRow("cycleClassTitle")}
           className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
-            classification === "vip"         ? "bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
-            : classification === "blacklisted" ? "bg-red-100 text-red-700 hover:bg-red-200"
-            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+            classification === "vip"
+              ? "bg-warning-50 text-warning-700 hover:bg-warning-100"
+              : classification === "blacklisted"
+              ? "bg-error-50 text-error-700 hover:bg-error-100"
+              : "bg-subtle text-fg-tertiary hover:bg-border-subtle"
           }`}
         >
-          {classification === "vip" ? tCls("vipBadge") : classification === "blacklisted" ? tCls("blacklistedBadge") : tCls("regular")}
+          {classification === "vip"
+            ? tCls("vipBadge")
+            : classification === "blacklisted"
+            ? tCls("blacklistedBadge")
+            : tCls("regular")}
         </button>
       </td>
-      {/* Stays */}
-      <td className="hidden px-3 py-2 text-sm text-center text-gray-700 xl:table-cell ltr-numbers">{tenant.totalStays}</td>
-      {/* Actions */}
+      {/* Stays — read-only display */}
+      <td className="px-3 py-2 text-center text-sm text-fg-tertiary ltr-numbers">
+        {tenant.totalStays}
+      </td>
+      {/* Actions — save + cancel */}
       <td className="px-3 py-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-1">
           <button
             onClick={save}
             disabled={isPending}
-            className="flex items-center gap-1 rounded-md bg-blue-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-60 transition-colors"
+            aria-label={tRow("save")}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-60 transition-colors"
+            title={tRow("save")}
           >
-            <CheckIcon className="h-3.5 w-3.5" /> {tRow("save")}
+            <CheckIcon className="h-4 w-4" />
           </button>
           <button
             onClick={onDone}
-            className="flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+            disabled={isPending}
+            aria-label={tRow("cancel")}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-tertiary hover:bg-subtle hover:text-fg transition-colors"
+            title={tRow("cancel")}
           >
-            <XMarkIcon className="h-3.5 w-3.5" /> {tRow("cancel")}
+            <XMarkIcon className="h-4 w-4" />
           </button>
-        </div>
-      </td>
-    </tr>
-  );
-}
-
-// ── Normal Table Row ──────────────────────────────────────────────────────────
-
-function TenantTableRow({ tenant, onEdit, editMode }: { tenant: TenantRow; onEdit: () => void; editMode: boolean }) {
-  const tRow    = useTranslations("tenants.list.row");
-  const sourceLabel = useSourceLabel();
-  return (
-    <tr className="group hover:bg-blue-50/40 transition-colors">
-      {/* Avatar */}
-      <td className="py-2.5 ps-4 pe-2">
-        <Avatar t={tenant} />
-      </td>
-
-      {/* Name + nationality + tags */}
-      <td className="px-3 py-2.5 min-w-[160px]">
-        <Link href={`/dashboard/tenants/${tenant.id}`} className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors">
-          {tenant.firstName} {tenant.lastName}
-        </Link>
-        <div className="text-xs text-gray-400">{tenant.nationality || "—"}</div>
-        <TagPills tags={tenant.tags} />
-      </td>
-
-      {/* Contact */}
-      <td className="hidden px-3 py-2.5 text-sm sm:table-cell">
-        <div className="text-gray-800 ltr-numbers">{tenant.phone}</div>
-        {tenant.email && <div className="text-xs text-gray-400 truncate max-w-[150px]">{tenant.email}</div>}
-      </td>
-
-      {/* Type */}
-      <td className="hidden px-3 py-2.5 md:table-cell">
-        <TypeBadge value={tenant.tenantType} />
-      </td>
-
-      {/* Source */}
-      <td className="hidden px-3 py-2.5 text-xs text-gray-500 lg:table-cell">
-        {sourceLabel(tenant.source)}
-      </td>
-
-      {/* Stays */}
-      <td className="hidden px-3 py-2.5 text-sm text-center text-gray-700 xl:table-cell ltr-numbers">
-        {tenant.totalStays}
-      </td>
-
-      {/* Actions */}
-      <td className="px-3 py-2.5 text-end">
-        <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
-          <Link
-            href={`/dashboard/tenants/${tenant.id}`}
-            className="rounded-lg p-1.5 text-gray-500 hover:bg-blue-100 hover:text-blue-700 transition-colors"
-            title={tRow("viewProfile")}
-          >
-            <EyeIcon className="h-4 w-4" />
-          </Link>
-          {editMode && (
-            <button
-              onClick={onEdit}
-              className="rounded-lg p-1.5 text-gray-500 hover:bg-blue-100 hover:text-blue-700 transition-colors"
-              title={tRow("quickEdit")}
-            >
-              <PencilSquareIcon className="h-4 w-4" />
-            </button>
-          )}
-          <Link
-            href={`/dashboard/tenants/${tenant.id}/edit`}
-            className="rounded-lg px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-100 transition-colors"
-          >
-            {tRow("edit")}
-          </Link>
         </div>
       </td>
     </tr>
@@ -560,19 +400,64 @@ export default function TenantsView({
 }) {
   const tBar     = useTranslations("tenants.list.toolbar");
   const tTable   = useTranslations("tenants.list.table");
+  const tRow     = useTranslations("tenants.list.row");
   const tList    = useTranslations("tenants.list");
+  const router   = useRouter();
   const [viewMode,     setViewMode]     = useState<"table" | "card" | "summary">("table");
-  const [sortKey,      setSortKey]      = useState<SortKey>("createdAt");
-  const [sortDir,      setSortDir]      = useState<SortDir>("desc");
+  const [sorting,      setSorting]      = useState<SortingState>([
+    { id: "name", desc: false },
+  ]);
   const [editMode,     setEditMode]     = useState(false);
   const [inlineEditId, setInlineEditId] = useState<string | null>(null);
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(key); setSortDir("asc"); }
-  };
+  // For card / summary views we still want the same default sort, but they
+  // are not driven by TanStack — derive a comparator from the sorting state.
+  const sorted = useMemo(() => {
+    const sort = sorting[0];
+    if (!sort) return tenants;
+    const dir = sort.desc ? -1 : 1;
+    return [...tenants].sort((a, b) => {
+      const av = (a as Record<string, unknown>)[sort.id];
+      const bv = (b as Record<string, unknown>)[sort.id];
+      if (typeof av === "string" && typeof bv === "string") {
+        return av.localeCompare(bv) * dir;
+      }
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return (av < bv ? -1 : av > bv ? 1 : 0) * dir;
+    });
+  }, [tenants, sorting]);
 
-  const sorted = useMemo(() => sortTenants(tenants, sortKey, sortDir), [tenants, sortKey, sortDir]);
+  const columns = useMemo(
+    () => buildTenantColumns({ tTable, tRow }),
+    [tTable, tRow],
+  );
+
+  const rowActions = useMemo(
+    () => (r: TenantRow) => [
+      {
+        id: "view",
+        label: tRow("viewProfile"),
+        icon: <EyeIcon className="h-4 w-4" />,
+        onClick: () => router.push(`/dashboard/tenants/${r.id}`),
+      },
+      {
+        id: "quick-edit",
+        label: tRow("quickEdit"),
+        icon: <BoltIcon className="h-4 w-4" />,
+        visible: editMode,
+        onClick: () => setInlineEditId(r.id),
+      },
+      {
+        id: "edit",
+        label: tRow("edit"),
+        icon: <PencilSquareIcon className="h-4 w-4" />,
+        onClick: () => router.push(`/dashboard/tenants/${r.id}/edit`),
+      },
+    ],
+    [tRow, editMode, router],
+  );
 
   const viewTitles: Record<"table" | "card" | "summary", string> = {
     table:   tBar("tableViewTitle"),
@@ -641,51 +526,33 @@ export default function TenantsView({
 
       {/* ── Table view ──────────────────────────────────────────── */}
       {viewMode === "table" && (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 print:text-xs">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="py-3 ps-4 pe-2 w-12" />
-                  <SortTh label={tTable("name")}    sortKey="name"           currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="min-w-[160px]" />
-                  <th className="hidden px-3 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500 sm:table-cell">{tTable("contact")}</th>
-                  <SortTh label={tTable("type")}    sortKey="tenantType"     currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden md:table-cell" />
-                  <SortTh label={tTable("source")}  sortKey="source"         currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden lg:table-cell" />
-                  <SortTh label={tTable("stays")}   sortKey="totalStays"     currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden xl:table-cell text-center" />
-                  <th className="px-3 py-3 text-end text-xs font-semibold uppercase tracking-wide text-gray-500 print:hidden">{tTable("actions")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
-                {sorted.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-16 text-center">
-                      <UserGroupIcon className="mx-auto mb-3 h-10 w-10 text-gray-200" />
-                      <p className="text-sm text-gray-400">{tList("empty")}</p>
-                    </td>
-                  </tr>
-                ) : (
-                  sorted.map((tenant) =>
-                    editMode && inlineEditId === tenant.id ? (
-                      <EditableRow key={tenant.id} tenant={tenant} onDone={() => setInlineEditId(null)} />
-                    ) : (
-                      <TenantTableRow
-                        key={tenant.id}
-                        tenant={tenant}
-                        editMode={editMode}
-                        onEdit={() => setInlineEditId(tenant.id)}
-                      />
-                    )
-                  )
-                )}
-              </tbody>
-            </table>
-          </div>
-          {sorted.length > 0 && (
-            <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-2.5 text-xs text-gray-500">
-              {tList("showing", { count: sorted.length })}
-            </div>
+        <>
+          <DataTable<TenantRow>
+            data={tenants}
+            columns={columns}
+            mode="client"
+            sorting={{ state: sorting, onChange: setSorting }}
+            rowActions={rowActions}
+            rowVariant={tenantRowVariant}
+            renderRow={({ row }) =>
+              editMode && inlineEditId === row.id ? (
+                <EditableRow tenant={row} onDone={() => setInlineEditId(null)} />
+              ) : null
+            }
+            emptyState={{
+              title: tList("empty"),
+              illustration: (
+                <UserGroupIcon className="h-10 w-10 text-fg-tertiary" />
+              ),
+            }}
+            aria-label={tTable("name")}
+          />
+          {tenants.length > 0 && (
+            <p className="px-4 text-xs text-fg-tertiary">
+              {tList("showing", { count: tenants.length })}
+            </p>
           )}
-        </div>
+        </>
       )}
 
       {/* ── Compact card view ───────────────────────────────────── */}

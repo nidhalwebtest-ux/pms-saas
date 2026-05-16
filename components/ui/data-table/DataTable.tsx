@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef } from "react";
+import { Fragment, useMemo, useRef } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { useDataTable } from "./hooks/useDataTable";
 import { useIsMobile } from "./hooks/useIsMobile";
@@ -100,6 +100,7 @@ export function DataTable<T>({
   error,
   onRowClick,
   rowVariant,
+  renderRow,
   density = "comfortable",
   stickyHeader = true,
   mobileBreakpoint = 768,
@@ -287,15 +288,23 @@ export function DataTable<T>({
                     endReachedThreshold={endReachedThreshold}
                   />
                 ) : (
-                  table.getRowModel().rows.map((row) => (
-                    <DataTableRow
-                      key={row.id}
-                      row={row}
-                      density={density}
-                      variant={rowVariant ? rowVariant(row.original) : "default"}
-                      onClick={onRowClick}
-                    />
-                  ))
+                  table.getRowModel().rows.map((row, index) => {
+                    if (renderRow) {
+                      const override = renderRow({ row: row.original, index });
+                      if (override !== null && override !== undefined) {
+                        return <Fragment key={row.id}>{override}</Fragment>;
+                      }
+                    }
+                    return (
+                      <DataTableRow
+                        key={row.id}
+                        row={row}
+                        density={density}
+                        variant={rowVariant ? rowVariant(row.original) : "default"}
+                        onClick={onRowClick}
+                      />
+                    );
+                  })
                 )
               ) : (
                 <DataTableEmpty

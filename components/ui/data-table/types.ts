@@ -220,6 +220,16 @@ export interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
   rowVariant?: (row: T) => RowVariant;
 
+  /**
+   * Per-row render override. Use to swap a row entirely (e.g. an inline-edit
+   * panel for the currently-editing tenant). Return `null` to keep the default
+   * row, or any `ReactNode` to replace it. The replacement must be a `<tr>`
+   * whose cells span the column count so the layout aligns.
+   *
+   * Desktop only — the mobile card variant does not consult this hook.
+   */
+  renderRow?: (args: { row: T; index: number }) => ReactNode | null;
+
   density?: TableDensity;
   stickyHeader?: boolean;
 

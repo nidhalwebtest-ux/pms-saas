@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useSearchParams, usePathname } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import {
   Squares2X2Icon,
@@ -15,9 +15,6 @@ import {
   CheckCircleIcon,
   WrenchScrewdriverIcon,
   ArchiveBoxIcon,
-  ChevronUpDownIcon,
-  ChevronUpIcon,
-  ChevronDownIcon,
   BuildingOffice2Icon,
   MapPinIcon,
   PlusIcon,
@@ -27,86 +24,20 @@ import {
   HomeIcon,
   FunnelIcon,
 } from "@heroicons/react/24/outline";
+import type { SortingState } from "@tanstack/react-table";
 import type { PropertyRow } from "./page";
-import { Badge, getPropertyTypeBadge, type PropertyTypeKey } from "@/components/ui";
-
-// ── Constants ────────────────────────────────────────────────────────────────
-
-type SortKey = "name" | "type" | "city" | "totalUnits" | "occupiedUnits" | "vacantUnits" | "isActive" | "createdAt" | "revenueThisMonth";
-type SortDir = "asc" | "desc";
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function sortProperties(items: PropertyRow[], key: SortKey, dir: SortDir): PropertyRow[] {
-  return [...items].sort((a, b) => {
-    let av: any = a[key];
-    let bv: any = b[key];
-    if (typeof av === "string") av = av.toLowerCase();
-    if (typeof bv === "string") bv = bv.toLowerCase();
-    if (av < bv) return dir === "asc" ? -1 :  1;
-    if (av > bv) return dir === "asc" ?  1 : -1;
-    return 0;
-  });
-}
-
-// ── Sub-components ───────────────────────────────────────────────────────────
-
-function Thumbnail({ photos, name }: { photos: string[]; name: string }) {
-  if (photos[0]) {
-    return (
-      <div className="relative h-10 w-14 flex-shrink-0 overflow-hidden rounded-md ring-1 ring-gray-200">
-        <Image src={photos[0]} alt={name} fill className="object-cover" unoptimized />
-      </div>
-    );
-  }
-  return (
-    <div className="flex h-10 w-14 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 ring-1 ring-gray-200">
-      <BuildingOffice2Icon className="h-5 w-5 text-gray-400" />
-    </div>
-  );
-}
-
-function OccupancyBar({ occupied, total, noUnitsLabel }: { occupied: number; total: number; noUnitsLabel: string }) {
-  if (total === 0) return <span className="text-xs text-gray-400">{noUnitsLabel}</span>;
-  const pct = Math.round((occupied / total) * 100);
-  const color = pct >= 90 ? "bg-red-400" : pct >= 60 ? "bg-amber-400" : "bg-green-500";
-  return (
-    <div className="flex items-center gap-2">
-      <div className="h-1.5 w-16 overflow-hidden rounded-full bg-gray-200">
-        <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-xs text-gray-500 ltr-numbers">{pct}%</span>
-    </div>
-  );
-}
-
-function SortTh({
-  label, sortKey, currentKey, currentDir, onSort, className = "",
-}: {
-  label: string; sortKey: SortKey; currentKey: SortKey; currentDir: SortDir;
-  onSort: (k: SortKey) => void; className?: string;
-}) {
-  const active = currentKey === sortKey;
-  return (
-    <th
-      scope="col"
-      onClick={() => onSort(sortKey)}
-      className={`cursor-pointer select-none px-3 py-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500 hover:bg-gray-100 transition-colors group ${className}`}
-    >
-      <div className="flex items-center gap-1">
-        {label}
-        {active ? (
-          currentDir === "asc"
-            ? <ChevronUpIcon   className="h-3.5 w-3.5 text-blue-600 stroke-[2.5]" />
-            : <ChevronDownIcon className="h-3.5 w-3.5 text-blue-600 stroke-[2.5]" />
-        ) : (
-          <ChevronUpDownIcon className="h-3.5 w-3.5 text-gray-300 group-hover:text-gray-500" />
-        )}
-      </div>
-    </th>
-  );
-}
-
+import {
+  Badge,
+  DataTable,
+  getPropertyTypeBadge,
+  type PropertyTypeKey,
+} from "@/components/ui";
+import {
+  OccupancyBar,
+  Thumbnail,
+  buildPropertyColumns,
+  propertyRowVariant,
+} from "./columns";
 
 // ── Card ─────────────────────────────────────────────────────────────────────
 
@@ -419,6 +350,7 @@ export default function PropertiesView({
   const tPrint  = useTranslations("buildings.print");
   const tCsv    = useTranslations("buildings.csv");
   const locale  = useLocale();
+  const router  = useRouter();
 
   // CSV export uses locale-aware translated headers
   const exportCSV = (rows: PropertyRow[]) => {
@@ -455,28 +387,38 @@ export default function PropertiesView({
     URL.revokeObjectURL(url);
   };
 
-  // Derive initial sort from URL param
-  const parseSort = (s: string): [SortKey, SortDir] => {
-    if (s === "newest")    return ["createdAt", "desc"];
-    if (s === "oldest")    return ["createdAt", "asc"];
+  // Derive initial sort from URL param. The URL accepts `newest` / `oldest`
+  // (mapped to createdAt) and `<key>_<dir>` for the table columns. createdAt
+  // is not a visible column in the table, so we fall back to name asc when
+  // the URL asks for createdAt-based ordering — server-side ordering still
+  // honors it.
+  const parseSort = (s: string): SortingState => {
+    if (s === "newest" || s === "oldest") return [{ id: "name", desc: false }];
     const [key, dir] = s.split("_");
-    return [(key as SortKey) || "name", (dir as SortDir) || "asc"];
+    return [{ id: key || "name", desc: dir === "desc" }];
   };
-  const [initKey, initDir] = parseSort(initialSort);
 
   const [viewMode, setViewMode] = useState<"table" | "card" | "summary">("table");
-  const [sortKey,  setSortKey]  = useState<SortKey>(initKey);
-  const [sortDir,  setSortDir]  = useState<SortDir>(initDir);
+  const [sorting,  setSorting]  = useState<SortingState>(parseSort(initialSort));
 
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    else { setSortKey(key); setSortDir("asc"); }
-  };
-
-  const sorted = useMemo(
-    () => sortProperties(properties, sortKey, sortDir),
-    [properties, sortKey, sortDir],
-  );
+  // Card and summary views need a sorted array too — derive it from the
+  // active TanStack sort by hand (those views do not own a TanStack table).
+  const sorted = useMemo(() => {
+    const sort = sorting[0];
+    if (!sort) return properties;
+    const dir = sort.desc ? -1 : 1;
+    const k = sort.id as keyof PropertyRow;
+    return [...properties].sort((a, b) => {
+      let av: unknown = a[k];
+      let bv: unknown = b[k];
+      if (typeof av === "string") av = (av as string).toLowerCase();
+      if (typeof bv === "string") bv = (bv as string).toLowerCase();
+      if (av == null && bv == null) return 0;
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return (av < bv ? -1 : av > bv ? 1 : 0) * dir;
+    });
+  }, [properties, sorting]);
 
   const handlePrint = () => window.print();
 
@@ -492,6 +434,30 @@ export default function PropertiesView({
     !!searchParams.get("type") ||
     (searchParams.get("status") ?? "active") !== "active";
   const clearFiltersHref = pathname; // strip all params
+
+  // ── Columns + row actions for the table view ──────────────────────────────
+  const columns = useMemo(
+    () => buildPropertyColumns({ tTable, tT, tDet }),
+    [tTable, tT, tDet],
+  );
+
+  const rowActions = useMemo(
+    () => (p: PropertyRow) => [
+      {
+        id: "view",
+        label: tTable("actionViewDetails"),
+        icon: <EyeIcon className="h-4 w-4" />,
+        onClick: () => router.push(`/dashboard/properties/${p.id}`),
+      },
+      {
+        id: "edit",
+        label: tTable("actionEdit"),
+        icon: <PencilSquareIcon className="h-4 w-4" />,
+        onClick: () => router.push(`/dashboard/properties/${p.id}/edit`),
+      },
+    ],
+    [tTable, router],
+  );
 
   return (
     <div className="space-y-3">
@@ -562,159 +528,52 @@ export default function PropertiesView({
 
       {/* ── Table view ───────────────────────────────────────────── */}
       {viewMode === "table" && (
-        <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 print:text-xs">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="py-3 ps-4 pe-2 sm:ps-5 w-16" />
-                  <SortTh label={tTable("colName")}     sortKey="name"          currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="min-w-[160px]" />
-                  <SortTh label={tTable("colType")}     sortKey="type"          currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden sm:table-cell" />
-                  <SortTh label={tTable("colCity")}     sortKey="city"          currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden md:table-cell" />
-                  <SortTh label={tTable("colUnits")}    sortKey="totalUnits"    currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden lg:table-cell text-center" />
-                  <SortTh label={tTable("colOccupied")} sortKey="occupiedUnits" currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden lg:table-cell text-center" />
-                  <SortTh label={tTable("colVacant")}   sortKey="vacantUnits"   currentKey={sortKey} currentDir={sortDir} onSort={handleSort} className="hidden lg:table-cell text-center" />
-                  <SortTh label={tTable("colStatus")}   sortKey="isActive"      currentKey={sortKey} currentDir={sortDir} onSort={handleSort} />
-                  <th className="px-3 py-3 text-end text-xs font-semibold uppercase tracking-wide text-gray-500 print:hidden">
-                    {tTable("colActions")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 bg-white">
-                {sorted.length === 0 ? (
-                  <tr>
-                    <td colSpan={9}>
-                      <EmptyState
-                        hasAnyBuildings={totalUnfiltered > 0}
-                        hasActiveFilters={hasActiveFilters}
-                        clearHref={clearFiltersHref}
-                      />
-                    </td>
-                  </tr>
-                ) : (
-                  sorted.map((p) => (
-                      <tr
-                        key={p.id}
-                        className="hover:bg-blue-50/50 transition-colors"
-                      >
-                        {/* Thumbnail */}
-                        <td className="py-2.5 ps-4 pe-2 sm:ps-5">
-                          <Thumbnail photos={p.photos} name={p.name} />
-                        </td>
+        <>
+          <DataTable<PropertyRow>
+            data={properties}
+            columns={columns}
+            mode="client"
+            sorting={{ state: sorting, onChange: setSorting }}
+            rowActions={rowActions}
+            rowVariant={propertyRowVariant}
+            hasActiveFilters={hasActiveFilters}
+            emptyState={{
+              title: t(totalUnfiltered > 0 ? "empty.noMatch" : "empty.firstTitle"),
+              description: totalUnfiltered > 0 ? undefined : t("empty.firstBody"),
+              illustration: (
+                <BuildingOffice2Icon className="h-10 w-10 text-fg-tertiary" />
+              ),
+              action:
+                totalUnfiltered === 0
+                  ? {
+                      label: t("empty.firstCta"),
+                      onClick: () => router.push("/dashboard/properties/new"),
+                    }
+                  : hasActiveFilters
+                    ? {
+                        label: t("empty.clearFilters"),
+                        onClick: () => router.push(clearFiltersHref),
+                      }
+                    : undefined,
+            }}
+            aria-label={tTable("colName")}
+          />
 
-                        {/* Name */}
-                        <td className="px-3 py-2.5">
-                          <div className="flex items-center gap-2">
-                            <Link
-                              href={`/dashboard/properties/${p.id}`}
-                              className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors line-clamp-1"
-                            >
-                              {p.name}
-                            </Link>
-                          </div>
-                          {p.description && (
-                            <p className="mt-0.5 line-clamp-1 text-xs text-gray-400">{p.description}</p>
-                          )}
-                        </td>
-
-                        {/* Type */}
-                        <td className="hidden sm:table-cell px-3 py-2.5">
-                          {(() => {
-                            let label: string;
-                            try { label = tT(p.type); } catch { label = p.type; }
-                            return (
-                              <Badge {...getPropertyTypeBadge(p.type as PropertyTypeKey)} size="sm">
-                                {label}
-                              </Badge>
-                            );
-                          })()}
-                        </td>
-
-                        {/* City */}
-                        <td className="hidden md:table-cell px-3 py-2.5 text-sm text-gray-500">
-                          {p.city}
-                          {p.governorate && p.governorate !== p.city && (
-                            <span className="text-gray-400">, {p.governorate}</span>
-                          )}
-                        </td>
-
-                        {/* Units */}
-                        <td className="hidden lg:table-cell px-3 py-2.5 text-sm text-center font-medium text-gray-700 ltr-numbers">
-                          {p.totalUnits}
-                        </td>
-
-                        {/* Occupied */}
-                        <td className="hidden lg:table-cell px-3 py-2.5">
-                          <div className="flex flex-col items-center gap-1">
-                            <span className="text-sm font-semibold text-green-600 ltr-numbers">{p.occupiedUnits}</span>
-                            <OccupancyBar occupied={p.occupiedUnits} total={p.totalUnits} noUnitsLabel={noUnitsLabel} />
-                          </div>
-                        </td>
-
-                        {/* Vacant */}
-                        <td className="hidden lg:table-cell px-3 py-2.5 text-sm text-center text-gray-500 ltr-numbers">
-                          {p.vacantUnits}
-                        </td>
-
-                        {/* Status */}
-                        <td className="px-3 py-2.5">
-                          {p.isArchived ? (
-                            <Badge tone="neutral" appearance="subtle" size="sm" icon={<ArchiveBoxIcon className="h-full w-full" />}>
-                              {tDet("archived")}
-                            </Badge>
-                          ) : p.isActive ? (
-                            <Badge tone="success" appearance="subtle" size="sm" icon={<CheckCircleIcon className="h-full w-full" />}>
-                              {tDet("active")}
-                            </Badge>
-                          ) : (
-                            <Badge tone="warning" appearance="subtle" size="sm" icon={<WrenchScrewdriverIcon className="h-full w-full" />}>
-                              {tDet("inactive")}
-                            </Badge>
-                          )}
-                        </td>
-
-                        {/* Actions */}
-                        <td className="px-3 py-2.5 text-end print:hidden">
-                          <div className="flex items-center justify-end gap-1">
-                            <Link
-                              href={`/dashboard/properties/${p.id}`}
-                              className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700 transition-colors"
-                              title={tTable("actionViewDetails")}
-                            >
-                              <EyeIcon className="h-3.5 w-3.5" />
-                            </Link>
-                            <Link
-                              href={`/dashboard/properties/${p.id}/edit`}
-                              className="inline-flex items-center gap-1 rounded-md border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-100 transition-colors"
-                              title={tTable("actionEdit")}
-                            >
-                              <PencilSquareIcon className="h-3.5 w-3.5" />
-                              {tTable("actionEdit")}
-                            </Link>
-                          </div>
-                        </td>
-                      </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Footer */}
-          {sorted.length > 0 && (
-            <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-2.5 text-xs text-gray-500 ltr-numbers">
-              {tTable("footerBuildings", { count: sorted.length })}
+          {/* Footer summary */}
+          {properties.length > 0 && (
+            <p className="px-4 text-xs text-fg-tertiary ltr-numbers">
+              {tTable("footerBuildings", { count: properties.length })}
               {tTable("footerSeparator")}
-              {tTable("footerTotalUnits", { count: sorted.reduce((s, p) => s + p.totalUnits, 0) })}
+              {tTable("footerTotalUnits", { count: properties.reduce((s, p) => s + p.totalUnits, 0) })}
               {tTable("footerSeparator")}
-              <span className="text-green-600 font-medium">
-                {tTable("footerOccupied", { count: sorted.reduce((s, p) => s + p.occupiedUnits, 0) })}
+              <span className="text-success-700 font-medium">
+                {tTable("footerOccupied", { count: properties.reduce((s, p) => s + p.occupiedUnits, 0) })}
               </span>
               {tTable("footerSeparator")}
-              {tTable("footerVacant", { count: sorted.reduce((s, p) => s + p.vacantUnits, 0) })}
-            </div>
+              {tTable("footerVacant", { count: properties.reduce((s, p) => s + p.vacantUnits, 0) })}
+            </p>
           )}
-        </div>
+        </>
       )}
 
       {/* ── Card view ────────────────────────────────────────────── */}

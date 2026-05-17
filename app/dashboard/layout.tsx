@@ -47,7 +47,12 @@ export default async function DashboardLayout({
 
   return (
     <OrgProvider value={{ currency }}>
-      <div className="min-h-screen bg-gray-50">
+      {/*
+       * `overflow-x-hidden` is a defensive guard so a stray overflowing
+       * child can never push the viewport wider than the window — that
+       * was breaking modal sizing and forcing horizontal scroll on mobile.
+       */}
+      <div className="min-h-screen bg-gray-50 overflow-x-hidden">
         {/* Global navigation progress bar */}
         <NavigationProgress />
 
@@ -64,8 +69,8 @@ export default async function DashboardLayout({
           <Navigation role={role} />
         </div>
 
-        <main className="py-10">
-          <div className="px-4 sm:px-6 lg:px-8">{children}</div>
+        <main className="py-6 sm:py-10">
+          <div className="px-3 sm:px-6 lg:px-8">{children}</div>
         </main>
 
         {modal}

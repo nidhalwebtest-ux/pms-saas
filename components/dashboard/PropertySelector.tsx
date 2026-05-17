@@ -27,7 +27,7 @@ export default function PropertySelector({ properties, currentPropertyId }: Prop
 
   return (
     <div
-      className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-sm transition-all ${
+      className={`flex items-center gap-1.5 rounded-lg border px-2 sm:px-2.5 py-1.5 text-sm transition-all min-w-0 ${
         isFiltered
           ? "border-blue-300 bg-blue-50 text-blue-700"
           : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300"
@@ -40,7 +40,7 @@ export default function PropertySelector({ properties, currentPropertyId }: Prop
         value={currentPropertyId}
         onChange={(e) => handleChange(e.target.value)}
         disabled={isPending}
-        className="appearance-none bg-transparent text-sm font-medium focus:outline-none cursor-pointer max-w-[160px] truncate"
+        className="appearance-none bg-transparent text-sm font-medium focus:outline-none cursor-pointer truncate min-w-0 w-full max-w-[100px] sm:max-w-[160px]"
       >
         <option value="">{t("allProperties")}</option>
         {properties.map((p) => (

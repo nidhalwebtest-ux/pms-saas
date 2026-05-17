@@ -9,7 +9,11 @@ import {
   EyeIcon,
   PrinterIcon,
 } from "@heroicons/react/24/outline";
-import { DataTable } from "@/components/ui";
+import {
+  DataTable,
+  NoInvoicesFirstTime,
+  NoInvoicesForFilters,
+} from "@/components/ui";
 import {
   buildInvoiceColumns,
   invoiceRowVariant,
@@ -115,7 +119,16 @@ export default function InvoicesTable({
         (searchParams.get("status") ?? "ALL") !== "ALL" ||
         !!searchParams.get("propertyId")
       }
-      emptyState={{ title: tTbl("empty") }}
+      emptyState={
+        <NoInvoicesFirstTime
+          onCreate={() => router.push("/dashboard/reservations")}
+        />
+      }
+      noResultsState={
+        <NoInvoicesForFilters
+          onClearFilters={() => router.push("/dashboard/invoices")}
+        />
+      }
       aria-label={tTbl("invoiceNumber")}
     />
   );

@@ -23,7 +23,13 @@ import {
   type ExpenseRow as Expense,
 } from "./columns";
 import { useFormatAmount, useOrgCurrency } from "@/lib/org-context";
-import { DataTable, useConfirmDialog } from "@/components/ui";
+import {
+  DataTable,
+  EmptyState,
+  NoExpensesForFilters,
+  NoExpensesPending,
+  useConfirmDialog,
+} from "@/components/ui";
 
 const REJECT_REASON_KEYS = [
   "insufficient_receipt",
@@ -396,13 +402,33 @@ export default function ExpensesListClient({
         hasActiveFilters={
           !!search || statusFilter !== "ALL" || !!propertyId || !!categoryId
         }
-        emptyState={{
-          title: tList("empty"),
-          description: tList("emptyHint"),
-          illustration: (
-            <ClipboardDocumentListIcon className="h-10 w-10 text-fg-tertiary" />
-          ),
-        }}
+        emptyState={
+          <EmptyState
+            illustration={<ClipboardDocumentListIcon />}
+            title={tList("empty")}
+            description={tList("emptyHint")}
+          />
+        }
+        noResultsState={
+          statusFilter === "PENDING" &&
+          canApprove &&
+          !search &&
+          !propertyId &&
+          !categoryId ? (
+            <NoExpensesPending
+              onViewApproved={() => setStatusFilter("APPROVED")}
+            />
+          ) : (
+            <NoExpensesForFilters
+              onClearFilters={() => {
+                setStatusFilter("ALL");
+                setPropertyId("");
+                setCategoryId("");
+                setSearch("");
+              }}
+            />
+          )
+        }
         aria-label={tList("table.expenseNumber")}
       />
 

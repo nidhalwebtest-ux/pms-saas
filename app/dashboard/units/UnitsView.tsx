@@ -19,7 +19,7 @@ import type { SortingState } from "@tanstack/react-table";
 import { UNIT_STATUS_CONFIG } from "@/lib/unit-status";
 import { quickUpdateUnit } from "./actions";
 import type { UnitRow } from "./page";
-import { DataTable, Badge, getUnitTypeBadge, type UnitTypeKey } from "@/components/ui";
+import { DataTable, EmptyState, Badge, getUnitTypeBadge, type UnitTypeKey } from "@/components/ui";
 import { UnitThumbnail, buildUnitColumns, unitRowVariant } from "./columns";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -278,10 +278,13 @@ export default function UnitsView({
           ) : null
         }
         hasActiveFilters={statusFilter !== "all"}
-        emptyState={{
-          title: t("noMatch"),
-          illustration: <HomeModernIcon className="h-10 w-10 text-fg-tertiary" />,
-        }}
+        emptyState={
+          <EmptyState
+            variant="exploratory"
+            illustration={<HomeModernIcon />}
+            title={t("noMatch")}
+          />
+        }
         aria-label={t("colUnit")}
       />
 

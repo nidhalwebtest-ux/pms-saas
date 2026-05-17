@@ -14,7 +14,6 @@ export type {
   SelectionConfig,
   BulkAction,
   RowAction,
-  EmptyStateConfig,
   TableErrorState,
 } from "./types";
 

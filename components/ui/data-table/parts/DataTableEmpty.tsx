@@ -3,75 +3,51 @@
 import type { ReactNode } from "react";
 import { InboxIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
-import { Button } from "../../Button";
-import type { EmptyStateConfig } from "../types";
+import { EmptyState } from "../../empty-state";
 
 export interface DataTableEmptyProps {
   /**
-   * Explicit empty-state config from the caller. Takes precedence over the
-   * built-in default.
+   * Caller-supplied slot (typically a preset or an `<EmptyState>`). When
+   * present, renders verbatim inside a full-width row.
    */
-  state?: EmptyStateConfig;
+  slot?: ReactNode;
   /**
-   * True when filters/search are active and the result is empty. Triggers
-   * the "no matches" copy (different from a fresh table with zero data).
+   * True when filters/search are active and the result is empty. Drives the
+   * default fallback copy (no matches vs no data yet) when no slot was
+   * supplied.
    */
   hasActiveFilters?: boolean;
-  /** Caller can pass an action to clear filters when in the no-matches state. */
-  onClearFilters?: () => void;
   /** Column count for `<td colspan>` so the empty cell stretches full width. */
   colspan: number;
 }
 
 /**
- * Empty state — rendered inside the table body. Two flavors:
- * - "No data yet" with optional CTA.
- * - "No matches for current filters" with optional Clear-filters action.
+ * Empty state — rendered inside the table body. When the caller passes an
+ * `emptyState` (or `noResultsState`) slot, we just render it inside a single
+ * full-width cell. Otherwise we fall back to the default i18n message via the
+ * design-system `<EmptyState>`.
  */
 export function DataTableEmpty({
-  state,
+  slot,
   hasActiveFilters,
-  onClearFilters,
   colspan,
 }: DataTableEmptyProps) {
   const t = useTranslations("dataTable.empty");
 
-  // Resolve content. Caller-supplied state always wins.
-  let title: ReactNode = state?.title;
-  let description: ReactNode = state?.description;
-  let illustration: ReactNode = state?.illustration;
-  let action = state?.action;
-
-  if (!state) {
-    if (hasActiveFilters) {
-      title = t("noMatches");
-      description = t("noMatchesHint");
-      if (onClearFilters) {
-        action = { label: t("clearFilters"), onClick: onClearFilters };
-      }
-    } else {
-      title = t("noData");
-    }
-    illustration = <InboxIcon className="h-10 w-10 text-fg-tertiary" />;
-  }
+  const content: ReactNode = slot ?? (
+    <EmptyState
+      variant={hasActiveFilters ? "exploratory" : "encouraging"}
+      illustration={<InboxIcon />}
+      title={hasActiveFilters ? t("noMatches") : t("noData")}
+      description={hasActiveFilters ? t("noMatchesHint") : undefined}
+      inline
+    />
+  );
 
   return (
     <tr>
-      <td colSpan={colspan} className="px-4 py-16">
-        <div className="flex flex-col items-center justify-center text-center gap-3">
-          {illustration}
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-fg">{title}</p>
-            {description && (
-              <p className="text-xs text-fg-tertiary max-w-sm">{description}</p>
-            )}
-          </div>
-          {action && (
-            <Button size="sm" variant="secondary" onClick={action.onClick}>
-              {action.label}
-            </Button>
-          )}
-        </div>
+      <td colSpan={colspan} className="px-4 py-8">
+        {content}
       </td>
     </tr>
   );

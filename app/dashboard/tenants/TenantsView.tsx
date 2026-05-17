@@ -25,7 +25,7 @@ import {
 import type { SortingState } from "@tanstack/react-table";
 import { quickUpdateTenant } from "./actions";
 import type { TenantRow } from "./page";
-import { DataTable } from "@/components/ui";
+import { DataTable, NoTenantsFirstTime } from "@/components/ui";
 import {
   Avatar,
   ClassBadge,
@@ -539,12 +539,11 @@ export default function TenantsView({
                 <EditableRow tenant={row} onDone={() => setInlineEditId(null)} />
               ) : null
             }
-            emptyState={{
-              title: tList("empty"),
-              illustration: (
-                <UserGroupIcon className="h-10 w-10 text-fg-tertiary" />
-              ),
-            }}
+            emptyState={
+              <NoTenantsFirstTime
+                onCreate={() => router.push("/dashboard/tenants/new")}
+              />
+            }
             aria-label={tTable("name")}
           />
           {tenants.length > 0 && (

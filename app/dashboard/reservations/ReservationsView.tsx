@@ -26,6 +26,7 @@ import {
   Badge,
   Button,
   DataTable,
+  EmptyState,
   Modal,
   ModalBody,
   ModalHeader,
@@ -793,11 +794,14 @@ export default function ReservationsView({
             rowVariant={reservationRowVariant}
             loading={loading}
             hasActiveFilters={hasActiveFilters}
-            emptyState={{
-              title: tEmpty(`${emptyKey}.title`),
-              description: tEmpty(`${emptyKey}.sub`),
-              illustration: <span className="text-4xl">{emptyEmoji}</span>,
-            }}
+            emptyState={
+              <EmptyState
+                illustration={<span className="text-4xl">{emptyEmoji}</span>}
+                title={tEmpty(`${emptyKey}.title`)}
+                description={tEmpty(`${emptyKey}.sub`)}
+                variant={activeTab === "all" ? "encouraging" : "exploratory"}
+              />
+            }
             aria-label={t("title")}
           />
         );

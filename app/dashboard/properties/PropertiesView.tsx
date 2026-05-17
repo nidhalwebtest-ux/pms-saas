@@ -29,6 +29,8 @@ import type { PropertyRow } from "./page";
 import {
   Badge,
   DataTable,
+  EmptyState,
+  NoBuildingsFirstTime,
   getPropertyTypeBadge,
   type PropertyTypeKey,
 } from "@/components/ui";
@@ -287,7 +289,7 @@ function SummaryCard({ property }: { property: PropertyRow }) {
 
 // ── Main Component ───────────────────────────────────────────────────────────
 
-function EmptyState({
+function CardEmptyState({
   hasAnyBuildings,
   hasActiveFilters,
   clearHref,
@@ -537,25 +539,27 @@ export default function PropertiesView({
             rowActions={rowActions}
             rowVariant={propertyRowVariant}
             hasActiveFilters={hasActiveFilters}
-            emptyState={{
-              title: t(totalUnfiltered > 0 ? "empty.noMatch" : "empty.firstTitle"),
-              description: totalUnfiltered > 0 ? undefined : t("empty.firstBody"),
-              illustration: (
-                <BuildingOffice2Icon className="h-10 w-10 text-fg-tertiary" />
-              ),
-              action:
-                totalUnfiltered === 0
-                  ? {
-                      label: t("empty.firstCta"),
-                      onClick: () => router.push("/dashboard/properties/new"),
-                    }
-                  : hasActiveFilters
-                    ? {
-                        label: t("empty.clearFilters"),
-                        onClick: () => router.push(clearFiltersHref),
-                      }
-                    : undefined,
-            }}
+            emptyState={
+              totalUnfiltered === 0 ? (
+                <NoBuildingsFirstTime
+                  onCreate={() => router.push("/dashboard/properties/new")}
+                />
+              ) : (
+                <EmptyState
+                  variant="exploratory"
+                  illustration={<BuildingOffice2Icon />}
+                  title={t("empty.noMatch")}
+                  primaryAction={
+                    hasActiveFilters
+                      ? {
+                          label: t("empty.clearFilters"),
+                          onClick: () => router.push(clearFiltersHref),
+                        }
+                      : undefined
+                  }
+                />
+              )
+            }
             aria-label={tTable("colName")}
           />
 
@@ -581,7 +585,7 @@ export default function PropertiesView({
         <>
           {sorted.length === 0 ? (
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-              <EmptyState
+              <CardEmptyState
                 hasAnyBuildings={totalUnfiltered > 0}
                 hasActiveFilters={hasActiveFilters}
                 clearHref={clearFiltersHref}
@@ -610,7 +614,7 @@ export default function PropertiesView({
         <>
           {sorted.length === 0 ? (
             <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
-              <EmptyState
+              <CardEmptyState
                 hasAnyBuildings={totalUnfiltered > 0}
                 hasActiveFilters={hasActiveFilters}
                 clearHref={clearFiltersHref}

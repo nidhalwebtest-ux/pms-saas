@@ -6,10 +6,9 @@ import { useTranslations } from "next-intl";
 import {
   EyeIcon,
   PrinterIcon,
-  BanknotesIcon,
 } from "@heroicons/react/24/outline";
 import type { SortingState } from "@tanstack/react-table";
-import { DataTable } from "@/components/ui";
+import { DataTable, NoPaymentsFirstTime } from "@/components/ui";
 import {
   buildPaymentColumns,
   type PaymentRow,
@@ -72,10 +71,11 @@ export default function PaymentsTable({
       sorting={{ state: sorting, onChange: setSorting }}
       rowActions={rowActions}
       hasActiveFilters={hasActiveFilters}
-      emptyState={{
-        title: tList("empty"),
-        illustration: <BanknotesIcon className="h-10 w-10 text-fg-tertiary" />,
-      }}
+      emptyState={
+        <NoPaymentsFirstTime
+          onRecord={() => router.push("/dashboard/payments/new")}
+        />
+      }
       aria-label={tTbl("receiptNumber")}
     />
   );

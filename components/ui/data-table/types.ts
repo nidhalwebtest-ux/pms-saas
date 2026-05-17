@@ -173,13 +173,6 @@ export interface RowAction<T = unknown> {
  *  Empty / error states
  * ========================================================================= */
 
-export interface EmptyStateConfig {
-  title: ReactNode;
-  description?: ReactNode;
-  illustration?: ReactNode;
-  action?: { label: string; onClick: () => void };
-}
-
 export interface TableErrorState {
   message: string;
   onRetry?: () => void;
@@ -215,8 +208,23 @@ export interface DataTableProps<T> {
   bulkActions?: BulkAction<T>[];
   rowActions?: (row: T) => RowAction<T>[];
 
-  emptyState?: EmptyStateConfig;
-  /** Surfaced when `data.length === 0` and filters/search are active. */
+  /**
+   * Empty state for the "no data at all yet" case. Pass a fully-rendered
+   * `<EmptyState>` or one of the preset components (e.g.
+   * `<NoReservationsFirstTime>`).
+   *
+   * When omitted, DataTable falls back to a default "No data yet" message.
+   */
+  emptyState?: ReactNode;
+
+  /**
+   * Empty state for the "rows exist but the current filters hide them all"
+   * case. Falls back to `emptyState` when omitted, and to the default
+   * "No matches" message when neither is provided.
+   */
+  noResultsState?: ReactNode;
+
+  /** Drives the choice between `emptyState` and `noResultsState`. */
   hasActiveFilters?: boolean;
 
   loading?: boolean;

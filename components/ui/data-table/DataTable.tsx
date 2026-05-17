@@ -106,6 +106,7 @@ export function DataTable<T>({
   bulkActions,
   rowActions,
   emptyState,
+  noResultsState,
   hasActiveFilters,
   loading,
   error,
@@ -228,23 +229,22 @@ export function DataTable<T>({
                 rowActions={rowActions}
               />
             ) : (
-              <MobileMessage>
-                <InboxIcon className="h-10 w-10 text-fg-tertiary" />
-                <p className="text-sm font-semibold text-fg">
-                  {emptyState?.title ??
-                    (hasActiveFilters ? tEmpty("noMatches") : tEmpty("noData"))}
-                </p>
-                {emptyState?.description && (
-                  <p className="text-xs text-fg-tertiary max-w-sm">
-                    {emptyState.description}
-                  </p>
+              <div className="px-4 py-8">
+                {pickEmptySlot({
+                  hasActiveFilters,
+                  emptyState,
+                  noResultsState,
+                }) ?? (
+                  <MobileMessage>
+                    <InboxIcon className="h-10 w-10 text-fg-tertiary" />
+                    <p className="text-sm font-semibold text-fg">
+                      {hasActiveFilters
+                        ? tEmpty("noMatches")
+                        : tEmpty("noData")}
+                    </p>
+                  </MobileMessage>
                 )}
-                {emptyState?.action && (
-                  <Button size="sm" variant="secondary" onClick={emptyState.action.onClick}>
-                    {emptyState.action.label}
-                  </Button>
-                )}
-              </MobileMessage>
+              </div>
             )}
           </div>
         </div>
@@ -321,7 +321,11 @@ export function DataTable<T>({
                 )
               ) : (
                 <DataTableEmpty
-                  state={emptyState}
+                  slot={pickEmptySlot({
+                    hasActiveFilters,
+                    emptyState,
+                    noResultsState,
+                  })}
                   hasActiveFilters={hasActiveFilters}
                   colspan={colspan}
                 />
@@ -362,4 +366,23 @@ function MobileMessage({ children }: { children: React.ReactNode }) {
       {children}
     </div>
   );
+}
+
+/**
+ * Picks between the two empty-state slots. With filters active and a
+ * `noResultsState` provided, that wins; otherwise we fall back to
+ * `emptyState`. Returns `undefined` when neither slot is set, so the caller
+ * can fall back to the built-in default copy.
+ */
+function pickEmptySlot({
+  hasActiveFilters,
+  emptyState,
+  noResultsState,
+}: {
+  hasActiveFilters?: boolean;
+  emptyState?: React.ReactNode;
+  noResultsState?: React.ReactNode;
+}): React.ReactNode {
+  if (hasActiveFilters && noResultsState !== undefined) return noResultsState;
+  return emptyState;
 }

@@ -180,6 +180,17 @@ const config: Config = {
         modal: "var(--z-modal)",
         toast: "var(--z-toast)",
       },
+
+      keyframes: {
+        "skeleton-pulse": {
+          "0%, 100%": { opacity: "1" },
+          "50%":      { opacity: "0.45" },
+        },
+      },
+
+      animation: {
+        "skeleton-pulse": "skeleton-pulse 1.4s ease-in-out infinite",
+      },
     },
   },
 

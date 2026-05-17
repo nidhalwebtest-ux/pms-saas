@@ -127,6 +127,34 @@ export type {
   ConfirmDialogTypeToConfirmConfig,
 } from "./confirm-dialog";
 
+/* ── Skeleton ────────────────────────────────────────────────────────── */
+export {
+  Skeleton,
+  SkeletonLine,
+  SkeletonText,
+  SkeletonCircle,
+  SkeletonRectangle,
+  SkeletonCard,
+  SkeletonTableRow,
+} from "./skeleton";
+export type {
+  SkeletonBaseProps,
+  SkeletonProps,
+  SkeletonShape,
+  SkeletonRounded,
+  SkeletonLineProps,
+  SkeletonLineSize,
+  SkeletonTextProps,
+  SkeletonCircleProps,
+  SkeletonCircleSize,
+  SkeletonRectangleProps,
+  SkeletonCardProps,
+  SkeletonTableColumn,
+  SkeletonTableCellType,
+  SkeletonTableAlign,
+  SkeletonTableRowProps,
+} from "./skeleton";
+
 /* ── EmptyState ──────────────────────────────────────────────────────── */
 export {
   EmptyState,

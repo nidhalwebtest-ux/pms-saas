@@ -1,15 +1,16 @@
 "use client";
 
-import { DocumentTextIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
+import { NoInvoices } from "../illustrations/NoInvoices";
+import { NoResults } from "../illustrations/NoResults";
 
 export function NoInvoicesFirstTime({ onCreate }: { onCreate: () => void }) {
   const t = useTranslations("emptyState.invoices.firstTime");
   return (
     <EmptyState
       variant="encouraging"
-      illustration={<DocumentTextIcon />}
+      illustration={<NoInvoices />}
       title={t("title")}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onCreate }}
@@ -26,7 +27,7 @@ export function NoInvoicesForFilters({
   return (
     <EmptyState
       variant="exploratory"
-      illustration={<DocumentTextIcon />}
+      illustration={<NoResults />}
       title={t("title")}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onClearFilters }}

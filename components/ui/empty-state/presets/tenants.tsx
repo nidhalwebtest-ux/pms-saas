@@ -1,11 +1,9 @@
 "use client";
 
-import {
-  MagnifyingGlassIcon,
-  UserGroupIcon,
-} from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
+import { NoTenants } from "../illustrations/NoTenants";
+import { NoSearchResults as NoSearchResultsIllustration } from "../illustrations/NoSearchResults";
 
 export function NoTenantsFirstTime({
   onCreate,
@@ -18,7 +16,7 @@ export function NoTenantsFirstTime({
   return (
     <EmptyState
       variant="encouraging"
-      illustration={<UserGroupIcon />}
+      illustration={<NoTenants />}
       title={t("title")}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onCreate }}
@@ -42,7 +40,7 @@ export function NoTenantsForSearch({
   return (
     <EmptyState
       variant="exploratory"
-      illustration={<MagnifyingGlassIcon />}
+      illustration={<NoSearchResultsIllustration />}
       title={t("title", { query })}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onClear }}

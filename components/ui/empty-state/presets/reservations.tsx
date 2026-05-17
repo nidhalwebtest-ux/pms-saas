@@ -1,8 +1,9 @@
 "use client";
 
-import { CalendarDaysIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
+import { NoReservations } from "../illustrations/NoReservations";
+import { NoResults } from "../illustrations/NoResults";
 
 export function NoReservationsFirstTime({
   onCreate,
@@ -15,7 +16,7 @@ export function NoReservationsFirstTime({
   return (
     <EmptyState
       variant="encouraging"
-      illustration={<CalendarDaysIcon />}
+      illustration={<NoReservations />}
       title={t("title")}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onCreate }}
@@ -40,7 +41,7 @@ export function NoReservationsForFilters({
   return (
     <EmptyState
       variant="exploratory"
-      illustration={<CalendarDaysIcon />}
+      illustration={<NoResults />}
       title={t("title")}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onClearFilters }}

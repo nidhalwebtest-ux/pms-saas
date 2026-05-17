@@ -1,18 +1,16 @@
 "use client";
 
-import {
-  BuildingOffice2Icon,
-  HomeModernIcon,
-} from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
+import { NoBuildings } from "../illustrations/NoBuildings";
+import { NoUnits } from "../illustrations/NoUnits";
 
 export function NoBuildingsFirstTime({ onCreate }: { onCreate: () => void }) {
   const t = useTranslations("emptyState.buildings.firstTime");
   return (
     <EmptyState
       variant="encouraging"
-      illustration={<BuildingOffice2Icon />}
+      illustration={<NoBuildings />}
       title={t("title")}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onCreate }}
@@ -31,7 +29,7 @@ export function NoUnitsForBuilding({
   return (
     <EmptyState
       variant="encouraging"
-      illustration={<HomeModernIcon />}
+      illustration={<NoUnits />}
       title={t("title", { buildingName })}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onCreate }}

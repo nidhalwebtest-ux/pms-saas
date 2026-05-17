@@ -1,20 +1,18 @@
 "use client";
 
-import {
-  CheckCircleIcon,
-  ClockIcon,
-  MagnifyingGlassIcon,
-  SparklesIcon,
-} from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
+import { NoActivity } from "../illustrations/NoActivity";
+import { NoSearchResults as NoSearchResultsIllustration } from "../illustrations/NoSearchResults";
+import { ComingSoon as ComingSoonIllustration } from "../illustrations/ComingSoon";
+import { UnitsAvailable as UnitsAvailableIllustration } from "../illustrations/UnitsAvailable";
 
 export function NoActivityYet({ onTakeTour }: { onTakeTour?: () => void }) {
   const t = useTranslations("emptyState.activity");
   return (
     <EmptyState
       variant="encouraging"
-      illustration={<ClockIcon />}
+      illustration={<NoActivity />}
       title={t("title")}
       description={t("description")}
       primaryAction={
@@ -35,7 +33,7 @@ export function NoSearchResults({
   return (
     <EmptyState
       variant="exploratory"
-      illustration={<MagnifyingGlassIcon />}
+      illustration={<NoSearchResultsIllustration />}
       title={t("title", { query })}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onClear }}
@@ -54,7 +52,7 @@ export function ComingSoon({
   return (
     <EmptyState
       variant="neutral"
-      illustration={<SparklesIcon />}
+      illustration={<ComingSoonIllustration />}
       title={t("title", { feature })}
       description={t("description")}
       primaryAction={
@@ -71,7 +69,7 @@ export function UnitsAvailable({ dateRange }: { dateRange: string }) {
   return (
     <EmptyState
       variant="positive"
-      illustration={<CheckCircleIcon />}
+      illustration={<UnitsAvailableIllustration />}
       title={t("title")}
       description={t("description", { dateRange })}
     />

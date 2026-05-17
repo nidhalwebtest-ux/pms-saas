@@ -34,6 +34,7 @@ import {
   getPropertyTypeBadge,
   type PropertyTypeKey,
 } from "@/components/ui";
+import { NoResults } from "@/components/ui/empty-state/illustrations";
 import {
   OccupancyBar,
   Thumbnail,
@@ -547,7 +548,7 @@ export default function PropertiesView({
               ) : (
                 <EmptyState
                   variant="exploratory"
-                  illustration={<BuildingOffice2Icon />}
+                  illustration={<NoResults />}
                   title={t("empty.noMatch")}
                   primaryAction={
                     hasActiveFilters

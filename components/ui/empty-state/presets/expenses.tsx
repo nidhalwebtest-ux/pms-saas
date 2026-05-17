@@ -1,11 +1,9 @@
 "use client";
 
-import {
-  CheckCircleIcon,
-  ClipboardDocumentListIcon,
-} from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
+import { AllCaughtUp } from "../illustrations/AllCaughtUp";
+import { NoExpenses } from "../illustrations/NoExpenses";
 
 export function NoExpensesPending({
   onViewApproved,
@@ -16,7 +14,7 @@ export function NoExpensesPending({
   return (
     <EmptyState
       variant="positive"
-      illustration={<CheckCircleIcon />}
+      illustration={<AllCaughtUp />}
       title={t("title")}
       description={t("description")}
       primaryAction={
@@ -37,7 +35,7 @@ export function NoExpensesForFilters({
   return (
     <EmptyState
       variant="exploratory"
-      illustration={<ClipboardDocumentListIcon />}
+      illustration={<NoExpenses />}
       title={t("title")}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onClearFilters }}

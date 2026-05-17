@@ -12,7 +12,6 @@ import {
   TrashIcon,
   ArrowPathIcon,
   ClipboardDocumentCheckIcon,
-  ClipboardDocumentListIcon,
 } from "@heroicons/react/24/outline";
 import type { SortingState } from "@tanstack/react-table";
 import ProcessExpenseModal from "./modals/ProcessExpenseModal";
@@ -30,6 +29,7 @@ import {
   NoExpensesPending,
   useConfirmDialog,
 } from "@/components/ui";
+import { NoExpenses } from "@/components/ui/empty-state/illustrations";
 
 const REJECT_REASON_KEYS = [
   "insufficient_receipt",
@@ -404,7 +404,7 @@ export default function ExpensesListClient({
         }
         emptyState={
           <EmptyState
-            illustration={<ClipboardDocumentListIcon />}
+            illustration={<NoExpenses />}
             title={tList("empty")}
             description={tList("emptyHint")}
           />

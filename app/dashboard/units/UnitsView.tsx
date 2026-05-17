@@ -12,7 +12,6 @@ import {
   BoltIcon,
   CheckIcon,
   XMarkIcon,
-  HomeModernIcon,
 } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import type { SortingState } from "@tanstack/react-table";
@@ -20,6 +19,7 @@ import { UNIT_STATUS_CONFIG } from "@/lib/unit-status";
 import { quickUpdateUnit } from "./actions";
 import type { UnitRow } from "./page";
 import { DataTable, EmptyState, Badge, getUnitTypeBadge, type UnitTypeKey } from "@/components/ui";
+import { NoUnits } from "@/components/ui/empty-state/illustrations";
 import { UnitThumbnail, buildUnitColumns, unitRowVariant } from "./columns";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -281,7 +281,7 @@ export default function UnitsView({
         emptyState={
           <EmptyState
             variant="exploratory"
-            illustration={<HomeModernIcon />}
+            illustration={<NoUnits />}
             title={t("noMatch")}
           />
         }

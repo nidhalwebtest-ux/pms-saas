@@ -29,7 +29,7 @@ import {
   NoExpensesPending,
   useConfirmDialog,
 } from "@/components/ui";
-import ReceiptIllustration from "@/public/illustrations/receipt.svg?react";
+import { ReceiptIllustration } from "@/components/ui/empty-state/illustrations";
 
 const REJECT_REASON_KEYS = [
   "insufficient_receipt",

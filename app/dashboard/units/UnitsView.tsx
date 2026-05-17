@@ -19,7 +19,7 @@ import { UNIT_STATUS_CONFIG } from "@/lib/unit-status";
 import { quickUpdateUnit } from "./actions";
 import type { UnitRow } from "./page";
 import { DataTable, EmptyState, Badge, getUnitTypeBadge, type UnitTypeKey } from "@/components/ui";
-import SearchIllustration from "@/public/illustrations/search.svg?react";
+import { SearchIllustration } from "@/components/ui/empty-state/illustrations";
 import { UnitThumbnail, buildUnitColumns, unitRowVariant } from "./columns";
 
 // ── Constants ─────────────────────────────────────────────────────────────────

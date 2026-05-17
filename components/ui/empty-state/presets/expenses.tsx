@@ -2,8 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
-import MailSuccessIllustration from "@/public/illustrations/mail-success.svg?react";
-import SearchIllustration from "@/public/illustrations/search.svg?react";
+import {
+  MailSuccessIllustration,
+  SearchIllustration,
+} from "../illustrations";
 
 export function NoExpensesPending({
   onViewApproved,

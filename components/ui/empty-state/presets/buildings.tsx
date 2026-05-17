@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
-import BuildingIllustration from "@/public/illustrations/building.svg?react";
+import { BuildingIllustration } from "../illustrations";
 
 export function NoBuildingsFirstTime({ onCreate }: { onCreate: () => void }) {
   const t = useTranslations("emptyState.buildings.firstTime");

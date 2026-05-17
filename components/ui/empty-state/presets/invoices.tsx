@@ -2,8 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
-import ReceiptIllustration from "@/public/illustrations/receipt.svg?react";
-import SearchIllustration from "@/public/illustrations/search.svg?react";
+import {
+  ReceiptIllustration,
+  SearchIllustration,
+} from "../illustrations";
 
 export function NoInvoicesFirstTime({ onCreate }: { onCreate: () => void }) {
   const t = useTranslations("emptyState.invoices.firstTime");

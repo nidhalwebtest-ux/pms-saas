@@ -34,7 +34,7 @@ import {
   getPropertyTypeBadge,
   type PropertyTypeKey,
 } from "@/components/ui";
-import SearchIllustration from "@/public/illustrations/search.svg?react";
+import { SearchIllustration } from "@/components/ui/empty-state/illustrations";
 import {
   OccupancyBar,
   Thumbnail,

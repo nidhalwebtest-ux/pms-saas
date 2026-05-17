@@ -2,8 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
-import CalendarIllustration from "@/public/illustrations/calendar.svg?react";
-import SearchIllustration from "@/public/illustrations/search.svg?react";
+import {
+  CalendarIllustration,
+  SearchIllustration,
+} from "../illustrations";
 
 export function NoReservationsFirstTime({
   onCreate,

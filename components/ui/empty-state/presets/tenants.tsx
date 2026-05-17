@@ -2,8 +2,10 @@
 
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
-import PersonIllustration from "@/public/illustrations/person.svg?react";
-import SearchIllustration from "@/public/illustrations/search.svg?react";
+import {
+  PersonIllustration,
+  SearchIllustration,
+} from "../illustrations";
 
 export function NoTenantsFirstTime({
   onCreate,

@@ -2,9 +2,11 @@
 
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
-import ClockIllustration from "@/public/illustrations/clock.svg?react";
-import SearchIllustration from "@/public/illustrations/search.svg?react";
-import KeySuccessIllustration from "@/public/illustrations/key-success.svg?react";
+import {
+  ClockIllustration,
+  KeySuccessIllustration,
+  SearchIllustration,
+} from "../illustrations";
 
 export function NoActivityYet({ onTakeTour }: { onTakeTour?: () => void }) {
   const t = useTranslations("emptyState.activity");

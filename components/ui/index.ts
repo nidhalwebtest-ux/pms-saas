@@ -127,6 +127,32 @@ export type {
   ConfirmDialogTypeToConfirmConfig,
 } from "./confirm-dialog";
 
+/* ── EmptyState ──────────────────────────────────────────────────────── */
+export {
+  EmptyState,
+  NoReservationsFirstTime,
+  NoReservationsForFilters,
+  NoTenantsFirstTime,
+  NoTenantsForSearch,
+  NoBuildingsFirstTime,
+  NoUnitsForBuilding,
+  NoInvoicesFirstTime,
+  NoInvoicesForFilters,
+  NoPaymentsFirstTime,
+  NoExpensesPending,
+  NoExpensesForFilters,
+  NoActivityYet,
+  NoSearchResults,
+  ComingSoon,
+  UnitsAvailable,
+} from "./empty-state";
+export type {
+  EmptyStateProps,
+  EmptyStateAction,
+  EmptyStateVariant,
+  EmptyStateSize,
+} from "./empty-state";
+
 /* ── DataTable ───────────────────────────────────────────────────────── */
 export {
   DataTable,
@@ -150,7 +176,6 @@ export type {
   SelectionConfig,
   BulkAction,
   RowAction,
-  EmptyStateConfig,
   TableErrorState,
   TextCellProps,
   NumberCellProps,

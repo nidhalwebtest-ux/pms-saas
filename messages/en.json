@@ -1,4 +1,95 @@
 {
+  "emptyState": {
+    "reservations": {
+      "firstTime": {
+        "title": "No reservations yet",
+        "description": "Create your first reservation to start tracking arrivals and balances.",
+        "primary": "+ New reservation",
+        "secondary": "Import"
+      },
+      "filtered": {
+        "title": "No reservations match these filters",
+        "description": "Try clearing or widening your filters to see more reservations.",
+        "primary": "Clear filters"
+      }
+    },
+    "tenants": {
+      "firstTime": {
+        "title": "No tenants in your database",
+        "description": "Add tenants individually, or import a list to start tracking contacts and contracts.",
+        "primary": "+ Add tenant",
+        "secondary": "Import"
+      },
+      "filtered": {
+        "title": "No tenants found for \"{query}\"",
+        "description": "Try a partial phone number or national ID, or clear your search.",
+        "primary": "Clear search",
+        "secondary": "+ Add tenant"
+      }
+    },
+    "buildings": {
+      "firstTime": {
+        "title": "No buildings added yet",
+        "description": "Add your first building to unlock units, occupancy and revenue tracking.",
+        "primary": "+ Add building"
+      },
+      "noUnits": {
+        "title": "No units in {buildingName}",
+        "description": "Add units to start tracking occupancy and pricing.",
+        "primary": "+ Add unit"
+      }
+    },
+    "invoices": {
+      "firstTime": {
+        "title": "No invoices yet",
+        "description": "Generate the first invoice from any active reservation.",
+        "primary": "View reservations"
+      },
+      "filtered": {
+        "title": "No invoices match these filters",
+        "description": "Try clearing or widening your filters to see more invoices.",
+        "primary": "Clear filters"
+      }
+    },
+    "payments": {
+      "firstTime": {
+        "title": "No payments recorded",
+        "description": "Record a payment against an outstanding invoice to get started.",
+        "primary": "Record payment"
+      }
+    },
+    "expenses": {
+      "pending": {
+        "title": "All caught up",
+        "description": "No expenses are waiting on your approval.",
+        "primary": "View approved expenses"
+      },
+      "filtered": {
+        "title": "No expenses match these filters",
+        "description": "Try clearing or widening your filters to see more expenses.",
+        "primary": "Clear filters"
+      }
+    },
+    "activity": {
+      "title": "No activity to show yet",
+      "description": "Once you create reservations and record payments, recent activity will appear here.",
+      "primary": "Take the tour"
+    },
+    "search": {
+      "title": "No results for \"{query}\"",
+      "description": "Check the spelling or try a different keyword.",
+      "primary": "Clear search"
+    },
+    "comingSoon": {
+      "title": "{feature} — coming soon",
+      "description": "This feature is in development. Join the waitlist to hear when it ships.",
+      "primary": "Join waitlist"
+    },
+    "unitsAvailable": {
+      "title": "Units available",
+      "description": "Selected units are free for {dateRange}."
+    }
+  },
   "dataTable": {
     "pagination": {
       "rowsLabel": "Rows",

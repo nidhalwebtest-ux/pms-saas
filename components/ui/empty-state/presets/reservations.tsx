@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
-import { NoReservations } from "../illustrations/NoReservations";
-import { NoResults } from "../illustrations/NoResults";
+import CalendarIllustration from "@/public/illustrations/calendar.svg?react";
+import SearchIllustration from "@/public/illustrations/search.svg?react";
 
 export function NoReservationsFirstTime({
   onCreate,
@@ -16,7 +16,7 @@ export function NoReservationsFirstTime({
   return (
     <EmptyState
       variant="encouraging"
-      illustration={<NoReservations />}
+      illustration={<CalendarIllustration />}
       title={t("title")}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onCreate }}
@@ -41,7 +41,7 @@ export function NoReservationsForFilters({
   return (
     <EmptyState
       variant="exploratory"
-      illustration={<NoResults />}
+      illustration={<SearchIllustration />}
       title={t("title")}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onClearFilters }}

@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
-import { AllCaughtUp } from "../illustrations/AllCaughtUp";
-import { NoExpenses } from "../illustrations/NoExpenses";
+import MailSuccessIllustration from "@/public/illustrations/mail-success.svg?react";
+import SearchIllustration from "@/public/illustrations/search.svg?react";
 
 export function NoExpensesPending({
   onViewApproved,
@@ -14,7 +14,7 @@ export function NoExpensesPending({
   return (
     <EmptyState
       variant="positive"
-      illustration={<AllCaughtUp />}
+      illustration={<MailSuccessIllustration />}
       title={t("title")}
       description={t("description")}
       primaryAction={
@@ -35,7 +35,7 @@ export function NoExpensesForFilters({
   return (
     <EmptyState
       variant="exploratory"
-      illustration={<NoExpenses />}
+      illustration={<SearchIllustration />}
       title={t("title")}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onClearFilters }}

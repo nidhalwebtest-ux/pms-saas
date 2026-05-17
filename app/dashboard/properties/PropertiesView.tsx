@@ -34,7 +34,7 @@ import {
   getPropertyTypeBadge,
   type PropertyTypeKey,
 } from "@/components/ui";
-import { NoResults } from "@/components/ui/empty-state/illustrations";
+import SearchIllustration from "@/public/illustrations/search.svg?react";
 import {
   OccupancyBar,
   Thumbnail,
@@ -548,7 +548,7 @@ export default function PropertiesView({
               ) : (
                 <EmptyState
                   variant="exploratory"
-                  illustration={<NoResults />}
+                  illustration={<SearchIllustration />}
                   title={t("empty.noMatch")}
                   primaryAction={
                     hasActiveFilters

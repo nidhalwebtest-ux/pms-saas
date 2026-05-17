@@ -2,17 +2,16 @@
 
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
-import { NoActivity } from "../illustrations/NoActivity";
-import { NoSearchResults as NoSearchResultsIllustration } from "../illustrations/NoSearchResults";
-import { ComingSoon as ComingSoonIllustration } from "../illustrations/ComingSoon";
-import { UnitsAvailable as UnitsAvailableIllustration } from "../illustrations/UnitsAvailable";
+import ClockIllustration from "@/public/illustrations/clock.svg?react";
+import SearchIllustration from "@/public/illustrations/search.svg?react";
+import KeySuccessIllustration from "@/public/illustrations/key-success.svg?react";
 
 export function NoActivityYet({ onTakeTour }: { onTakeTour?: () => void }) {
   const t = useTranslations("emptyState.activity");
   return (
     <EmptyState
       variant="encouraging"
-      illustration={<NoActivity />}
+      illustration={<ClockIllustration />}
       title={t("title")}
       description={t("description")}
       primaryAction={
@@ -33,7 +32,7 @@ export function NoSearchResults({
   return (
     <EmptyState
       variant="exploratory"
-      illustration={<NoSearchResultsIllustration />}
+      illustration={<SearchIllustration />}
       title={t("title", { query })}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onClear }}
@@ -52,7 +51,7 @@ export function ComingSoon({
   return (
     <EmptyState
       variant="neutral"
-      illustration={<ComingSoonIllustration />}
+      illustration={<ClockIllustration />}
       title={t("title", { feature })}
       description={t("description")}
       primaryAction={
@@ -69,7 +68,7 @@ export function UnitsAvailable({ dateRange }: { dateRange: string }) {
   return (
     <EmptyState
       variant="positive"
-      illustration={<UnitsAvailableIllustration />}
+      illustration={<KeySuccessIllustration />}
       title={t("title")}
       description={t("description", { dateRange })}
     />

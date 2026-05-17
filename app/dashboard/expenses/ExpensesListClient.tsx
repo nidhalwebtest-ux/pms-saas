@@ -29,7 +29,7 @@ import {
   NoExpensesPending,
   useConfirmDialog,
 } from "@/components/ui";
-import { NoExpenses } from "@/components/ui/empty-state/illustrations";
+import ReceiptIllustration from "@/public/illustrations/receipt.svg?react";
 
 const REJECT_REASON_KEYS = [
   "insufficient_receipt",
@@ -404,7 +404,7 @@ export default function ExpensesListClient({
         }
         emptyState={
           <EmptyState
-            illustration={<NoExpenses />}
+            illustration={<ReceiptIllustration />}
             title={tList("empty")}
             description={tList("emptyHint")}
           />

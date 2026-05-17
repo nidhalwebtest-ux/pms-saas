@@ -2,15 +2,15 @@
 
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
-import { NoInvoices } from "../illustrations/NoInvoices";
-import { NoResults } from "../illustrations/NoResults";
+import ReceiptIllustration from "@/public/illustrations/receipt.svg?react";
+import SearchIllustration from "@/public/illustrations/search.svg?react";
 
 export function NoInvoicesFirstTime({ onCreate }: { onCreate: () => void }) {
   const t = useTranslations("emptyState.invoices.firstTime");
   return (
     <EmptyState
       variant="encouraging"
-      illustration={<NoInvoices />}
+      illustration={<ReceiptIllustration />}
       title={t("title")}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onCreate }}
@@ -27,7 +27,7 @@ export function NoInvoicesForFilters({
   return (
     <EmptyState
       variant="exploratory"
-      illustration={<NoResults />}
+      illustration={<SearchIllustration />}
       title={t("title")}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onClearFilters }}

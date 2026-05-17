@@ -2,8 +2,8 @@
 
 import { useTranslations } from "next-intl";
 import { EmptyState } from "../EmptyState";
-import { NoTenants } from "../illustrations/NoTenants";
-import { NoSearchResults as NoSearchResultsIllustration } from "../illustrations/NoSearchResults";
+import PersonIllustration from "@/public/illustrations/person.svg?react";
+import SearchIllustration from "@/public/illustrations/search.svg?react";
 
 export function NoTenantsFirstTime({
   onCreate,
@@ -16,7 +16,7 @@ export function NoTenantsFirstTime({
   return (
     <EmptyState
       variant="encouraging"
-      illustration={<NoTenants />}
+      illustration={<PersonIllustration />}
       title={t("title")}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onCreate }}
@@ -40,7 +40,7 @@ export function NoTenantsForSearch({
   return (
     <EmptyState
       variant="exploratory"
-      illustration={<NoSearchResultsIllustration />}
+      illustration={<SearchIllustration />}
       title={t("title", { query })}
       description={t("description")}
       primaryAction={{ label: t("primary"), onClick: onClear }}

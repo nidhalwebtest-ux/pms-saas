@@ -181,6 +181,34 @@ export type {
   EmptyStateSize,
 } from "./empty-state";
 
+/* ── Alert ───────────────────────────────────────────────────────────── */
+export {
+  Alert,
+  FormErrorSummary,
+  TrialExpiryBanner,
+  MaintenanceBanner,
+  FeatureAnnouncement,
+  PendingApprovalsBanner,
+  PaymentRecorded,
+  NetworkErrorRetry,
+  TenantBlacklistedWarning,
+} from "./alert";
+export type {
+  AlertProps,
+  AlertVariant,
+  AlertSize,
+  AlertAppearance,
+  FormErrorSummaryProps,
+  FormErrorSummaryItem,
+  TrialExpiryBannerProps,
+  MaintenanceBannerProps,
+  FeatureAnnouncementProps,
+  PendingApprovalsBannerProps,
+  PaymentRecordedProps,
+  NetworkErrorRetryProps,
+  TenantBlacklistedWarningProps,
+} from "./alert";
+
 /* ── DataTable ───────────────────────────────────────────────────────── */
 export {
   DataTable,

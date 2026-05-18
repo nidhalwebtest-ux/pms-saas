@@ -45,6 +45,8 @@ const config: Config = {
         },
         success: {
           50: "var(--success-50)",
+          100: "var(--success-100)",
+          200: "var(--success-200)",
           500: "var(--success-500)",
           600: "var(--success-600)",
           700: "var(--success-700)",
@@ -52,6 +54,8 @@ const config: Config = {
         },
         warning: {
           50: "var(--warning-50)",
+          100: "var(--warning-100)",
+          200: "var(--warning-200)",
           500: "var(--warning-500)",
           600: "var(--warning-600)",
           700: "var(--warning-700)",
@@ -60,6 +64,7 @@ const config: Config = {
         error: {
           50: "var(--error-50)",
           100: "var(--error-100)",
+          200: "var(--error-200)",
           500: "var(--error-500)",
           600: "var(--error-600)",
           700: "var(--error-700)",
@@ -67,6 +72,8 @@ const config: Config = {
         },
         info: {
           50: "var(--info-50)",
+          100: "var(--info-100)",
+          200: "var(--info-200)",
           500: "var(--info-500)",
           600: "var(--info-600)",
           700: "var(--info-700)",

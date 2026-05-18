@@ -6,11 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getCurrentCurrency } from "@/lib/get-org";
 import { formatAmount } from "@/lib/format-currency";
-import {
-  BanknotesIcon,
-  MagnifyingGlassIcon,
-} from "@heroicons/react/24/outline";
+import { BanknotesIcon } from "@heroicons/react/24/outline";
 import PaymentsTable from "./PaymentsTable";
+import PaymentsFilters from "./PaymentsFilters";
 import type { PaymentRow } from "./columns";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -52,9 +50,7 @@ export default async function PaymentsListPage({
 
   const currency = await getCurrentCurrency();
   const t       = await getTranslations("payments");
-  const tList   = await getTranslations("payments.list");
-  const tTabs   = await getTranslations("payments.tabs");
-  const tMethod = await getTranslations("payments.methods");
+  const tList = await getTranslations("payments.list");
 
   // ── Date range for period filter ──────────────────────────────────────────
   const now   = new Date();
@@ -145,22 +141,6 @@ export default async function PaymentsListPage({
 
   const hasActiveFilters = !!q || !!method || period !== "all";
 
-  // ── Tab helper ────────────────────────────────────────────────────────────
-  function tabHref(p: string) {
-    const sp = new URLSearchParams();
-    sp.set("period", p);
-    if (q)      sp.set("q",      q);
-    if (method) sp.set("method", method);
-    return `/dashboard/payments?${sp.toString()}`;
-  }
-
-  const tabs = [
-    { key: "all",   label: tTabs("all"),   count: allCount   },
-    { key: "today", label: tTabs("today"), count: todayCount },
-    { key: "week",  label: tTabs("week"),  count: weekCount  },
-    { key: "month", label: tTabs("month"), count: monthCount },
-  ];
-
   return (
     <div className="mx-auto max-w-full px-4 sm:px-6 lg:px-8 py-8">
 
@@ -188,69 +168,15 @@ export default async function PaymentsListPage({
         </Link>
       </div>
 
-      {/* ── Quick-filter tabs ── */}
-      <div className="border-b border-gray-200 mb-4">
-        <nav className="-mb-px flex gap-x-6">
-          {tabs.map((tab) => (
-            <Link
-              key={tab.key}
-              href={tabHref(tab.key)}
-              className={`pb-3 px-1 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-                period === tab.key
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              {tab.label}
-              <span className={`ms-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ltr-numbers ${
-                period === tab.key ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
-              }`}>
-                {tab.count}
-              </span>
-            </Link>
-          ))}
-        </nav>
+      {/* ── Filters ── */}
+      <div className="mb-4">
+        <PaymentsFilters
+          currentPeriod={period}
+          currentQ={q}
+          currentMethod={method}
+          counts={{ all: allCount, today: todayCount, week: weekCount, month: monthCount }}
+        />
       </div>
-
-      {/* ── Search & filters ── */}
-      <form method="GET" action="/dashboard/payments" className="flex flex-wrap gap-3 mb-4">
-        <input type="hidden" name="period" value={period} />
-        <div className="relative flex-1 min-w-[200px]">
-          <MagnifyingGlassIcon className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-          <input
-            type="text"
-            name="q"
-            defaultValue={q}
-            placeholder={tList("searchPlaceholder")}
-            className="block w-full rounded-md border border-gray-300 ps-9 pe-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-        <select
-          name="method"
-          defaultValue={method}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">{tList("allMethods")}</option>
-          <option value="CASH">{tMethod("CASH")}</option>
-          <option value="CARD">{tMethod("CARD")}</option>
-          <option value="BANK_TRANSFER">{tMethod("BANK_TRANSFER")}</option>
-          <option value="CHEQUE">{tMethod("CHEQUE")}</option>
-        </select>
-        <button
-          type="submit"
-          className="rounded-md bg-gray-100 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
-        >
-          {tList("search")}
-        </button>
-        {(q || method) && (
-          <Link
-            href={`/dashboard/payments?period=${period}`}
-            className="rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-          >
-            {tList("clear")}
-          </Link>
-        )}
-      </form>
 
       {/* ── Table ── */}
       <PaymentsTable

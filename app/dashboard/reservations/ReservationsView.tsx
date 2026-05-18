@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
@@ -9,10 +9,7 @@ import { format as fmtDateFns } from "date-fns";
 import { toast } from "sonner";
 import {
   CalendarDaysIcon,
-  MagnifyingGlassIcon,
-  AdjustmentsHorizontalIcon,
   PlusIcon,
-  XMarkIcon,
   ArrowPathIcon,
   ArrowLeftOnRectangleIcon,
   ArrowRightOnRectangleIcon,
@@ -27,10 +24,12 @@ import {
   Button,
   DataTable,
   EmptyState,
+  FilterBar,
   Modal,
   ModalBody,
   ModalHeader,
   useConfirmDialog,
+  type QuickFilter,
 } from "@/components/ui";
 import {
   buildReservationColumns,
@@ -399,14 +398,11 @@ export default function ReservationsView({
   const [loading,      setLoading]      = useState(true);
   const [activeTab,    setActiveTab]    = useState<TabKey>("all");
   const [search,       setSearch]       = useState("");
-  const [showFilters,  setShowFilters]  = useState(false);
   const [advFilters,   setAdvFilters]   = useState<AdvFilters>({ propertyId: defaultPropertyId, dateFrom: "", dateTo: "", rateType: "", source: "" });
   const [sorting,      setSorting]      = useState<SortingState>([
     { id: "startDate", desc: false },
   ]);
   const [modal,        setModal]        = useState<ModalState>(null);
-
-  const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── Data fetching ────────────────────────────────────────────────────────────
 
@@ -446,11 +442,6 @@ export default function ReservationsView({
     }, 60_000);
     return () => clearInterval(id);
   }, []);
-
-  // Debounced search
-  useEffect(() => {
-    if (searchRef.current) clearTimeout(searchRef.current);
-  }, [search]);
 
   // ── Derived list ─────────────────────────────────────────────────────────────
 
@@ -647,139 +638,119 @@ export default function ReservationsView({
         </Link>
       </div>
 
-      {/* ── Primary tabs ───────────────────────────────────────────────────── */}
-      <div className="flex flex-wrap gap-1 mb-1">
-        {PRIMARY_TABS.map(({ key, tKey }) => {
-          const count   = summary?.[key as keyof SummaryData] ?? 0;
-          const active  = activeTab === key;
-          const isOvr   = key === "overstay"    && count > 0;
-          const isArv   = key === "arriving"    && count > 0;
-          const isDue   = key === "dueCheckout" && count > 0;
+      {/* ── Filters ─────────────────────────────────────────────────────────── */}
+      <div className="mb-4">
+        {(() => {
+          const quickFilters: QuickFilter[] = [...PRIMARY_TABS, ...SECONDARY_TABS].map(({ key, tKey }) => ({
+            id:      key,
+            label:   tTabs(tKey),
+            count:   summary?.[key as keyof SummaryData] ?? 0,
+            variant: key === "overstay" ? "destructive" : key === "arriving" || key === "dueCheckout" ? "warning" : undefined,
+            dotOnPositive: key === "overstay",
+          }));
+
+          // Parse ISO YYYY-MM-DD into a local Date; round-trip back when set.
+          const parseISO = (s: string): Date | null => {
+            if (!s) return null;
+            const [y, m, d] = s.split("-").map(Number);
+            return y && m && d ? new Date(y, m - 1, d) : null;
+          };
+          const fmtISO = (d: Date | null): string => {
+            if (!d) return "";
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            return `${y}-${m}-${day}`;
+          };
+
           return (
-            <button key={key} onClick={() => setActiveTab(key)}
-              className={`relative inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                active
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-              }`}>
-              {tTabs(tKey)}
-              {count > 0 && (
-                <span className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold ${
-                  active
-                    ? "bg-white/25 text-white"
-                    : isOvr ? "bg-red-600 text-white" + (isOvr ? " animate-pulse" : "")
-                    : isArv ? "bg-orange-500 text-white"
-                    : isDue ? "bg-orange-400 text-white"
-                    : "bg-gray-200 text-gray-700"
-                }`}>
-                  {count}
-                </span>
-              )}
-            </button>
-          );
-        })}
-        {/* Secondary tabs dropdown-style */}
-        <div className="flex gap-1">
-          {SECONDARY_TABS.map(({ key, tKey }) => {
-            const count  = summary?.[key as keyof SummaryData] ?? 0;
-            const active = activeTab === key;
-            return (
-              <button key={key} onClick={() => setActiveTab(key)}
-                className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                  active
-                    ? "bg-gray-700 text-white"
-                    : "bg-white border border-gray-200 text-gray-500 hover:bg-gray-50"
-                }`}>
-                {tTabs(tKey)}
-                {count > 0 && (
-                  <span className={`inline-flex h-4 min-w-4 items-center justify-center rounded-full px-0.5 text-xs ${
-                    active ? "bg-white/25 text-white" : "bg-gray-200 text-gray-600"
-                  }`}>{count}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* ── Search + filter bar ─────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-4 overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <div className="relative flex-1">
-            <MagnifyingGlassIcon className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
-            <input
-              type="text"
-              placeholder={t("search")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="block w-full rounded-lg border-0 py-2 ps-9 pe-3 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500"
+            <FilterBar
+              search={{
+                value: search,
+                onChange: setSearch,
+                placeholder: t("search"),
+              }}
+              quickFilters={quickFilters}
+              activeQuickFilter={activeTab}
+              onQuickFilterChange={(id) => setActiveTab(id as TabKey)}
+              filters={[
+                {
+                  id:       "property",
+                  type:     "select",
+                  label:    t("propertyLabel") ?? "Property",
+                  value:    advFilters.propertyId,
+                  allValue: "",
+                  disabled: scopedToBuilding,
+                  helpText: scopedToBuilding ? t("scopedNote") : undefined,
+                  options:  [
+                    ...(scopedToBuilding ? [] : [{ value: "", label: t("allProperties") }]),
+                    ...properties.map((p) => ({ value: p.id, label: p.name })),
+                  ],
+                  onChange: (v) => setAdvFilters((s) => ({ ...s, propertyId: v })),
+                },
+                {
+                  id:       "date",
+                  type:     "dateRange",
+                  label:    t("dateLabel") ?? "Date",
+                  value:    [parseISO(advFilters.dateFrom), parseISO(advFilters.dateTo)],
+                  presets:  "all",
+                  onChange: ([from, to]) => setAdvFilters((s) => ({
+                    ...s,
+                    dateFrom: fmtISO(from),
+                    dateTo:   fmtISO(to),
+                  })),
+                },
+                {
+                  id:       "rateType",
+                  type:     "select",
+                  label:    t("rateTypeLabel") ?? "Rate type",
+                  value:    advFilters.rateType,
+                  allValue: "",
+                  options:  [
+                    { value: "",        label: t("allRateTypes") },
+                    { value: "daily",   label: t("daily") },
+                    { value: "monthly", label: t("monthly") },
+                  ],
+                  onChange: (v) => setAdvFilters((s) => ({ ...s, rateType: v })),
+                },
+                {
+                  id:       "source",
+                  type:     "select",
+                  label:    t("sourceLabel") ?? "Source",
+                  value:    advFilters.source,
+                  allValue: "",
+                  options:  [
+                    { value: "",         label: t("allSources") },
+                    { value: "walk_in",  label: tSrc("walkIn") },
+                    { value: "phone",    label: tSrc("phone") },
+                    { value: "whatsapp", label: tSrc("whatsapp") },
+                    { value: "online",   label: tSrc("online") },
+                    { value: "agent",    label: tSrc("agent") },
+                  ],
+                  onChange: (v) => setAdvFilters((s) => ({ ...s, source: v })),
+                },
+              ]}
+              actions={[
+                {
+                  label:    t("refresh"),
+                  onClick:  fetchData,
+                  variant:  "ghost",
+                  icon:     <ArrowPathIcon className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />,
+                  disabled: loading,
+                  iconOnlyMobile: true,
+                },
+              ]}
+              activeFiltersDisplay="chips"
+              onClearAll={() => setAdvFilters({
+                propertyId: scopedToBuilding ? defaultPropertyId : "",
+                dateFrom: "",
+                dateTo: "",
+                rateType: "",
+                source: "",
+              })}
             />
-            {search && (
-              <button onClick={() => setSearch("")} className="absolute end-2 top-1/2 -translate-y-1/2">
-                <XMarkIcon className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-              </button>
-            )}
-          </div>
-          <button onClick={() => setShowFilters((v) => !v)}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium border transition-colors ${
-              showFilters || hasAdvFilters
-                ? "border-blue-500 bg-blue-50 text-blue-700"
-                : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
-            }`}>
-            <AdjustmentsHorizontalIcon className="h-4 w-4" />
-            {t("filters")}
-            {hasAdvFilters && <span className="h-2 w-2 rounded-full bg-blue-600" />}
-          </button>
-          <button onClick={fetchData} disabled={loading} aria-label={t("refresh")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
-            <ArrowPathIcon className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
-        </div>
-
-        {/* Collapsible advanced filters */}
-        {showFilters && (
-          <div className="px-4 py-3 border-t border-gray-100 bg-gray-50">
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-              <select value={advFilters.propertyId}
-                onChange={(e) => setAdvFilters((v) => ({ ...v, propertyId: e.target.value }))}
-                disabled={scopedToBuilding}
-                title={scopedToBuilding ? t("scopedNote") : undefined}
-                className="rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:text-gray-500 disabled:cursor-not-allowed">
-                {!scopedToBuilding && <option value="">{t("allProperties")}</option>}
-                {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-              <input type="date" placeholder={t("from")} value={advFilters.dateFrom}
-                onChange={(e) => setAdvFilters((v) => ({ ...v, dateFrom: e.target.value }))}
-                className="rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500" />
-              <input type="date" placeholder={t("to")} value={advFilters.dateTo}
-                onChange={(e) => setAdvFilters((v) => ({ ...v, dateTo: e.target.value }))}
-                className="rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500" />
-              <select value={advFilters.rateType}
-                onChange={(e) => setAdvFilters((v) => ({ ...v, rateType: e.target.value }))}
-                className="rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500">
-                <option value="">{t("allRateTypes")}</option>
-                <option value="daily">{t("daily")}</option>
-                <option value="monthly">{t("monthly")}</option>
-              </select>
-              <select value={advFilters.source}
-                onChange={(e) => setAdvFilters((v) => ({ ...v, source: e.target.value }))}
-                className="rounded-lg border-0 py-1.5 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-blue-500">
-                <option value="">{t("allSources")}</option>
-                <option value="walk_in">{tSrc("walkIn")}</option>
-                <option value="phone">{tSrc("phone")}</option>
-                <option value="whatsapp">{tSrc("whatsapp")}</option>
-                <option value="online">{tSrc("online")}</option>
-                <option value="agent">{tSrc("agent")}</option>
-              </select>
-            </div>
-            {hasAdvFilters && (
-              <button onClick={() => { setAdvFilters({ propertyId: "", dateFrom: "", dateTo: "", rateType: "", source: "" }); fetchData(); }}
-                className="mt-2 text-xs text-blue-600 hover:underline">
-                {t("clearAllFilters")}
-              </button>
-            )}
-          </div>
-        )}
+          );
+        })()}
       </div>
 
       {/* ── Table ──────────────────────────────────────────────────────────── */}

@@ -209,6 +209,42 @@ export type {
   TenantBlacklistedWarningProps,
 } from "./alert";
 
+/* ── FilterBar ───────────────────────────────────────────────────────── */
+export {
+  FilterBar,
+  FilterBarSearch,
+  FilterBarQuickFilters,
+  FilterBarActions,
+  FilterBarAdvanced,
+  FilterBarAdvancedToggle,
+  FilterDispatch,
+  FilterBarActiveFilters,
+  buildActiveChips,
+  FilterBarMobileDrawer,
+} from "./filter-bar";
+export type {
+  FilterBarProps,
+  FilterBarAction,
+  FilterBarViewSwitcher,
+  ActiveFiltersDisplay,
+  SearchProp,
+  QuickFilter,
+  QuickFilterStyle,
+  QuickFilterCountVariant,
+  DatePreset,
+  FilterDef,
+  SelectFilterDef,
+  MultiSelectFilterDef,
+  DateRangeFilterDef,
+  DateSingleFilterDef,
+  NumberRangeFilterDef,
+  TextFilterDef,
+  BooleanFilterDef,
+  CustomFilterDef,
+  Option as FilterOption,
+  ActiveChip,
+} from "./filter-bar";
+
 /* ── DataTable ───────────────────────────────────────────────────────── */
 export {
   DataTable,

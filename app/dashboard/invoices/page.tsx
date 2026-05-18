@@ -1,18 +1,14 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
-import {
-  DocumentTextIcon,
-  MagnifyingGlassIcon,
-  PlusIcon,
-  ArrowPathIcon,
-} from "@heroicons/react/24/outline";
+import { DocumentTextIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { getTranslations } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { getCurrentCurrency } from "@/lib/get-org";
 import { formatCurrency } from "@/lib/format-currency";
 import InvoicesTable from "./InvoicesTable";
+import InvoicesFilters from "./InvoicesFilters";
 import type { InvoiceRow } from "./columns";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -59,7 +55,6 @@ export default async function InvoicesPage({
   const currency = await getCurrentCurrency();
   const t       = await getTranslations("invoices");
   const tTabs   = await getTranslations("invoices.tabs");
-  const tSearch = await getTranslations("invoices.search");
   const tFooter = await getTranslations("invoices.footer");
 
   // ── Build where clause ────────────────────────────────────────────────────────
@@ -191,27 +186,6 @@ export default async function InvoicesPage({
     { key: "CANCELLED",     label: tTabs("cancelled"),   count: countMap["CANCELLED"] ?? 0 },
   ];
 
-  // ── Build URL helpers ─────────────────────────────────────────────────────────
-
-  function tabUrl(key: StatusFilter) {
-    const sp = new URLSearchParams();
-    if (key !== "ALL") sp.set("status", key);
-    if (search) sp.set("search", search);
-    if (propertyId) sp.set("propertyId", propertyId);
-    const qs = sp.toString();
-    return `/dashboard/invoices${qs ? `?${qs}` : ""}`;
-  }
-
-  // Refresh URL preserves current filters but adds a cache-buster timestamp
-  const refreshUrl = (() => {
-    const sp = new URLSearchParams();
-    if (statusFilter !== "ALL") sp.set("status", statusFilter);
-    if (search) sp.set("search", search);
-    if (propertyId) sp.set("propertyId", propertyId);
-    sp.set("_t", String(Date.now()));
-    return `/dashboard/invoices?${sp.toString()}`;
-  })();
-
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
@@ -237,85 +211,15 @@ export default async function InvoicesPage({
         </Link>
       </div>
 
-      {/* Pill-style filter tabs */}
-      <div className="flex flex-wrap gap-1">
-        {primaryTabs.map((tab) => {
-          const active = statusFilter === tab.key;
-          const isWarn   = tab.tone === "warn"   && tab.count > 0;
-          const isDanger = tab.tone === "danger" && tab.count > 0;
-          return (
-            <Link
-              key={tab.key}
-              href={tabUrl(tab.key)}
-              className={`relative inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                active
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "bg-white border border-gray-200 text-gray-600 hover:bg-gray-50"
-              }`}
-            >
-              {tab.label}
-              {tab.count > 0 && (
-                <span
-                  className={`inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-xs font-bold ltr-numbers ${
-                    active
-                      ? "bg-white/25 text-white"
-                      : isDanger
-                        ? "bg-red-600 text-white animate-pulse"
-                        : isWarn
-                          ? "bg-amber-500 text-white"
-                          : "bg-gray-200 text-gray-700"
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              )}
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* Search + refresh bar */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <form method="GET" action="/dashboard/invoices" className="flex flex-1 gap-2">
-            {statusFilter !== "ALL" && (
-              <input type="hidden" name="status" value={statusFilter} />
-            )}
-            {propertyId && <input type="hidden" name="propertyId" value={propertyId} />}
-            <div className="relative flex-1 max-w-md">
-              <MagnifyingGlassIcon className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                name="search"
-                defaultValue={search}
-                placeholder={tSearch("placeholder")}
-                className="block w-full rounded-lg border-0 py-2 ps-9 pe-3 text-sm text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-indigo-500"
-              />
-            </div>
-            <button
-              type="submit"
-              className="rounded-lg bg-white border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              {tSearch("submit")}
-            </button>
-            {search && (
-              <Link
-                href={tabUrl(statusFilter)}
-                className="rounded-lg bg-white border border-gray-300 px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors"
-              >
-                {tSearch("clear")}
-              </Link>
-            )}
-          </form>
-          <Link
-            href={refreshUrl}
-            aria-label={t("refresh")}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-50"
-          >
-            <ArrowPathIcon className="h-4 w-4" />
-          </Link>
-        </div>
-      </div>
+      {/* Filters */}
+      <InvoicesFilters
+        currentStatus={statusFilter as "ALL" | "DRAFT" | "ISSUED" | "OVERDUE" | "PARTIALLY_PAID" | "PAID" | "CANCELLED"}
+        currentSearch={search}
+        counts={primaryTabs.map((t) => ({
+          key: t.key as "ALL" | "DRAFT" | "ISSUED" | "OVERDUE" | "PARTIALLY_PAID" | "PAID" | "CANCELLED",
+          count: t.count,
+        }))}
+      />
 
       {/* Table */}
       <InvoicesTable

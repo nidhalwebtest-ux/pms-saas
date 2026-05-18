@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
-  MagnifyingGlassIcon,
   CheckIcon,
   XMarkIcon,
   EyeIcon,
@@ -25,9 +24,11 @@ import { useFormatAmount, useOrgCurrency } from "@/lib/org-context";
 import {
   DataTable,
   EmptyState,
+  FilterBar,
   NoExpensesForFilters,
   NoExpensesPending,
   useConfirmDialog,
+  type QuickFilter,
 } from "@/components/ui";
 import { ReceiptIllustration } from "@/components/ui/empty-state/illustrations";
 
@@ -211,13 +212,13 @@ export default function ExpensesListClient({
   }
 
   // ── Tabs ──────────────────────────────────────────────────────────────
-  const tabs: { key: string }[] = [
-    { key: "ALL" },
-    { key: "PENDING" },
-    { key: "APPROVED" },
-    { key: "REJECTED" },
-    { key: "PROCESSED" },
-  ];
+  const tabKeys = ["ALL", "PENDING", "APPROVED", "REJECTED", "PROCESSED"] as const;
+  const quickFilters: QuickFilter[] = tabKeys.map((k) => ({
+    id:      k,
+    label:   tTabs(k),
+    count:   statusCounts[k]?.count ?? 0,
+    variant: k === "REJECTED" ? "destructive" : k === "APPROVED" || k === "PROCESSED" ? "success" : k === "PENDING" ? "warning" : undefined,
+  }));
 
   const showCheckboxes = canApprove && statusFilter === "PENDING";
 
@@ -304,78 +305,61 @@ export default function ExpensesListClient({
 
   return (
     <div className="space-y-5">
-      {/* ── Status tabs ──────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-sm ring-1 ring-gray-200 px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {tabs.map((tb) => {
-            const active = statusFilter === tb.key;
-            const count = statusCounts[tb.key]?.count ?? 0;
-            const total = statusCounts[tb.key]?.total ?? 0;
-            return (
-              <button
-                key={tb.key}
-                onClick={() => setStatusFilter(tb.key)}
-                className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-full transition-all ${
-                  active
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                {tTabs(tb.key)}
-                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ltr-numbers ${
-                  active ? "bg-blue-500/40 text-white" : "bg-white text-gray-500"
-                }`}>
-                  {count}
-                </span>
-                {active && total > 0 && (
-                  <span className="text-[10px] font-medium opacity-80 ltr-numbers">
-                    · {fmtAmount(total)}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-          <button
-            onClick={fetchExpenses}
-            disabled={loading}
-            className="ms-auto p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-40"
-            title={tList("refresh")}
-          >
-            <ArrowPathIcon className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
-        </div>
-      </div>
-
-      {/* ── Filters bar ──────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-sm ring-1 ring-gray-200 px-4 py-3 grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <div className="relative sm:col-span-2">
-          <MagnifyingGlassIcon className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={tList("searchPlaceholder")}
-            className="w-full rounded-lg border-0 bg-white py-2 ps-9 pe-3 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600"
-          />
-        </div>
-        <select
-          value={propertyId}
-          onChange={(e) => setPropertyId(e.target.value)}
-          className="w-full rounded-lg border-0 bg-white py-2 px-3 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600"
-        >
-          <option value="">{tList("allBuildings")}</option>
-          {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className="w-full rounded-lg border-0 bg-white py-2 px-3 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600"
-        >
-          <option value="">{tList("allCategories")}</option>
-          {categories.filter(c => c.isActive).map((c) => (
-            <option key={c.id} value={c.id}>{c.icon ?? ""} {c.name}</option>
-          ))}
-        </select>
-      </div>
+      <FilterBar
+        search={{
+          value: search,
+          onChange: setSearch,
+          placeholder: tList("searchPlaceholder"),
+          debounceMs: 0, // local state already debounces via debouncedSearch
+        }}
+        quickFilters={quickFilters}
+        activeQuickFilter={statusFilter}
+        onQuickFilterChange={setStatusFilter}
+        filters={[
+          {
+            id:       "property",
+            type:     "select",
+            label:    tList("allBuildings"),
+            value:    propertyId,
+            allValue: "",
+            onChange: setPropertyId,
+            options:  [
+              { value: "", label: tList("allBuildings") },
+              ...properties.map((p) => ({ value: p.id, label: p.name })),
+            ],
+          },
+          {
+            id:       "category",
+            type:     "select",
+            label:    tList("allCategories"),
+            value:    categoryId,
+            allValue: "",
+            onChange: setCategoryId,
+            options:  [
+              { value: "", label: tList("allCategories") },
+              ...categories.filter((c) => c.isActive).map((c) => ({
+                value: c.id,
+                label: `${c.icon ?? ""} ${c.name}`.trim(),
+              })),
+            ],
+          },
+        ]}
+        actions={[
+          {
+            label:    tList("refresh"),
+            onClick:  fetchExpenses,
+            variant:  "ghost",
+            icon:     <ArrowPathIcon className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />,
+            disabled: loading,
+            iconOnlyMobile: true,
+          },
+        ]}
+        activeFiltersDisplay="chips"
+        onClearAll={() => {
+          setPropertyId("");
+          setCategoryId("");
+        }}
+      />
 
       {/* ── Bulk action bar ──────────────────────────────────────────── */}
       {/* ── Table ────────────────────────────────────────────────────── */}

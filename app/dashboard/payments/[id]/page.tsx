@@ -14,6 +14,7 @@ import {
   CalendarDaysIcon,
 } from "@heroicons/react/24/outline";
 import {
+  Alert,
   Badge,
   getPaymentMethodBadge,
   resolveInvoiceBadge,
@@ -346,9 +347,7 @@ export default async function PaymentDetailPage({
 
       {/* Unapplied credit note */}
       {payment.allocations.length === 0 && (
-        <div className="mt-6 bg-amber-50 rounded-lg border border-amber-200 px-4 py-4 text-sm text-amber-800">
-          {tDet("unappliedNotice")}
-        </div>
+        <Alert variant="warning" className="mt-6" description={tDet("unappliedNotice")} />
       )}
     </div>
   );

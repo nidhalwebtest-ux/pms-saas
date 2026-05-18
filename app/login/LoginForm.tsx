@@ -17,6 +17,7 @@ import {
   XMarkIcon,
   ShieldExclamationIcon,
 } from "@heroicons/react/24/outline";
+import { Alert } from "@/components/ui";
 
 // ─── Error keys ────────────────────────────────────────────────────────────────
 
@@ -68,22 +69,22 @@ function LockoutBanner({ until }: { until: number }) {
   }, [until]);
 
   return (
-    <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3.5">
-      <ShieldExclamationIcon className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
-      <div>
-        <p className="text-sm font-semibold text-red-700">{t("lockoutTitle")}</p>
-        <p className="mt-0.5 text-sm text-red-600">
-          {timeLeft === ""
-            ? t("lockoutBodyNow")
-            : timeLeft
-              ? t.rich("lockoutBodyIn", {
-                  time: timeLeft,
-                  b: (chunks) => <span className="font-mono font-semibold ltr-numbers">{chunks}</span>,
-                })
-              : null}
-        </p>
-      </div>
-    </div>
+    <Alert
+      variant="error"
+      className="mb-5"
+      icon={<ShieldExclamationIcon className="h-5 w-5 text-error-600 flex-shrink-0" aria-hidden="true" />}
+      title={t("lockoutTitle")}
+      description={
+        timeLeft === ""
+          ? t("lockoutBodyNow")
+          : timeLeft
+            ? t.rich("lockoutBodyIn", {
+                time: timeLeft,
+                b: (chunks) => <span className="font-mono font-semibold ltr-numbers">{chunks}</span>,
+              })
+            : null
+      }
+    />
   );
 }
 
@@ -244,20 +245,12 @@ export default function LoginForm({
         {/* Lockout countdown */}
         {isLockedOut && lockoutUntil && <LockoutBanner until={lockoutUntil} />}
 
-        {/* Server error */}
         {serverError && (
-          <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <ExclamationCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
-            <span>{serverError}</span>
-          </div>
+          <Alert variant="error" className="mb-5" description={serverError} />
         )}
 
-        {/* Server warning (non-blocking — e.g. email not delivered) */}
         {serverWarn && (
-          <div className="mb-5 flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            <ExclamationCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
-            <span>{serverWarn}</span>
-          </div>
+          <Alert variant="warning" className="mb-5" description={serverWarn} />
         )}
 
         {/* ── Google OAuth button ────────────────────────────── */}

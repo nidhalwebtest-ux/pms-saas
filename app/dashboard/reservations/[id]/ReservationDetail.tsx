@@ -28,6 +28,7 @@ import {
   BanknotesIcon,
 } from "@heroicons/react/24/outline";
 import {
+  Alert,
   Badge,
   Button,
   Modal,
@@ -373,10 +374,7 @@ function CheckInModal({ res, onSuccess, onClose }: {
 
         {/* Date info */}
         {daysUntil > 0 && (
-          <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-            <ExclamationTriangleIcon className="h-4 w-4 shrink-0" />
-            <span>{t("earlyCheckInQuestion", { when: whenText })}</span>
-          </div>
+          <Alert variant="warning" size="sm" description={t("earlyCheckInQuestion", { when: whenText })} />
         )}
 
         {/* Units */}
@@ -392,10 +390,12 @@ function CheckInModal({ res, onSuccess, onClose }: {
         </div>
 
         {res.invoicesGenerated && (
-          <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-            <BanknotesIcon className="h-4 w-4 shrink-0" />
-            <span>{t("invoicesExist", { count: res.invoices.length })}</span>
-          </div>
+          <Alert
+            variant="info"
+            size="sm"
+            icon={<BanknotesIcon className="h-4 w-4 text-info-600 shrink-0" aria-hidden="true" />}
+            description={t("invoicesExist", { count: res.invoices.length })}
+          />
         )}
 
         <button
@@ -600,16 +600,15 @@ function CancelModal({ res, onSuccess, onClose }: {
   return (
     <Modal open onClose={onClose} size="md"><ModalHeader title={t("title")} /><ModalBody>
       <div className="space-y-4">
-        <div className="p-4 bg-red-50 rounded-xl text-sm text-red-700 border border-red-200">
-          {t("warning")}
-        </div>
+        <Alert variant="error" description={t("warning")} />
         {totalPaid > 0 && (
-          <div className="p-4 bg-yellow-50 rounded-xl text-sm text-yellow-800 border border-yellow-200">
-            {t.rich("refundWarning", {
+          <Alert
+            variant="warning"
+            description={t.rich("refundWarning", {
               amount: res.amountPaid,
               b: (chunks) => <strong>{chunks}</strong>,
             })}
-          </div>
+          />
         )}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">{t("reasonLabel")}</label>
@@ -996,9 +995,8 @@ function GenerateInvoicesModal({ res, onSuccess, onClose }: {
   return (
     <Modal open onClose={onClose} size="md"><ModalHeader title={t("title")} /><ModalBody>
       <div className="space-y-4">
-        <div className="p-4 bg-blue-50 rounded-xl text-sm text-blue-800 border border-blue-200">
-          {t("body")}
-        </div>
+        <Alert variant="info" description={t("body")} />
+
         <div className="bg-gray-50 rounded-xl p-4 space-y-1 text-sm text-gray-700">
           <div className="flex justify-between">
             <span>{t("grandTotal")}</span>
@@ -1291,9 +1289,7 @@ function ReturnModal({ res, onSuccess, onClose }: {
           <div className="text-sm text-gray-400 text-center py-2">{t("calculating")}</div>
         )}
         {previewError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-            {previewError}
-          </div>
+          <Alert variant="error" size="sm" description={previewError} />
         )}
         {preview && !previewError && (
           <div className="space-y-3">
@@ -1351,20 +1347,16 @@ function ReturnModal({ res, onSuccess, onClose }: {
 
             {/* Refund notice */}
             {preview.refundRequired ? (
-              <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-xl text-sm text-orange-800">
-                <ExclamationTriangleIcon className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>
-                  {t.rich("refundRequiredMsg", {
-                    amount: preview.refundAmount,
-                    b: (chunks) => <strong>{chunks}</strong>,
-                  })}
-                </span>
-              </div>
+              <Alert
+                variant="warning"
+                size="sm"
+                description={t.rich("refundRequiredMsg", {
+                  amount: preview.refundAmount,
+                  b: (chunks) => <strong>{chunks}</strong>,
+                })}
+              />
             ) : (
-              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800">
-                <CheckIcon className="h-4 w-4 shrink-0" />
-                <span>{t("noRefundMsg")}</span>
-              </div>
+              <Alert variant="success" size="sm" description={t("noRefundMsg")} />
             )}
           </div>
         )}
@@ -1398,9 +1390,7 @@ function ReturnModal({ res, onSuccess, onClose }: {
           />
         </div>
 
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
-          {t("warning")}
-        </div>
+        <Alert variant="warning" size="sm" description={t("warning")} />
 
         <button
           onClick={handleConfirm}

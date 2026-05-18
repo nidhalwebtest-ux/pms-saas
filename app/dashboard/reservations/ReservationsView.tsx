@@ -13,7 +13,6 @@ import {
   AdjustmentsHorizontalIcon,
   PlusIcon,
   XMarkIcon,
-  ExclamationTriangleIcon,
   ArrowPathIcon,
   ArrowLeftOnRectangleIcon,
   ArrowRightOnRectangleIcon,
@@ -23,6 +22,7 @@ import {
 import type { SortingState } from "@tanstack/react-table";
 import type { DisplayStatus, TabKey } from "@/lib/reservation-status";
 import {
+  Alert,
   Badge,
   Button,
   DataTable,
@@ -177,15 +177,13 @@ function CheckInModal({
       <div className="space-y-4">
         <GuestInfo res={res} />
         {isEarly && (
-          <div className="flex gap-2 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
-            <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-amber-500 mt-0.5" />
-            <span>
-              {t.rich("earlyWarning", {
-                date: fmtDate(res.startDate).text,
-                b: (chunks) => <strong>{chunks}</strong>,
-              })}
-            </span>
-          </div>
+          <Alert
+            variant="warning"
+            description={t.rich("earlyWarning", {
+              date: fmtDate(res.startDate).text,
+              b: (chunks) => <strong>{chunks}</strong>,
+            })}
+          />
         )}
         <ModalActions
           confirmLabel={t("confirm")}
@@ -243,39 +241,45 @@ function CheckOutModal({
 
         {/* Balance warning */}
         {res.balanceDue > 0 && (
-          <div className="flex gap-2 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-800">
-            <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-red-500 mt-0.5" />
-            <div>
-              <p className="font-semibold">{t("outstandingBalance", { amount: res.balanceDue.toFixed(3) })}</p>
-              <p className="text-xs mt-0.5 text-red-700">{t("unpaidWarning")}</p>
-            </div>
-          </div>
+          <Alert
+            variant="error"
+            title={t("outstandingBalance", { amount: res.balanceDue.toFixed(3) })}
+            description={t("unpaidWarning")}
+          />
         )}
 
         {/* Overstay */}
         {isOverstay && (
-          <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-800 space-y-2">
-            <p className="font-semibold">{t("overstayWarning", { count: extraNights })}</p>
-            <p className="text-xs">{t("overstayPlanned", { date: fmtDate(res.endDate).text })}</p>
-            <label className="flex items-center gap-2 text-xs">
-              <input type="number" min="0" step="0.001" placeholder={t("extraChargePlaceholder")}
-                className="w-36 rounded border border-red-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-red-400 ltr-numbers"
-                value={additionalAmt} onChange={(e) => setAdditionalAmt(e.target.value)} />
-              <span>{t("addOverstayCharge")}</span>
-            </label>
-          </div>
+          <Alert
+            variant="error"
+            title={t("overstayWarning", { count: extraNights })}
+            description={
+              <div className="space-y-2">
+                <p>{t("overstayPlanned", { date: fmtDate(res.endDate).text })}</p>
+                <label className="flex items-center gap-2">
+                  <input type="number" min="0" step="0.001" placeholder={t("extraChargePlaceholder")}
+                    className="w-36 rounded border border-error-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-error-500 ltr-numbers"
+                    value={additionalAmt} onChange={(e) => setAdditionalAmt(e.target.value)} />
+                  <span>{t("addOverstayCharge")}</span>
+                </label>
+              </div>
+            }
+          />
         )}
 
         {/* Early checkout */}
         {isEarly && (
-          <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800 space-y-2">
-            <p className="font-semibold">{t("earlyCheckout", { count: savedNights })}</p>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={adjustCharges} onChange={(e) => setAdjustCharges(e.target.checked)}
-                className="rounded border-amber-400" />
-              <span className="text-xs">{t("recalcCharges")}</span>
-            </label>
-          </div>
+          <Alert
+            variant="warning"
+            title={t("earlyCheckout", { count: savedNights })}
+            description={
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={adjustCharges} onChange={(e) => setAdjustCharges(e.target.checked)}
+                  className="rounded border-warning-200" />
+                <span>{t("recalcCharges")}</span>
+              </label>
+            }
+          />
         )}
 
         <ModalActions
@@ -512,15 +516,13 @@ export default function ReservationsView({
     if (type === "cancel") {
       const totalPaid = Number(res.amountPaid);
       const refundBody = totalPaid > 0 ? (
-        <div className="flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          <ExclamationTriangleIcon className="h-5 w-5 shrink-0 text-amber-500 mt-0.5" />
-          <span>
-            {tCancel.rich("totalPaidRefund", {
-              amount: totalPaid.toFixed(3),
-              b: (chunks) => <strong>{chunks}</strong>,
-            })}
-          </span>
-        </div>
+        <Alert
+          variant="warning"
+          description={tCancel.rich("totalPaidRefund", {
+            amount: totalPaid.toFixed(3),
+            b: (chunks) => <strong>{chunks}</strong>,
+          })}
+        />
       ) : undefined;
       const nonOther = CANCEL_REASONS.filter((r) => r.value !== "Other").map((r) => r.value);
       await confirm({

@@ -8,9 +8,8 @@ import {
   EnvelopeIcon,
   ArrowLeftIcon,
   ArrowPathIcon,
-  CheckCircleIcon,
-  ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
+import { Alert } from "@/components/ui";
 
 const RESEND_COOLDOWN = 60; // seconds
 
@@ -85,28 +84,16 @@ export default function VerifyEmailClient({
         </div>
 
         <div className="mt-6 space-y-3">
-          {/* Delivery-failure warning carried over from signup */}
           {showDeliveryWarning && status === "idle" && (
-            <div className="flex items-start gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              <ExclamationCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
-              <span>{t("warnEmailFailed")}</span>
-            </div>
+            <Alert variant="warning" description={t("warnEmailFailed")} />
           )}
 
-          {/* Success banner */}
           {status === "sent" && (
-            <div className="flex items-start gap-2.5 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-              <CheckCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
-              <span>{t("successResent")}</span>
-            </div>
+            <Alert variant="success" description={t("successResent")} />
           )}
 
-          {/* Error banner */}
           {status === "error" && (
-            <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              <ExclamationCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
-              <span>{errorMsg}</span>
-            </div>
+            <Alert variant="error" description={errorMsg} />
           )}
 
           {/* Resend button */}

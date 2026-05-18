@@ -2,12 +2,9 @@
 
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  CheckCircleIcon,
-  ExclamationCircleIcon,
-} from "@heroicons/react/24/outline";
 import { updateProfile, changePassword } from "./actions";
 import {
+  Alert,
   Button,
   PasswordField,
   TextField,
@@ -16,20 +13,8 @@ import {
 // ── Tiny helpers ──────────────────────────────────────────────────────────────
 
 function StatusBanner({ state }: { state: { error?: string; success?: string } }) {
-  if (state.success)
-    return (
-      <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-        <CheckCircleIcon className="h-4 w-4 flex-shrink-0" />
-        {state.success}
-      </div>
-    );
-  if (state.error)
-    return (
-      <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-        <ExclamationCircleIcon className="h-4 w-4 flex-shrink-0" />
-        {state.error}
-      </div>
-    );
+  if (state.success) return <Alert variant="success" description={state.success} />;
+  if (state.error)   return <Alert variant="error"   description={state.error} />;
   return null;
 }
 

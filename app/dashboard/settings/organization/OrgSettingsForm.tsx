@@ -12,7 +12,7 @@ import {
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { updateOrganization } from "./actions";
-import { Button } from "@/components/ui";
+import { Alert, Button } from "@/components/ui";
 
 const TIMEZONES = [
   { value: "Asia/Muscat",       label: "(GMT+4) Asia/Muscat — Oman" },
@@ -134,12 +134,7 @@ export default function OrgSettingsForm({ org }: { org: FormState }) {
 
   return (
     <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-900/5 space-y-5">
-      {bannerError && (
-        <div className="flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <ExclamationCircleIcon className="mt-0.5 h-4 w-4 flex-shrink-0" />
-          <span>{bannerError}</span>
-        </div>
-      )}
+      {bannerError && <Alert variant="error" description={bannerError} />}
 
       {/* Company name */}
       <div>

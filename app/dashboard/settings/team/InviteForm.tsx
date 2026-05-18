@@ -2,8 +2,8 @@
 
 import { useActionState } from "react";
 import { useTranslations } from "next-intl";
-import { CheckCircleIcon, ExclamationCircleIcon, PaperAirplaneIcon } from "@heroicons/react/24/outline";
-import { Button } from "@/components/ui";
+import { PaperAirplaneIcon } from "@heroicons/react/24/outline";
+import { Alert, Button } from "@/components/ui";
 
 interface Props {
   action:          (prev: { error?: string; success?: string }, fd: FormData) => Promise<{ error?: string; success?: string }>;
@@ -17,18 +17,8 @@ export default function InviteForm({ action, canAssignAdmin }: Props) {
 
   return (
     <form action={formAction} className="space-y-5">
-      {state.success && (
-        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          <CheckCircleIcon className="h-4 w-4 flex-shrink-0" />
-          {state.success}
-        </div>
-      )}
-      {state.error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <ExclamationCircleIcon className="h-4 w-4 flex-shrink-0" />
-          {state.error}
-        </div>
-      )}
+      {state.success && <Alert variant="success" description={state.success} />}
+      {state.error   && <Alert variant="error"   description={state.error} />}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {/* Email */}

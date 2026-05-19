@@ -421,20 +421,28 @@ export function TodayView({ propertyId }: { propertyId: string }) {
               )}
 
               {/* Quick links */}
-              <div className="mt-4 space-y-1.5">
-                <Link
-                  href="/dashboard/payments/new"
-                  className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-100 transition-colors"
-                >
-                  <BanknotesIcon className="h-3.5 w-3.5" />
-                  {tFin("recordPayment")}
+              <div className="mt-4 flex flex-col gap-1.5">
+                <Link href="/dashboard/payments/new" className="block">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<BanknotesIcon className="h-3.5 w-3.5" />}
+                    onClick={(e) => e.preventDefault()}
+                    fullWidth
+                  >
+                    {tFin("recordPayment")}
+                  </Button>
                 </Link>
-                <Link
-                  href="/dashboard/expenses/new"
-                  className="flex items-center gap-1.5 rounded-lg bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
-                >
-                  <ArrowUpIcon className="h-3.5 w-3.5" />
-                  {tFin("logExpense")}
+                <Link href="/dashboard/expenses/new" className="block">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<ArrowUpIcon className="h-3.5 w-3.5" />}
+                    onClick={(e) => e.preventDefault()}
+                    fullWidth
+                  >
+                    {tFin("logExpense")}
+                  </Button>
                 </Link>
               </div>
             </div>

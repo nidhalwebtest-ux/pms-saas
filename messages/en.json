@@ -413,6 +413,7 @@
       "loadFailed": "Failed to load dashboard data",
       "loadingData": "Loading today's data…",
       "noData": "No data",
+      "retry": "Retry",
       "stats": {
         "arrivingToday": "Arriving Today",
         "checkingOut": "Checking Out",
@@ -478,7 +479,8 @@
           "NOTE_ADDED": "Note added",
           "NO_SHOW": "No-show recorded"
         }
-      }
+      },
+      "retry": "Retry"
     },
     "receptionist": {
       "loadFailed": "Failed to load receptionist data",

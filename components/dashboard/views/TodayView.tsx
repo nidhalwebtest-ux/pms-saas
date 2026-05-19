@@ -18,9 +18,15 @@ import {
 } from "@heroicons/react/24/outline";
 import { useFormatCurrency } from "@/lib/org-context";
 import {
+  Alert,
   Badge,
   Button,
   EmptyState,
+  SkeletonCard,
+  SkeletonCircle,
+  SkeletonLine,
+  SkeletonRectangle,
+  SkeletonText,
   getTenantClassBadge,
 } from "@/components/ui";
 
@@ -221,6 +227,69 @@ function SectionCard({
   );
 }
 
+/* ============================================================================
+ *  Skeleton — mirrors the real grid (4 stat tiles, 2-col guest sections,
+ *  2-col financial + activity). Announce as a single live region via the
+ *  outer SkeletonCard so screen readers receive one update on first load.
+ * ========================================================================= */
+
+function TodayViewSkeleton({ ariaLabel }: { ariaLabel: string }) {
+  return (
+    <SkeletonCard padding={0} bordered={false} announce aria-label={ariaLabel} className="bg-transparent">
+      <div className="space-y-5">
+        {/* Stat tiles */}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonCard key={i} padding={20} bordered={false} announce={false} className="bg-subtle">
+              <SkeletonLine width="60%" size="sm" />
+              <SkeletonRectangle width="40%" height={32} className="mt-3" />
+              <SkeletonLine width="55%" size="sm" className="mt-3" />
+            </SkeletonCard>
+          ))}
+        </div>
+
+        {/* Guest section columns */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <SkeletonCard key={i} padding={16} announce={false}>
+              <div className="flex items-center gap-2">
+                <SkeletonCircle size={10} />
+                <SkeletonLine width={140} size="sm" />
+              </div>
+              <div className="mt-4 space-y-3">
+                {Array.from({ length: 3 }).map((_, j) => (
+                  <div key={j} className="flex items-center gap-3">
+                    <SkeletonCircle size={32} />
+                    <div className="flex-1">
+                      <SkeletonLine width="60%" size="sm" />
+                      <SkeletonLine width="40%" size="sm" className="mt-1.5" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SkeletonCard>
+          ))}
+        </div>
+
+        {/* Financial + activity columns */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <SkeletonCard padding={20} announce={false}>
+            <SkeletonLine width={120} size="sm" />
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div><SkeletonText lines={4} size="sm" /></div>
+              <div><SkeletonText lines={4} size="sm" /></div>
+            </div>
+          </SkeletonCard>
+          <SkeletonCard padding={16} announce={false}>
+            <SkeletonLine width={120} size="sm" />
+            <div className="mt-4"><SkeletonText lines={6} size="sm" /></div>
+          </SkeletonCard>
+        </div>
+      </div>
+    </SkeletonCard>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
 export function TodayView({ propertyId }: { propertyId: string }) {
@@ -259,17 +328,18 @@ export function TodayView({ propertyId }: { propertyId: string }) {
     return () => clearInterval(id);
   }, [fetchData]);
 
-  if (loading)
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-sm text-gray-400">{t("loadingData")}</div>
-      </div>
-    );
+  if (loading) return <TodayViewSkeleton ariaLabel={t("loadingData")} />;
   if (error || !data)
     return (
-      <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-        {error ?? t("noData")}
-      </div>
+      <Alert
+        variant="error"
+        title={error ?? t("noData")}
+        actions={
+          <Button variant="secondary" size="sm" onClick={fetchData}>
+            {t("retry")}
+          </Button>
+        }
+      />
     );
 
   const allArrivals = [...data.overdueArrivals, ...data.arrivals];

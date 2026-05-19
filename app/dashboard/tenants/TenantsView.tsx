@@ -25,7 +25,7 @@ import {
 import type { SortingState } from "@tanstack/react-table";
 import { quickUpdateTenant } from "./actions";
 import type { TenantRow } from "./page";
-import { DataTable, NoTenantsFirstTime } from "@/components/ui";
+import { DataTable, NoTenantsFirstTime, SegmentedControl } from "@/components/ui";
 import {
   Avatar,
   ClassBadge,
@@ -507,20 +507,17 @@ export default function TenantsView({
           <span className="text-xs text-gray-400 hidden sm:block">
             {tBar("tenantsCount", { count: sorted.length })}
           </span>
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-            {([["table", ListBulletIcon], ["card", Squares2X2Icon], ["summary", RectangleGroupIcon]] as const).map(([mode, Icon]) => (
-              <button
-                key={mode}
-                onClick={() => { setViewMode(mode as any); setInlineEditId(null); setEditMode(false); }}
-                className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                  viewMode === mode ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50"
-                }`}
-                title={viewTitles[mode]}
-              >
-                <Icon className="h-4 w-4" />
-              </button>
-            ))}
-          </div>
+          <SegmentedControl<"table" | "card" | "summary">
+            value={viewMode}
+            onValueChange={(mode) => { setViewMode(mode); setInlineEditId(null); setEditMode(false); }}
+            size="sm"
+            ariaLabel="View mode"
+            options={[
+              { value: "table",   icon: <ListBulletIcon />,     ariaLabel: viewTitles.table,   tooltip: viewTitles.table },
+              { value: "card",    icon: <Squares2X2Icon />,     ariaLabel: viewTitles.card,    tooltip: viewTitles.card },
+              { value: "summary", icon: <RectangleGroupIcon />, ariaLabel: viewTitles.summary, tooltip: viewTitles.summary },
+            ]}
+          />
         </div>
       </div>
 

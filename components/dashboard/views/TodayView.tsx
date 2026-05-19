@@ -194,7 +194,7 @@ function SectionCard({
   emptyText: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
+    <div className="overflow-hidden rounded-xl bg-surface border border-border-subtle">
       <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
         <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
         <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
@@ -355,7 +355,7 @@ export function TodayView({ propertyId }: { propertyId: string }) {
       {/* ── Financial summary + Activity feed ── */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Financial summary */}
-        <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 p-5">
+        <div className="rounded-xl bg-surface border border-border-subtle p-5">
           <div className="flex items-center gap-2 mb-4">
             <BanknotesIcon className="h-5 w-5 text-green-600" />
             <h3 className="text-sm font-semibold text-gray-900">
@@ -437,7 +437,7 @@ export function TodayView({ propertyId }: { propertyId: string }) {
         </div>
 
         {/* Recent activity feed */}
-        <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
+        <div className="overflow-hidden rounded-xl bg-surface border border-border-subtle">
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
             <div className="flex items-center gap-2">
               <ClockIcon className="h-4 w-4 text-gray-400" />

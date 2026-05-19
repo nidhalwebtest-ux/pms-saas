@@ -98,7 +98,7 @@ function StatCard({
   return (
     <div className={`relative rounded-xl p-5 text-white ${color} overflow-hidden`}>
       {pulse && value > 0 && (
-        <span className="absolute top-3 right-3 flex h-3 w-3">
+        <span className="absolute top-3 inset-ie-3 flex h-3 w-3">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
           <span className="relative inline-flex rounded-full h-3 w-3 bg-white" />
         </span>

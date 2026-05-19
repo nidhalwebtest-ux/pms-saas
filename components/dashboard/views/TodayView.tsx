@@ -17,6 +17,12 @@ import {
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { useFormatCurrency } from "@/lib/org-context";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  getTenantClassBadge,
+} from "@/components/ui";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -129,19 +135,19 @@ function GuestRow({ res, type }: { res: ReservationRow; type: "arrival" | "depar
               {res.tenant.name}
             </span>
             {res.tenant.classification === "vip" && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+              <Badge {...getTenantClassBadge("vip")} size="sm">
                 {t("vipBadge")}
-              </span>
+              </Badge>
             )}
             {isOverdue && (
-              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
+              <Badge tone="danger" appearance="solid" size="sm">
                 {t("overdueBadge", { days: daysOverdue })}
-              </span>
+              </Badge>
             )}
             {type === "overstay" && (
-              <span className="rounded-full bg-red-200 px-2 py-0.5 text-xs font-bold text-red-800">
+              <Badge tone="danger" appearance="solid" size="sm" pulse>
                 {t("overstayBadge", { days: daysPastEnd })}
-              </span>
+              </Badge>
             )}
           </div>
           <p className="mt-0.5 text-xs text-gray-500">
@@ -164,18 +170,16 @@ function GuestRow({ res, type }: { res: ReservationRow; type: "arrival" | "depar
           )}
           <div className="flex gap-1.5 justify-end">
             {(type === "departure" || type === "overstay") && res.balance > 0.001 && (
-              <Link
-                href={`/dashboard/payments/new?reservationId=${res.id}`}
-                className="rounded-md bg-green-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-green-700 transition-colors"
-              >
-                {t("collect")}
+              <Link href={`/dashboard/payments/new?reservationId=${res.id}`} className="inline-flex">
+                <Button variant="primary" size="sm" onClick={(e) => e.preventDefault()}>
+                  {t("collect")}
+                </Button>
               </Link>
             )}
-            <Link
-              href={`/dashboard/reservations/${res.id}`}
-              className="rounded-md bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 transition-colors"
-            >
-              {t("view")}
+            <Link href={`/dashboard/reservations/${res.id}`} className="inline-flex">
+              <Button variant="secondary" size="sm" onClick={(e) => e.preventDefault()}>
+                {t("view")}
+              </Button>
             </Link>
           </div>
         </div>
@@ -195,22 +199,23 @@ function SectionCard({
 }) {
   return (
     <div className="overflow-hidden rounded-xl bg-surface border border-border-subtle">
-      <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
+      <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-3">
         <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
-        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-        <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-          count > 0 ? "bg-gray-100 text-gray-600" : "bg-gray-50 text-gray-400"
-        }`}>
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        <Badge tone="neutral" size="sm" className="ms-1">
           {count}
-        </span>
+        </Badge>
       </div>
       {count === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8">
-          <CheckCircleIcon className="mb-2 h-8 w-8 text-gray-200" />
-          <p className="text-sm text-gray-400">{emptyText}</p>
-        </div>
+        <EmptyState
+          inline
+          variant="positive"
+          size="sm"
+          illustration={<CheckCircleIcon className="h-6 w-6" />}
+          title={emptyText}
+        />
       ) : (
-        <ul className="divide-y divide-gray-50">{children}</ul>
+        <ul className="divide-y divide-border-subtle">{children}</ul>
       )}
     </div>
   );

@@ -66,13 +66,13 @@ interface TodayData {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-const ACTION_COLORS: Record<string, string> = {
-  CREATED:          "bg-blue-100 text-blue-700",
-  CHECKED_IN:       "bg-green-100 text-green-700",
-  CHECKED_OUT:      "bg-orange-100 text-orange-700",
-  CANCELLED:        "bg-red-100 text-red-600",
-  PAYMENT_RECORDED: "bg-emerald-100 text-emerald-700",
-  NO_SHOW:          "bg-gray-100 text-gray-500",
+const ACTION_TONE: Record<string, "info" | "success" | "warning" | "danger" | "neutral"> = {
+  CREATED:          "info",
+  CHECKED_IN:       "success",
+  CHECKED_OUT:      "warning",
+  CANCELLED:        "danger",
+  PAYMENT_RECORDED: "success",
+  NO_SHOW:          "neutral",
 };
 
 const METHOD_KEYS = ["CASH", "CARD", "BANK_TRANSFER", "CHEQUE", "OTHER"] as const;
@@ -451,48 +451,50 @@ export function TodayView({ propertyId }: { propertyId: string }) {
 
         {/* Recent activity feed */}
         <div className="overflow-hidden rounded-xl bg-surface border border-border-subtle">
-          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+          <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
             <div className="flex items-center gap-2">
-              <ClockIcon className="h-4 w-4 text-gray-400" />
-              <h3 className="text-sm font-semibold text-gray-900">
+              <ClockIcon className="h-4 w-4 text-fg-tertiary" />
+              <h3 className="text-sm font-semibold text-fg">
                 {tAct("title")}
               </h3>
             </div>
-            <Link
-              href="/dashboard/reservations"
-              className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800"
-            >
-              {tAct("allReservations")}
-              <ArrowRightIcon className="h-3 w-3 rtl:rotate-180" />
+            <Link href="/dashboard/reservations" className="inline-flex">
+              <Button
+                variant="link"
+                size="sm"
+                rightIcon={<ArrowRightIcon className="h-3 w-3 rtl:rotate-180" />}
+                onClick={(e) => e.preventDefault()}
+              >
+                {tAct("allReservations")}
+              </Button>
             </Link>
           </div>
 
           {data.recentActivities.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10">
-              <UserGroupIcon className="mb-2 h-8 w-8 text-gray-200" />
-              <p className="text-sm text-gray-400">{tAct("noActivity")}</p>
-            </div>
+            <EmptyState
+              inline
+              variant="encouraging"
+              size="sm"
+              illustration={<UserGroupIcon className="h-6 w-6" />}
+              title={tAct("noActivity")}
+            />
           ) : (
-            <ul className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
+            <ul className="divide-y divide-border-subtle max-h-80 overflow-y-auto">
               {data.recentActivities.map((act) => {
                 const actionLabel = tActLab.has(act.action) ? tActLab(act.action) : act.action;
                 return (
-                  <li key={act.id} className="px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                  <li key={act.id} className="px-4 py-2.5 hover:bg-subtle transition-colors">
                     <div className="flex items-start gap-2.5">
-                      <span
-                        className={`mt-0.5 inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                          ACTION_COLORS[act.action] ?? "bg-gray-100 text-gray-500"
-                        }`}
-                      >
+                      <Badge tone={ACTION_TONE[act.action] ?? "neutral"} size="sm" appearance="subtle">
                         {actionLabel}
-                      </span>
+                      </Badge>
                     </div>
-                    <p className="mt-0.5 text-xs text-gray-600 truncate">
+                    <p className="mt-0.5 text-xs text-fg-secondary truncate">
                       {act.description}
                     </p>
-                    <div className="mt-0.5 flex items-center gap-2 text-[10px] text-gray-400">
+                    <div className="mt-0.5 flex items-center gap-2 text-[10px] text-fg-tertiary">
                       {act.performedBy && (
-                        <span className="font-medium text-gray-500">
+                        <span className="font-medium text-fg-tertiary">
                           {act.performedBy}
                         </span>
                       )}
@@ -505,7 +507,7 @@ export function TodayView({ propertyId }: { propertyId: string }) {
                       {act.reservationId && (
                         <Link
                           href={`/dashboard/reservations/${act.reservationId}`}
-                          className="text-blue-500 hover:text-blue-700"
+                          className="text-brand-600 hover:text-brand-700"
                         >
                           {act.reservationNumber ?? tAct("viewLink")}
                         </Link>

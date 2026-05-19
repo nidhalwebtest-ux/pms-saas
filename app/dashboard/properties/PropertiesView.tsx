@@ -31,6 +31,7 @@ import {
   DataTable,
   EmptyState,
   NoBuildingsFirstTime,
+  SegmentedControl,
   getPropertyTypeBadge,
   type PropertyTypeKey,
 } from "@/components/ui";
@@ -497,35 +498,17 @@ export default function PropertiesView({
             <PlusIcon className="h-3.5 w-3.5" />
             {t("newProperty")}
           </Link>
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-            <button
-              onClick={() => setViewMode("table")}
-              className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                viewMode === "table" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50"
-              }`}
-              title={tTb("viewTable")}
-            >
-              <ListBulletIcon className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("card")}
-              className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                viewMode === "card" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50"
-              }`}
-              title={tTb("viewCard")}
-            >
-              <Squares2X2Icon className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => setViewMode("summary")}
-              className={`flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                viewMode === "summary" ? "bg-gray-900 text-white" : "bg-white text-gray-500 hover:bg-gray-50"
-              }`}
-              title={tTb("viewSummary")}
-            >
-              <RectangleGroupIcon className="h-4 w-4" />
-            </button>
-          </div>
+          <SegmentedControl<"table" | "card" | "summary">
+            value={viewMode}
+            onValueChange={setViewMode}
+            size="sm"
+            ariaLabel="View mode"
+            options={[
+              { value: "table",   icon: <ListBulletIcon />,     ariaLabel: tTb("viewTable"),   tooltip: tTb("viewTable") },
+              { value: "card",    icon: <Squares2X2Icon />,     ariaLabel: tTb("viewCard"),    tooltip: tTb("viewCard") },
+              { value: "summary", icon: <RectangleGroupIcon />, ariaLabel: tTb("viewSummary"), tooltip: tTb("viewSummary") },
+            ]}
+          />
         </div>
       </div>
 

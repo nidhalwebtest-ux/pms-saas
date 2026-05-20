@@ -105,8 +105,9 @@ function HeroVisual({
 }: { confirmTitle: string; forecastTitle: string; forecastMeta: string }) {
   return (
     <div className="relative [perspective:1600px]">
-      {/* Floating card top */}
-      <div className="absolute -top-[18px] -start-8 z-20 flex motion-safe:animate-float items-center gap-2.5 rounded-md border border-gray-200 bg-white px-3.5 py-3 shadow-lg sm:flex">
+      {/* Floating card top — hidden on phones so it does not push past the
+          viewport edge with its negative-start offset. */}
+      <div className="absolute -top-[18px] -start-8 z-20 hidden motion-safe:animate-float items-center gap-2.5 rounded-md border border-gray-200 bg-white px-3.5 py-3 shadow-lg sm:flex">
         <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-lg bg-success-50 text-success-700">
           <CheckCircle2 className="h-4 w-4" strokeWidth={2} />
         </span>
@@ -118,7 +119,7 @@ function HeroVisual({
         </div>
       </div>
 
-      <div className="relative overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-xl [transform:rotateY(-4deg)_rotateX(2deg)_rotate(0.4deg)] origin-center rtl:[transform:rotateY(4deg)_rotateX(2deg)_rotate(-0.4deg)]">
+      <div className="relative overflow-hidden rounded-[14px] border border-gray-200 bg-white shadow-xl origin-center sm:[transform:rotateY(-4deg)_rotateX(2deg)_rotate(0.4deg)] sm:rtl:[transform:rotateY(4deg)_rotateX(2deg)_rotate(-0.4deg)]">
         <div className="flex items-center gap-1.5 border-b border-gray-200 bg-gray-50 px-3 py-2.5">
           <i className="h-2.5 w-2.5 rounded-full bg-[oklch(0.78_0.16_25)]" />
           <i className="h-2.5 w-2.5 rounded-full bg-[oklch(0.82_0.14_80)]" />
@@ -130,7 +131,7 @@ function HeroVisual({
         <HeroDashboardMock />
       </div>
 
-      <div className="absolute -bottom-[22px] -end-7 z-20 flex motion-safe:animate-float-delayed items-center gap-2.5 rounded-md border border-gray-200 bg-white px-3.5 py-3 shadow-lg">
+      <div className="absolute -bottom-[22px] -end-7 z-20 hidden motion-safe:animate-float-delayed items-center gap-2.5 rounded-md border border-gray-200 bg-white px-3.5 py-3 shadow-lg sm:flex">
         <span className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700">
           <Users className="h-4 w-4" strokeWidth={1.75} />
         </span>

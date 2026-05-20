@@ -24,7 +24,10 @@ export const metadata = {
 
 export default function MarketingHomePage() {
   return (
-    <>
+    // `overflow-x-hidden` is a defensive guard so a stray transform / negative
+    // inset / 3D-rotated card on a section can never force horizontal scroll
+    // on the whole page. Mirrors the same guard the dashboard layout uses.
+    <div className="overflow-x-hidden">
       <MarketingNavbar />
       <main id="top">
         <HeroSection />
@@ -44,6 +47,6 @@ export default function MarketingHomePage() {
         <FinalCtaSection />
       </main>
       <MarketingFooter />
-    </>
+    </div>
   );
 }

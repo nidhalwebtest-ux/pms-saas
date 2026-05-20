@@ -55,7 +55,7 @@ export default function MarketingNavbar() {
       >
         <Container
           className={[
-            "flex items-center gap-9 transition-[height] duration-200",
+            "flex items-center gap-3 lg:gap-9 transition-[height] duration-200",
             scrolled ? "h-[60px]" : "h-[72px]",
           ].join(" ")}
         >

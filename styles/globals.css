@@ -165,6 +165,13 @@
   [dir="rtl"] [data-icon-flip="true"] {
     transform: scaleX(-1);
   }
+
+  /* Decorative glyphs (e.g. typographic open-quote on the testimonials card)
+     that need to mirror in RTL without affecting their parent text flow. */
+  [dir="rtl"] .rtl-mirror {
+    transform: scaleX(-1);
+    display: inline-block;
+  }
 }
 
 /* ============================================================================
@@ -187,6 +194,53 @@
   .focus-ring-error {
     box-shadow: var(--shadow-focus-error);
     border-color: var(--error-500);
+  }
+
+  /* ── Marketing — gradient ornaments ────────────────────────
+     Scoped to the marketing landing page only. Self-contained so the
+     dashboard tree is unaffected. */
+  .hero-bg::before {
+    content: "";
+    position: absolute;
+    inset: -120px -10% auto -10%;
+    height: 720px;
+    background:
+      radial-gradient(60% 50% at 80% 20%, oklch(0.94 0.04 258 / 0.55), transparent 70%),
+      radial-gradient(50% 50% at 10% 0%, oklch(0.96 0.03 175 / 0.4), transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .final-cta-bg {
+    background: radial-gradient(70% 100% at 50% 0%, oklch(0.94 0.04 258), oklch(0.99 0.005 258) 70%);
+  }
+  .final-cta-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(40% 60% at 80% 90%, oklch(0.94 0.05 175 / 0.4), transparent 70%);
+    pointer-events: none;
+  }
+  .oman-bg {
+    background: linear-gradient(180deg, oklch(0.97 0.025 175 / 0.9), oklch(0.94 0.04 175 / 0.5) 70%, white);
+  }
+  .oman-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(50% 60% at 85% 10%, oklch(0.86 0.07 175 / 0.45), transparent 70%),
+      radial-gradient(40% 50% at 5% 90%, oklch(0.94 0.05 258 / 0.4), transparent 70%);
+    pointer-events: none;
+  }
+  .steps-dotline::before {
+    content: "";
+    position: absolute;
+    top: 38px;
+    inset-inline-start: 8%;
+    inset-inline-end: 8%;
+    height: 1px;
+    background: repeating-linear-gradient(90deg, var(--gray-300) 0 6px, transparent 6px 12px);
+    z-index: 0;
   }
 }
 

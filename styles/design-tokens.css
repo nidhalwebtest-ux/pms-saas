@@ -59,6 +59,17 @@
   --error-600: oklch(0.510 0.205 25);
   --error-700: oklch(0.420 0.180 25);
 
+  /* ── Marketing · khareef (Salalah monsoon green-teal) ──── */
+  --khareef-50:  oklch(0.965 0.030 175);
+  --khareef-200: oklch(0.870 0.080 175);
+  --khareef-500: oklch(0.560 0.110 175);
+  --khareef-700: oklch(0.400 0.100 175);
+
+  /* ── Marketing · primary CTA shadows ───────────────────── */
+  --shadow-brand:       0 1px 2px oklch(0.46 0.17 258 / 0.25),
+                        inset 0 1px 0 oklch(1 0 0 / 0.18);
+  --shadow-brand-hover: 0 4px 12px oklch(0.46 0.17 258 / 0.35);
+
   /* ── Semantic · info ────────────────────────────────────── */
   --info-50:  oklch(0.965 0.025 235);
   --info-100: oklch(0.935 0.045 235);

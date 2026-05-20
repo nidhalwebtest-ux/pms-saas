@@ -79,6 +79,13 @@ const config: Config = {
           700: "var(--info-700)",
           DEFAULT: "var(--info-500)",
         },
+        // Marketing-only palette: Salalah monsoon teal / "khareef".
+        khareef: {
+          50:  "var(--khareef-50)",
+          200: "var(--khareef-200)",
+          500: "var(--khareef-500)",
+          700: "var(--khareef-700)",
+        },
         // Semantic surface / foreground aliases
         canvas: "var(--bg-canvas)",
         surface: "var(--bg-surface)",
@@ -160,6 +167,9 @@ const config: Config = {
         xl: "var(--shadow-xl)",
         focus: "var(--shadow-focus)",
         "focus-error": "var(--shadow-focus-error)",
+        // Marketing — primary CTA elevation + hover lift
+        brand: "var(--shadow-brand)",
+        "brand-hover": "var(--shadow-brand-hover)",
       },
 
       transitionDuration: {
@@ -177,6 +187,9 @@ const config: Config = {
 
       maxWidth: {
         container: "var(--container-2xl)",
+        // Marketing-only container widths — narrower than the dashboard's 1440 px.
+        "marketing-container": "1200px",
+        "marketing-container-wide": "1280px",
       },
 
       zIndex: {
@@ -193,10 +206,17 @@ const config: Config = {
           "0%, 100%": { opacity: "1" },
           "50%":      { opacity: "0.45" },
         },
+        // Marketing — hero floating cards
+        "marketing-float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%":      { transform: "translateY(-6px)" },
+        },
       },
 
       animation: {
         "skeleton-pulse": "skeleton-pulse 1.4s ease-in-out infinite",
+        float:           "marketing-float 6s ease-in-out infinite",
+        "float-delayed": "marketing-float 7s ease-in-out 1s infinite",
       },
     },
   },

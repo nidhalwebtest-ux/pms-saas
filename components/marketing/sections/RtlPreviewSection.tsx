@@ -1,13 +1,17 @@
 import {
   CalendarDays, ArrowDown, ArrowUp, AlertTriangle, Users,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import Container, { SectionHead } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 
 /* ============================================================================
  *  RTL Preview — side-by-side English / Arabic product previews so visitors
- *  can see that the Arabic experience is first-class, not bolted on. Both
- *  cards are static UI snapshots: real layout, real translations.
+ *  can see that the Arabic experience is first-class, not bolted on.
+ *
+ *  This section intentionally renders both directions regardless of the
+ *  active locale — it is the demonstration of bilingual support, not a
+ *  translated section.
  * ========================================================================= */
 
 const EN_STATS = [
@@ -36,7 +40,8 @@ const AR_LIST = [
   { name: "أحمد البلوشي",      unit: "المرسى · 211", balance: "120.000", badge: "متأخر",       badgeCls: "bg-error-50 text-error-500" },
 ];
 
-export default function RtlPreviewSection() {
+export default async function RtlPreviewSection() {
+  const t = await getTranslations("marketing.rtl");
   return (
     <section
       id="rtl"
@@ -45,14 +50,14 @@ export default function RtlPreviewSection() {
     >
       <Container className="relative">
         <SectionHead
-          eyebrow="عربي · Arabic-first"
-          title="Same product. Both directions."
-          description="Every screen, every form, every report flips right-to-left without a single missing translation or broken layout. Train your team in their preferred language."
+          eyebrow={t("eyebrow")}
+          title={t("title")}
+          description={t("description")}
         />
 
         <div className="grid items-stretch gap-6 md:grid-cols-2">
           <Reveal from="left">
-            <PreviewCard dir="ltr" label="English · LTR">
+            <PreviewCard dir="ltr" label={t("panelEn")}>
               <DashboardPanel
                 dir="ltr"
                 greeting="Good morning, Reem"
@@ -70,7 +75,7 @@ export default function RtlPreviewSection() {
           </Reveal>
 
           <Reveal from="right" delay={120}>
-            <PreviewCard dir="rtl" label="عربي · RTL">
+            <PreviewCard dir="rtl" label={t("panelAr")}>
               <DashboardPanel
                 dir="rtl"
                 greeting="صباح الخير، ريم"
@@ -89,8 +94,7 @@ export default function RtlPreviewSection() {
         </div>
 
         <p className="mx-auto mt-10 max-w-[640px] text-center text-sm text-gray-500">
-          Every number stays LTR · every chevron flips · every date uses the
-          right calendar conventions. <span className="font-arabic">يدعم العربية بالكامل.</span>
+          {t("footer")} <span className="font-arabic">{t("footerAr")}</span>
         </p>
       </Container>
     </section>

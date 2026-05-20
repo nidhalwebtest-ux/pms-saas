@@ -1,9 +1,11 @@
 import { ArrowRight, Play, CheckCircle2, Users } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import Container from "../ui/Container";
 import { MarketingButton } from "../ui/MarketingButton";
 import { HeroDashboardMock } from "../mocks";
 
-export default function HeroSection() {
+export default async function HeroSection() {
+  const t = await getTranslations("marketing.hero");
   return (
     <section
       data-screen-label="Hero"
@@ -15,49 +17,47 @@ export default function HeroSection() {
             <span className="relative inline-block h-3.5 w-3.5 rounded-full bg-brand-500">
               <span className="absolute inset-1 rounded-full bg-white" />
             </span>
-            Property management software · Salalah
+            {t("badge")}
           </span>
 
           <h1 className="mt-6 mb-5 text-[44px] font-semibold leading-[1.02] tracking-[-0.03em] text-balance md:text-[60px]">
-            Run your buildings{" "}
+            {t("headlinePrefix")}{" "}
             <span className="bg-gradient-to-br from-brand-600 via-brand-500 to-khareef-700 bg-clip-text text-transparent">
-              like a pro
+              {t("headlineHighlight")}
             </span>
-            , not a spreadsheet.
+            {t("headlineSuffix")}
           </h1>
 
           <p className="mb-8 max-w-[540px] text-[19px] leading-[1.55] text-gray-600 text-pretty">
-            Binaya helps property managers in Salalah handle reservations, payments, and
-            operations across every building — in one place. Free for one building. Ready in 20 minutes.
+            {t("lede")}
           </p>
 
           <div className="mb-6 flex flex-wrap gap-3">
             <MarketingButton href="#trial" variant="primary" size="xl">
-              Start free trial
+              {t("ctaTrial")}
               <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" strokeWidth={1.75} />
             </MarketingButton>
             <MarketingButton href="#demo" variant="secondary" size="xl">
               <Play className="h-3.5 w-3.5 fill-current" strokeWidth={0} />
-              Watch 2-min demo
+              {t("ctaDemo")}
             </MarketingButton>
           </div>
 
-          <TrustList />
-          <SocialProof />
+          <TrustList items={[t("trustNoCard"), t("trustFree"), t("trustSetup")]} />
+          <SocialProof label={t("socialProof")} />
         </div>
 
-        <HeroVisual />
+        <HeroVisual
+          confirmTitle={t("floatingConfirmTitle")}
+          forecastTitle={t("floatingForecastTitle")}
+          forecastMeta={t("floatingForecastMeta")}
+        />
       </Container>
     </section>
   );
 }
 
-function TrustList() {
-  const items = [
-    "No credit card required",
-    "Free for 1 building",
-    "Set up in 20 minutes",
-  ];
+function TrustList({ items }: { items: string[] }) {
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-2 text-[13.5px] text-gray-600">
       {items.map((label) => (
@@ -72,7 +72,7 @@ function TrustList() {
   );
 }
 
-function SocialProof() {
+function SocialProof({ label }: { label: string }) {
   const avatars = [
     { label: "AB", cls: "bg-brand-100 text-brand-700" },
     { label: "RA", cls: "bg-[oklch(0.92_0.05_175)] text-khareef-700" },
@@ -95,12 +95,14 @@ function SocialProof() {
           </span>
         ))}
       </span>
-      Trusted by property managers across Salalah, Mirbat &amp; Al Haffa
+      {label}
     </div>
   );
 }
 
-function HeroVisual() {
+function HeroVisual({
+  confirmTitle, forecastTitle, forecastMeta,
+}: { confirmTitle: string; forecastTitle: string; forecastMeta: string }) {
   return (
     <div className="relative [perspective:1600px]">
       {/* Floating card top */}
@@ -110,9 +112,9 @@ function HeroVisual() {
         </span>
         <div>
           <strong className="block text-[13px] font-semibold text-gray-900">
-            Reservation confirmed
+            {confirmTitle}
           </strong>
-          <span className="font-mono text-[11.5px] text-gray-500">BNY-04812 · OMR 303.765</span>
+          <span className="font-mono text-[11.5px] text-gray-500 ltr-num">BNY-04812 · OMR 303.765</span>
         </div>
       </div>
 
@@ -121,7 +123,7 @@ function HeroVisual() {
           <i className="h-2.5 w-2.5 rounded-full bg-[oklch(0.78_0.16_25)]" />
           <i className="h-2.5 w-2.5 rounded-full bg-[oklch(0.82_0.14_80)]" />
           <i className="h-2.5 w-2.5 rounded-full bg-[oklch(0.78_0.14_155)]" />
-          <span className="mx-auto max-w-[320px] flex-1 rounded-md border border-gray-200 bg-white px-3 py-1 text-center font-mono text-[11px] text-gray-500">
+          <span className="mx-auto max-w-[320px] flex-1 rounded-md border border-gray-200 bg-white px-3 py-1 text-center font-mono text-[11px] text-gray-500 ltr-num">
             app.binaya.om / dashboard
           </span>
         </div>
@@ -133,8 +135,8 @@ function HeroVisual() {
           <Users className="h-4 w-4" strokeWidth={1.75} />
         </span>
         <div>
-          <strong className="block text-[13px] font-semibold text-gray-900">Khareef forecast</strong>
-          <span className="font-mono text-[11.5px] text-gray-500">94% occupancy · 21 Jun</span>
+          <strong className="block text-[13px] font-semibold text-gray-900">{forecastTitle}</strong>
+          <span className="font-mono text-[11.5px] text-gray-500 ltr-num">{forecastMeta}</span>
         </div>
       </div>
     </div>

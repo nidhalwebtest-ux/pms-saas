@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import Container from "../ui/Container";
 
 const LOGOS = [
@@ -9,7 +10,8 @@ const LOGOS = [
   { glyph: "AS", name: "Al Saada Suites",  tint: "bg-info-50 text-info-700" },
 ];
 
-export default function TrustBarSection() {
+export default async function TrustBarSection() {
+  const t = await getTranslations("marketing.trust");
   return (
     <section
       data-screen-label="Trust"
@@ -18,7 +20,7 @@ export default function TrustBarSection() {
       <Container className="flex flex-wrap items-center justify-center gap-x-10 gap-y-5">
         <span className="inline-flex items-center gap-2 rounded-full border border-khareef-200/80 bg-white px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.06em] text-khareef-700 shadow-sm">
           <Star className="h-3 w-3 fill-khareef-500 text-khareef-500" strokeWidth={0} />
-          Made in Salalah
+          {t("madeIn")}
         </span>
         <div className="flex flex-wrap items-center justify-center gap-x-9 gap-y-4">
           {LOGOS.map((l) => (

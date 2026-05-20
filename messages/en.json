@@ -479,8 +479,7 @@
           "NOTE_ADDED": "Note added",
           "NO_SHOW": "No-show recorded"
         }
-      },
-      "retry": "Retry"
+      }
     },
     "receptionist": {
       "loadFailed": "Failed to load receptionist data",
@@ -3572,6 +3571,230 @@
         "computerGenerated": "Computer-generated receipt",
         "recordedBy": "Recorded by: {name}"
       }
+    }
+  },
+  "marketing": {
+    "nav": {
+      "features": "Features",
+      "how": "How it works",
+      "pricing": "Pricing",
+      "faq": "FAQ",
+      "login": "Log in",
+      "trial": "Start free trial",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu"
+    },
+    "hero": {
+      "badge": "Property management software · Salalah",
+      "headlinePrefix": "Run your buildings",
+      "headlineHighlight": "like a pro",
+      "headlineSuffix": ", not a spreadsheet.",
+      "lede": "Binaya helps property managers in Salalah handle reservations, payments, and operations across every building — in one place. Free for one building. Ready in 20 minutes.",
+      "ctaTrial": "Start free trial",
+      "ctaDemo": "Watch 2-min demo",
+      "trustNoCard": "No credit card required",
+      "trustFree": "Free for 1 building",
+      "trustSetup": "Set up in 20 minutes",
+      "socialProof": "Trusted by property managers across Salalah, Mirbat & Al Haffa",
+      "floatingConfirmTitle": "Reservation confirmed",
+      "floatingForecastTitle": "Khareef forecast",
+      "floatingForecastMeta": "94% occupancy · 21 Jun"
+    },
+    "trust": {
+      "madeIn": "Made in Salalah"
+    },
+    "problem": {
+      "eyebrow": "The reality",
+      "title": "Sound familiar?",
+      "description": "Most property managers in Salalah run their business on three tools: a spreadsheet, a WhatsApp group, and good memory. It works — until Khareef starts.",
+      "lostTitle": "Lost bookings during Khareef",
+      "lostBody": "Your receptionist does not know which units are available across buildings — and the caller hangs up.",
+      "sheetTitle": "Spreadsheet chaos",
+      "sheetBody": "Reservations in one sheet, payments in another, expenses in a third. Three people, three versions of the truth.",
+      "carTitle": "Manager driving between buildings",
+      "carBody": "Hours wasted approving expenses in person and checking cash boxes that should already be reconciled.",
+      "reconTitle": "End-of-day reconciliation nightmares",
+      "reconBody": "Counting cash that does not match the receipts, every single night, in the back office."
+    },
+    "solution": {
+      "eyebrow": "The Binaya way",
+      "title": "Built for the way you actually work.",
+      "description": "Binaya PMS handles every part of property management — from the first phone call to the monthly P&L — so you can stop firefighting and start running the business.",
+      "calendarTitle": "See every unit at a glance",
+      "calendarBody": "Color-coded availability across all your buildings. Find any vacant night in seconds — even when the phone rings on a Friday afternoon.",
+      "pricingTitle": "Khareef-ready pricing",
+      "pricingBody": "Automatic rate changes for Khareef season. Maximise revenue during your busiest months without spreadsheet juggling.",
+      "deviceTitle": "Manage from anywhere",
+      "deviceBody": "Approve expenses from your phone. Check dashboards from home. Run your business from the gardens of Al Haffa if you want."
+    },
+    "featureReservations": {
+      "eyebrow": "01 · Reservations",
+      "title": "Never miss a booking again.",
+      "description": "Create a reservation in under 30 seconds. Daily or monthly stays, mix multiple units in one booking, automatic pricing with Khareef rates already baked in.",
+      "b1": "Multi-unit reservations across buildings",
+      "b2": "Automatic invoice generation with VAT",
+      "b3": "Online check-in & check-out flow",
+      "b4": "Guest history & repeat-stay tracking",
+      "b5": "Real-time availability — no double bookings, ever",
+      "linkLabel": "See the reservations workflow"
+    },
+    "featureFinance": {
+      "eyebrow": "02 · Financial operations",
+      "title": "Track every riyal — to three decimals.",
+      "description": "Built for Omani Rial from day one. Invoices generate themselves, payments record in cash or card or transfer, and your cashier reconciliation takes two minutes instead of two hours.",
+      "b1": "Multi-method payments — cash, card, bank transfer",
+      "b2": "Auto invoice generation with VAT & Khareef rates",
+      "b3": "Tenant ledger with full payment history",
+      "b4": "Refunds and returns handled correctly",
+      "b5": "Real-time outstanding balance tracking",
+      "linkLabel": "Tour the finance module"
+    },
+    "featureReports": {
+      "eyebrow": "03 · Dashboards & reports",
+      "title": "Know your business at a glance.",
+      "description": "Three dashboards for three perspectives. Your receptionist sees today's tasks. Your accountant sees the books. You see the whole picture — across every building.",
+      "b1": "Today's operations dashboard",
+      "b2": "Receptionist daily view",
+      "b3": "Manager 360° revenue & occupancy",
+      "b4": "Aging A/R and outstanding balances",
+      "b5": "Export to PDF or Excel · Khareef analytics",
+      "linkLabel": "Browse all 14 reports"
+    },
+    "featureExpenses": {
+      "eyebrow": "04 · Expense approvals",
+      "title": "Approve expenses from your phone.",
+      "description": "The receptionist photographs the receipt. You approve with one tap, from the back seat of the car. No more driving to a building just to sign off on cleaning supplies.",
+      "b1": "Submit expenses with a receipt photo",
+      "b2": "Manager mobile approval — one tap",
+      "b3": "Accountant processing workflow",
+      "b4": "Building-level expense tracking",
+      "b5": "Category breakdowns & monthly limits",
+      "linkLabel": "See the approval flow"
+    },
+    "oman": {
+      "eyebrow": "Made in Salalah",
+      "title": "Made in Oman. For Oman.",
+      "description": "Other property software treats Oman as an afterthought — an extra currency setting, a half-baked translation. Binaya was built specifically for how property runs in Salalah.",
+      "arabicTitle": "Full Arabic support",
+      "arabicBody": "Native Arabic interface with proper right-to-left layout. Train your team in their preferred language — receptionist by receptionist.",
+      "omrTitle": "OMR currency, baisa-precise",
+      "omrBody": "Built for Omani Rial with proper 3-decimal precision. No conversion errors, no confusing dollar signs slipping into invoices.",
+      "khareefTitle": "Khareef season tools",
+      "khareefBody": "Seasonal pricing, occupancy forecasting, peak-season dashboards. Built around how Salalah's rental economy actually works."
+    },
+    "how": {
+      "eyebrow": "Ready in 20 minutes",
+      "title": "From signup to first reservation in three steps.",
+      "description": "No implementation consultant. No training week. Most of our customers create their first real booking the same afternoon they sign up.",
+      "step1Title": "Sign up",
+      "step1Body": "Create your account in two minutes. No credit card needed. No sales call required.",
+      "step2Title": "Add your building",
+      "step2Body": "Tell us about your units and pricing. Or upload your existing spreadsheet — we will import it for you.",
+      "step3Title": "Start managing",
+      "step3Body": "Create reservations, generate invoices, and watch the chaos turn into a dashboard.",
+      "cta": "Get started free"
+    },
+    "testimonials": {
+      "eyebrow": "Customer stories",
+      "title": "What property managers are saying.",
+      "description": "Real feedback from operators across Salalah, Mirbat, and Al Haffa — the people Binaya was built with, not just for.",
+      "readMore": "Read full case studies",
+      "t1Quote": "We tracked Khareef bookings on spreadsheets for five years. Binaya replaced everything in a week, and we are already seeing fewer lost bookings during the rush.",
+      "t1Name": "Ahmed Al Balushi",
+      "t1Meta": "Owner · Salalah Plaza · 22 units",
+      "t2Quote": "Finally a system that understands how Omani property managers actually work. The Khareef pricing alone saves me hours every season — and probably catches OMR 800 in revenue I used to lose.",
+      "t2Name": "Reem Al-Hinai",
+      "t2Meta": "Manager · Mirbat Resort · 18 units",
+      "t3Quote": "My receptionists love it. My accountant loves it. I can approve expenses from the car. It just works — and it speaks Arabic, which my team appreciates.",
+      "t3Name": "Salim Al-Khalili",
+      "t3Meta": "Owner · Haffa Residences · 12 units"
+    },
+    "pricing": {
+      "eyebrow": "Simple, honest pricing",
+      "title": "Free to start. Scale as you grow.",
+      "description": "No setup fees. No per-reservation charges. No surprise invoices at the end of the year. Cancel anytime.",
+      "perForever": "forever",
+      "perMonth": "/month",
+      "badgePopular": "Most popular",
+      "featuresHeader": "Everything in {tier}, plus",
+      "freeName": "Free",
+      "freeTagline": "Perfect for single-building operators getting started.",
+      "freeCta": "Start free",
+      "freeF1": "1 building, up to 15 units",
+      "freeF2": "1 user account",
+      "freeF3": "All core reservation features",
+      "freeF4": "Invoicing in OMR with VAT",
+      "freeF5": "Email support",
+      "freeF6": "Free forever — no card on file",
+      "proName": "Professional",
+      "proTagline": "For growing property businesses across 2 buildings.",
+      "proCta": "Start 14-day trial",
+      "proF1": "Up to 2 buildings, 30 units",
+      "proF2": "3 user accounts with roles",
+      "proF3": "Expense approval workflow",
+      "proF4": "Khareef seasonal pricing",
+      "proF5": "Advanced reports & CSV export",
+      "proF6": "Email & WhatsApp support",
+      "bizName": "Business",
+      "bizTagline": "For multi-building operations and growing portfolios.",
+      "bizCta": "Start 14-day trial",
+      "bizF1": "Unlimited buildings & units",
+      "bizF2": "Unlimited user accounts",
+      "bizF3": "Multi-building dashboards",
+      "bizF4": "Custom report builder",
+      "bizF5": "Priority support & dedicated onboarding",
+      "bizF6": "API access & channel manager sync"
+    },
+    "rtl": {
+      "eyebrow": "عربي · Arabic-first",
+      "title": "Same product. Both directions.",
+      "description": "Every screen, every form, every report flips right-to-left without a single missing translation or broken layout. Train your team in their preferred language.",
+      "panelEn": "English · LTR",
+      "panelAr": "عربي · RTL",
+      "footer": "Every number stays LTR · every chevron flips · every date uses the right calendar conventions.",
+      "footerAr": "يدعم العربية بالكامل."
+    },
+    "faq": {
+      "eyebrow": "Common questions",
+      "title": "Everything you might ask.",
+      "description": "The straight answers we wish we had had when we evaluated property software.",
+      "q1": "Is Binaya really free for one building?",
+      "a1": "Yes. The free tier covers a single building of up to 15 units with one user account, forever. No card on file required.",
+      "q2": "How long does setup take?",
+      "a2": "Most customers create their first real reservation within 20 minutes of signing up. If you have an existing spreadsheet, we can import it for you in one go.",
+      "q3": "Does Binaya handle Khareef pricing automatically?",
+      "a3": "Yes. Seasonal rates apply automatically between configurable date ranges, including the Jun 15 – Sep 15 Khareef window.",
+      "q4": "Can my team work in Arabic?",
+      "a4": "Yes. The entire product UI is bilingual English / Arabic with right-to-left layout. Each user picks their own language."
+    },
+    "finalCta": {
+      "badge": "Ready when you are",
+      "headline1": "Stop juggling spreadsheets.",
+      "headline2": "Start running your buildings.",
+      "description": "Free for one building, forever. Set up in 20 minutes. No credit card, no sales call — just a working dashboard by lunch.",
+      "ctaTrial": "Start free trial",
+      "ctaDemo": "Talk to the team",
+      "perk1": "Free for one building",
+      "perk2": "No credit card",
+      "perk3": "20-minute setup",
+      "perk4": "Cancel anytime"
+    },
+    "footer": {
+      "tagline": "Property management software built in Salalah for the way Omani property managers actually work.",
+      "productCol": "Product",
+      "companyCol": "Company",
+      "legalCol": "Legal",
+      "linkFeatures": "Features",
+      "linkPricing": "Pricing",
+      "linkHow": "How it works",
+      "linkFaq": "FAQ",
+      "linkAbout": "About",
+      "linkBlog": "Blog",
+      "linkContact": "Contact",
+      "linkPrivacy": "Privacy",
+      "linkTerms": "Terms",
+      "copyright": "© {year} Binaya PMS. Made in Salalah.",
+      "version": "v0.1 · marketing preview"
     }
   }
 }

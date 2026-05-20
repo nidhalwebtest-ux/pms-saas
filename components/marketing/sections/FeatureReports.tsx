@@ -1,22 +1,18 @@
+import { getTranslations } from "next-intl/server";
 import FeatureBlock from "./FeatureBlock";
 import { Manager360Mock } from "../mocks";
 
-export default function FeatureReports() {
+export default async function FeatureReports() {
+  const t = await getTranslations("marketing.featureReports");
   return (
     <FeatureBlock
       id="reports"
       screenLabel="Feature · Reports"
-      eyebrow="03 · Dashboards & reports"
-      title="Know your business at a glance."
-      description="Three dashboards for three perspectives. Your receptionist sees today's tasks. Your accountant sees the books. You see the whole picture — across every building."
-      bullets={[
-        "Today's operations dashboard",
-        "Receptionist daily view",
-        "Manager 360° revenue & occupancy",
-        "Aging A/R and outstanding balances",
-        "Export to PDF or Excel · Khareef analytics",
-      ]}
-      linkLabel="Browse all 14 reports"
+      eyebrow={t("eyebrow")}
+      title={t("title")}
+      description={t("description")}
+      bullets={[t("b1"), t("b2"), t("b3"), t("b4"), t("b5")]}
+      linkLabel={t("linkLabel")}
       linkHref="#reports"
       visual={<Manager360Mock />}
     />

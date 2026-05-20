@@ -1,22 +1,23 @@
 import { ArrowRight } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import Container, { SectionHead } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 import { MarketingButton } from "../ui/MarketingButton";
 
-const STEPS = [
-  { n: "01", title: "Sign up", body: "Create your account in two minutes. No credit card needed. No sales call required." },
-  { n: "02", title: "Add your building", body: "Tell us about your units and pricing. Or upload your existing spreadsheet — we will import it for you." },
-  { n: "03", title: "Start managing", body: "Create reservations, generate invoices, and watch the chaos turn into a dashboard." },
-];
-
-export default function HowItWorksSection() {
+export default async function HowItWorksSection() {
+  const t = await getTranslations("marketing.how");
+  const STEPS = [
+    { n: "01", title: t("step1Title"), body: t("step1Body") },
+    { n: "02", title: t("step2Title"), body: t("step2Body") },
+    { n: "03", title: t("step3Title"), body: t("step3Body") },
+  ];
   return (
     <section id="how" data-screen-label="How it works" className="py-16 md:py-24">
       <Container>
         <SectionHead
-          eyebrow="Ready in 20 minutes"
-          title="From signup to first reservation in three steps."
-          description="No implementation consultant. No training week. Most of our customers create their first real booking the same afternoon they sign up."
+          eyebrow={t("eyebrow")}
+          title={t("title")}
+          description={t("description")}
         />
         <div className="steps-dotline relative grid gap-8 md:grid-cols-3">
           {STEPS.map((s, i) => (
@@ -34,7 +35,7 @@ export default function HowItWorksSection() {
         </div>
         <div className="mt-12 text-center">
           <MarketingButton href="#trial" variant="primary" size="lg">
-            Get started free
+            {t("cta")}
             <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" strokeWidth={1.75} />
           </MarketingButton>
         </div>

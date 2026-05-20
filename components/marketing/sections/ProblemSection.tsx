@@ -1,38 +1,23 @@
 import { ListChecks, Table, Car, ScrollText } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import Container, { SectionHead } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 
-const PROBLEMS = [
-  {
-    Icon: ListChecks,
-    title: "Lost bookings during Khareef",
-    body: "Your receptionist does not know which units are available across buildings — and the caller hangs up.",
-  },
-  {
-    Icon: Table,
-    title: "Spreadsheet chaos",
-    body: "Reservations in one sheet, payments in another, expenses in a third. Three people, three versions of the truth.",
-  },
-  {
-    Icon: Car,
-    title: "Manager driving between buildings",
-    body: "Hours wasted approving expenses in person and checking cash boxes that should already be reconciled.",
-  },
-  {
-    Icon: ScrollText,
-    title: "End-of-day reconciliation nightmares",
-    body: "Counting cash that does not match the receipts, every single night, in the back office.",
-  },
-];
-
-export default function ProblemSection() {
+export default async function ProblemSection() {
+  const t = await getTranslations("marketing.problem");
+  const PROBLEMS = [
+    { Icon: ListChecks, title: t("lostTitle"),  body: t("lostBody") },
+    { Icon: Table,      title: t("sheetTitle"), body: t("sheetBody") },
+    { Icon: Car,        title: t("carTitle"),   body: t("carBody") },
+    { Icon: ScrollText, title: t("reconTitle"), body: t("reconBody") },
+  ];
   return (
     <section data-screen-label="Problem" className="py-16 md:py-24">
       <Container>
         <SectionHead
-          eyebrow="The reality"
-          title="Sound familiar?"
-          description="Most property managers in Salalah run their business on three tools: a spreadsheet, a WhatsApp group, and good memory. It works — until Khareef starts."
+          eyebrow={t("eyebrow")}
+          title={t("title")}
+          description={t("description")}
         />
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {PROBLEMS.map(({ Icon, title, body }, i) => (

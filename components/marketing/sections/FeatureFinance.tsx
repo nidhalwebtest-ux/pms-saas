@@ -1,24 +1,20 @@
+import { getTranslations } from "next-intl/server";
 import FeatureBlock from "./FeatureBlock";
 import { InvoiceMock } from "../mocks";
 
-export default function FeatureFinance() {
+export default async function FeatureFinance() {
+  const t = await getTranslations("marketing.featureFinance");
   return (
     <FeatureBlock
       id="finance"
       screenLabel="Feature · Finance"
       flip
       tinted
-      eyebrow="02 · Financial operations"
-      title="Track every riyal — to three decimals."
-      description="Built for Omani Rial from day one. Invoices generate themselves, payments record in cash or card or transfer, and your cashier reconciliation takes two minutes instead of two hours."
-      bullets={[
-        "Multi-method payments — cash, card, bank transfer",
-        "Auto invoice generation with VAT & Khareef rates",
-        "Tenant ledger with full payment history",
-        "Refunds and returns handled correctly",
-        "Real-time outstanding balance tracking",
-      ]}
-      linkLabel="Tour the finance module"
+      eyebrow={t("eyebrow")}
+      title={t("title")}
+      description={t("description")}
+      bullets={[t("b1"), t("b2"), t("b3"), t("b4"), t("b5")]}
+      linkLabel={t("linkLabel")}
       linkHref="#finance"
       visual={<InvoiceMock />}
     />

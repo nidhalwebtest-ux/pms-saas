@@ -1,33 +1,22 @@
+import { getTranslations } from "next-intl/server";
 import Container, { SectionHead } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 import { CalendarMini, KhareefPricingMini, MultiDeviceMini } from "../mocks";
 
-const SOLUTIONS = [
-  {
-    visual: <CalendarMini />,
-    title: "See every unit at a glance",
-    body: "Color-coded availability across all your buildings. Find any vacant night in seconds — even when the phone rings on a Friday afternoon.",
-  },
-  {
-    visual: <KhareefPricingMini />,
-    title: "Khareef-ready pricing",
-    body: "Automatic rate changes for Khareef season. Maximise revenue during your busiest months without spreadsheet juggling.",
-  },
-  {
-    visual: <MultiDeviceMini />,
-    title: "Manage from anywhere",
-    body: "Approve expenses from your phone. Check dashboards from home. Run your business from the gardens of Al Haffa if you want.",
-  },
-];
-
-export default function SolutionSection() {
+export default async function SolutionSection() {
+  const t = await getTranslations("marketing.solution");
+  const SOLUTIONS = [
+    { visual: <CalendarMini />,       title: t("calendarTitle"), body: t("calendarBody") },
+    { visual: <KhareefPricingMini />, title: t("pricingTitle"),  body: t("pricingBody") },
+    { visual: <MultiDeviceMini />,    title: t("deviceTitle"),   body: t("deviceBody") },
+  ];
   return (
     <section id="features" data-screen-label="Solution" className="bg-gray-50 py-16 md:py-24">
       <Container>
         <SectionHead
-          eyebrow="The Binaya way"
-          title="Built for the way you actually work."
-          description="Binaya PMS handles every part of property management — from the first phone call to the monthly P&L — so you can stop firefighting and start running the business."
+          eyebrow={t("eyebrow")}
+          title={t("title")}
+          description={t("description")}
         />
         <div className="grid gap-6 md:grid-cols-3">
           {SOLUTIONS.map(({ visual, title, body }, i) => (

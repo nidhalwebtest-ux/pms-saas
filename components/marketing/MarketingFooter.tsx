@@ -1,29 +1,25 @@
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import Container from "./ui/Container";
 
-/* ============================================================================
- *  Marketing footer — placeholder body. TODO: paste real link sets / legal
- *  copy when the design hand-off lands. Stub keeps the same three-column
- *  shape as the original landing so the page bottom is presentable.
- * ========================================================================= */
-
-const PRODUCT = [
-  { href: "#features", label: "Features" },
-  { href: "#pricing",  label: "Pricing" },
-  { href: "#how",      label: "How it works" },
-  { href: "#faq",      label: "FAQ" },
-];
-const COMPANY = [
-  { href: "#about",   label: "About" },
-  { href: "#blog",    label: "Blog" },
-  { href: "#contact", label: "Contact" },
-];
-const LEGAL = [
-  { href: "#privacy", label: "Privacy" },
-  { href: "#terms",   label: "Terms" },
-];
-
-export default function MarketingFooter() {
+export default async function MarketingFooter() {
+  const t = await getTranslations("marketing.footer");
+  const PRODUCT = [
+    { href: "#features", label: t("linkFeatures") },
+    { href: "#pricing",  label: t("linkPricing") },
+    { href: "#how",      label: t("linkHow") },
+    { href: "#faq",      label: t("linkFaq") },
+  ];
+  const COMPANY = [
+    { href: "#about",   label: t("linkAbout") },
+    { href: "#blog",    label: t("linkBlog") },
+    { href: "#contact", label: t("linkContact") },
+  ];
+  const LEGAL = [
+    { href: "#privacy", label: t("linkPrivacy") },
+    { href: "#terms",   label: t("linkTerms") },
+  ];
+  const year = new Date().getFullYear();
   return (
     <footer data-screen-label="Footer" className="border-t border-gray-200 bg-white py-12">
       <Container>
@@ -37,18 +33,15 @@ export default function MarketingFooter() {
                 Binaya <span className="font-normal text-gray-500">PMS</span>
               </span>
             </Link>
-            <p className="mt-4 max-w-[320px] text-[13.5px] text-gray-600">
-              Property management software built in Salalah for the way Omani
-              property managers actually work.
-            </p>
+            <p className="mt-4 max-w-[320px] text-[13.5px] text-gray-600">{t("tagline")}</p>
           </div>
-          <FooterCol title="Product" items={PRODUCT} />
-          <FooterCol title="Company" items={COMPANY} />
-          <FooterCol title="Legal"   items={LEGAL} />
+          <FooterCol title={t("productCol")} items={PRODUCT} />
+          <FooterCol title={t("companyCol")} items={COMPANY} />
+          <FooterCol title={t("legalCol")}   items={LEGAL} />
         </div>
         <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-6 font-mono text-[12px] uppercase tracking-[0.06em] text-gray-500">
-          <span>© {new Date().getFullYear()} Binaya PMS. Made in Salalah.</span>
-          <span>v0.1 · marketing preview</span>
+          <span>{t("copyright", { year })}</span>
+          <span>{t("version")}</span>
         </div>
       </Container>
     </footer>

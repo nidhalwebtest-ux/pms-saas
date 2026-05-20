@@ -1,22 +1,18 @@
+import { getTranslations } from "next-intl/server";
 import FeatureBlock from "./FeatureBlock";
 import { ReservationMock } from "../mocks";
 
-export default function FeatureReservations() {
+export default async function FeatureReservations() {
+  const t = await getTranslations("marketing.featureReservations");
   return (
     <FeatureBlock
       id="reservations"
       screenLabel="Feature · Reservations"
-      eyebrow="01 · Reservations"
-      title="Never miss a booking again."
-      description="Create a reservation in under 30 seconds. Daily or monthly stays, mix multiple units in one booking, automatic pricing with Khareef rates already baked in."
-      bullets={[
-        "Multi-unit reservations across buildings",
-        "Automatic invoice generation with VAT",
-        "Online check-in & check-out flow",
-        "Guest history & repeat-stay tracking",
-        "Real-time availability — no double bookings, ever",
-      ]}
-      linkLabel="See the reservations workflow"
+      eyebrow={t("eyebrow")}
+      title={t("title")}
+      description={t("description")}
+      bullets={[t("b1"), t("b2"), t("b3"), t("b4"), t("b5")]}
+      linkLabel={t("linkLabel")}
       linkHref="#reservations"
       visual={<ReservationMock />}
     />

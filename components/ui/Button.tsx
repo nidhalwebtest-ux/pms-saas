@@ -19,7 +19,7 @@ export type ButtonVariant =
   | "destructive"
   | "link";
 
-export type ButtonSize = "sm" | "md" | "lg" | "icon";
+export type ButtonSize = "sm" | "md" | "lg" | "xl" | "icon";
 
 export interface ButtonProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
@@ -29,6 +29,11 @@ export interface ButtonProps
   loading?: boolean;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
+  /**
+   * Marketing-only: adds a brand drop-shadow on the primary variant plus a
+   * subtle hover translate. Off by default so dashboard buttons stay still.
+   */
+  lift?: boolean;
   children?: ReactNode;
 }
 
@@ -47,9 +52,10 @@ const base =
   "aria-disabled:cursor-not-allowed";
 
 const sizeText: Record<Exclude<ButtonSize, "icon">, string> = {
-  sm: "h-[28px] text-sm px-2.5", // 28 / 12px / 10px
+  sm: "h-[28px] text-sm px-2.5",     // 28 / 12px / 10px
   md: "h-[34px] text-[13px] px-3.5", // 34 / 13px / 14px
-  lg: "h-10 text-base px-[18px]", // 40 / 14px / 18px
+  lg: "h-10 text-base px-[18px]",    // 40 / 14px / 18px
+  xl: "h-[52px] text-base px-[26px]",// 52 / 16px / 26px — marketing CTAs
 };
 
 const sizeIcon: Record<"sm" | "md" | "lg", string> = {
@@ -120,6 +126,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     loading = false,
     leftIcon,
     rightIcon,
+    lift = false,
     disabled,
     type = "button",
     className = "",
@@ -150,7 +157,16 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
       : sizeText[size];
 
   const spinnerPx =
-    size === "sm" ? 12 : size === "lg" ? 16 : size === "icon" ? 16 : 14;
+    size === "sm" ? 12 :
+    size === "lg" ? 16 :
+    size === "xl" ? 18 :
+    size === "icon" ? 16 : 14;
+
+  // Marketing lift treatment — only meaningful on the primary variant.
+  const liftClass =
+    lift && variant === "primary"
+      ? "shadow-brand hover:shadow-brand-hover hover:-translate-y-px active:translate-y-0 transition-[transform,box-shadow,background-color] duration-150"
+      : "";
 
   const classes = [
     base,
@@ -158,6 +174,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     sizeClass,
     fullWidth ? "w-full" : "",
     loading ? "cursor-wait" : "",
+    liftClass,
     className,
   ]
     .filter(Boolean)

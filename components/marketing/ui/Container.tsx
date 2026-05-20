@@ -31,7 +31,9 @@ export default function Container({
 
 /* ============================================================================
  *  SectionHead — centered eyebrow + h2 + lede triplet used by every
- *  marketing section that opens with copy.
+ *  marketing section that opens with copy. The eyebrow sits inside a soft
+ *  brand-tinted pill so it feels deliberate, not abandoned at the top of the
+ *  section.
  * ========================================================================= */
 export function SectionHead({
   eyebrow,
@@ -48,13 +50,21 @@ export function SectionHead({
     <div className="mx-auto mb-14 max-w-[720px] text-center">
       <span
         className={[
-          "inline-block font-mono text-[12px] font-medium uppercase tracking-[0.08em]",
-          muted ? "text-gray-500" : "text-brand-600",
+          "inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.08em]",
+          muted
+            ? "border border-gray-200 bg-gray-50 text-gray-500"
+            : "border border-brand-500/15 bg-brand-50 text-brand-700",
         ].join(" ")}
       >
+        <span
+          className={[
+            "inline-block h-1.5 w-1.5 rounded-full",
+            muted ? "bg-gray-400" : "bg-brand-500",
+          ].join(" ")}
+        />
         {eyebrow}
       </span>
-      <h2 className="mt-3 mb-4 text-[34px] font-semibold leading-[1.1] tracking-[-0.025em] text-balance md:text-[44px]">
+      <h2 className="mt-4 mb-4 text-[34px] font-semibold leading-[1.1] tracking-[-0.025em] text-balance md:text-[44px]">
         {title}
       </h2>
       {description && (

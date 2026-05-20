@@ -19,7 +19,11 @@ export default function HeroSection() {
           </span>
 
           <h1 className="mt-6 mb-5 text-[44px] font-semibold leading-[1.02] tracking-[-0.03em] text-balance md:text-[60px]">
-            Run your buildings <span className="text-brand-600">like a pro</span>, not a spreadsheet.
+            Run your buildings{" "}
+            <span className="bg-gradient-to-br from-brand-600 via-brand-500 to-khareef-700 bg-clip-text text-transparent">
+              like a pro
+            </span>
+            , not a spreadsheet.
           </h1>
 
           <p className="mb-8 max-w-[540px] text-[19px] leading-[1.55] text-gray-600 text-pretty">

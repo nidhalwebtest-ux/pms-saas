@@ -1,5 +1,6 @@
 import { ListChecks, Table, Car, ScrollText } from "lucide-react";
 import Container, { SectionHead } from "../ui/Container";
+import { Reveal } from "../ui/Reveal";
 
 const PROBLEMS = [
   {
@@ -34,14 +35,16 @@ export default function ProblemSection() {
           description="Most property managers in Salalah run their business on three tools: a spreadsheet, a WhatsApp group, and good memory. It works — until Khareef starts."
         />
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {PROBLEMS.map(({ Icon, title, body }) => (
-            <article key={title} className="relative rounded-lg border border-gray-200 bg-white p-7">
-              <div className="mb-4 grid h-10 w-10 place-items-center rounded-[10px] bg-error-50 text-error-500">
-                <Icon className="h-5 w-5" strokeWidth={1.75} />
-              </div>
-              <h3 className="mb-1.5 text-base font-semibold tracking-tight">{title}</h3>
-              <p className="m-0 text-sm leading-[1.55] text-gray-600">{body}</p>
-            </article>
+          {PROBLEMS.map(({ Icon, title, body }, i) => (
+            <Reveal key={title} delay={i * 80}>
+              <article className="group relative h-full rounded-lg border border-gray-200 bg-white p-7 transition-all duration-200 hover:-translate-y-1 hover:border-error-200 hover:shadow-lg">
+                <div className="mb-4 grid h-10 w-10 place-items-center rounded-[10px] bg-error-50 text-error-500 transition-transform group-hover:scale-110">
+                  <Icon className="h-5 w-5" strokeWidth={1.75} />
+                </div>
+                <h3 className="mb-1.5 text-base font-semibold tracking-tight">{title}</h3>
+                <p className="m-0 text-sm leading-[1.55] text-gray-600">{body}</p>
+              </article>
+            </Reveal>
           ))}
         </div>
       </Container>

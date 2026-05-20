@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ArrowRight } from "lucide-react";
 import Container from "../ui/Container";
+import { Reveal } from "../ui/Reveal";
 import { ButtonLink } from "../ui/MarketingButton";
 
 type FeatureBlockProps = {
@@ -48,7 +49,7 @@ export default function FeatureBlock({
               : "md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]",
           ].join(" ")}
         >
-          <div className={flip ? "md:order-2" : ""}>
+          <Reveal from={flip ? "right" : "left"} className={flip ? "md:order-2" : ""}>
             <span className="font-mono text-[12px] font-medium uppercase tracking-[0.08em] text-brand-600">
               {eyebrow}
             </span>
@@ -72,12 +73,12 @@ export default function FeatureBlock({
               {linkLabel}
               <ArrowRight className="h-3 w-3 rtl:rotate-180" strokeWidth={2} />
             </ButtonLink>
-          </div>
-          <div className={flip ? "md:order-1" : ""}>
-            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
+          </Reveal>
+          <Reveal from={flip ? "left" : "right"} delay={120} className={flip ? "md:order-1" : ""}>
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl transition-transform duration-300 hover:-translate-y-1 hover:shadow-2xl">
               {visual}
             </div>
-          </div>
+          </Reveal>
         </div>
       </Container>
     </section>

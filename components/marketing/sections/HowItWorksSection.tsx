@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import Container, { SectionHead } from "../ui/Container";
+import { Reveal } from "../ui/Reveal";
 import { MarketingButton } from "../ui/MarketingButton";
 
 const STEPS = [
@@ -18,15 +19,17 @@ export default function HowItWorksSection() {
           description="No implementation consultant. No training week. Most of our customers create their first real booking the same afternoon they sign up."
         />
         <div className="steps-dotline relative grid gap-8 md:grid-cols-3">
-          {STEPS.map((s) => (
-            <div key={s.n} className="relative z-10 text-center">
-              <div className="relative mx-auto mb-6 grid h-[76px] w-[76px] place-items-center rounded-full border border-gray-200 bg-white font-mono text-[22px] font-semibold text-brand-600 shadow-sm">
-                <span className="absolute -inset-1.5 rounded-full border border-brand-100" />
-                {s.n}
+          {STEPS.map((s, i) => (
+            <Reveal key={s.n} delay={i * 150}>
+              <div className="relative z-10 text-center">
+                <div className="group relative mx-auto mb-6 grid h-[76px] w-[76px] place-items-center rounded-full border border-gray-200 bg-white font-mono text-[22px] font-semibold text-brand-600 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-brand-200 hover:shadow-lg">
+                  <span className="absolute -inset-1.5 rounded-full border border-brand-100 transition-transform group-hover:scale-105" />
+                  {s.n}
+                </div>
+                <h3 className="mb-2 text-xl font-semibold tracking-tight">{s.title}</h3>
+                <p className="m-0 mx-auto max-w-[280px] text-[14.5px] text-gray-600">{s.body}</p>
               </div>
-              <h3 className="mb-2 text-xl font-semibold tracking-tight">{s.title}</h3>
-              <p className="m-0 mx-auto max-w-[280px] text-[14.5px] text-gray-600">{s.body}</p>
-            </div>
+            </Reveal>
           ))}
         </div>
         <div className="mt-12 text-center">

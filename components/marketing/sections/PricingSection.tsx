@@ -1,4 +1,5 @@
 import Container, { SectionHead } from "../ui/Container";
+import { Reveal } from "../ui/Reveal";
 import { MarketingButton } from "../ui/MarketingButton";
 
 type Tier = {
@@ -78,16 +79,16 @@ export default function PricingSection() {
           description="No setup fees. No per-reservation charges. No surprise invoices at the end of the year. Cancel anytime."
         />
         <div className="grid items-stretch gap-5 md:grid-cols-3">
-          {TIERS.map((t) => (
-            <article
-              key={t.name}
-              className={[
-                "relative flex flex-col rounded-lg border bg-white p-8",
-                t.featured
-                  ? "border-brand-500 shadow-[0_0_0_1px_var(--brand-500),0_12px_32px_-12px_oklch(0.46_0.17_258/0.3)] md:-translate-y-2 bg-gradient-to-b from-white to-[oklch(0.99_0.005_258)]"
-                  : "border-gray-200",
-              ].join(" ")}
-            >
+          {TIERS.map((t, i) => (
+            <Reveal key={t.name} delay={i * 100}>
+              <article
+                className={[
+                  "relative flex h-full flex-col rounded-lg border bg-white p-8 transition-all duration-300",
+                  t.featured
+                    ? "border-brand-500 shadow-[0_0_0_1px_var(--brand-500),0_12px_32px_-12px_oklch(0.46_0.17_258/0.3)] md:-translate-y-2 bg-gradient-to-b from-white to-[oklch(0.99_0.005_258)] hover:-translate-y-3 hover:shadow-2xl"
+                    : "border-gray-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-lg",
+                ].join(" ")}
+              >
               {t.badge && (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-500 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-white">
                   {t.badge}
@@ -126,7 +127,8 @@ export default function PricingSection() {
                   </li>
                 ))}
               </ul>
-            </article>
+              </article>
+            </Reveal>
           ))}
         </div>
       </Container>

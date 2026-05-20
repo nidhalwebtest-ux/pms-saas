@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import Container, { SectionHead } from "../ui/Container";
+import { Reveal } from "../ui/Reveal";
 import { ButtonLink } from "../ui/MarketingButton";
 
 const TESTIMONIALS = [
@@ -39,11 +40,9 @@ export default function TestimonialsSection() {
           description="Real feedback from operators across Salalah, Mirbat, and Al Haffa — the people Binaya was built with, not just for."
         />
         <div className="grid gap-6 md:grid-cols-3">
-          {TESTIMONIALS.map((t) => (
-            <article
-              key={t.name}
-              className="flex flex-col gap-5 rounded-lg border border-gray-200 bg-white p-7"
-            >
+          {TESTIMONIALS.map((t, i) => (
+            <Reveal key={t.name} delay={i * 100}>
+              <article className="flex h-full flex-col gap-5 rounded-lg border border-gray-200 bg-white p-7 transition-all duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-lg">
               <p className="m-0 flex-1 text-base leading-[1.55] text-gray-800 text-pretty">
                 <span className="mb-1 block font-serif text-[40px] leading-none text-brand-300 rtl:rtl-mirror">
                   &ldquo;
@@ -59,7 +58,8 @@ export default function TestimonialsSection() {
                   <span className="font-mono text-[12.5px] text-gray-500">{t.meta}</span>
                 </div>
               </div>
-            </article>
+              </article>
+            </Reveal>
           ))}
         </div>
         <div className="mt-10 text-center">

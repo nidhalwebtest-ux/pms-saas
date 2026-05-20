@@ -42,7 +42,7 @@ export function MarketingButton({
 
   if (href) {
     return (
-      <Link href={href} className="inline-flex">
+      <Link href={href} className={rest.fullWidth ? "block w-full" : "inline-flex"}>
         {btn}
       </Link>
     );

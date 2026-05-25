@@ -105,6 +105,10 @@ async function check2_allocationsNotExceedingInvoiceTotals(orgIds: string[]): Pr
 }
 
 async function check3_invoiceStatusMatchesPaymentState(orgIds: string[]): Promise<CheckResult> {
+  // Per CLAUDE.md: DRAFT = monthly cycle pre-created but not yet issued.
+  // Future monthly cycles legitimately sit at DRAFT with $0 paid — that is
+  // not a mismatch. We only flag invoices whose status contradicts their
+  // payment state given the issued/draft distinction.
   const invoices = await prisma.invoice.findMany({
     where: { organizationId: { in: orgIds }, status: { notIn: ["CANCELLED", "VOID"] } },
   });
@@ -112,6 +116,16 @@ async function check3_invoiceStatusMatchesPaymentState(orgIds: string[]): Promis
   for (const inv of invoices) {
     const total = Number(inv.totalAmount);
     const paid  = Number(inv.amountPaid);
+
+    // DRAFT is valid only when $0 paid — anything else means we paid against
+    // a non-issued invoice, which would be wrong.
+    if (inv.status === "DRAFT") {
+      if (paid > 0.001) {
+        mismatches.push(`${inv.invoiceNumber} DRAFT with ${paid.toFixed(3)} paid`);
+      }
+      continue;
+    }
+
     let expected: typeof inv.status;
     if (paid <= 0.001)               expected = "PENDING";
     else if (paid >= total - 0.001)  expected = "PAID";
@@ -122,7 +136,7 @@ async function check3_invoiceStatusMatchesPaymentState(orgIds: string[]): Promis
     }
   }
   return mismatches.length === 0
-    ? { name: "Invoice status matches payment state", status: "PASS", detail: `${invoices.length} invoices checked` }
+    ? { name: "Invoice status matches payment state", status: "PASS", detail: `${invoices.length} invoices checked (DRAFT cycles allowed at $0 paid)` }
     : { name: "Invoice status matches payment state", status: "FAIL", detail: `${mismatches.length} mismatch(es): ${mismatches.slice(0, 3).join("; ")}` };
 }
 

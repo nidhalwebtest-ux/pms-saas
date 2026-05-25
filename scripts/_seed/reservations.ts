@@ -54,9 +54,13 @@ function markActive(unitId: string, start: Date, end: Date): void {
   activeUsage.push({ unitId, start, end });
 }
 
-function pickFreeUnit(units: UnitRef[], start: Date, end: Date): UnitRef {
+/** Returns `null` when every unit is already booked in the window. Callers
+ *  should treat this as "skip this reservation" rather than fatal — the seed
+ *  targets are aspirational, and falling short of a few is better than
+ *  failing the whole run. */
+function pickFreeUnit(units: UnitRef[], start: Date, end: Date): UnitRef | null {
   const free = units.filter((u) => unitFree(u.id, start, end));
-  if (free.length === 0) throw new Error(`No free unit between ${start.toDateString()} and ${end.toDateString()}`);
+  if (free.length === 0) return null;
   return pick(free);
 }
 
@@ -166,6 +170,7 @@ export async function runReservations(
       const end   = addDays(TODAY, offset);
       const start = addDays(end, -nights);
       const unit  = pickFreeUnit(orgUnits, start, end);
+      if (!unit) continue;
       const r = await createDaily({
         tenant: pick(bookableTenants),
         unit,
@@ -183,6 +188,7 @@ export async function runReservations(
     const start = TODAY;
     const end = addDays(start, randInt(2, 7));
     const unit = pickFreeUnit(orgUnits, start, end);
+    if (!unit) continue;
     const r = await createDaily({
       tenant: pick(bookableTenants),
       unit,
@@ -199,6 +205,7 @@ export async function runReservations(
     const start = addDays(TODAY, randInt(2, 28));
     const end = addDays(start, randInt(2, 7));
     const unit = pickFreeUnit(orgUnits, start, end);
+    if (!unit) continue;
     const r = await createDaily({
       tenant: pick(bookableTenants),
       unit,
@@ -275,76 +282,82 @@ export async function runReservations(
   const extendOriginalEnd = addDays(extendStart, 3);
   const extendNewEnd = addDays(extendOriginalEnd, 4);
   const extendUnit = pickFreeUnit(orgUnits, extendStart, extendNewEnd);
-  const extended = await createDaily({
-    tenant: pick(bookableTenants),
-    unit:   extendUnit,
-    start:  extendStart,
-    end:    extendNewEnd,
-    status: "CHECKED_IN",
-    orgId:  alNoor.id, userId: owner.id,
-    track:  true,
-  });
-  reservations.push(extended);
-  // Log the extension as an activity so the audit log shows the change.
-  await prisma.reservationActivity.create({
-    data: {
-      reservationId:  extended.id,
-      organizationId: alNoor.id,
-      action:         "EXTENDED",
-      description:    `Stay extended by ${daysBetween(extendOriginalEnd, extendNewEnd)} nights`,
-      performedById:  owner.id,
-      metadata:       { previousEndDate: extendOriginalEnd.toISOString(), newEndDate: extendNewEnd.toISOString() },
-    },
-  });
+  if (extendUnit) {
+    const extended = await createDaily({
+      tenant: pick(bookableTenants),
+      unit:   extendUnit,
+      start:  extendStart,
+      end:    extendNewEnd,
+      status: "CHECKED_IN",
+      orgId:  alNoor.id, userId: owner.id,
+      track:  true,
+    });
+    reservations.push(extended);
+    // Log the extension as an activity so the audit log shows the change.
+    await prisma.reservationActivity.create({
+      data: {
+        reservationId:  extended.id,
+        organizationId: alNoor.id,
+        action:         "EXTENDED",
+        description:    `Stay extended by ${daysBetween(extendOriginalEnd, extendNewEnd)} nights`,
+        performedById:  owner.id,
+        metadata:       { previousEndDate: extendOriginalEnd.toISOString(), newEndDate: extendNewEnd.toISOString() },
+      },
+    });
+  }
 
   // 9. Unit changed mid-stay
   const swapStart = addDays(TODAY, -4);
   const swapEnd = addDays(swapStart, 7);
   const originalUnit = pickFreeUnit(orgUnits, swapStart, swapEnd);
-  const newUnit = pickFreeUnit(orgUnits.filter((u) => u.id !== originalUnit.id), swapStart, swapEnd);
-  const swapRes = await createDaily({
-    tenant: pick(bookableTenants),
-    unit:   newUnit,
-    start:  swapStart,
-    end:    swapEnd,
-    status: "CHECKED_IN",
-    orgId:  alNoor.id, userId: owner.id,
-    track:  true,
-  });
-  reservations.push(swapRes);
-  // Mark the original ReservationUnit as moved out + log activity.
-  await prisma.reservationUnit.updateMany({
-    where: { reservationId: swapRes.id, unitId: newUnit.id },
-    data: {
-      isMovedOut:    false,
-    },
-  });
-  // Add the original unit as a moved-out row.
-  await prisma.reservationUnit.create({
-    data: {
-      reservationId: swapRes.id,
-      unitId:        originalUnit.id,
-      rateType:      "DAILY",
-      rateAmount:    originalUnit.dailyRate,
-      rateSource:    "DEFAULT_PRICE",
-      nights:        2,
-      subtotal:      originalUnit.dailyRate * 2,
-      isMovedOut:    true,
-      movedToUnitId: newUnit.id,
-      moveReason:    "Tenant requested upgrade",
-      moveDate:      addDays(swapStart, 2),
-    },
-  });
-  await prisma.reservationActivity.create({
-    data: {
-      reservationId:  swapRes.id,
-      organizationId: alNoor.id,
-      action:         "UNIT_MOVED",
-      description:    `Moved from ${originalUnit.name} to ${newUnit.name}`,
-      performedById:  owner.id,
-      metadata:       { fromUnitId: originalUnit.id, toUnitId: newUnit.id },
-    },
-  });
+  const newUnit = originalUnit
+    ? pickFreeUnit(orgUnits.filter((u) => u.id !== originalUnit.id), swapStart, swapEnd)
+    : null;
+  if (originalUnit && newUnit) {
+    const swapRes = await createDaily({
+      tenant: pick(bookableTenants),
+      unit:   newUnit,
+      start:  swapStart,
+      end:    swapEnd,
+      status: "CHECKED_IN",
+      orgId:  alNoor.id, userId: owner.id,
+      track:  true,
+    });
+    reservations.push(swapRes);
+    // Mark the original ReservationUnit as moved out + log activity.
+    await prisma.reservationUnit.updateMany({
+      where: { reservationId: swapRes.id, unitId: newUnit.id },
+      data: {
+        isMovedOut:    false,
+      },
+    });
+    // Add the original unit as a moved-out row.
+    await prisma.reservationUnit.create({
+      data: {
+        reservationId: swapRes.id,
+        unitId:        originalUnit.id,
+        rateType:      "DAILY",
+        rateAmount:    originalUnit.dailyRate,
+        rateSource:    "DEFAULT_PRICE",
+        nights:        2,
+        subtotal:      originalUnit.dailyRate * 2,
+        isMovedOut:    true,
+        movedToUnitId: newUnit.id,
+        moveReason:    "Tenant requested upgrade",
+        moveDate:      addDays(swapStart, 2),
+      },
+    });
+    await prisma.reservationActivity.create({
+      data: {
+        reservationId:  swapRes.id,
+        organizationId: alNoor.id,
+        action:         "UNIT_MOVED",
+        description:    `Moved from ${originalUnit.name} to ${newUnit.name}`,
+        performedById:  owner.id,
+        metadata:       { fromUnitId: originalUnit.id, toUnitId: newUnit.id },
+      },
+    });
+  }
 
   /* ── MONTHLY ────────────────────────────────────────────────────────── */
 
@@ -368,13 +381,17 @@ export async function runReservations(
     void monthsAgo;
   }
 
-  // 20 currently active monthly (start dates Jan-Apr 2026, duration 3-12 months)
+  // 20 currently active monthly (start dates Jan-Apr 2026, duration 3-6 months)
+  // Shortened from 3-12 months — long overlapping monthlies were exhausting
+  // unit capacity (33 Al Noor units) when combined with the future-monthly +
+  // Khareef-span edge cases.
   for (let i = 0; i < 20; i++) {
     const startMonth = pick([1, 2, 3, 4]);
     const start = fixedDate(2026, startMonth, randInt(1, 25));
-    const months = randInt(3, 12);
+    const months = randInt(3, 6);
     const end = addDays(start, months * 30);
     const unit = pickFreeUnit(orgUnits, start, end);
+    if (!unit) continue;
     const r = await createMonthly({
       tenant: pick(bookableTenants),
       unit,
@@ -393,6 +410,7 @@ export async function runReservations(
     const months = randInt(3, 6);
     const end = addDays(start, months * 30);
     const unit = pickFreeUnit(orgUnits, start, end);
+    if (!unit) continue;
     const r = await createMonthly({
       tenant: pick(bookableTenants),
       unit,
@@ -430,17 +448,19 @@ export async function runReservations(
   const khareefSpanStart = fixedDate(2026, 6, 28);
   const khareefSpanEnd   = fixedDate(2026, 9, 4);
   const khareefSpanUnit  = pickFreeUnit(orgUnits, khareefSpanStart, khareefSpanEnd);
-  const khareefSpan = await createMonthly({
-    tenant: pick(bookableTenants),
-    unit:   khareefSpanUnit,
-    start:  khareefSpanStart,
-    end:    khareefSpanEnd,
-    status: "CONFIRMED",
-    orgId: alNoor.id, userId: owner.id,
-    track: true,
-    months: 2,
-  });
-  reservations.push(khareefSpan);
+  if (khareefSpanUnit) {
+    const khareefSpan = await createMonthly({
+      tenant: pick(bookableTenants),
+      unit:   khareefSpanUnit,
+      start:  khareefSpanStart,
+      end:    khareefSpanEnd,
+      status: "CONFIRMED",
+      orgId: alNoor.id, userId: owner.id,
+      track: true,
+      months: 2,
+    });
+    reservations.push(khareefSpan);
+  }
 
   console.log(`   • ${reservations.length} reservations`);
   console.log(`   • ${reservations.filter((r) => r.invoicesGenerated).length} reservations with invoices generated`);

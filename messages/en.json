@@ -2630,7 +2630,8 @@
       "balance": "Balance",
       "dueDate": "Due Date",
       "actions": "Actions",
-      "empty": "No invoices found matching your criteria."
+      "empty": "No invoices found matching your criteria.",
+      "viewReservation": "View reservation"
     },
     "rowActions": {
       "pay": "Pay",
@@ -2678,7 +2679,8 @@
       "paymentAmount": "Amount",
       "refund": "Refund",
       "noPayments": "No payments recorded yet.",
-      "unitLabel": "Unit"
+      "unitLabel": "Unit",
+      "viewReservation": "View reservation"
     },
     "actions": {
       "issuing": "Issuing…",

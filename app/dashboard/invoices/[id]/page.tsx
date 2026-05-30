@@ -448,14 +448,12 @@ export default async function InvoiceDetailPage({
               <CalendarDaysIcon className="h-4 w-4 text-gray-400" />
               <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">{tDet("reservation")}</h3>
             </div>
-            {invoice.reservation.reservationNumber && (
-              <Link
-                href={`/dashboard/reservations/${invoice.reservationId}`}
-                className="font-mono font-semibold text-indigo-600 hover:text-indigo-900 transition-colors ltr-numbers"
-              >
-                {invoice.reservation.reservationNumber}
-              </Link>
-            )}
+            <Link
+              href={`/dashboard/reservations/${invoice.reservationId}`}
+              className="font-mono font-semibold text-indigo-600 hover:text-indigo-900 transition-colors ltr-numbers"
+            >
+              {invoice.reservation.reservationNumber ?? tDet("viewReservation")}
+            </Link>
             <p className="text-sm text-gray-600 mt-1 ltr-numbers">
               {fmtDate(invoice.reservation.startDate)} – {fmtDate(invoice.reservation.endDate)}
             </p>

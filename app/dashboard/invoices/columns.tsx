@@ -162,13 +162,12 @@ export function buildInvoiceColumns({
       meta: { mobile: "detail", mobilePriority: 2, mobileLabel: tTbl("reservation") },
       cell: ({ row }) => {
         const num = row.original.reservation.reservationNumber;
-        if (!num) return <span className="text-xs text-fg-tertiary">—</span>;
         return (
           <Link
             href={`/dashboard/reservations/${row.original.reservationId}`}
             className="text-xs text-brand-600 hover:underline font-mono ltr-numbers"
           >
-            {num}
+            {num ?? tTbl("viewReservation")}
           </Link>
         );
       },

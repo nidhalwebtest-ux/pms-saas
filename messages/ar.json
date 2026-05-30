@@ -2630,7 +2630,8 @@
       "balance": "المتبقي",
       "dueDate": "تاريخ الاستحقاق",
       "actions": "إجراءات",
-      "empty": "لا توجد فواتير مطابقة لمعايير البحث."
+      "empty": "لا توجد فواتير مطابقة لمعايير البحث.",
+      "viewReservation": "عرض الحجز"
     },
     "rowActions": {
       "pay": "دفع",
@@ -2678,7 +2679,8 @@
       "paymentAmount": "المبلغ",
       "refund": "استرداد",
       "noPayments": "لم يتم تسجيل أي دفعات بعد.",
-      "unitLabel": "وحدة"
+      "unitLabel": "وحدة",
+      "viewReservation": "عرض الحجز"
     },
     "actions": {
       "issuing": "جارٍ الإصدار…",

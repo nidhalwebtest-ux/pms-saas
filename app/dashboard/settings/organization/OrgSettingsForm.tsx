@@ -37,8 +37,6 @@ const CURRENCIES = [
   { value: "QAR", label: "QAR — Qatari Riyal" },
 ];
 
-type CheckInPolicy = "ALLOW_BACK_TO_BACK" | "REQUIRE_VACANT";
-
 type FormState = {
   name: string;
   phone: string;
@@ -48,7 +46,6 @@ type FormState = {
   logo: string | null;
   timezone: string;
   currency: string;
-  checkInPolicy: CheckInPolicy;
 };
 
 export default function OrgSettingsForm({ org }: { org: FormState }) {
@@ -71,7 +68,6 @@ export default function OrgSettingsForm({ org }: { org: FormState }) {
     form.area     !== org.area     ||
     form.timezone !== org.timezone ||
     form.currency !== org.currency ||
-    form.checkInPolicy !== org.checkInPolicy ||
     logoFile      !== null         ||
     removeLogo;
 
@@ -100,7 +96,6 @@ export default function OrgSettingsForm({ org }: { org: FormState }) {
       fd.append("area",     form.area.trim());
       fd.append("timezone", form.timezone);
       fd.append("currency", form.currency);
-      fd.append("checkInPolicy", form.checkInPolicy);
       if (logoFile) fd.append("logo", logoFile);
       if (removeLogo) fd.append("removeLogo", "1");
 
@@ -246,43 +241,6 @@ export default function OrgSettingsForm({ org }: { org: FormState }) {
               <option key={c.value} value={c.value}>{c.label}</option>
             ))}
           </select>
-        </div>
-      </div>
-
-      {/* Check-in policy */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          {t("checkInPolicyLabel")}
-        </label>
-        <p className="text-xs text-gray-500 mb-2">{t("checkInPolicyHint")}</p>
-        <div className="space-y-2">
-          {(["ALLOW_BACK_TO_BACK", "REQUIRE_VACANT"] as const).map((value) => (
-            <label
-              key={value}
-              className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition ${
-                form.checkInPolicy === value
-                  ? "border-blue-500 bg-blue-50/40 ring-1 ring-blue-500/30"
-                  : "border-gray-300 bg-white hover:border-gray-400"
-              }`}
-            >
-              <input
-                type="radio"
-                name="checkInPolicy"
-                value={value}
-                checked={form.checkInPolicy === value}
-                onChange={() => set("checkInPolicy", value)}
-                className="mt-0.5 h-4 w-4 text-blue-600 focus:ring-blue-500/30"
-              />
-              <span className="flex flex-col">
-                <span className="text-sm font-medium text-gray-800">
-                  {t(value === "ALLOW_BACK_TO_BACK" ? "checkInPolicyBackToBackTitle" : "checkInPolicyRequireVacantTitle")}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {t(value === "ALLOW_BACK_TO_BACK" ? "checkInPolicyBackToBackDesc" : "checkInPolicyRequireVacantDesc")}
-                </span>
-              </span>
-            </label>
-          ))}
         </div>
       </div>
 

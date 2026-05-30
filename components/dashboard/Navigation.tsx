@@ -85,6 +85,7 @@ const navigationConfig: NavItem[] = [
       },
       { labelKey: "myProfile",   href: "/dashboard/settings/profile" },
       { labelKey: "organization", href: "/dashboard/settings/organization" },
+      { labelKey: "reservationSettings", href: "/dashboard/settings/reservations" },
     ],
   },
 ];

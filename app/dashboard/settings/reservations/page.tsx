@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { BuildingOffice2Icon } from "@heroicons/react/24/outline";
+import { CalendarDaysIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
-import OrgSettingsForm from "./OrgSettingsForm";
+import ReservationSettingsForm from "./ReservationSettingsForm";
 
-export default async function OrganizationSettingsPage() {
+export default async function ReservationSettingsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -18,27 +18,17 @@ export default async function OrganizationSettingsPage() {
 
   const org = await prisma.organization.findUnique({
     where:  { id: dbUser.organizationId },
-    select: {
-      id: true,
-      name: true,
-      phone: true,
-      address: true,
-      city: true,
-      area: true,
-      logo: true,
-      timezone: true,
-      currency: true,
-    },
+    select: { checkInPolicy: true },
   });
   if (!org) redirect("/onboarding");
 
-  const t = await getTranslations("settings.organization");
+  const t = await getTranslations("settings.reservations");
 
   return (
     <div className="mx-auto max-w-3xl py-8 space-y-6">
       <div className="flex items-center gap-3">
         <div className="p-2 bg-blue-100 rounded-lg">
-          <BuildingOffice2Icon className="h-6 w-6 text-blue-700" />
+          <CalendarDaysIcon className="h-6 w-6 text-blue-700" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
@@ -46,16 +36,9 @@ export default async function OrganizationSettingsPage() {
         </div>
       </div>
 
-      <OrgSettingsForm
-        org={{
-          name:     org.name,
-          phone:    org.phone ?? "",
-          address:  org.address ?? "",
-          city:     org.city,
-          area:     org.area ?? "",
-          logo:     org.logo,
-          timezone: org.timezone,
-          currency: org.currency,
+      <ReservationSettingsForm
+        settings={{
+          checkInPolicy: org.checkInPolicy,
         }}
       />
     </div>

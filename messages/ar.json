@@ -379,7 +379,8 @@
     "myProfile": "ملفي الشخصي",
     "organization": "المؤسسة",
     "reservationList": "قائمة الحجوزات",
-    "newReservation": "حجز جديد"
+    "newReservation": "حجز جديد",
+    "reservationSettings": "إعدادات الحجوزات"
   },
   "dashboard": {
     "goodMorning": "صباح الخير، {name}",
@@ -3406,13 +3407,21 @@
       "save": "حفظ التغييرات",
       "saving": "جاري الحفظ…",
       "revert": "تجاهل التغييرات",
-      "savedToast": "تم حفظ إعدادات المؤسسة.",
+      "savedToast": "تم حفظ إعدادات المؤسسة."
+    },
+    "reservations": {
+      "title": "الحجوزات",
+      "subtitle": "تهيئة سلوك الحجوزات وتسجيل الدخول وتبديل النزلاء.",
       "checkInPolicyLabel": "سياسة تسجيل الدخول",
       "checkInPolicyHint": "يتحكم في ما إذا كان يجب إخلاء الوحدة بالكامل قبل تسجيل دخول نزيل جديد.",
       "checkInPolicyBackToBackTitle": "السماح بتسجيل الدخول المتتالي",
       "checkInPolicyBackToBackDesc": "يمكن تسجيل دخول نزيل جديد في يوم مغادرة النزيل السابق. يُمنع فقط تداخل التواريخ الفعلي.",
       "checkInPolicyRequireVacantTitle": "اشتراط أن تكون الوحدة شاغرة",
-      "checkInPolicyRequireVacantDesc": "منع تسجيل الدخول حتى يتم تسجيل خروج النزيل السابق — حتى في حالة التغيير في نفس اليوم."
+      "checkInPolicyRequireVacantDesc": "منع تسجيل الدخول حتى يتم تسجيل خروج النزيل السابق — حتى في حالة التغيير في نفس اليوم.",
+      "save": "حفظ التغييرات",
+      "saving": "جارٍ الحفظ…",
+      "revert": "تجاهل التغييرات",
+      "savedToast": "تم حفظ إعدادات الحجوزات."
     }
   },
   "photoUpload": {

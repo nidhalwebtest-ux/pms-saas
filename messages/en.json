@@ -379,7 +379,8 @@
     "myProfile": "My Profile",
     "organization": "Organization",
     "reservationList": "Reservations list",
-    "newReservation": "New reservation"
+    "newReservation": "New reservation",
+    "reservationSettings": "Reservation Settings"
   },
   "dashboard": {
     "goodMorning": "Good morning, {name}",
@@ -3406,13 +3407,21 @@
       "save": "Save changes",
       "saving": "Saving…",
       "revert": "Discard changes",
-      "savedToast": "Organization settings saved.",
+      "savedToast": "Organization settings saved."
+    },
+    "reservations": {
+      "title": "Reservations",
+      "subtitle": "Configure how reservations, check-in, and turnover behave.",
       "checkInPolicyLabel": "Check-in policy",
       "checkInPolicyHint": "Controls whether a unit must be fully vacated before a new guest can be checked in.",
       "checkInPolicyBackToBackTitle": "Allow back-to-back check-in",
       "checkInPolicyBackToBackDesc": "A new guest can be checked in on the previous guest's checkout day. Only true date overlaps are blocked.",
       "checkInPolicyRequireVacantTitle": "Require unit to be vacant",
-      "checkInPolicyRequireVacantDesc": "Block check-in until the previous guest is checked out — even on a same-day turnover."
+      "checkInPolicyRequireVacantDesc": "Block check-in until the previous guest is checked out — even on a same-day turnover.",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "revert": "Discard changes",
+      "savedToast": "Reservation settings saved."
     }
   },
   "photoUpload": {

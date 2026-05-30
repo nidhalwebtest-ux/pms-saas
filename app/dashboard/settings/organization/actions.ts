@@ -36,9 +36,6 @@ export async function updateOrganization(
   const area     = (formData.get("area")     as string)?.trim() || null;
   const timezone = (formData.get("timezone") as string) || "Asia/Muscat";
   const currency = (formData.get("currency") as string) || "OMR";
-  const checkInPolicyRaw = formData.get("checkInPolicy") as string;
-  const checkInPolicy =
-    checkInPolicyRaw === "REQUIRE_VACANT" ? "REQUIRE_VACANT" : "ALLOW_BACK_TO_BACK";
   const logoFile = formData.get("logo") as File | null;
   const removeLogo = formData.get("removeLogo") === "1";
 
@@ -100,7 +97,6 @@ export async function updateOrganization(
         area,
         timezone,
         currency,
-        checkInPolicy,
         ...(logoUrl !== undefined ? { logo: logoUrl } : {}),
       },
     });

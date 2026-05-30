@@ -338,7 +338,7 @@ function CheckInModal({ res, onSuccess, onClose }: {
   res: ReservationData; onSuccess: () => void; onClose: () => void;
 }) {
   const t = useTranslations("reservations.detail.checkInModal");
-  const tp = useTranslations("settings.organization");
+  const tp = useTranslations("settings.reservations");
   const [loading, setLoading] = useState(false);
 
   // Effective policy for this reservation: per-reservation override, else org default.

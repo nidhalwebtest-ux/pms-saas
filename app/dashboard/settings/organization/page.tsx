@@ -28,6 +28,7 @@ export default async function OrganizationSettingsPage() {
       logo: true,
       timezone: true,
       currency: true,
+      checkInPolicy: true,
     },
   });
   if (!org) redirect("/onboarding");
@@ -56,6 +57,7 @@ export default async function OrganizationSettingsPage() {
           logo:     org.logo,
           timezone: org.timezone,
           currency: org.currency,
+          checkInPolicy: org.checkInPolicy,
         }}
       />
     </div>

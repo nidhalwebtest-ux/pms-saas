@@ -47,7 +47,7 @@ export default async function PropertyDetailsPage({
         include: {
           reservations: {
             where:  { status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN"] } },
-            select: { status: true },
+            select: { status: true, endDate: true },
           },
         },
       },

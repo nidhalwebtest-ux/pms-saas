@@ -1,14 +1,10 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
-import { normalizeReservationDates, calculatePeriod } from "@/utils/date-math";
 import { generateInstallments } from "@/utils/billing-engine";
 import {
   requireOrgUser,
-  assertTenantOwnership,
-  assertUnitOwnership,
   assertReservationOwnership,
 } from "@/lib/tenant";
 
@@ -20,108 +16,15 @@ export type ActionResponse = {
   data?: any;
   id?: string;
 };
-// ---------------------------------------------------------
-// 1. Create RESERVATION
-// ---------------------------------------------------------
-export async function createReservation(
-  prevState: any,
-  formData: FormData,
-): Promise<ActionResponse> {
-  let orgUser;
-  try { orgUser = await requireOrgUser(); } catch (e: any) { return e; }
-
-  // 1. Extract Data
-  const tenantId = formData.get("tenantId") as string;
-  const unitId = formData.get("unitId") as string;
-
-  // Verify tenant and unit belong to the caller's org
-  try {
-    await assertTenantOwnership(tenantId, orgUser.organizationId);
-    await assertUnitOwnership(unitId, orgUser.organizationId);
-  } catch (e: any) { return e; }
-
-  // Raw dates from form (usually midnight)
-  const rawStartDate = new Date(formData.get("startDate") as string);
-  const rawEndDate = new Date(formData.get("endDate") as string);
-  const unitPrice = parseFloat(formData.get("amount") as string);
-  const frequency = formData.get("frequency") as "DAILY" | "MONTHLY" | "YEARLY";
-
-  const duration = calculatePeriod(rawStartDate, rawEndDate, frequency);
-  const totalPrice = duration.quantity * unitPrice;
-
-  // 2. NORMALIZE DATES (The Magic Fix)
-  // This transforms "Feb 1" to "Feb 1, 2:00 PM" and "Feb 3" to "Feb 3, 12:00 PM"
-  const { checkIn, checkOut } = normalizeReservationDates(
-    rawStartDate,
-    rawEndDate,
-  );
-
-  // 3. Validation
-  if (checkOut <= checkIn) {
-    return { error: "End date must be after start date" };
-  }
-
-  // 5. CRITICAL: Availability Check using NORMALIZED dates
-  const overlapping = await prisma.reservation.findFirst({
-    where: {
-      unitId: unitId,
-      status: { not: "CANCELLED" },
-      OR: [
-        { startDate: { lt: checkOut }, endDate: { gt: checkIn } }, // Optimized overlap logic
-      ],
-    },
-  });
-
-  if (overlapping) {
-    return {
-      error: `Unit is already booked (Collision with Reservation #${overlapping.id.slice(0, 6)})`,
-    };
-  }
-
-  //   const installments = generateInstallments(
-  //   checkIn,
-  //   checkOut,
-  //   unitPrice,
-  //   frequency,
-  // );
-  // const totalPrice = installments.reduce((sum, inv) => sum + inv.amount, 0);
-
-  // 6. Create Reservation
-  let newReservation;
-  try {
-    newReservation = await prisma.reservation.create({
-      data: {
-        tenantId,
-        unitId,
-        startDate: checkIn, // Save the normalized 2 PM date
-        endDate: checkOut, // Save the normalized 12 PM date
-        amount: unitPrice, // The rate (per night/month)
-        totalPrice: totalPrice, // The full contract value
-        frequency,
-        status: "PENDING",
-        // invoices: {
-        //   create: installments.map((inst, index) => ({
-        //     invoiceNumber: `INV-${Date.now()}-${index + 1}`, // Simple ID generation
-        //     dueDate: inst.dueDate,
-        //     amount: inst.amount,
-        //     description: inst.description,
-        //     status: "PENDING",
-        //   })),
-        // },
-      },
-    });
-  } catch (e) {
-    console.error(e);
-    return { error: "Database error: Failed to create reservation." };
-  }
-
-  revalidatePath("/dashboard");
-  // redirect("/dashboard/reservations");
-  return { success: true, id: newReservation.id };
-}
+// NOTE: The original `createReservation` server action was removed. All booking
+// creation now goes through POST /api/reservations (see app/api/reservations/
+// route.ts + components/dashboard/BookingEngine.tsx), which performs the
+// availability re-check inside a Serializable transaction. The old action did a
+// non-atomic check-then-insert with a loose status filter and was a
+// double-booking race; its only consumer (ReservationForm.tsx) was unused.
 
 // ---------------------------------------------------------
-// 2. CONFIRM RESERVATION (Generate Contract & Invoices)
+// CONFIRM RESERVATION (Generate Contract & Invoices)
 // ---------------------------------------------------------
 export async function confirmReservation(formData: FormData) {
   let orgUser;

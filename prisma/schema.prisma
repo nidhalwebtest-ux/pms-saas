@@ -156,6 +156,9 @@ model Organization {
   timezone           String   @default("Asia/Muscat")
   currency           String   @default("OMR")
 
+  /// Org-wide default check-in policy; reservations may override per-booking.
+  checkInPolicy      CheckInPolicy @default(ALLOW_BACK_TO_BACK)
+
   plan               String   @default("FREE")
   maxProperties      Int      @default(1)
   subscriptionStatus String   @default("ACTIVE")
@@ -175,6 +178,19 @@ model Organization {
 enum Language {
   en
   ar
+}
+
+/// Controls whether a unit must be fully vacated before a new guest can be
+/// checked in, or whether same-day (back-to-back) turnover is allowed.
+enum CheckInPolicy {
+  /// Allow back-to-back check-in: only true DATE overlaps block a check-in.
+  /// A new guest may be checked in on the prior guest's checkout day even if
+  /// the prior reservation has not yet been checked out. (default)
+  ALLOW_BACK_TO_BACK
+  /// Require the unit to be vacant: block check-in if any other reservation on
+  /// the unit is still CHECKED_IN (not yet checked out), in addition to any
+  /// date overlap. Forces a clean turnover.
+  REQUIRE_VACANT
 }
 
 model User {
@@ -405,6 +421,10 @@ model Reservation {
   cancelledReason   String?
   cancelledAt       DateTime?
   refundPending     Boolean  @default(false)
+
+  // Per-reservation check-in policy override. NULL = inherit the organization's
+  // default (Organization.checkInPolicy).
+  checkInPolicyOverride CheckInPolicy?
 
   // Expected total number of monthly invoices (set at creation for monthly stays)
   expectedInvoiceCount Int?

@@ -184,12 +184,13 @@ export function resolveInvoiceBadge(
  *  Unit statuses (per user decisions 2/3/4: spec colors win)
  * ------------------------------------------------------------------------- */
 
-export type UnitStatusKey = "vacant" | "occupied" | "reserved" | "maintenance";
+export type UnitStatusKey = "vacant" | "occupied" | "overstay" | "reserved" | "maintenance";
 
 export function getUnitStatusBadge(status: UnitStatusKey): BadgeVariantProps {
   switch (status) {
     case "vacant":      return { tone: "success", appearance: "subtle", dot: true };
-    case "occupied":    return { tone: "danger",  appearance: "subtle", dot: true };
+    case "occupied":    return { tone: "info",    appearance: "subtle", dot: true };
+    case "overstay":    return { tone: "danger",  appearance: "solid",  dot: true };
     case "reserved":    return { tone: "warning", appearance: "subtle", dot: true };
     case "maintenance": return { tone: "neutral", appearance: "subtle", dot: true };
   }

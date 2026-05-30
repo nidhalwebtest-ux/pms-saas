@@ -966,7 +966,8 @@
       "vacant": "شاغرة",
       "occupied": "مشغولة",
       "reserved": "محجوزة",
-      "maintenance": "تحت الصيانة"
+      "maintenance": "تحت الصيانة",
+      "overstay": "تجاوز المدة"
     },
     "filters": {
       "searchPlaceholder": "بحث باسم الوحدة أو رقمها…",
@@ -1919,7 +1920,9 @@
         "checking": "جاري تسجيل الدخول…",
         "confirm": "✓ تأكيد تسجيل الدخول",
         "failed": "فشل تسجيل الدخول",
-        "successDefault": "تم تسجيل الدخول بنجاح"
+        "successDefault": "تم تسجيل الدخول بنجاح",
+        "policyOverrideHint": "اختر كيفية فرض توفر الوحدة لتسجيل الدخول هذا. يعتمد افتراضيًا على إعداد مؤسستك.",
+        "policyDefault": "افتراضي"
       },
       "checkOutModal": {
         "title": "تسجيل خروج — {ref}",
@@ -3403,7 +3406,13 @@
       "save": "حفظ التغييرات",
       "saving": "جاري الحفظ…",
       "revert": "تجاهل التغييرات",
-      "savedToast": "تم حفظ إعدادات المؤسسة."
+      "savedToast": "تم حفظ إعدادات المؤسسة.",
+      "checkInPolicyLabel": "سياسة تسجيل الدخول",
+      "checkInPolicyHint": "يتحكم في ما إذا كان يجب إخلاء الوحدة بالكامل قبل تسجيل دخول نزيل جديد.",
+      "checkInPolicyBackToBackTitle": "السماح بتسجيل الدخول المتتالي",
+      "checkInPolicyBackToBackDesc": "يمكن تسجيل دخول نزيل جديد في يوم مغادرة النزيل السابق. يُمنع فقط تداخل التواريخ الفعلي.",
+      "checkInPolicyRequireVacantTitle": "اشتراط أن تكون الوحدة شاغرة",
+      "checkInPolicyRequireVacantDesc": "منع تسجيل الدخول حتى يتم تسجيل خروج النزيل السابق — حتى في حالة التغيير في نفس اليوم."
     }
   },
   "photoUpload": {

@@ -27,7 +27,6 @@ export type UnitRow = {
   propertyId:  string;
   description: string | null;
   property:    { name: string };
-  reservations: { status: string }[];
   displayStatus: UnitDisplayStatus;
 };
 
@@ -112,7 +111,7 @@ export default async function UnitsPage({
       property:     { select: { name: true } },
       reservations: {
         where:  { status: { in: [...ACTIVE_STATUSES] } },
-        select: { status: true },
+        select: { status: true, endDate: true },
       },
     },
     orderBy: orderByClause,
@@ -133,7 +132,6 @@ export default async function UnitsPage({
     propertyId:    u.propertyId,
     description:   u.description,
     property:      u.property,
-    reservations:  u.reservations,
     displayStatus: getUnitDisplayStatus(u.status, u.reservations),
   }));
 

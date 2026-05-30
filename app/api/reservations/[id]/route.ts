@@ -97,6 +97,11 @@ export async function GET(
   if (r.tenant.organizationId !== actor.organizationId)
     return NextResponse.json({ error: "Not found." }, { status: 404 });
 
+  const org = await prisma.organization.findUnique({
+    where:  { id: actor.organizationId },
+    select: { checkInPolicy: true },
+  });
+
   const dsInfo = getDisplayStatus(r.status as StoredStatus, r.startDate, r.endDate);
 
   // Merge units (legacy + junction table). The junction table is the source of
@@ -195,6 +200,8 @@ export async function GET(
     cancelledReason: r.cancelledReason,
     cancelledAt: r.cancelledAt?.toISOString() ?? null,
     refundPending: r.refundPending,
+    checkInPolicyOverride: r.checkInPolicyOverride,
+    orgCheckInPolicy: org?.checkInPolicy ?? "ALLOW_BACK_TO_BACK",
     totalAmount: Number(r.totalAmount).toFixed(3),
     discountAmount: Number(r.discountAmount).toFixed(3),
     taxAmount: Number(r.taxAmount).toFixed(3),

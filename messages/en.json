@@ -966,7 +966,8 @@
       "vacant": "Vacant",
       "occupied": "Occupied",
       "reserved": "Reserved",
-      "maintenance": "Under Maintenance"
+      "maintenance": "Under Maintenance",
+      "overstay": "Overstay"
     },
     "filters": {
       "searchPlaceholder": "Search by unit name or number…",
@@ -1919,7 +1920,9 @@
         "checking": "Checking In…",
         "confirm": "✓ Confirm Check In",
         "failed": "Check-in failed",
-        "successDefault": "Checked in successfully"
+        "successDefault": "Checked in successfully",
+        "policyOverrideHint": "Choose how unit availability is enforced for this check-in. Defaults to your organization setting.",
+        "policyDefault": "default"
       },
       "checkOutModal": {
         "title": "Check Out — {ref}",
@@ -3403,7 +3406,13 @@
       "save": "Save changes",
       "saving": "Saving…",
       "revert": "Discard changes",
-      "savedToast": "Organization settings saved."
+      "savedToast": "Organization settings saved.",
+      "checkInPolicyLabel": "Check-in policy",
+      "checkInPolicyHint": "Controls whether a unit must be fully vacated before a new guest can be checked in.",
+      "checkInPolicyBackToBackTitle": "Allow back-to-back check-in",
+      "checkInPolicyBackToBackDesc": "A new guest can be checked in on the previous guest's checkout day. Only true date overlaps are blocked.",
+      "checkInPolicyRequireVacantTitle": "Require unit to be vacant",
+      "checkInPolicyRequireVacantDesc": "Block check-in until the previous guest is checked out — even on a same-day turnover."
     }
   },
   "photoUpload": {

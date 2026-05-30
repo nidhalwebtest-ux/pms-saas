@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { canTransitionTo, type StoredStatus } from "@/lib/reservation-status";
 import { generateInvoicesForReservation } from "@/lib/invoice-engine";
+import { getUnitConflict, getCheckedInOccupant } from "@/lib/reservation-conflict";
 
 async function getActor() {
   const supabase = await createClient();
@@ -16,13 +18,27 @@ async function getActor() {
 }
 
 export async function PATCH(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const actor = await getActor();
   if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
+
+  // Optional per-reservation check-in policy override from the request body.
+  // Values: "ALLOW_BACK_TO_BACK" | "REQUIRE_VACANT" | null (clear override).
+  let overrideFromBody: "ALLOW_BACK_TO_BACK" | "REQUIRE_VACANT" | null | undefined;
+  try {
+    const body = await req.json();
+    if (body && "checkInPolicyOverride" in body) {
+      const v = body.checkInPolicyOverride;
+      overrideFromBody =
+        v === "ALLOW_BACK_TO_BACK" || v === "REQUIRE_VACANT" ? v : null;
+    }
+  } catch {
+    // No/invalid JSON body — leave override unchanged.
+  }
 
   const res = await prisma.reservation.findUnique({
     where: { id },
@@ -35,6 +51,17 @@ export async function PATCH(
       },
     },
   });
+
+  // Effective check-in policy = per-reservation override, else org default.
+  const org = await prisma.organization.findUnique({
+    where:  { id: actor.organizationId! },
+    select: { checkInPolicy: true },
+  });
+  // Body override (if provided) wins over the stored one for this check-in.
+  const resolvedOverride =
+    overrideFromBody !== undefined ? overrideFromBody : res?.checkInPolicyOverride ?? null;
+  const effectivePolicy =
+    resolvedOverride ?? org?.checkInPolicy ?? "ALLOW_BACK_TO_BACK";
 
 
   if (!res || res.tenant.organizationId !== actor.organizationId)
@@ -55,7 +82,7 @@ export async function PATCH(
 
   const unitNames = await prisma.unit.findMany({
     where:  { id: { in: unitIds } },
-    select: { name: true },
+    select: { id: true, name: true },
   });
   const unitLabel = unitNames.map((u) => u.name).join(", ");
 
@@ -77,38 +104,93 @@ export async function PATCH(
     })
     .map((inv) => inv.id);
 
-  await prisma.$transaction(async (tx) => {
-    await tx.reservation.update({
-      where: { id },
-      data: { status: "CHECKED_IN", actualCheckIn: today },
-    });
+  try {
+    await prisma.$transaction(
+      async (tx) => {
+        // Re-check availability inside the transaction (double-booking prevention).
+        // Guards against checking in a reservation whose unit is already occupied
+        // by another overlapping active reservation — and, under Serializable
+        // isolation, against two concurrent check-ins on the same unit.
+        for (const unitId of unitIds) {
+          const unitName = unitNames.find((u) => u.id === unitId)?.name ?? unitId;
 
-    if (unitIds.length > 0) {
-      await tx.unit.updateMany({
-        where: { id: { in: unitIds } },
-        data:  { status: "OCCUPIED" },
-      });
-    }
+          // Always block a true date overlap (any policy).
+          const conflict = await getUnitConflict(
+            tx, unitId, unitName, res.startDate, res.endDate, id,
+          );
+          if (conflict) {
+            throw new Error(`CONFLICT:${JSON.stringify({ ...conflict, reason: "overlap" })}`);
+          }
 
-    // Set due date to today for already-existing relevant invoices
-    if (invoiceIdsForDueDate.length > 0) {
-      await tx.invoice.updateMany({
-        where: { id: { in: invoiceIdsForDueDate } },
-        data:  { dueDate: todayDay },
-      });
-    }
+          // REQUIRE_VACANT: also block if another guest is still physically
+          // checked in on this unit (even a back-to-back turnover day) — they
+          // must be checked out first.
+          if (effectivePolicy === "REQUIRE_VACANT") {
+            const occupant = await getCheckedInOccupant(tx, unitId, unitName, id);
+            if (occupant) {
+              throw new Error(`CONFLICT:${JSON.stringify({ ...occupant, reason: "occupied" })}`);
+            }
+          }
+        }
 
-    await tx.reservationActivity.create({
-      data: {
-        reservationId:  id,
-        organizationId: actor.organizationId!,
-        action:         "CHECKED_IN",
-        description:    `Checked in${unitLabel ? ` — Units ${unitLabel} marked as Occupied` : ""}`,
-        performedById:  actor.id,
-        metadata:       { unitIds, unitNames: unitNames.map((u) => u.name) },
+        await tx.reservation.update({
+          where: { id },
+          data: {
+            status: "CHECKED_IN",
+            actualCheckIn: today,
+            // Persist the override only when the client explicitly sent the field.
+            ...(overrideFromBody !== undefined
+              ? { checkInPolicyOverride: overrideFromBody }
+              : {}),
+          },
+        });
+
+        if (unitIds.length > 0) {
+          await tx.unit.updateMany({
+            where: { id: { in: unitIds } },
+            data:  { status: "OCCUPIED" },
+          });
+        }
+
+        // Set due date to today for already-existing relevant invoices
+        if (invoiceIdsForDueDate.length > 0) {
+          await tx.invoice.updateMany({
+            where: { id: { in: invoiceIdsForDueDate } },
+            data:  { dueDate: todayDay },
+          });
+        }
+
+        await tx.reservationActivity.create({
+          data: {
+            reservationId:  id,
+            organizationId: actor.organizationId!,
+            action:         "CHECKED_IN",
+            description:    `Checked in${unitLabel ? ` — Units ${unitLabel} marked as Occupied` : ""}`,
+            performedById:  actor.id,
+            metadata:       { unitIds, unitNames: unitNames.map((u) => u.name) },
+          },
+        });
       },
-    });
-  });
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.startsWith("CONFLICT:")) {
+      const conflict = JSON.parse(msg.slice("CONFLICT:".length));
+      const error =
+        conflict.reason === "occupied"
+          ? `Cannot check in: unit ${conflict.unitName} is still occupied by ${conflict.guestName} (reservation ${conflict.reservationNumber ?? "—"}). Check them out first, or allow back-to-back check-in.`
+          : `Cannot check in: unit ${conflict.unitName} is already booked for these dates by ${conflict.guestName} (reservation ${conflict.reservationNumber ?? "—"}).`;
+      return NextResponse.json(
+        {
+          error,
+          conflict,
+        },
+        { status: 409 },
+      );
+    }
+    throw err;
+  }
 
   // ── Auto-generate invoices on check-in (if not yet generated) ───────────────
   let generatedCount = 0;

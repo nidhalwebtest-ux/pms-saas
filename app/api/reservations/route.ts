@@ -15,6 +15,7 @@ import {
   roundOMR,
   sumSubtotals,
 } from "@/lib/reservation-engine";
+import { getUnitConflict, type ConflictDetail } from "@/lib/reservation-conflict";
 import { getUnitPriceForRange } from "@/lib/pricing";
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
@@ -36,87 +37,6 @@ async function generateReservationNumber(): Promise<string> {
   const year  = new Date().getFullYear();
   const count = await prisma.reservation.count();
   return `RES-${year}-${String(count + 1).padStart(5, "0")}`;
-}
-
-// ── Availability check (re-used inside transaction) ───────────────────────────
-
-type ConflictDetail = {
-  unitId: string;
-  unitName: string;
-  reservationNumber: string | null;
-  guestName: string;
-  startDate: string;
-  endDate: string;
-} | null;
-
-async function getUnitConflict(
-  tx:        Prisma.TransactionClient,
-  unitId:    string,
-  unitName:  string,
-  startDate: Date,
-  endDate:   Date,
-  excludeReservationId?: string,
-): Promise<ConflictDetail> {
-  // Check old-style reservations (Reservation.unitId)
-  const conflictOld = await tx.reservation.findFirst({
-    where: {
-      unitId,
-      status: { notIn: ["CANCELLED", "NO_SHOW", "COMPLETED"] },
-      ...(excludeReservationId ? { NOT: { id: excludeReservationId } } : {}),
-      startDate: { lt: endDate },
-      endDate:   { gt: startDate },
-    },
-    select: {
-      reservationNumber: true,
-      startDate: true,
-      endDate: true,
-      tenant: { select: { firstName: true, lastName: true } },
-    },
-  });
-  if (conflictOld) {
-    return {
-      unitId,
-      unitName,
-      reservationNumber: conflictOld.reservationNumber,
-      guestName: `${conflictOld.tenant.firstName} ${conflictOld.tenant.lastName}`,
-      startDate: conflictOld.startDate.toISOString(),
-      endDate:   conflictOld.endDate.toISOString(),
-    };
-  }
-
-  // Check new-style reservations (ReservationUnit)
-  const conflictNew = await tx.reservationUnit.findFirst({
-    where: {
-      unitId,
-      reservation: {
-        status: { notIn: ["CANCELLED", "NO_SHOW", "COMPLETED"] },
-        ...(excludeReservationId ? { NOT: { id: excludeReservationId } } : {}),
-        startDate: { lt: endDate },
-        endDate:   { gt: startDate },
-      },
-    },
-    select: {
-      reservation: {
-        select: {
-          reservationNumber: true,
-          startDate: true,
-          endDate: true,
-          tenant: { select: { firstName: true, lastName: true } },
-        },
-      },
-    },
-  });
-  if (conflictNew) {
-    return {
-      unitId,
-      unitName,
-      reservationNumber: conflictNew.reservation.reservationNumber,
-      guestName: `${conflictNew.reservation.tenant.firstName} ${conflictNew.reservation.tenant.lastName}`,
-      startDate: conflictNew.reservation.startDate.toISOString(),
-      endDate:   conflictNew.reservation.endDate.toISOString(),
-    };
-  }
-  return null;
 }
 
 // ── GET /api/reservations ─────────────────────────────────────────────────────

@@ -645,7 +645,16 @@ async function createReservation(opts: CreateReservationOpts): Promise<Reservati
   }
 
   if (opts.track) {
-    for (const u of opts.units) markActive(u.id, opts.start, opts.end);
+    // A CHECKED_IN reservation whose end date is already in the past is an
+    // OVERSTAY — the guest is physically still in the unit, so the room is NOT
+    // free for a same-day-turnover check-in. Extend its effective occupancy to
+    // tomorrow so unitFree() won't hand this unit to an overlapping current
+    // in-house stay (which previously produced two CHECKED_IN reservations on
+    // one unit). Half-open intervals still allow legitimate back-to-back stays
+    // for non-overstaying reservations.
+    const isOverstay = opts.status === "CHECKED_IN" && opts.end <= TODAY;
+    const effectiveEnd = isOverstay ? addDays(TODAY, 1) : opts.end;
+    for (const u of opts.units) markActive(u.id, opts.start, effectiveEnd);
   }
 
   // Invoices

@@ -3816,5 +3816,16 @@
       "copyright": "© {year} Binaya PMS. Made in Salalah.",
       "version": "v0.1 · marketing preview"
     }
+  },
+  "transactions": {
+    "overview": "Overview",
+    "reservations": "Reservations",
+    "invoices": "Invoices",
+    "payments": "Payments",
+    "viewAll": "View all",
+    "ariaLabel": "Transaction sections",
+    "noReservations": "No reservations yet.",
+    "noInvoices": "No invoices yet.",
+    "noPayments": "No payments yet."
   }
 }

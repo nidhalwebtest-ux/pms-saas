@@ -2,25 +2,25 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import {
   HomeModernIcon,
   PencilSquareIcon,
   WrenchScrewdriverIcon,
-  CalendarDaysIcon,
   CurrencyDollarIcon,
-  UserGroupIcon,
+  CalendarDaysIcon,
   ChatBubbleLeftIcon,
   BuildingOffice2Icon,
   BoltIcon,
   ListBulletIcon,
-  BanknotesIcon,
 } from "@heroicons/react/24/outline";
-import { getTranslations, getLocale } from "next-intl/server";
-import { format } from "date-fns";
-import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
+import { getTranslations } from "next-intl/server";
 import { getUnitDisplayStatus, UNIT_STATUS_CONFIG } from "@/lib/unit-status";
+import { getDisplayStatus, type StoredStatus } from "@/lib/reservation-status";
 import UnitPricingSection from "@/components/dashboard/units/UnitPricingSection";
 import UnitNotesSection   from "@/components/dashboard/units/UnitNotesSection";
+import TransactionsPanel from "@/components/dashboard/transactions/TransactionsPanel";
+import type { TransactionData } from "@/components/dashboard/transactions/TransactionSections";
 
 function fmt(v: any) {
   return `${Number(v).toFixed(3)} OMR`;
@@ -45,17 +45,25 @@ export default async function UnitDetailPage({
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
 
-  const [unit, prices, notes, recentPayments] = await Promise.all([
+  // A unit is attached to a reservation via the new ReservationUnit junction
+  // table OR the legacy Reservation.unitId FK. Match on either so older data
+  // and post-move reservations are both found.
+  const reservationWhereForUnit: Prisma.ReservationWhereInput = {
+    OR: [
+      { unitId },
+      { reservationUnits: { some: { unitId } } },
+    ],
+  };
+
+  const [unit, prices, notes, txnReservations, txnInvoices, txnPayments, resCount, invCount, payCount] =
+    await Promise.all([
     prisma.unit.findUnique({
       where:   { id: unitId },
       include: {
         property:     { select: { id: true, name: true, organizationId: true } },
         reservations: {
           where:   { status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN"] } },
-          include: {
-            tenant: { select: { firstName: true, lastName: true, phone: true } },
-          },
-          orderBy: { startDate: "asc" },
+          select:  { status: true, endDate: true },
         },
       },
     }),
@@ -71,44 +79,87 @@ export default async function UnitDetailPage({
       orderBy: { createdAt: "desc" },
     }),
 
-    // Most recent payments tied to a reservation that currently has this unit
-    // attached via the reservationUnits junction table (i.e. the active stay).
-    // The legacy `reservation.unitId` FK still points to the FIRST unit ever
-    // booked, so after a move it would mis-attribute payments to the old
-    // unit. The junction-table filter excludes moved-out RUs and follows the
-    // guest to whichever unit they're actually in.
+    // ── Transactions for this unit (latest 50 each; counts queried separately) ──
+    prisma.reservation.findMany({
+      where:   reservationWhereForUnit,
+      include: {
+        reservationUnits: { include: { unit: { select: { name: true } } } },
+        unit:             { select: { name: true } },
+      },
+      orderBy: { startDate: "desc" },
+      take: 50,
+    }),
+
+    prisma.invoice.findMany({
+      where:   { reservation: reservationWhereForUnit, status: { not: "VOID" } },
+      orderBy: { issueDate: "desc" },
+      take: 50,
+    }),
+
+    // Payments follow the guest via the junction table (moved-out RUs excluded).
     prisma.payment.findMany({
       where: {
-        reservation: {
-          reservationUnits: {
-            some: { unitId, isMovedOut: { not: true } },
-          },
-        },
+        reservation: { reservationUnits: { some: { unitId, isMovedOut: { not: true } } } },
       },
-      include: {
-        tenant: { select: { id: true, firstName: true, lastName: true } },
-        reservation: { select: { id: true, reservationNumber: true } },
-      },
+      include: { reservation: { select: { id: true, reservationNumber: true } } },
       orderBy: { date: "desc" },
-      take: 10,
+      take: 50,
     }),
+
+    prisma.reservation.count({ where: reservationWhereForUnit }),
+    prisma.invoice.count({ where: { reservation: reservationWhereForUnit, status: { not: "VOID" } } }),
+    prisma.payment.count({ where: { reservation: { reservationUnits: { some: { unitId, isMovedOut: { not: true } } } } } }),
   ]);
 
   if (!unit || unit.property.organizationId !== dbUser.organizationId) notFound();
 
   const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations);
   const cfg           = UNIT_STATUS_CONFIG[displayStatus];
-  const activeRes     = unit.reservations.find((r) => r.status === "CHECKED_IN");
-  const upcomingRes   = unit.reservations.filter((r) => r.status !== "CHECKED_IN");
+
+  // Build the serialized transaction data for the shared panel.
+  const unitNameFor = (r: (typeof txnReservations)[number]) =>
+    r.reservationUnits.map((ru) => ru.unit.name).join(", ") || r.unit?.name || null;
+
+  const txnData: TransactionData = {
+    currency: "OMR",
+    counts: { reservations: resCount, invoices: invCount, payments: payCount },
+    reservations: txnReservations.map((r) => ({
+      id: r.id,
+      reservationNumber: r.reservationNumber,
+      status: r.status,
+      displayStatus: getDisplayStatus(r.status as StoredStatus, r.startDate, r.endDate).label,
+      startDate: r.startDate.toISOString(),
+      endDate: r.endDate.toISOString(),
+      unitLabel: unitNameFor(r),
+      grandTotal: Number(r.grandTotal ?? 0),
+    })),
+    invoices: txnInvoices.map((i) => ({
+      id: i.id,
+      invoiceNumber: i.invoiceNumber,
+      status: i.status,
+      dueDate: i.dueDate.toISOString(),
+      issueDate: i.issueDate?.toISOString() ?? null,
+      totalAmount: Number(i.totalAmount),
+      amountPaid: Number(i.amountPaid),
+      balanceDue: Number(i.balanceDue),
+      reservationId: i.reservationId,
+    })),
+    payments: txnPayments.map((p) => ({
+      id: p.id,
+      amount: Number(p.amount),
+      method: p.method,
+      date: p.date.toISOString(),
+      reference: p.reference,
+      isRefund: p.isRefund,
+      reservationId: p.reservationId,
+      reservationNumber: p.reservation?.reservationNumber ?? null,
+    })),
+  };
 
   const t             = await getTranslations("units.detail");
   const tTypesLong    = await getTranslations("units.typesLong");
   const tAmen         = await getTranslations("units.amenities");
   const tStatus       = await getTranslations("units.displayStatus");
-  const locale        = await getLocale();
-  const dfLocale      = locale === "ar" ? arLocale : enLocale;
-  const fmtDay        = (d: Date) => format(d, "dd MMM yyyy", { locale: dfLocale });
-  const fmtDayShort   = (d: Date) => format(d, "dd MMM",       { locale: dfLocale });
 
   let typeLabel = unit.unitType;
   try { typeLabel = tTypesLong(unit.unitType as never); } catch {}
@@ -265,136 +316,8 @@ export default async function UnitDetailPage({
             )}
           </section>
 
-          {/* Active Reservation */}
-          {activeRes && (
-            <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-emerald-800">
-                <UserGroupIcon className="h-4 w-4" />
-                {t("currentlyOccupied")}
-              </h2>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">
-                    {activeRes.tenant.firstName} {activeRes.tenant.lastName}
-                  </p>
-                  <p className="text-xs text-gray-500 ltr-numbers">{activeRes.tenant.phone}</p>
-                  <p className="mt-1 text-xs text-gray-500 ltr-numbers">
-                    {fmtDay(new Date(activeRes.startDate))}
-                    {" → "}
-                    {fmtDay(new Date(activeRes.endDate))}
-                  </p>
-                </div>
-                <Link
-                  href={`/dashboard/reservations/${activeRes.id}`}
-                  className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
-                >
-                  {t("viewReservation")}
-                </Link>
-              </div>
-            </section>
-          )}
-
-          {/* Upcoming Reservations */}
-          {upcomingRes.length > 0 && (
-            <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-800">
-                <CalendarDaysIcon className="h-4 w-4 text-gray-400" />
-                {t("upcomingReservations")}
-              </h2>
-              <div className="space-y-2">
-                {upcomingRes.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between rounded-lg bg-gray-50 px-3 py-2">
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">
-                        {r.tenant.firstName} {r.tenant.lastName}
-                      </p>
-                      <p className="text-xs text-gray-500 ltr-numbers">
-                        {fmtDayShort(new Date(r.startDate))}
-                        {" → "}
-                        {fmtDay(new Date(r.endDate))}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        r.status === "CONFIRMED" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"
-                      }`}>
-                        {r.status === "CONFIRMED" ? t("confirmed") : t("pending")}
-                      </span>
-                      <Link
-                        href={`/dashboard/reservations/${r.id}`}
-                        className="text-xs text-blue-600 hover:underline"
-                      >
-                        {t("view")}
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Recent Transactions */}
-          <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-gray-800">
-              <BanknotesIcon className="h-4 w-4 text-gray-400" />
-              {t("recentTransactions")}
-              {recentPayments.length > 0 && (
-                <span className="ms-auto rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 ltr-numbers">
-                  {recentPayments.length}
-                </span>
-              )}
-            </h2>
-            {recentPayments.length === 0 ? (
-              <p className="text-sm text-gray-400">{t("noTransactions")}</p>
-            ) : (
-              <div className="overflow-x-auto -mx-5">
-                <table className="min-w-full text-sm">
-                  <thead>
-                    <tr className="text-xs text-gray-400 uppercase tracking-wide border-b border-gray-100">
-                      <th className="text-start font-medium px-5 py-2">{t("txDate")}</th>
-                      <th className="text-start font-medium px-3 py-2">{t("txTenant")}</th>
-                      <th className="text-end   font-medium px-3 py-2">{t("txAmount")}</th>
-                      <th className="text-start font-medium px-3 py-2 hidden sm:table-cell">{t("txMethod")}</th>
-                      <th className="text-start font-medium px-5 py-2 hidden md:table-cell">{t("txReservation")}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {recentPayments.map((p) => (
-                      <tr key={p.id} className="hover:bg-gray-50/60 transition-colors">
-                        <td className="px-5 py-2.5 text-gray-700 ltr-numbers whitespace-nowrap">
-                          {fmtDay(p.date)}
-                        </td>
-                        <td className="px-3 py-2.5">
-                          <Link
-                            href={`/dashboard/tenants/${p.tenant.id}`}
-                            className="text-blue-600 hover:underline"
-                          >
-                            {p.tenant.firstName} {p.tenant.lastName}
-                          </Link>
-                        </td>
-                        <td className="px-3 py-2.5 text-end font-semibold text-emerald-700 ltr-numbers whitespace-nowrap">
-                          {fmt(p.amount)}
-                        </td>
-                        <td className="px-3 py-2.5 text-gray-600 hidden sm:table-cell">
-                          {p.method}
-                        </td>
-                        <td className="px-5 py-2.5 hidden md:table-cell">
-                          {p.reservation && (
-                            <Link
-                              href={`/dashboard/reservations/${p.reservation.id}`}
-                              className="font-mono text-xs text-blue-600 hover:underline ltr-numbers"
-                            >
-                              {p.reservation.reservationNumber ?? p.reservation.id.slice(0, 8)}
-                            </Link>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
+          {/* Reservations · Invoices · Payments */}
+          <TransactionsPanel data={txnData} />
 
           {/* Notes */}
           <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">

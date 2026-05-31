@@ -7,7 +7,6 @@ import {
   BanknotesIcon,
   PhoneIcon,
   IdentificationIcon,
-  CalendarDaysIcon,
   MapPinIcon,
   ExclamationTriangleIcon,
   BuildingOfficeIcon,
@@ -18,8 +17,6 @@ import {
 import {
   Badge,
   getTenantClassBadge,
-  getPaymentMethodBadge,
-  type PaymentMethodKey,
 } from "@/components/ui";
 import { prisma } from "@/lib/prisma";
 import { getTranslations, getLocale } from "next-intl/server";
@@ -27,6 +24,9 @@ import { format } from "date-fns";
 import { ar, enGB } from "date-fns/locale";
 import TenantLedger from "./TenantLedger";
 import TenantDetailTabs from "./TenantDetailTabs";
+import TransactionsPanel from "@/components/dashboard/transactions/TransactionsPanel";
+import type { TransactionData } from "@/components/dashboard/transactions/TransactionSections";
+import { getDisplayStatus, type StoredStatus } from "@/lib/reservation-status";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -57,7 +57,6 @@ export default async function TenantProfilePage({
   const tSections = await getTranslations("tenants.detail.sections");
   const tKpi      = await getTranslations("tenants.detail.kpi");
   const tTabs     = await getTranslations("tenants.detail.tabs");
-  const tHist     = await getTranslations("tenants.detail.history");
   const tGen      = await getTranslations("tenants.detail.gender");
   const tCls      = await getTranslations("tenants.classifications");
   const tTypes    = await getTranslations("tenants.types");
@@ -88,17 +87,34 @@ export default async function TenantProfilePage({
       reservations: {
         include: {
           unit: { include: { property: { select: { name: true } } } },
-          invoices: { include: { payments: true } },
+          reservationUnits: { include: { unit: { select: { name: true } } } },
         },
         orderBy: { startDate: "desc" },
+        take: 50,
       },
-      payments: { orderBy: { date: "desc" }, take: 10 },
+      payments: {
+        include: { reservation: { select: { id: true, reservationNumber: true } } },
+        orderBy: { date: "desc" },
+        take: 50,
+      },
     },
   });
 
   if (!tenant || tenant.organizationId !== dbUser?.organizationId) {
     return notFound();
   }
+
+  // Invoices + transaction counts for the shared TransactionsPanel.
+  const [tenantInvoices, resCount, invCount, payCount] = await Promise.all([
+    prisma.invoice.findMany({
+      where:   { tenantId: id, status: { not: "VOID" } },
+      orderBy: { issueDate: "desc" },
+      take: 50,
+    }),
+    prisma.reservation.count({ where: { tenantId: id } }),
+    prisma.invoice.count({ where: { tenantId: id, status: { not: "VOID" } } }),
+    prisma.payment.count({ where: { tenantId: id } }),
+  ]);
 
   // Tenant balance = total charged on non-cancelled invoices − total paid (net
   // of refunds). Allowed to go negative so customer credits (overpayments not
@@ -123,6 +139,44 @@ export default async function TenantProfilePage({
   const openBalance   = Math.round((totalCharged - totalPaid + totalRefunded) * 1000) / 1000;
 
   const isIdExpired = tenant.idExpiryDate && new Date(tenant.idExpiryDate) < new Date();
+
+  // Serialized transaction data for the shared panel (Reservations/Invoices/Payments).
+  const txnData: TransactionData = {
+    currency: "OMR",
+    counts: { reservations: resCount, invoices: invCount, payments: payCount },
+    reservations: tenant.reservations.map((r) => ({
+      id: r.id,
+      reservationNumber: r.reservationNumber,
+      status: r.status,
+      displayStatus: getDisplayStatus(r.status as StoredStatus, r.startDate, r.endDate).label,
+      startDate: r.startDate.toISOString(),
+      endDate: r.endDate.toISOString(),
+      unitLabel:
+        r.reservationUnits.map((ru) => ru.unit.name).join(", ") || r.unit?.name || null,
+      grandTotal: Number(r.grandTotal ?? 0),
+    })),
+    invoices: tenantInvoices.map((i) => ({
+      id: i.id,
+      invoiceNumber: i.invoiceNumber,
+      status: i.status,
+      dueDate: i.dueDate.toISOString(),
+      issueDate: i.issueDate?.toISOString() ?? null,
+      totalAmount: Number(i.totalAmount),
+      amountPaid: Number(i.amountPaid),
+      balanceDue: Number(i.balanceDue),
+      reservationId: i.reservationId,
+    })),
+    payments: tenant.payments.map((p) => ({
+      id: p.id,
+      amount: Number(p.amount),
+      method: p.method,
+      date: p.date.toISOString(),
+      reference: p.reference,
+      isRefund: p.isRefund,
+      reservationId: p.reservationId,
+      reservationNumber: p.reservation?.reservationNumber ?? null,
+    })),
+  };
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
@@ -414,86 +468,9 @@ export default async function TenantProfilePage({
           )}
         </div>
 
-        {/* RIGHT: History */}
-        <div className="lg:col-span-2 space-y-4">
-
-          {/* Lease history */}
-          <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-            <div className="px-4 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-              <CalendarDaysIcon className="h-4 w-4 text-gray-400" />
-              <h3 className="text-sm font-semibold text-gray-700">{tSections("leases")}</h3>
-              <span className="ms-auto text-xs text-gray-400">{tHist("recordsCount", { count: tenant.reservations.length })}</span>
-            </div>
-            {tenant.reservations.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-gray-400">{tHist("noLeases")}</p>
-            ) : (
-              <ul className="divide-y divide-gray-100">
-                {tenant.reservations.map((res) => (
-                  <li key={res.id} className="hover:bg-gray-50 transition-colors">
-                    <Link href={`/dashboard/reservations/${res.id}`} className="block px-4 py-3.5">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-blue-600 truncate">
-                            {res.unit?.name ?? tHist("multipleUnits")}
-                            <span className="ms-1 text-gray-500 font-normal">{tHist("inProperty", { property: res.unit?.property.name ?? "—" })}</span>
-                          </p>
-                          <div className="flex items-center gap-1.5 mt-0.5 text-xs text-gray-500">
-                            <CalendarDaysIcon className="h-3.5 w-3.5" />
-                            <span className="ltr-numbers">{fmtDate(res.startDate)} → {fmtDate(res.endDate)}</span>
-                          </div>
-                        </div>
-                        <span className={`flex-shrink-0 inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          res.status === "CONFIRMED" || res.status === "CHECKED_IN"
-                            ? "bg-green-100 text-green-800"
-                            : res.status === "CANCELLED"
-                            ? "bg-red-100 text-red-800"
-                            : res.status === "COMPLETED"
-                            ? "bg-gray-100 text-gray-700"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}>
-                          {res.status}
-                        </span>
-                      </div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {/* Payment history */}
-          <div className="bg-white shadow-sm rounded-lg overflow-hidden">
-            <div className="px-4 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-              <BanknotesIcon className="h-4 w-4 text-gray-400" />
-              <h3 className="text-sm font-semibold text-gray-700">{tSections("payments")}</h3>
-            </div>
-            {tenant.payments.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-gray-400">{tHist("noPayments")}</p>
-            ) : (
-              <ul className="divide-y divide-gray-100">
-                {tenant.payments.map((pay) => (
-                  <li key={pay.id} className="px-4 py-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-gray-900 ltr-numbers">
-                        {Number(pay.amount).toFixed(3)} OMR
-                      </p>
-                      <p className="text-xs text-gray-500 ltr-numbers">
-                        {fmtDate(pay.date)}
-                      </p>
-                    </div>
-                    <div className="text-end">
-                      <Badge {...getPaymentMethodBadge(pay.method as PaymentMethodKey)} size="sm">
-                        {tryT(tPay, pay.method.toLowerCase()) ?? pay.method}
-                      </Badge>
-                      {pay.reference && (
-                        <p className="text-xs text-gray-400 mt-0.5 truncate max-w-[120px]">{pay.reference}</p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+        {/* RIGHT: Transactions (Reservations · Invoices · Payments) */}
+        <div className="lg:col-span-2">
+          <TransactionsPanel data={txnData} />
         </div>
       </div>
 

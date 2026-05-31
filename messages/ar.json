@@ -3816,5 +3816,16 @@
       "copyright": "© {year} بنايا. صُنع في صلالة.",
       "version": "v0.1 · معاينة تسويقية"
     }
+  },
+  "transactions": {
+    "overview": "نظرة عامة",
+    "reservations": "الحجوزات",
+    "invoices": "الفواتير",
+    "payments": "المدفوعات",
+    "viewAll": "عرض الكل",
+    "ariaLabel": "أقسام المعاملات",
+    "noReservations": "لا توجد حجوزات بعد.",
+    "noInvoices": "لا توجد فواتير بعد.",
+    "noPayments": "لا توجد مدفوعات بعد."
   }
 }

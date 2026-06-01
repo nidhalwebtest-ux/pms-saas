@@ -41,9 +41,10 @@ export default async function UnitDetailPage({
 
   const dbUser = await prisma.user.findUnique({
     where:  { id: user.id },
-    select: { id: true, organizationId: true },
+    select: { id: true, organizationId: true, organization: { select: { showReservedStatus: true } } },
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
+  const showReserved = dbUser.organization?.showReservedStatus ?? false;
 
   // A unit is attached to a reservation via the new ReservationUnit junction
   // table OR the legacy Reservation.unitId FK. Match on either so older data
@@ -113,7 +114,7 @@ export default async function UnitDetailPage({
 
   if (!unit || unit.property.organizationId !== dbUser.organizationId) notFound();
 
-  const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations);
+  const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations, new Date(), { showReserved });
   const cfg           = UNIT_STATUS_CONFIG[displayStatus];
 
   // Build the serialized transaction data for the shared panel.

@@ -36,8 +36,9 @@ export default async function PropertyDetailsPage({
 
   const dbUser = await prisma.user.findUnique({
     where:  { id: user.id },
-    select: { organizationId: true },
+    select: { organizationId: true, organization: { select: { showReservedStatus: true } } },
   });
+  const showReserved = dbUser?.organization?.showReservedStatus ?? false;
 
   const property = await prisma.property.findUnique({
     where:   { id },
@@ -198,7 +199,7 @@ export default async function PropertyDetailsPage({
                 </tr>
               ) : (
                 property.units.map((unit) => {
-                  const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations);
+                  const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations, new Date(), { showReserved });
                   const statusLabel = tryT((k) => tStat(k), displayStatus, displayStatus);
                   return (
                   <tr key={unit.id} className="hover:bg-blue-50/40 transition-colors">

@@ -49,9 +49,10 @@ export default async function UnitsPage({
 
   const dbUser = await prisma.user.findUnique({
     where:  { id: user.id },
-    select: { organizationId: true },
+    select: { organizationId: true, organization: { select: { showReservedStatus: true } } },
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
+  const showReserved = dbUser.organization?.showReservedStatus ?? false;
 
   const [allProperties, selectedPropertyId] = await Promise.all([
     prisma.property.findMany({
@@ -132,7 +133,7 @@ export default async function UnitsPage({
     propertyId:    u.propertyId,
     description:   u.description,
     property:      u.property,
-    displayStatus: getUnitDisplayStatus(u.status, u.reservations),
+    displayStatus: getUnitDisplayStatus(u.status, u.reservations, new Date(), { showReserved }),
   }));
 
   // Distinct floors for filter dropdown
@@ -174,8 +175,10 @@ export default async function UnitsPage({
             <p className="text-xs text-gray-500">
               <span className="ltr-numbers">{total}</span> {t("totalLabel")} ·{" "}
               <span className="text-emerald-600 font-medium"><span className="ltr-numbers">{vacantCount}</span> {t("vacantLabel")}</span> ·{" "}
-              <span className="text-blue-600 font-medium"><span className="ltr-numbers">{occupiedCount}</span> {t("occupiedLabel")}</span> ·{" "}
-              <span className="text-violet-600 font-medium"><span className="ltr-numbers">{reservedCount}</span> {t("reservedLabel")}</span>
+              <span className="text-blue-600 font-medium"><span className="ltr-numbers">{occupiedCount}</span> {t("occupiedLabel")}</span>
+              {showReserved && (
+                <> · <span className="text-violet-600 font-medium"><span className="ltr-numbers">{reservedCount}</span> {t("reservedLabel")}</span></>
+              )}
               {maintenanceCount > 0 && (
                 <> · <span className="text-amber-600 font-medium"><span className="ltr-numbers">{maintenanceCount}</span> {t("maintenanceLabel")}</span></>
               )}
@@ -211,6 +214,7 @@ export default async function UnitsPage({
         availableFloors={availableFloors}
         scopedToBuilding={!!selectedPropertyId}
         counts={{ all: allCount, vacant: vacantCount, occupied: occupiedCount, reserved: reservedCount, maintenance: maintenanceCount }}
+        showReserved={showReserved}
       />
 
       {/* ── Table (client component with sort + quick actions) ───── */}

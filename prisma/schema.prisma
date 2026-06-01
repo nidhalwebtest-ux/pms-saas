@@ -158,6 +158,14 @@ model Organization {
 
   /// Org-wide default check-in policy; reservations may override per-booking.
   checkInPolicy      CheckInPolicy @default(ALLOW_BACK_TO_BACK)
+  /// When false, units with only upcoming (CONFIRMED/PENDING) reservations show
+  /// as "Vacant" instead of "Reserved". Toggled in Settings → Units.
+  showReservedStatus Boolean  @default(false)
+  /// When false, a guest cannot be checked in before their reservation start date.
+  allowEarlyCheckIn  Boolean  @default(true)
+  /// When true, reservations past their end date are checked out automatically
+  /// (by a scheduled job). When false, staff check out manually.
+  autoCheckout       Boolean  @default(false)
 
   plan               String   @default("FREE")
   maxProperties      Int      @default(1)

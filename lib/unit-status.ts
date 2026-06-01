@@ -32,6 +32,7 @@ export function getUnitDisplayStatus(
   unitStatus: string,
   activeReservations: { status: string; endDate?: Date | string | null }[],
   today: Date = new Date(),
+  opts: { showReserved?: boolean } = {},
 ): UnitDisplayStatus {
   if (unitStatus === "MAINTENANCE") return "maintenance";
 
@@ -55,7 +56,12 @@ export function getUnitDisplayStatus(
     return "occupied";
   }
 
-  if (activeReservations.some((r) => ["CONFIRMED", "PENDING"].includes(r.status))) return "reserved";
+  // "Reserved" (upcoming booking, nobody checked in) is only surfaced when the
+  // org opts in via Settings → Units. Otherwise such units read as "Vacant".
+  if (opts.showReserved &&
+      activeReservations.some((r) => ["CONFIRMED", "PENDING"].includes(r.status))) {
+    return "reserved";
+  }
   return "vacant";
 }
 

@@ -55,7 +55,7 @@ export async function PATCH(
   // Effective check-in policy = per-reservation override, else org default.
   const org = await prisma.organization.findUnique({
     where:  { id: actor.organizationId! },
-    select: { checkInPolicy: true },
+    select: { checkInPolicy: true, allowEarlyCheckIn: true },
   });
   // Body override (if provided) wins over the stored one for this check-in.
   const resolvedOverride =
@@ -72,6 +72,22 @@ export async function PATCH(
       { error: `Cannot check in a reservation with status "${res.status}".` },
       { status: 409 },
     );
+
+  // Early check-in guard: when the org disallows early check-in, block checking
+  // in before the reservation's start day.
+  if (org && org.allowEarlyCheckIn === false) {
+    const startDay = new Date(Date.UTC(
+      res.startDate.getUTCFullYear(), res.startDate.getUTCMonth(), res.startDate.getUTCDate(),
+    ));
+    const nowDay = new Date();
+    const todayUTC = new Date(Date.UTC(nowDay.getUTCFullYear(), nowDay.getUTCMonth(), nowDay.getUTCDate()));
+    if (todayUTC < startDay) {
+      return NextResponse.json(
+        { error: "Early check-in is disabled. This reservation cannot be checked in before its start date." },
+        { status: 409 },
+      );
+    }
+  }
 
   const unitIds = [
     ...new Set([

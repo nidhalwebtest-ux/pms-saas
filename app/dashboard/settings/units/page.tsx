@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { CalendarDaysIcon } from "@heroicons/react/24/outline";
+import { HomeModernIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
-import ReservationSettingsForm from "./ReservationSettingsForm";
+import UnitSettingsForm from "./UnitSettingsForm";
 
-export default async function ReservationSettingsPage() {
+export default async function UnitSettingsPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -18,17 +18,17 @@ export default async function ReservationSettingsPage() {
 
   const org = await prisma.organization.findUnique({
     where:  { id: dbUser.organizationId },
-    select: { checkInPolicy: true, allowEarlyCheckIn: true, autoCheckout: true },
+    select: { showReservedStatus: true },
   });
   if (!org) redirect("/onboarding");
 
-  const t = await getTranslations("settings.reservations");
+  const t = await getTranslations("settings.units");
 
   return (
     <div className="mx-auto max-w-3xl py-8 space-y-6">
       <div className="flex items-center gap-3">
         <div className="p-2 bg-blue-100 rounded-lg">
-          <CalendarDaysIcon className="h-6 w-6 text-blue-700" />
+          <HomeModernIcon className="h-6 w-6 text-blue-700" />
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
@@ -36,13 +36,7 @@ export default async function ReservationSettingsPage() {
         </div>
       </div>
 
-      <ReservationSettingsForm
-        settings={{
-          checkInPolicy: org.checkInPolicy,
-          allowEarlyCheckIn: org.allowEarlyCheckIn,
-          autoCheckout: org.autoCheckout,
-        }}
-      />
+      <UnitSettingsForm settings={{ showReservedStatus: org.showReservedStatus }} />
     </div>
   );
 }

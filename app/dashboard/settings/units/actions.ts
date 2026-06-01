@@ -5,13 +5,13 @@ import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { canNav, type Role } from "@/lib/permissions";
 
-export type SaveReservationSettingsResult =
+export type SaveUnitSettingsResult =
   | { ok: true }
   | { ok: false; error: string };
 
-export async function updateReservationSettings(
+export async function updateUnitSettings(
   formData: FormData,
-): Promise<SaveReservationSettingsResult> {
+): Promise<SaveUnitSettingsResult> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "unauthorized" };
@@ -27,22 +27,19 @@ export async function updateReservationSettings(
     return { ok: false, error: "forbidden" };
   }
 
-  const checkInPolicyRaw = formData.get("checkInPolicy") as string;
-  const checkInPolicy =
-    checkInPolicyRaw === "REQUIRE_VACANT" ? "REQUIRE_VACANT" : "ALLOW_BACK_TO_BACK";
-  const allowEarlyCheckIn = formData.get("allowEarlyCheckIn") === "on";
-  const autoCheckout      = formData.get("autoCheckout") === "on";
+  const showReservedStatus = formData.get("showReservedStatus") === "on";
 
   try {
     await prisma.organization.update({
       where: { id: dbUser.organizationId },
-      data:  { checkInPolicy, allowEarlyCheckIn, autoCheckout },
+      data:  { showReservedStatus },
     });
   } catch (err) {
-    console.error("[updateReservationSettings] DB error:", err);
+    console.error("[updateUnitSettings] DB error:", err);
     return { ok: false, error: "generic" };
   }
 
-  revalidatePath("/dashboard/settings/reservations");
+  revalidatePath("/dashboard/settings/units");
+  revalidatePath("/dashboard/units", "layout");
   return { ok: true };
 }

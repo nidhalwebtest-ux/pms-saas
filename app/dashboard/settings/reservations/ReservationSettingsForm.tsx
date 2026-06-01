@@ -12,6 +12,8 @@ type CheckInPolicy = "ALLOW_BACK_TO_BACK" | "REQUIRE_VACANT";
 
 type FormState = {
   checkInPolicy: CheckInPolicy;
+  allowEarlyCheckIn: boolean;
+  autoCheckout: boolean;
 };
 
 export default function ReservationSettingsForm({ settings }: { settings: FormState }) {
@@ -22,13 +24,18 @@ export default function ReservationSettingsForm({ settings }: { settings: FormSt
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const dirty = form.checkInPolicy !== settings.checkInPolicy;
+  const dirty =
+    form.checkInPolicy !== settings.checkInPolicy ||
+    form.allowEarlyCheckIn !== settings.allowEarlyCheckIn ||
+    form.autoCheckout !== settings.autoCheckout;
 
   function handleSave() {
     setBannerError(null);
     startTransition(async () => {
       const fd = new FormData();
       fd.append("checkInPolicy", form.checkInPolicy);
+      if (form.allowEarlyCheckIn) fd.append("allowEarlyCheckIn", "on");
+      if (form.autoCheckout) fd.append("autoCheckout", "on");
 
       let result;
       try {
@@ -90,6 +97,34 @@ export default function ReservationSettingsForm({ settings }: { settings: FormSt
           ))}
         </div>
       </div>
+
+      {/* Early check-in */}
+      <label className="flex cursor-pointer items-start gap-3 border-t border-gray-100 pt-4">
+        <input
+          type="checkbox"
+          checked={form.allowEarlyCheckIn}
+          onChange={(e) => { setForm((p) => ({ ...p, allowEarlyCheckIn: e.target.checked })); setBannerError(null); }}
+          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
+        />
+        <span className="flex flex-col">
+          <span className="text-sm font-medium text-gray-800">{t("allowEarlyCheckInLabel")}</span>
+          <span className="text-xs text-gray-500">{t("allowEarlyCheckInHint")}</span>
+        </span>
+      </label>
+
+      {/* Automatic checkout */}
+      <label className="flex cursor-pointer items-start gap-3">
+        <input
+          type="checkbox"
+          checked={form.autoCheckout}
+          onChange={(e) => { setForm((p) => ({ ...p, autoCheckout: e.target.checked })); setBannerError(null); }}
+          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
+        />
+        <span className="flex flex-col">
+          <span className="text-sm font-medium text-gray-800">{t("autoCheckoutLabel")}</span>
+          <span className="text-xs text-gray-500">{t("autoCheckoutHint")}</span>
+        </span>
+      </label>
 
       {/* Save */}
       <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">

@@ -476,7 +476,6 @@ function CheckOutModal({ res, onSuccess, onClose }: {
   const estimatedAdjustment = Math.abs(extraDays) * nightlyRate;
 
   const [adjustToggle, setAdjustToggle] = useState(isOverstay);
-  const [payment, setPayment] = useState({ amount: res.balanceDue, method: "CASH", reference: "" });
   const [condition, setCondition] = useState({ inspected: false, keysReturned: false, noDamage: false });
   const [loading, setLoading] = useState(false);
 
@@ -491,9 +490,6 @@ function CheckOutModal({ res, onSuccess, onClose }: {
       additionalAmount: estimatedAdjustment,
       unitCondition: condition,
     };
-    if (payment.amount && Number(payment.amount) > 0) {
-      body.payment = { amount: Number(payment.amount), method: payment.method, reference: payment.reference || null };
-    }
     const r = await fetch(`/api/reservations/${res.id}/check-out`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -542,10 +538,7 @@ function CheckOutModal({ res, onSuccess, onClose }: {
           <div className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl">
             <input
               type="checkbox" id="adjust" checked={adjustToggle}
-              onChange={(e) => {
-                setAdjustToggle(e.target.checked);
-                setPayment((p) => ({ ...p, amount: Math.max(0, Number(res.balanceDue) + (e.target.checked ? adjustmentAmt : 0)).toFixed(3) }));
-              }}
+              onChange={(e) => setAdjustToggle(e.target.checked)}
               className="mt-0.5 h-4 w-4 rounded text-blue-600"
             />
             <label htmlFor="adjust" className="text-sm text-gray-700 cursor-pointer">
@@ -583,12 +576,20 @@ function CheckOutModal({ res, onSuccess, onClose }: {
           </div>
         </div>
 
-        {/* Payment form */}
-        <PaymentForm
-          balanceDue={adjustedBalance}
-          value={payment}
-          onChange={setPayment}
-        />
+        {/* Balance status — payment is collected separately, not at check-out */}
+        {Number(adjustedBalance) > 0 ? (
+          <Alert
+            variant="warning"
+            size="sm"
+            description={t("balanceRemaining", { amount: adjustedBalance })}
+          />
+        ) : (
+          <Alert
+            variant="success"
+            size="sm"
+            description={t("fullyPaid")}
+          />
+        )}
 
         {/* Condition checklist */}
         <div className="space-y-2">

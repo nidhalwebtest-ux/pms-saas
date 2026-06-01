@@ -380,7 +380,8 @@
     "organization": "Organization",
     "reservationList": "Reservations list",
     "newReservation": "New reservation",
-    "reservationSettings": "Reservation Settings"
+    "reservationSettings": "Reservation Settings",
+    "unitSettings": "Unit Settings"
   },
   "dashboard": {
     "goodMorning": "Good morning, {name}",
@@ -1945,7 +1946,9 @@
         "processing": "Processing…",
         "confirm": "Complete Check Out",
         "failed": "Check-out failed",
-        "successDefault": "Checked out successfully"
+        "successDefault": "Checked out successfully",
+        "balanceRemaining": "This guest still has an outstanding balance of {amount} OMR. Collect payment separately from the Payments section.",
+        "fullyPaid": "This guest has no outstanding balance — fully paid."
       },
       "cancelModal": {
         "title": "Cancel Reservation",
@@ -3423,7 +3426,21 @@
       "save": "Save changes",
       "saving": "Saving…",
       "revert": "Discard changes",
-      "savedToast": "Reservation settings saved."
+      "savedToast": "Reservation settings saved.",
+      "allowEarlyCheckInLabel": "Allow early check-in",
+      "allowEarlyCheckInHint": "When off, a guest cannot be checked in before their reservation start date.",
+      "autoCheckoutLabel": "Automatic check-out",
+      "autoCheckoutHint": "When on, reservations past their end date are checked out automatically by a daily job. (Note: the scheduled job is not yet active — this preference is saved for when it is enabled.)"
+    },
+    "units": {
+      "title": "Units",
+      "subtitle": "Configure how units and their statuses behave.",
+      "showReservedLabel": "Show “Reserved” status for upcoming bookings",
+      "showReservedHint": "When off, a unit with an upcoming (confirmed/pending) reservation shows as Vacant until the guest checks in.",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "revert": "Discard changes",
+      "savedToast": "Unit settings saved."
     }
   },
   "photoUpload": {

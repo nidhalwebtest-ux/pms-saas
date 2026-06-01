@@ -17,6 +17,8 @@ interface Props {
   availableFloors:  number[];
   scopedToBuilding: boolean;
   counts: { all: number; vacant: number; occupied: number; reserved: number; maintenance: number };
+  /** When false, the "Reserved" quick-filter tab is hidden (org setting). */
+  showReserved?: boolean;
 }
 
 export default function UnitFilters({
@@ -29,6 +31,7 @@ export default function UnitFilters({
   availableFloors,
   scopedToBuilding,
   counts,
+  showReserved = false,
 }: Props) {
   const t      = useTranslations("units.filters");
   const tTypes = useTranslations("units.types");
@@ -51,7 +54,10 @@ export default function UnitFilters({
     }
   };
 
-  const quickFilters: QuickFilter[] = STATUS_TABS.map((key) => ({
+  const visibleTabs = showReserved
+    ? STATUS_TABS
+    : STATUS_TABS.filter((k) => k !== "reserved");
+  const quickFilters: QuickFilter[] = visibleTabs.map((key) => ({
     id:    key,
     label: statusLabel(key),
     count: counts[key],

@@ -12,7 +12,6 @@ import {
   PlusCircleIcon,
   XMarkIcon,
   ArrowLeftIcon,
-  ArrowPathIcon,
   ListBulletIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
@@ -134,11 +133,6 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
       setRows(generatedNames.map(seedRow));
     }
   }, [generatedNames, hasCustomized]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  function regenerate() {
-    setRows(generatedNames.map(seedRow));
-    setHasCustomized(false);
-  }
 
   function patchRow(i: number, patch: Partial<UnitRow>) {
     setHasCustomized(true);
@@ -435,22 +429,11 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
         icon={ListBulletIcon}
         title={t("preview")}
         badge={
-          <div className="ms-auto flex items-center gap-2">
-            {validCount > 0 && (
-              <span className="rounded-full bg-blue-600 px-2 py-0.5 text-xs font-bold text-white ltr-numbers">
-                {validCount}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={regenerate}
-              title={t("regenerateTitle")}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              <ArrowPathIcon className="h-3.5 w-3.5" />
-              {t("regenerate")}
-            </button>
-          </div>
+          validCount > 0 ? (
+            <span className="ms-auto rounded-full bg-blue-600 px-2 py-0.5 text-xs font-bold text-white ltr-numbers">
+              {validCount}
+            </span>
+          ) : undefined
         }
       >
         {rows.length === 0 ? (

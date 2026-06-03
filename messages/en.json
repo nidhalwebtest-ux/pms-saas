@@ -1148,8 +1148,6 @@
       "amenitiesTitle": "Amenities",
       "preview": "Preview",
       "previewHelp": "Edit names or remove units before creating",
-      "regenerate": "Regenerate",
-      "regenerateTitle": "Regenerate from pattern",
       "emptyPreviewTitle": "Set a naming pattern to preview units",
       "namePlaceholder": "Unit name…",
       "addBlank": "Add blank unit",

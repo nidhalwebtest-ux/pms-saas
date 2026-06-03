@@ -17,7 +17,7 @@
 | 3 | App still branded "OmRent" — rename to "Binaya" app-wide | 1 | P2 | ✅ Fixed |
 | 4 | Disable modal (slide-over) forms for now — use full pages | 2 | P2 | ✅ Fixed |
 | 5 | Base Price should be optional in Bulk Unit Add | 2 | P2 | ✅ Fixed |
-| 6 | Make unit-row regeneration automatic; remove "Regenerate" button | 2 | P3 | Open |
+| 6 | Make unit-row regeneration automatic; remove "Regenerate" button | 2 | P3 | ✅ Fixed |
 | 7 | Remove Price column from Units list page | 2 | P3 | ✅ Fixed |
 | 8 | After create, redirect to LIST page (not detail) once toast shows | 2 | P2 | ✅ Fixed |
 | 9 | Tenants list filter tabs/labels show raw i18n keys (missing translations) | 3 | P2 | Open |
@@ -127,7 +127,7 @@
 - **Actual:** A `regenerate()` handler + button exist at [BulkCreateForm.tsx:138-141](app/dashboard/units/bulk/BulkCreateForm.tsx#L138-L141) and [441-449](app/dashboard/units/bulk/BulkCreateForm.tsx#L441-L449). Note: the auto re-seed only fires while `hasCustomized` is false ([useEffect line 132-136](app/dashboard/units/bulk/BulkCreateForm.tsx#L132-L136)); the pattern inputs reset `hasCustomized=false` on change, so auto-regen already covers pattern edits. The button's purpose is to discard manual row edits and re-seed.
 - **Proposed fix:** Remove the Regenerate button (and optionally the now-unused `regenerate()` fn + `ArrowPathIcon` import + `regenerate`/`regenerateTitle` i18n keys). Confirm with user that losing the "discard my edits and re-seed" affordance is acceptable — pattern-driven auto regen remains. Keep the `validCount` badge that shares that header.
 - **Files affected:** [app/dashboard/units/bulk/BulkCreateForm.tsx](app/dashboard/units/bulk/BulkCreateForm.tsx); optional cleanup in [messages/en.json](messages/en.json) / [messages/ar.json](messages/ar.json) (`units.bulk.regenerate*`).
-- **Status:** Open
+- **Status:** ✅ Fixed — removed the Regenerate button, the `regenerate()` handler, and the `ArrowPathIcon` import; kept the `validCount` badge in the preview header. Pattern-driven auto re-seed (the `!hasCustomized` effect) still covers prefix/range edits. Removed the now-unused `units.bulk.regenerate`/`regenerateTitle` keys from both locales.
 
 ## Issue #7: Remove Price column from Units list page
 - **Scenario:** 2 — Add building with units

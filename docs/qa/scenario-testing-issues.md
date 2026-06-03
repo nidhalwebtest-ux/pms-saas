@@ -18,7 +18,7 @@
 | 4 | Disable modal (slide-over) forms for now — use full pages | 2 | P2 | Open |
 | 5 | Base Price should be optional in Bulk Unit Add | 2 | P2 | Open |
 | 6 | Make unit-row regeneration automatic; remove "Regenerate" button | 2 | P3 | Open |
-| 7 | Remove Price column from Units list page | 2 | P3 | Open |
+| 7 | Remove Price column from Units list page | 2 | P3 | ✅ Fixed |
 | 8 | After create, redirect to LIST page (not detail) once toast shows | 2 | P2 | Open |
 | 9 | Tenants list filter tabs/labels show raw i18n keys (missing translations) | 3 | P2 | Open |
 | 10 | Tenant phone fields hardcode +968 — allow changing country code | 3 | P2 | Open |
@@ -137,7 +137,7 @@
 - **Actual:** The `basePrice` column is defined at [app/dashboard/units/columns.tsx:177-192](app/dashboard/units/columns.tsx#L177-L192).
 - **Proposed fix:** Remove that column object from the array returned by `buildUnitColumns`. Check `UnitFilters`/sort options and any mobile `mobilePriority` ordering don't reference it afterward. Leaves Photo, Name, Property, Type, Floor, Beds/Baths, Status.
 - **Files affected:** [app/dashboard/units/columns.tsx](app/dashboard/units/columns.tsx).
-- **Status:** Open
+- **Status:** ✅ Fixed — removed the `basePrice` column object from `buildUnitColumns`. No filter/sort referenced it. Leaves Photo, Name, Property, Type, Floor, Beds/Baths, Status.
 
 ## Issue #8: After create, redirect to the LIST page (not detail), once the toast shows
 - **Scenario:** 2 — Add building with units

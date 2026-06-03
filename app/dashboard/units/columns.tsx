@@ -174,22 +174,7 @@ export function buildUnitColumns({ t }: UnitColumnsDeps) {
       ),
     }),
 
-    /* ── Price ─────────────────────────────────────────────────────── */
-    c.custom<number>({
-      id: "basePrice",
-      header: t("colPrice"),
-      accessorFn: (r) => Number(r.basePrice),
-      sortingFn: (a, b) => Number(a.original.basePrice) - Number(b.original.basePrice),
-      meta: { align: "end", numeric: true, mobile: "detail", mobilePriority: 5, mobileLabel: t("colPrice") },
-      cell: ({ row }) => (
-        <span className="text-sm font-semibold text-fg whitespace-nowrap">
-          <span className="tabular-nums" dir="ltr">
-            {Number(row.original.basePrice).toFixed(3)}
-          </span>{" "}
-          <span className="text-xs font-normal text-fg-tertiary">OMR</span>
-        </span>
-      ),
-    }),
+    /* Price column intentionally removed (QA issue #7). */
 
     /* ── Status ────────────────────────────────────────────────────── */
     c.custom<string>({

@@ -179,6 +179,7 @@ export default async function UnitDetailPage({
     endDate:     p.endDate?.toISOString()   ?? null,
     priority:    p.priority,
     isActive:    p.isActive,
+    disallowMonthly: p.disallowMonthly,
   }));
 
   const serializedNotes = notes.map((n) => ({

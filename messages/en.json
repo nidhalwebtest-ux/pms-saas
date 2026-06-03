@@ -1207,6 +1207,8 @@
         "statusLabel": "Status",
         "active": "Active",
         "inactive": "Inactive",
+        "disallowMonthlyLabel": "Block monthly bookings during this season",
+        "disallowMonthlyHint": "Guests can only book nightly in this date range — useful to keep units open for premium short stays (e.g. Khareef).",
         "dailyRate": "Daily Rate * (OMR)",
         "weeklyRate": "Weekly (OMR)",
         "monthlyRate": "Monthly * (OMR)",

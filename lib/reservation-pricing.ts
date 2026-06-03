@@ -37,6 +37,30 @@ export type UnitPricing = {
 export type UnitOverride = { unitId: string; rateAmount: number };
 
 /**
+ * Returns the SEASONAL price record that blocks monthly bookings for any of the
+ * given units over [startDate, endDate), or null if none (QA #27). Used to
+ * reject monthly reservations during seasons flagged `disallowMonthly`.
+ */
+export async function findMonthlyBlock(
+  unitIds:   string[],
+  startDate: Date,
+  endDate:   Date,
+): Promise<{ unitId: string; name: string | null } | null> {
+  const blocked = await prisma.unitPrice.findFirst({
+    where: {
+      unitId:          { in: unitIds },
+      priceType:       "SEASONAL",
+      isActive:        true,
+      disallowMonthly: true,
+      startDate:       { lt: endDate },
+      endDate:         { gt: startDate },
+    },
+    select: { unitId: true, name: true },
+  });
+  return blocked;
+}
+
+/**
  * Compute per-unit pricing + the persisted segment breakdown for a stay.
  * Shared by the create (POST) and edit (PUT) reservation handlers so both
  * produce identical pricing/segment snapshots (QA #28 / #30).

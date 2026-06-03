@@ -11,7 +11,7 @@ import {
   calculateGrandTotal,
 } from "@/lib/reservation-engine";
 import { getUnitConflict, type ConflictDetail } from "@/lib/reservation-conflict";
-import { computeUnitPricings } from "@/lib/reservation-pricing";
+import { computeUnitPricings, findMonthlyBlock } from "@/lib/reservation-pricing";
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
 
@@ -257,6 +257,18 @@ export async function POST(req: NextRequest) {
   for (const u of unitRecords) {
     if (u.property.organizationId !== actor.organizationId)
       return NextResponse.json({ error: "Unauthorized access to unit." }, { status: 403 });
+  }
+
+  // Block monthly reservations during seasons flagged disallowMonthly (QA #27).
+  if (rt === "monthly") {
+    const block = await findMonthlyBlock(unitIds, startDate, endDate);
+    if (block) {
+      const unitName = unitRecords.find((u) => u.id === block.unitId)?.name ?? "this unit";
+      return NextResponse.json(
+        { error: `Monthly bookings aren't allowed for ${unitName} during ${block.name ?? "this season"}.`, code: "monthly_blocked" },
+        { status: 409 },
+      );
+    }
   }
 
   // Compute pricing + persisted segments per unit (shared with the edit PUT).

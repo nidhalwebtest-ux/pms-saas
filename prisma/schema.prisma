@@ -327,6 +327,10 @@ model UnitPrice {
   priority    Int      @default(10)
   isActive    Boolean  @default(true)
 
+  /// SEASONAL only — when true, monthly-rate reservations whose dates overlap
+  /// this season are blocked (e.g. maximize short-term Khareef bookings). QA #27.
+  disallowMonthly Boolean @default(false)
+
   unitId      String
   unit        Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
 

@@ -37,6 +37,7 @@ interface UnitPrice {
   endDate:     string | null;
   priority:    number;
   isActive:    boolean;
+  disallowMonthly?: boolean;
 }
 
 interface Props {
@@ -387,6 +388,19 @@ function PriceModal({
                   </select>
                 </div>
               </div>
+              {/* Block monthly reservations during this season (QA #27). */}
+              <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+                <input
+                  type="checkbox"
+                  name="disallowMonthly"
+                  defaultChecked={editPrice?.disallowMonthly ?? false}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
+                />
+                <span className="flex flex-col">
+                  <span className="text-sm font-medium text-gray-800">{tM("disallowMonthlyLabel")}</span>
+                  <span className="text-xs text-gray-500">{tM("disallowMonthlyHint")}</span>
+                </span>
+              </label>
             </>
           )}
 

@@ -5,7 +5,7 @@ import { Prisma } from "@prisma/client";
 import { getDisplayStatus, type StoredStatus } from "@/lib/reservation-status";
 import { calculateNights, calculateGrandTotal } from "@/lib/reservation-engine";
 import { getUnitConflict, type ConflictDetail } from "@/lib/reservation-conflict";
-import { computeUnitPricings } from "@/lib/reservation-pricing";
+import { computeUnitPricings, findMonthlyBlock } from "@/lib/reservation-pricing";
 
 async function getActor() {
   const supabase = await createClient();
@@ -397,6 +397,18 @@ export async function PUT(
   for (const u of unitRecords) {
     if (u.property.organizationId !== actor.organizationId)
       return NextResponse.json({ error: "Unauthorized access to unit." }, { status: 403 });
+  }
+
+  // Block monthly during seasons flagged disallowMonthly (QA #27).
+  if (rt === "monthly") {
+    const block = await findMonthlyBlock(unitIds, startDate, endDate);
+    if (block) {
+      const unitName = unitRecords.find((u) => u.id === block.unitId)?.name ?? "this unit";
+      return NextResponse.json(
+        { error: `Monthly bookings aren't allowed for ${unitName} during ${block.name ?? "this season"}.`, code: "monthly_blocked" },
+        { status: 409 },
+      );
+    }
   }
 
   const unitPricings = await computeUnitPricings(unitIds, rt, startDate, endDate, unitOverrides);

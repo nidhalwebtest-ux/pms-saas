@@ -133,6 +133,7 @@ export async function createSeasonalPrice(formData: FormData): Promise<ActionRes
   const endDate     = new Date(formData.get("endDate")   as string);
   const priority    = parseInt(formData.get("priority")  as string) || 10;
   const isActive    = formData.get("isActive") !== "false";
+  const disallowMonthly = formData.get("disallowMonthly") === "on";
 
   if (!name)  return { error: "Name is required." };
   if (!await assertUnitOrg(unitId, actor.organizationId!)) return { error: "Unauthorized" };
@@ -146,7 +147,7 @@ export async function createSeasonalPrice(formData: FormData): Promise<ActionRes
   if (startDate >= endDate) return { error: "Start date must be before end date." };
 
   const price = await prisma.unitPrice.create({
-    data: { unitId, priceType: "SEASONAL", name, dailyRate, weeklyRate, monthlyRate, startDate, endDate, priority, isActive },
+    data: { unitId, priceType: "SEASONAL", name, dailyRate, weeklyRate, monthlyRate, startDate, endDate, priority, isActive, disallowMonthly },
   });
 
   revalidatePath(`/dashboard/units/${unitId}`);
@@ -194,7 +195,8 @@ export async function updateUnitPrice(formData: FormData): Promise<ActionRespons
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return { error: "Invalid dates." };
     if (startDate >= endDate) return { error: "Start date must be before end date." };
 
-    Object.assign(data, { name, startDate, endDate, priority, isActive });
+    const disallowMonthly = formData.get("disallowMonthly") === "on";
+    Object.assign(data, { name, startDate, endDate, priority, isActive, disallowMonthly });
   }
 
   await prisma.unitPrice.update({ where: { id: priceId }, data });

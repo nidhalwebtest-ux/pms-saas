@@ -38,7 +38,7 @@
 | 24 | Add settings: require contract creation/signing before check-in (feature) | 7 | **P1** | Open |
 | 25 | Corporate tenant: company name shown small on reservation page (contact too prominent) | 8 | P2 | ✅ Fixed (detail + list + today; PDF → follow-up) |
 | 26 | Add Seasonal Price modal: monthly rate should be optional, not required | 10 | P2 | ✅ Fixed |
-| 27 | Add settings to prevent monthly reservations during certain periods (feature) | 10 | P2 | Open |
+| 27 | Add settings to prevent monthly reservations during certain periods (feature) | 10 | P2 | ✅ Fixed |
 | 28 | Seasonal price breakdown not shown on unit card during selection (and not persisted on reservationUnit) | 10 | **P1** | ✅ Persistence fixed (card UI → #31) |
 | 29 | Configurable reservation-number format (prefix/padding/reset) in settings | 6 (split from #18) | P2 | ✅ Fixed (needs `db push`) |
 | 30 | Full Edit Reservation flow (edit route + PUT API + guards) | 6 (split from #23) | **P1** | ✅ Fixed |
@@ -384,7 +384,7 @@
   - **UI surface:** alongside seasonal price form, or in Reservations Settings?
 - **Dependencies:** Lands well alongside #26 (seasonal price form refinements). Smaller scope than #24 (contract).
 - **Files affected (planned):** [prisma/schema.prisma](prisma/schema.prisma) (add column), [components/dashboard/units/UnitPricingSection.tsx](components/dashboard/units/UnitPricingSection.tsx) (toggle in form), [app/api/reservations/route.ts](app/api/reservations/route.ts) (enforcement), [components/dashboard/BookingEngine.tsx](components/dashboard/BookingEngine.tsx) (UI hint).
-- **Status:** Open — captured per user request; bundle into a small "seasonal pricing v2" sprint slice with #26.
+- **Status:** ✅ Fixed (Option 1 — per-unit, user's choice). Added `UnitPrice.disallowMonthly` (Boolean, default false; **db push applied**). The Add/Edit Seasonal Price form has a "Block monthly bookings during this season" toggle. New `findMonthlyBlock()` helper in [lib/reservation-pricing.ts](lib/reservation-pricing.ts); **both POST and PUT** reject a monthly reservation whose dates overlap a flagged season for any selected unit (409 with a friendly message naming the unit + season). New i18n keys. **Not done:** the proactive BookingEngine UI gray-out of "Monthly" (per-unit restriction isn't known until unit selection) — server enforcement is the source of truth; could add a per-unit hint on the step-3 cards as a follow-up.
 
 ## Issue #29: Configurable reservation-number format (split from #18)
 - **Scenario:** 6 — Create daily reservation

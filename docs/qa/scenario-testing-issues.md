@@ -28,7 +28,7 @@
 | 14 | Reservation list filter labels show raw i18n keys | 6 | P2 | Open |
 | 15 | Reservation form steps not responsive | 6 | P2 | ✅ Fixed |
 | 16 | Tenant select after search does not actually select (booking blocked) | 6 | **P1** | ✅ Fixed |
-| 17 | Daily date picker UX poor — align with monthly picker | 6 | P2 | Open |
+| 17 | Daily date picker UX poor — align with monthly picker | 6 | P2 | ✅ Fixed |
 | 18 | Reservation number not org-scoped (got 00140) + make format configurable | 6 | **P1** | ✅ Fixed (format UI → #29) |
 | 19 | Unit name in reservation not clickable to unit page | 6 | P3 | ✅ Fixed |
 | 20 | No Check-In button for early check-in despite setting enabled | 6 | **P1** | ✅ Fixed |
@@ -255,7 +255,7 @@
 - **Actual:** Daily mode uses separate check-in date + nights inputs ([BookingEngine.tsx:663-731](components/dashboard/BookingEngine.tsx#L663-L731)); monthly mode has a nicer picker. UX inconsistency.
 - **Proposed fix:** Reuse a single range/calendar component for both daily and monthly (or raise daily to the monthly picker's polish — inline calendar + night count). Design decision; pair with #15.
 - **Files affected:** [components/dashboard/BookingEngine.tsx](components/dashboard/BookingEngine.tsx).
-- **Status:** Open
+- **Status:** ✅ Fixed — **user picked the "check-in date + nights stepper" direction.** Daily mode now uses the **same 3-column layout as monthly**: a `DatePicker` check-in + a `NumberField` nights stepper (min 1, max 90) + an auto-computed read-only check-out. (Note: by the time this was implemented the code had daily on an inline `DateRangePicker` and monthly on the stepper — both are now unified on the cleaner stepper pattern.) Reuses the existing daily-aware `handleStartDateChange`/`handlePeriodChange` (derive check-out from the count). Removed the now-unused `DateRangePicker`/`DateRangeValue` imports; added `lockedHintNights` in both locales.
 
 ## Issue #18: Reservation number is global, not org-scoped (first booking got RES-2026-00140); make format configurable
 - **Scenario:** 6 — Create daily reservation

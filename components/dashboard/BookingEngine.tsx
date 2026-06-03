@@ -23,13 +23,11 @@ import {
   Badge,
   Button,
   DatePicker,
-  DateRangePicker,
   getTenantClassBadge,
   NumberField,
   SearchableSelect,
   Select,
   TextArea,
-  type DateRangeValue,
   type SearchableSelectOption,
   type TenantClassKey,
 } from "@/components/ui";
@@ -661,66 +659,42 @@ export default function BookingEngine({
             )}
           </div>
 
-          {rateType === "daily" ? (
-            <DateRangePicker
-              label={tStep2("checkInAndDuration")}
-              value={
-                startDate && endDate
-                  ? { from: parseLocalDate(startDate), to: parseLocalDate(endDate) }
-                  : null
-              }
-              onValueChange={(range: DateRangeValue | null) => {
-                if (!range) {
-                  setStartDate("");
-                  setEndDate("");
-                  setPeriod(1);
-                  return;
-                }
-                setStartDate(toDateInput(range.from));
-                setEndDate(toDateInput(range.to));
-                setPeriod(calculateNights(range.from, range.to));
-              }}
+          {/* Daily and monthly share the same clean layout: check-in date picker
+              + a duration stepper (nights/months) + an auto-computed check-out.
+              The daily-aware handlers already derive check-out from the count (QA #17). */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <DatePicker
+              label={tStep2("checkInDate")}
+              value={startDate ? parseLocalDate(startDate) : null}
+              onValueChange={(d) => handleStartDateChange(d ? toDateInput(d) : "")}
               minDate={new Date()}
               locale={dateFnsLocale}
-              helperText={
-                currentPeriod > 0
-                  ? tStep2("nightsSummary", { count: currentPeriod })
-                  : tStep2("nightsHint")
-              }
+              reserveMessageSpace={false}
             />
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <DatePicker
-                label={tStep2("checkInDate")}
-                value={startDate ? parseLocalDate(startDate) : null}
-                onValueChange={(d) => handleStartDateChange(d ? toDateInput(d) : "")}
-                minDate={new Date()}
-                locale={dateFnsLocale}
-                reserveMessageSpace={false}
-              />
-              <NumberField
-                label={tStep2("numberOfMonths")}
-                stepper
-                min={1}
-                max={24}
-                step={1}
-                precision={0}
-                value={period}
-                onValueChange={(v) => handlePeriodChange(v ?? 1)}
-                helperText={tStep2("calendarMonthsOnly")}
-                reserveMessageSpace={false}
-              />
-              <div>
-                <label className="block text-[13px] font-medium text-fg leading-5">{tStep2("checkOutDate")}</label>
-                <div className="mt-1 block w-full rounded-md border border-border-default bg-bg-subtle px-3 py-2 text-sm text-fg-secondary h-[38px] flex items-center">
-                  {endDate
-                    ? <span className="ltr-numbers font-medium">{endDate}</span>
-                    : <span className="text-fg-tertiary">{tStep2("autoComputed")}</span>}
-                </div>
-                <p className="mt-1 text-xs text-fg-tertiary">{tStep2("lockedHint")}</p>
+            <NumberField
+              label={rateType === "daily" ? tStep2("numberOfNights") : tStep2("numberOfMonths")}
+              stepper
+              min={1}
+              max={rateType === "daily" ? 90 : 24}
+              step={1}
+              precision={0}
+              value={period}
+              onValueChange={(v) => handlePeriodChange(v ?? 1)}
+              helperText={rateType === "daily" ? tStep2("nightsHint") : tStep2("calendarMonthsOnly")}
+              reserveMessageSpace={false}
+            />
+            <div>
+              <label className="block text-[13px] font-medium text-fg leading-5">{tStep2("checkOutDate")}</label>
+              <div className="mt-1 block w-full rounded-md border border-border-default bg-bg-subtle px-3 py-2 text-sm text-fg-secondary h-[38px] flex items-center">
+                {endDate
+                  ? <span className="ltr-numbers font-medium">{endDate}</span>
+                  : <span className="text-fg-tertiary">{tStep2("autoComputed")}</span>}
               </div>
+              <p className="mt-1 text-xs text-fg-tertiary">
+                {rateType === "daily" ? tStep2("lockedHintNights") : tStep2("lockedHint")}
+              </p>
             </div>
-          )}
+          </div>
 
           {/* Duration summary chip */}
           {currentPeriod > 0 && startDate && endDate && (

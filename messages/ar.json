@@ -2262,6 +2262,7 @@
         "nightsHint": "ليالي",
         "autoComputed": "محسوب تلقائياً",
         "lockedHint": "مقفل — استناداً إلى الوصول + الأشهر",
+        "lockedHintNights": "مقفل — استناداً إلى الوصول + الليالي",
         "nightsSummary": "{count, plural, zero {لا ليالٍ} one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}}",
         "monthsSummary": "{count, plural, zero {لا أشهر} one {شهر تقويمي واحد} two {شهران تقويميان} few {# أشهر تقويمية} many {# شهراً تقويمياً} other {# شهر تقويمي}}"
       },

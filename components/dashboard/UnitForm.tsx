@@ -168,9 +168,12 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
       toast.success(isEditMode ? t("unitUpdated") : t("unitCreated"));
       const propertyId = fd.get("propertyId") as string;
       setTimeout(() => {
-        router.push(propertyId
-          ? `/dashboard/properties/${propertyId}`
-          : "/dashboard/units");
+        // Create → units list; edit → back to the property page (QA issue #8).
+        router.push(
+          isEditMode
+            ? (propertyId ? `/dashboard/properties/${propertyId}` : "/dashboard/units")
+            : "/dashboard/units",
+        );
       }, 700);
     });
   };

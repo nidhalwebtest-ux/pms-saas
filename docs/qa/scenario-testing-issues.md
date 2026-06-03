@@ -19,7 +19,7 @@
 | 5 | Base Price should be optional in Bulk Unit Add | 2 | P2 | ✅ Fixed |
 | 6 | Make unit-row regeneration automatic; remove "Regenerate" button | 2 | P3 | Open |
 | 7 | Remove Price column from Units list page | 2 | P3 | ✅ Fixed |
-| 8 | After create, redirect to LIST page (not detail) once toast shows | 2 | P2 | Open |
+| 8 | After create, redirect to LIST page (not detail) once toast shows | 2 | P2 | ✅ Fixed |
 | 9 | Tenants list filter tabs/labels show raw i18n keys (missing translations) | 3 | P2 | Open |
 | 10 | Tenant phone fields hardcode +968 — allow changing country code | 3 | P2 | Open |
 | 11 | Quick Add → Full Form loses typed first/last name (uncontrolled inputs) | 3 | P2 | Open |
@@ -154,7 +154,7 @@
   - BulkCreateForm success → `/dashboard/units`
   Keep the existing toast; the single-unit form already delays 700ms so the toast is visible before navigating — apply the same small delay (or rely on sonner's persistence across navigation) to the others for consistency. **Edit-mode** redirects can stay on detail (only change *create* mode). Coordinate with Issue #4 (modal off) so the non-modal navigation path is the one taking effect.
 - **Files affected:** [components/dashboard/PropertyForm.tsx](components/dashboard/PropertyForm.tsx), [components/dashboard/UnitForm.tsx](components/dashboard/UnitForm.tsx), [app/dashboard/units/bulk/BulkCreateForm.tsx](app/dashboard/units/bulk/BulkCreateForm.tsx). **Also tenant create** → [components/dashboard/TenantForm.tsx:485-486](components/dashboard/TenantForm.tsx#L485-L486) currently `router.push('/dashboard/tenants/<id>')`; change create-mode to `/dashboard/tenants`.
-- **Status:** Open
+- **Status:** ✅ Fixed — create-mode now lands on the list: PropertyForm → `/dashboard/properties`, UnitForm → `/dashboard/units`, BulkCreateForm → `/dashboard/units`. Edit-mode still goes to the detail page. (TenantForm's create→list change ships in the combined TenantForm commit with #11/#13.)
 
 ## Issue #9: Tenants list filter tabs & labels render raw i18n keys (missing translations)
 - **Scenario:** 3 — Add tenant

@@ -202,9 +202,8 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
         toast.error(res.error);
       } else {
         toast.success(t("unitsCreatedToast", { count: res.created ?? 0 }));
-        router.push(propertyId
-          ? `/dashboard/properties/${propertyId}`
-          : "/dashboard/units");
+        // Always land on the units list after a bulk create (QA issue #8).
+        router.push("/dashboard/units");
       }
     });
   }

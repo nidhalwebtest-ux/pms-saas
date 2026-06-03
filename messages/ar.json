@@ -1829,6 +1829,7 @@
       },
       "guest": {
         "viewProfile": "عرض الملف الكامل ←",
+        "contactPerson": "جهة الاتصال",
         "vip": "مميز",
         "blacklisted": "محظور",
         "whatsapp": "واتساب",

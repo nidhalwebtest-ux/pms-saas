@@ -141,7 +141,7 @@ type ReservationData = {
     id: string; firstName: string; lastName: string; fullNameArabic: string | null;
     phone: string; whatsappNumber: string | null; email: string | null;
     nationality: string | null; classification: string | null; tenantType: string | null;
-    corporateName: string | null; idType: string | null; idNumber: string | null;
+    corporateName: string | null; corporateContact: string | null; idType: string | null; idNumber: string | null;
     idExpiryDate: string | null; specialRequests: string | null; internalNotes: string | null;
     totalStays: number; totalSpent: string; firstStayDate: string | null;
   };
@@ -1782,6 +1782,17 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { i
     );
   }
 
+  // For corporate/government tenants the company is the primary identity; the
+  // person is the secondary "contact" line (QA #25). Individuals stay person-first.
+  const personName    = `${res.tenant.firstName} ${res.tenant.lastName}`;
+  const isCorporate   = (res.tenant.tenantType === "corporate" || res.tenant.tenantType === "government")
+    && !!res.tenant.corporateName;
+  const primaryName   = isCorporate ? res.tenant.corporateName! : personName;
+  const contactName   = res.tenant.corporateContact || personName;
+  const avatarInitials = isCorporate
+    ? res.tenant.corporateName!.trim().slice(0, 2).toUpperCase()
+    : `${res.tenant.firstName[0]}${res.tenant.lastName[0]}`;
+
   // Use invoice balances as the source of truth when invoices exist
   const invoiceBalanceDue = res.invoices.length > 0
     ? res.invoices
@@ -1869,15 +1880,20 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { i
                     res.tenant.classification === "vip" ? "bg-yellow-500" :
                     res.tenant.classification === "blacklisted" ? "bg-red-500" : "bg-blue-600"
                   }`}>
-                    {res.tenant.firstName[0]}{res.tenant.lastName[0]}
+                    {avatarInitials}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="text-lg font-bold text-gray-900">
-                        {res.tenant.firstName} {res.tenant.lastName}
+                        {primaryName}
                       </h2>
                       <ClassBadge c={res.tenant.classification} />
                     </div>
+                    {isCorporate && (
+                      <p className="text-sm text-gray-600">
+                        {tGuest("contactPerson")}: {contactName}
+                      </p>
+                    )}
                     {res.tenant.fullNameArabic && (
                       <p className="text-sm text-gray-500 font-arabic" dir="rtl">{res.tenant.fullNameArabic}</p>
                     )}
@@ -1930,7 +1946,8 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { i
                 {res.tenant.firstStayDate && (
                   <span>{tGuest("firstVisit", { date: fmtDate(res.tenant.firstStayDate, { month: "short", year: "numeric" }) })}</span>
                 )}
-                {res.tenant.corporateName && (
+                {/* Only when not already the heading (i.e. an individual with an associated company). */}
+                {!isCorporate && res.tenant.corporateName && (
                   <span className="font-medium text-gray-700">🏢 {res.tenant.corporateName}</span>
                 )}
               </div>

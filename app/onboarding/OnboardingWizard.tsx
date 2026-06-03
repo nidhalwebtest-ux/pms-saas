@@ -16,6 +16,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { createOrganization } from "./actions";
 import { logout } from "@/app/login/actions";
+import { PhoneInput } from "@/components/ui";
 
 // ── Static data ───────────────────────────────────────────────────────────────
 
@@ -392,14 +393,18 @@ export default function OnboardingWizard() {
               required
               error={fieldError?.field === "name" ? fieldError.message : null}
             />
-            <InputField
-              label={tCompany("phoneLabel")}
-              name="phone"
-              type="tel"
-              value={form.phone}
-              onChange={(v) => set("phone", v)}
-              placeholder={tCompany("phonePlaceholder")}
-            />
+            {/* Phone with country-code picker (QA #2) — dark variant. */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                {tCompany("phoneLabel")}
+              </label>
+              <PhoneInput
+                variant="dark"
+                value={form.phone}
+                onValueChange={(v) => set("phone", v)}
+                placeholder={tCompany("phonePlaceholder")}
+              />
+            </div>
             <LogoUploader
               file={form.logo}
               onChange={(f) => set("logo", f)}

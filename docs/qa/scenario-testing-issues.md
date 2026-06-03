@@ -13,7 +13,7 @@
 | # | Title | Scenario | Severity | Status |
 |---|-------|----------|----------|--------|
 | 1 | No logout button on Onboarding wizard | 1 | P2 | ✅ Fixed |
-| 2 | Onboarding phone field lacks country-code picker (reuse PhoneField) | 1 | P2 | Open |
+| 2 | Onboarding phone field lacks country-code picker (reuse PhoneField) | 1 | P2 | ✅ Fixed |
 | 3 | App still branded "OmRent" — rename to "Binaya" app-wide | 1 | P2 | ✅ Fixed |
 | 4 | Disable modal (slide-over) forms for now — use full pages | 2 | P2 | ✅ Fixed |
 | 5 | Base Price should be optional in Bulk Unit Add | 2 | P2 | ✅ Fixed |
@@ -68,7 +68,7 @@
 - **Root cause:** The wizard predates the shared phone component. A purpose-built [components/ui/form/PhoneField.tsx](components/ui/form/PhoneField.tsx) **already exists** — it uses `libphonenumber-js`, defaults `defaultCountry="OM"` (+968 prefix), formats as-you-type, and emits canonical E.164 via a hidden field. **It is not wired into onboarding.** However, per its own docstring it is *single-country* (no dropdown picker yet — "v2 picker planned in Tier 3").
 - **Proposed fix:** Two parts. (a) Quick win: replace the plain `InputField` in Step 1 with the existing `PhoneField` (defaultCountry="OM") to immediately get the +968 prefix, formatting, and E.164 output. (b) For an actual country *picker* (multi-country selector), build the v2 dropdown the component's docstring references (`SearchableSelect`-based), defaulting selection to Oman. Decide whether a picker is needed for MVP or if single-country Oman is sufficient.
 - **Files affected:** [app/onboarding/OnboardingWizard.tsx](app/onboarding/OnboardingWizard.tsx), [components/ui/form/PhoneField.tsx](components/ui/form/PhoneField.tsx). Note: the wizard's `handleSubmit` appends `phone` from `form.phone` — would need to read the E.164 value the PhoneField emits.
-- **Status:** Open
+- **Status:** ✅ Fixed — replaced Step 1's plain `InputField` with the new [PhoneInput](components/ui/form/PhoneInput.tsx) (`variant="dark"` to match the wizard), keeping the slate label. `onValueChange` stores the E.164/raw value into `form.phone`, which `handleSubmit` already appends. Same searchable country picker as the tenant forms (#10).
 
 ## Issue #3: App still branded "OmRent" — rename to "Binaya" across the app
 - **Scenario:** 1 — Create organization (noticed on auth/onboarding branding)

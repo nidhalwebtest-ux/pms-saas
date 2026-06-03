@@ -29,7 +29,7 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OmRent — Property Management for Oman",
+  title: "Binaya — Property Management for Oman",
   description:
     "Manage properties, tenants, reservations, and payments in one modern platform. Built for property managers in Oman.",
 };

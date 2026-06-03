@@ -14,7 +14,7 @@
 |---|-------|----------|----------|--------|
 | 1 | No logout button on Onboarding wizard | 1 | P2 | ✅ Fixed |
 | 2 | Onboarding phone field lacks country-code picker (reuse PhoneField) | 1 | P2 | Open |
-| 3 | App still branded "OmRent" — rename to "Binaya" app-wide | 1 | P2 | Open |
+| 3 | App still branded "OmRent" — rename to "Binaya" app-wide | 1 | P2 | ✅ Fixed |
 | 4 | Disable modal (slide-over) forms for now — use full pages | 2 | P2 | ✅ Fixed |
 | 5 | Base Price should be optional in Bulk Unit Add | 2 | P2 | ✅ Fixed |
 | 6 | Make unit-row regeneration automatic; remove "Regenerate" button | 2 | P3 | Open |
@@ -87,7 +87,7 @@
 - **Root cause:** Product was renamed; the string was never globally swapped.
 - **Proposed fix:** Replace all user-facing "OmRent" → "Binaya" (and `أم رنت` → the chosen Arabic spelling, e.g. "بنايه"). Confirm the exact Arabic spelling with the user before editing `ar.json`. Leave cookie keys unless a clean rename is wanted (keep both files in sync). Update `RESEND_FROM_EMAIL` env in deployment too.
 - **Files affected:** [app/layout.tsx](app/layout.tsx), [messages/en.json](messages/en.json), [messages/ar.json](messages/ar.json), [app/dashboard/settings/team/actions.ts](app/dashboard/settings/team/actions.ts), [lib/email.ts](lib/email.ts), (optional) [utils/supabase/middleware.ts](utils/supabase/middleware.ts), [components/dashboard/InactivityGuard.tsx](components/dashboard/InactivityGuard.tsx).
-- **Status:** Open
+- **Status:** ✅ Fixed — all user-facing "OmRent"/"أم رنت" replaced with the Latin "Binaya" (user decision: keep Latin in the Arabic UI too): page `<title>`, `auth.brand.name` + `header.appName` in both locales, the invite-email fallback org name, and every string in `lib/email.ts` (subjects, `<h1>`, body, footer, `RESEND_FROM_EMAIL` default). Lowercase `omrent_last_activity` cookie keys left untouched (non-user-facing; the two files stay in sync). **Note:** set the `RESEND_FROM_EMAIL` env var in deployment to the Binaya sender.
 
 ## Issue #4: Disable modal (slide-over) forms for now — use full pages
 - **Scenario:** 2 — Add building with units

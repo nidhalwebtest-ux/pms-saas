@@ -160,7 +160,7 @@
   },
   "auth": {
     "brand": {
-      "name": "أم رنت",
+      "name": "Binaya",
       "tagline": "نظام إدارة العقارات"
     },
     "common": {
@@ -406,7 +406,7 @@
     "outstandingBalance": "الأرصدة المستحقة",
     "pendingApprovals": "بانتظار الموافقة",
     "header": {
-      "appName": "OmRent",
+      "appName": "Binaya",
       "version": "v1.0",
       "viewNotifications": "عرض الإشعارات",
       "logout": "تسجيل الخروج"

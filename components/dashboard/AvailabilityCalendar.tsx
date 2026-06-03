@@ -91,6 +91,7 @@ export function AvailabilityCalendar({
   const router = useRouter();
   const locale = useLocale();
   const dateFnsLocale: Locale = locale === "ar" ? arLocale : enLocale;
+  const isRtl = locale === "ar";
 
   const tWidget   = useTranslations("reservations.availabilityCalendar.widget");
   const tModal    = useTranslations("reservations.availabilityCalendar.modal");
@@ -531,7 +532,9 @@ export function AvailabilityCalendar({
                                 height: 40,
                                 background: cell.solid
                                   ? cell.leftColor
-                                  : `linear-gradient(135deg, ${cell.leftColor} 50%, ${cell.rightColor} 50%)`,
+                                  // Mirror the diagonal under RTL (225deg) so the
+                                  // earlier-half color stays on the correct side (QA #22).
+                                  : `linear-gradient(${isRtl ? 225 : 135}deg, ${cell.leftColor} 50%, ${cell.rightColor} 50%)`,
                                 outline: todayFlag
                                   ? "2px solid #2563EB"
                                   : cell.isGap

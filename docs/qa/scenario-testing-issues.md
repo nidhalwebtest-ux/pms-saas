@@ -33,7 +33,7 @@
 | 19 | Unit name in reservation not clickable to unit page | 6 | P3 | ✅ Fixed |
 | 20 | No Check-In button for early check-in despite setting enabled | 6 | **P1** | ✅ Fixed |
 | 21 | Availability modal: Show disabled under "All Properties" (need property selector) | 6 | P2 | ✅ Fixed |
-| 22 | Availability split-day half-square wrong direction in Arabic/RTL | 6 | P3 | Open |
+| 22 | Availability split-day half-square wrong direction in Arabic/RTL | 6 | P3 | ✅ Fixed |
 | 23 | Edit Reservation 404s — route not implemented | 6 | **P1** | ✅ Stopgap (dead link removed; full flow → #30) |
 | 24 | Add settings: require contract creation/signing before check-in (feature) | 7 | **P1** | Open |
 | 25 | Corporate tenant: company name shown small on reservation page (contact too prominent) | 8 | P2 | ✅ Fixed (detail; list/PDF → follow-up) |
@@ -308,8 +308,7 @@
 - **Expected:** In RTL the diagonal/half-fill mirrors so the occupied half is on the correct side.
 - **Actual / root cause:** [AvailabilityCalendar.tsx:531](components/dashboard/AvailabilityCalendar.tsx#L531) hardcodes `linear-gradient(135deg, leftColor 50%, rightColor 50%)`. The fixed 135° angle doesn't flip under RTL, so direction is inverted relative to the mirrored layout.
 - **Proposed fix:** Make the gradient direction-aware — switch `135deg`↔`45deg` (or swap left/right colors) based on `dir==='rtl'`/locale. Apply to the split cell and the legend swatch ([line 568](components/dashboard/AvailabilityCalendar.tsx#L568)).
-- **Files affected:** [components/dashboard/AvailabilityCalendar.tsx](components/dashboard/AvailabilityCalendar.tsx).
-- **Status:** Open
+- **Status:** ✅ Fixed — added an `isRtl` flag (`locale === "ar"`) and the split cell now uses `linear-gradient(${isRtl ? 225 : 135}deg, …)`, a horizontal mirror of the diagonal so the earlier-half color stays on the correct side in RTL. (No separate legend gradient swatch exists in the current markup — only the one cell gradient.)
 
 ## Issue #23: Edit Reservation 404s — the edit route is not implemented
 - **Scenario:** 6 — Create daily reservation

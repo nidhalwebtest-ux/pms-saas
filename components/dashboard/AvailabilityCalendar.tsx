@@ -111,8 +111,11 @@ export function AvailabilityCalendar({
 
   // Widget state (controls that persist even when modal is closed)
   const todayStr = format(new Date(), "yyyy-MM-dd");
+  // Under "All Properties" the header passes an empty string — fall back to the
+  // first property so the picker has a selection and "Show" is enabled (QA #21).
+  // (`||` not `??`, so the empty string falls through, unlike a null/undefined.)
   const [propertyId, setPropertyId] = useState(
-    defaultPropertyId ?? properties[0]?.id ?? "",
+    defaultPropertyId || properties[0]?.id || "",
   );
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate]     = useState(

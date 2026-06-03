@@ -32,7 +32,7 @@
 | 18 | Reservation number not org-scoped (got 00140) + make format configurable | 6 | **P1** | ✅ Fixed (format UI → #29) |
 | 19 | Unit name in reservation not clickable to unit page | 6 | P3 | ✅ Fixed |
 | 20 | No Check-In button for early check-in despite setting enabled | 6 | **P1** | ✅ Fixed |
-| 21 | Availability modal: Show disabled under "All Properties" (need property selector) | 6 | P2 | Open |
+| 21 | Availability modal: Show disabled under "All Properties" (need property selector) | 6 | P2 | ✅ Fixed |
 | 22 | Availability split-day half-square wrong direction in Arabic/RTL | 6 | P3 | Open |
 | 23 | Edit Reservation 404s — route not implemented | 6 | **P1** | ✅ Stopgap (dead link removed; full flow → #30) |
 | 24 | Add settings: require contract creation/signing before check-in (feature) | 7 | **P1** | Open |
@@ -299,7 +299,7 @@
 - **Actual / root cause:** [AvailabilityCalendar.tsx:114-116](components/dashboard/AvailabilityCalendar.tsx#L114-L116) sets `propertyId = defaultPropertyId ?? properties[0]?.id ?? ""`. With header = All Properties, `defaultPropertyId` is empty. The in-modal `<select>` only renders when `properties.length > 1` ([~line 222](components/dashboard/AvailabilityCalendar.tsx#L222)), and the Show button is `disabled={!propertyId || …}` ([line 290](components/dashboard/AvailabilityCalendar.tsx#L290)) — so if `propertyId` is `""`, Show stays disabled.
 - **Proposed fix:** When `defaultPropertyId` is empty (All Properties), always show the property selector and require/auto-pick a selection (e.g. `properties[0]`) so Show is enabled; when set, lock to the header's property. Ensure `propertyId` is never `""` when properties exist.
 - **Files affected:** [components/dashboard/AvailabilityCalendar.tsx](components/dashboard/AvailabilityCalendar.tsx).
-- **Status:** Open
+- **Status:** ✅ Fixed — the initial `propertyId` now uses `||` instead of `??`, so the empty-string `defaultPropertyId` from "All Properties" falls through to `properties[0]`. The picker (rendered when `properties.length > 1`) lets the user switch; "Show" is enabled because `propertyId` is never empty when properties exist.
 
 ## Issue #22: Availability split-day half-square points the wrong way in Arabic/RTL
 - **Scenario:** 6 — Create daily reservation (availability, Arabic mode)

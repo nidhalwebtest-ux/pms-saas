@@ -22,9 +22,9 @@
 | 8 | After create, redirect to LIST page (not detail) once toast shows | 2 | P2 | ✅ Fixed |
 | 9 | Tenants list filter tabs/labels show raw i18n keys (missing translations) | 3 | P2 | Open |
 | 10 | Tenant phone fields hardcode +968 — allow changing country code | 3 | P2 | Open |
-| 11 | Quick Add → Full Form loses typed first/last name (uncontrolled inputs) | 3 | P2 | Open |
+| 11 | Quick Add → Full Form loses typed first/last name (uncontrolled inputs) | 3 | P2 | ✅ Fixed |
 | 12 | Disable modal tenant form for now (dup of #4, tenants) | 3 | P2 | ✅ Fixed (via #4) |
-| 13 | After editing a tenant, no redirect to tenant detail page | 4 | P2 | Open |
+| 13 | After editing a tenant, no redirect to tenant detail page | 4 | P2 | ✅ Fixed |
 | 14 | Reservation list filter labels show raw i18n keys | 6 | P2 | Open |
 | 15 | Reservation form steps not responsive | 6 | P2 | Open |
 | 16 | Tenant select after search does not actually select (booking blocked) | 6 | **P1** | ✅ Fixed |
@@ -190,7 +190,7 @@
 - **Root cause:** firstName/lastName were never lifted into the shared parent state that survives the mode switch.
 - **Proposed fix:** Lift `firstName` and `lastName` (and any other quick fields not yet controlled — e.g. email) into `useState` in the parent `TenantForm`, pass value+setter down to both QuickAddForm and the full form, and bind them as controlled inputs in both (full form currently uses `defaultValue`, which also won't reflect lifted state on remount — switch to `value`/`onChange`). Then the toggle preserves all input. Verify the duplicate-ID async check still works after lifting.
 - **Files affected:** [components/dashboard/TenantForm.tsx](components/dashboard/TenantForm.tsx).
-- **Status:** Open
+- **Status:** ✅ Fixed — lifted `firstName`/`lastName` into parent `useState`; both QuickAddForm and the full form now bind them as controlled `value`/`onChange` inputs, so the Quick↔Full toggle preserves the typed names. `handleSubmit` injects them into FormData from state.
 
 ## Issue #12: Disable modal tenant form for now
 - **Scenario:** 3 — Add tenant
@@ -212,7 +212,7 @@
 - **Root cause:** Edit branch was never given a redirect; the `!isEdit` guard excludes it.
 - **Proposed fix:** Add an edit-mode redirect. e.g. after the toast: `if (isEdit) router.push(\`/dashboard/tenants/${initialData!.id}\`)` (or use `res.id`). Keep the `onSuccess` callback path for the modal/booking-engine inline-create case. **Note the tension with Issue #8:** #8 asks *create* to go to the *list* page, while this issue asks *edit* to go to the *detail* page — they are different modes, so both can coexist: create → list, edit → detail. Make sure the fix for #8 (which proposed changing create destinations) does not also change edit, and that this fix only touches the edit branch.
 - **Files affected:** [components/dashboard/TenantForm.tsx](components/dashboard/TenantForm.tsx).
-- **Status:** Open
+- **Status:** ✅ Fixed — `handleSubmit` now branches: edit → `router.push('/dashboard/tenants/<id>')` (detail), create → `/dashboard/tenants` (list, per #8). The `onSuccess` inline-create path is preserved.
 
 ## Issue #14: Reservation list filter labels render raw i18n keys
 - **Scenario:** 6 — Create daily reservation

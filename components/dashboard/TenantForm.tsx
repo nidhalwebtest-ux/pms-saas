@@ -267,11 +267,14 @@ function SegBtn({
 // ── Quick-Add form (minimal 7-field version) ──────────────────────────────────
 
 function QuickAddForm({
-  onSwitchFull, idType, setIdType, tenantType, setTenantType,
+  onSwitchFull, firstName, setFirstName, lastName, setLastName,
+  idType, setIdType, tenantType, setTenantType,
   source, setSource, phone, setPhone, nationality, setNationality,
   idNumber, setIdNumber, dupCheck, isPending,
 }: {
   onSwitchFull:    () => void;
+  firstName:       string; setFirstName:   (v: string) => void;
+  lastName:        string; setLastName:    (v: string) => void;
   idType:          string; setIdType:      (v: string) => void;
   tenantType:      string; setTenantType:  (v: string) => void;
   source:          string; setSource:      (v: string) => void;
@@ -294,12 +297,12 @@ function QuickAddForm({
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("firstName")} <span className="text-red-500">*</span></label>
-          <input autoFocus name="firstName" required placeholder={tPh("firstName")}
+          <input autoFocus name="firstName" required value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={tPh("firstName")}
             className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("lastName")} <span className="text-red-500">*</span></label>
-          <input name="lastName" required placeholder={tPh("lastName")}
+          <input name="lastName" required value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder={tPh("lastName")}
             className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
         </div>
         <div>
@@ -421,6 +424,10 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
   const tog = (k: keyof typeof open) => setOpen((p) => ({ ...p, [k]: !p[k] }));
 
   // Controlled fields
+  // firstName/lastName are lifted to parent state so they survive the Quick↔Full
+  // mode toggle (which unmounts the other form) — QA issue #11.
+  const [firstName,      setFirstName]      = useState(initialData?.firstName ?? "");
+  const [lastName,       setLastName]       = useState(initialData?.lastName ?? "");
   const [gender,         setGender]         = useState(initialData?.gender ?? "");
   const [idType,         setIdType]         = useState(initialData?.idType ?? "national_id");
   const [idNumber,       setIdNumber]       = useState(initialData?.idNumber ?? initialData?.nationalId ?? "");
@@ -461,6 +468,8 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
     // Inject controlled state
+    fd.set("firstName",       firstName);
+    fd.set("lastName",        lastName);
     fd.set("gender",          gender);
     fd.set("idType",          idType);
     fd.set("idNumber",        idNumber);
@@ -472,18 +481,19 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
     fd.set("classification",  classification);
     fd.set("tags_json",       JSON.stringify(tags));
 
-    const firstName = (fd.get("firstName") as string)?.trim() ?? "";
-    const lastName  = (fd.get("lastName")  as string)?.trim() ?? "";
-
     startTransition(async () => {
       const res = isEdit ? await updateTenant(fd) : await createTenant(fd);
       if (res?.error) { toast.error(res.error); return; }
       toast.success(isEdit ? tToast("updated") : tToast("created"));
-      if (!isEdit && res.id) {
+      if (isEdit) {
+        // Edit → tenant detail page (QA issue #13).
+        router.push(`/dashboard/tenants/${initialData!.id}`);
+      } else if (res.id) {
         if (onSuccess) {
-          onSuccess({ id: res.id, firstName, lastName });
+          onSuccess({ id: res.id, firstName: firstName.trim(), lastName: lastName.trim() });
         } else {
-          router.push(`/dashboard/tenants/${res.id}`);
+          // Create → tenants list page (QA issue #8).
+          router.push("/dashboard/tenants");
         }
       }
     });
@@ -518,6 +528,8 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
           <input type="hidden" name="phone"          value={phone} />
           <QuickAddForm
             onSwitchFull={() => setQuickMode(false)}
+            firstName={firstName} setFirstName={setFirstName}
+            lastName={lastName} setLastName={setLastName}
             idType={idType} setIdType={setIdType}
             tenantType={tenantType} setTenantType={setTenantType}
             source={source} setSource={setSource}
@@ -556,13 +568,13 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("firstName")} <span className="text-red-500">*</span></label>
-              <input autoFocus={!isEdit} name="firstName" required defaultValue={initialData?.firstName}
+              <input autoFocus={!isEdit} name="firstName" required value={firstName} onChange={(e) => setFirstName(e.target.value)}
                 placeholder={tPh("firstName")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("lastName")} <span className="text-red-500">*</span></label>
-              <input name="lastName" required defaultValue={initialData?.lastName}
+              <input name="lastName" required value={lastName} onChange={(e) => setLastName(e.target.value)}
                 placeholder={tPh("lastName")}
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
             </div>

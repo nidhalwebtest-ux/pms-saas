@@ -123,6 +123,7 @@ export async function GET(req: NextRequest) {
         select: {
           id: true, firstName: true, lastName: true,
           phone: true, nationality: true, classification: true,
+          tenantType: true, corporateName: true,
         },
       },
       unit: {

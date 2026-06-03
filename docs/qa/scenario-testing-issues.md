@@ -36,7 +36,7 @@
 | 22 | Availability split-day half-square wrong direction in Arabic/RTL | 6 | P3 | ✅ Fixed |
 | 23 | Edit Reservation 404s — route not implemented | 6 | **P1** | ✅ Fixed (full flow → #30; Edit buttons restored) |
 | 24 | Add settings: require contract creation/signing before check-in (feature) | 7 | **P1** | Open |
-| 25 | Corporate tenant: company name shown small on reservation page (contact too prominent) | 8 | P2 | ✅ Fixed (detail; list/PDF → follow-up) |
+| 25 | Corporate tenant: company name shown small on reservation page (contact too prominent) | 8 | P2 | ✅ Fixed (detail + list + today; PDF → follow-up) |
 | 26 | Add Seasonal Price modal: monthly rate should be optional, not required | 10 | P2 | ✅ Fixed |
 | 27 | Add settings to prevent monthly reservations during certain periods (feature) | 10 | P2 | Open |
 | 28 | Seasonal price breakdown not shown on unit card during selection (and not persisted on reservationUnit) | 10 | **P1** | ✅ Persistence fixed (card UI → #31) |
@@ -353,7 +353,7 @@
   - When individual, keep the current layout.
   - Audit other places that show the tenant identity (reservation list row, today view, invoices, contracts, PDFs) to apply the same rule consistently.
 - **Files affected (likely):** [app/dashboard/reservations/[id]/ReservationDetail.tsx](app/dashboard/reservations/[id]/ReservationDetail.tsx), [app/dashboard/reservations/columns.tsx](app/dashboard/reservations/columns.tsx), [components/dashboard/views/TodayView.tsx](components/dashboard/views/TodayView.tsx). DB confirms: `firstName="Hassan"`, `corporateName="Salalah Marine Services LLC"`, `corporateContact="Hassan Al Wahaibi"`, `tenantType="corporate"` — fields all present, just under-used by the UI.
-- **Status:** ✅ Fixed (reservation detail) — for `corporate`/`government` tenants with a `corporateName`, the detail guest card now renders the **company name as the heading**, the person as a secondary "Contact: …" line (new `reservations.detail.guest.contactPerson` key in both locales), and the avatar uses the company initials; individuals keep the person-first layout. Added `corporateContact` to the reservation GET select + detail type. The redundant 🏢 company stat now only shows for individuals with an associated company. **Follow-up (not done):** apply the same rule to the reservation **list columns**, **TodayView**, invoices, and PDFs — these need `tenantType`/`corporateName` plumbed through their data fetches. Tracking as a future task.
+- **Status:** ✅ Fixed (reservation detail) — for `corporate`/`government` tenants with a `corporateName`, the detail guest card now renders the **company name as the heading**, the person as a secondary "Contact: …" line (new `reservations.detail.guest.contactPerson` key in both locales), and the avatar uses the company initials; individuals keep the person-first layout. Added `corporateContact` to the reservation GET select + detail type. The redundant 🏢 company stat now only shows for individuals with an associated company. **Follow-up:** ✅ Applied to the reservation **list** (columns.tsx) and **TodayView** via a shared [lib/tenant-display.ts](lib/tenant-display.ts) `tenantDisplayName()` helper — `tenantType`/`corporateName` added to the list GET select and the dashboard/today route select. **Invoices/receipts/PDFs still pending** (separate templates).
 
 ## Issue #26: Add Seasonal Price modal — monthly rate is required, should be optional
 - **Scenario:** 10 — Seasonal pricing setup (Khareef on Unit 6)

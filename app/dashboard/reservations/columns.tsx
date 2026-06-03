@@ -11,6 +11,7 @@ import {
   reservationStatusKeyFromDisplayLabel,
 } from "@/components/ui";
 import type { ReservationRow } from "./ReservationsView";
+import { tenantDisplayName } from "@/lib/tenant-display";
 
 /* ----------------------------------------------------------------------------
  *  Helpers — local to this column file
@@ -143,7 +144,8 @@ export function buildReservationColumns({
     c.custom<string>({
       id: "guest",
       header: tTable("guest"),
-      accessorFn: (r) => `${r.tenant.firstName} ${r.tenant.lastName}`,
+      // Corporate tenants show the company name as primary identity (QA #25).
+      accessorFn: (r) => tenantDisplayName(r.tenant),
       enableSorting: false,
       meta: { mobile: "detail", mobilePriority: 1 },
       cell: ({ row }) => {
@@ -161,7 +163,7 @@ export function buildReservationColumns({
                   isCancelled ? "text-fg-tertiary" : "text-fg"
                 }`}
               >
-                {flag} {r.tenant.firstName} {r.tenant.lastName}
+                {flag} {tenantDisplayName(r.tenant)}
               </p>
             </Link>
             {r.tenant.classification === "vip" && (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { tenantDisplayName } from "@/lib/tenant-display";
 
 async function getOrgId() {
   const supabase = await createClient();
@@ -39,6 +40,8 @@ const resSelect = {
       lastName: true,
       phone: true,
       classification: true,
+      tenantType: true,
+      corporateName: true,
     },
   },
   unit: {
@@ -63,7 +66,7 @@ function serializeRes(r: {
   totalNights: number;
   grandTotal: unknown;
   amountPaid: unknown;
-  tenant: { id: string; firstName: string; lastName: string; phone: string | null; classification: string };
+  tenant: { id: string; firstName: string; lastName: string; phone: string | null; classification: string; tenantType: string | null; corporateName: string | null };
   unit: { id: string; name: string; property: { id: string; name: string } } | null;
   reservationUnits: { unit: { id: string; name: string } }[];
 }) {
@@ -84,7 +87,7 @@ function serializeRes(r: {
     balance: gt - ap,
     tenant: {
       id: r.tenant.id,
-      name: `${r.tenant.firstName} ${r.tenant.lastName}`,
+      name: tenantDisplayName(r.tenant), // company name for corporate tenants (QA #25)
       phone: r.tenant.phone ?? null,
       classification: r.tenant.classification,
     },

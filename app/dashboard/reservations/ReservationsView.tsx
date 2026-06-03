@@ -44,6 +44,7 @@ interface PropertyOption { id: string; name: string }
 interface TenantInfo {
   id: string; firstName: string; lastName: string;
   phone: string; nationality: string | null; classification: string | null;
+  tenantType: string | null; corporateName: string | null;
 }
 
 interface UnitInfo {

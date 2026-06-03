@@ -96,6 +96,29 @@ export async function upsertDefaultPrice(formData: FormData): Promise<ActionResp
   return { success: true, id };
 }
 
+/**
+ * Resolve the monthly rate for a SEASONAL price (QA #26 — monthly is optional).
+ * Uses the typed value when provided; otherwise snapshots the unit's active
+ * DEFAULT monthly rate so monthly stays in the season keep that rate. Returns
+ * null only when nothing was provided and the unit has no DEFAULT to fall back
+ * to (caller surfaces a "monthly required" error).
+ */
+async function resolveSeasonalMonthlyRate(
+  unitId: string,
+  monthlyRaw: string,
+  _dailyRate: number,
+): Promise<number | null> {
+  const parsed = monthlyRaw ? parseFloat(monthlyRaw) : NaN;
+  if (!isNaN(parsed) && parsed > 0) return parsed;
+
+  const def = await prisma.unitPrice.findFirst({
+    where:  { unitId, priceType: "DEFAULT", isActive: true },
+    select: { monthlyRate: true },
+  });
+  if (def && Number(def.monthlyRate) > 0) return Number(def.monthlyRate);
+  return null;
+}
+
 export async function createSeasonalPrice(formData: FormData): Promise<ActionResponse> {
   const actor = await getOrgUser();
   if (!actor) return { error: "Unauthorized" };
@@ -103,7 +126,7 @@ export async function createSeasonalPrice(formData: FormData): Promise<ActionRes
   const unitId      = formData.get("unitId")      as string;
   const name        = (formData.get("name") as string)?.trim();
   const dailyRate   = parseFloat(formData.get("dailyRate")   as string);
-  const monthlyRate = parseFloat(formData.get("monthlyRate") as string);
+  const monthlyRaw  = formData.get("monthlyRate") as string;
   const weeklyRaw   = formData.get("weeklyRate") as string;
   const weeklyRate  = weeklyRaw ? parseFloat(weeklyRaw) : null;
   const startDate   = new Date(formData.get("startDate") as string);
@@ -114,8 +137,12 @@ export async function createSeasonalPrice(formData: FormData): Promise<ActionRes
   if (!name)  return { error: "Name is required." };
   if (!await assertUnitOrg(unitId, actor.organizationId!)) return { error: "Unauthorized" };
   if (isNaN(dailyRate) || dailyRate <= 0)    return { error: "Daily rate must be positive." };
-  if (isNaN(monthlyRate) || monthlyRate <= 0) return { error: "Monthly rate must be positive." };
   if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return { error: "Invalid dates." };
+
+  // Monthly rate is optional for seasonal prices (QA #26): when omitted, snapshot
+  // the unit's DEFAULT monthly rate so monthly stays in the season keep that rate.
+  const monthlyRate = await resolveSeasonalMonthlyRate(unitId, monthlyRaw, dailyRate);
+  if (monthlyRate == null) return { error: "Monthly rate must be positive." };
   if (startDate >= endDate) return { error: "Start date must be before end date." };
 
   const price = await prisma.unitPrice.create({
@@ -136,12 +163,23 @@ export async function updateUnitPrice(formData: FormData): Promise<ActionRespons
 
   const unitId      = price.unitId;
   const dailyRate   = parseFloat(formData.get("dailyRate")   as string);
-  const monthlyRate = parseFloat(formData.get("monthlyRate") as string);
+  const monthlyRaw  = formData.get("monthlyRate") as string;
   const weeklyRaw   = formData.get("weeklyRate") as string;
   const weeklyRate  = weeklyRaw ? parseFloat(weeklyRaw) : null;
 
   if (isNaN(dailyRate) || dailyRate <= 0)    return { error: "Daily rate must be positive." };
-  if (isNaN(monthlyRate) || monthlyRate <= 0) return { error: "Monthly rate must be positive." };
+
+  // Monthly is optional for SEASONAL prices (QA #26) — falls back to the unit's
+  // DEFAULT monthly rate; still required when editing the DEFAULT price itself.
+  let monthlyRate: number;
+  if (price.priceType === "SEASONAL") {
+    const resolved = await resolveSeasonalMonthlyRate(unitId, monthlyRaw, dailyRate);
+    if (resolved == null) return { error: "Monthly rate must be positive." };
+    monthlyRate = resolved;
+  } else {
+    monthlyRate = parseFloat(monthlyRaw);
+    if (isNaN(monthlyRate) || monthlyRate <= 0) return { error: "Monthly rate must be positive." };
+  }
 
   const data: any = { dailyRate, weeklyRate, monthlyRate };
 

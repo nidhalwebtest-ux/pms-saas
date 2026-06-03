@@ -37,7 +37,7 @@
 | 23 | Edit Reservation 404s — route not implemented | 6 | **P1** | ✅ Stopgap (dead link removed; full flow → #30) |
 | 24 | Add settings: require contract creation/signing before check-in (feature) | 7 | **P1** | Open |
 | 25 | Corporate tenant: company name shown small on reservation page (contact too prominent) | 8 | P2 | ✅ Fixed (detail; list/PDF → follow-up) |
-| 26 | Add Seasonal Price modal: monthly rate should be optional, not required | 10 | P2 | Open |
+| 26 | Add Seasonal Price modal: monthly rate should be optional, not required | 10 | P2 | ✅ Fixed |
 | 27 | Add settings to prevent monthly reservations during certain periods (feature) | 10 | P2 | Open |
 | 28 | Seasonal price breakdown not shown on unit card during selection (and not persisted on reservationUnit) | 10 | **P1** | ✅ Persistence fixed (card UI → #31) |
 | 29 | Configurable reservation-number format (prefix/padding/reset) in settings | 6 (split from #18) | P2 | Open |
@@ -366,7 +366,7 @@
   - Make `monthlyRate` nullable in the action/validator for SEASONAL rows (schema already allows `monthlyRate` as Decimal — if NOT NULL, may need a migration; otherwise just relax the input validation).
   - Engine impact: `getUnitPriceForRange()`/`calculateUnitTotal()` already pick a price record per night via priority — when a seasonal record has no `monthlyRate`, fall back to DEFAULT for monthly stays in that window (or treat the seasonal record as daily-only).
 - **Files affected:** [components/dashboard/units/UnitPricingSection.tsx](components/dashboard/units/UnitPricingSection.tsx), seasonal price create/update action, [utils/pricing](utils/) (verify fallback behavior), [prisma/schema.prisma](prisma/schema.prisma) (if `monthlyRate` is NOT NULL).
-- **Status:** Open
+- **Status:** ✅ Fixed — `monthlyRate` is `required` only for the DEFAULT price now (`required={!isSeasonal}`, optional placeholder for seasonal). The seasonal create/update actions resolve monthly via a new `resolveSeasonalMonthlyRate()` helper: use the typed value if given, else **snapshot the unit's active DEFAULT monthly rate** (so monthly stays in the season keep that rate); only error if omitted AND the unit has no DEFAULT. **No schema/engine change** — `UnitPrice.monthlyRate` stays NOT NULL (avoids a DB migration); chose snapshot-at-save over a nullable column + engine fallback. DEFAULT price still requires both rates. Daily-only seasonal pricing (Khareef) now works without dummy values.
 
 ## Issue #27: Add settings to prevent monthly reservations during certain periods (feature)
 - **Scenario:** 10 — Seasonal pricing setup (user-flagged proactively)

@@ -425,8 +425,10 @@ function PriceModal({
                 step="0.001"
                 min="0"
                 defaultValue={editPrice?.monthlyRate ?? ""}
-                required
-                placeholder={tM("ratePlaceholder")}
+                // Optional for seasonal prices (QA #26) — falls back to the unit's
+                // DEFAULT monthly rate. Still required for the DEFAULT price itself.
+                required={!isSeasonal}
+                placeholder={isSeasonal ? tM("rateOptional") : tM("ratePlaceholder")}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               />
             </div>

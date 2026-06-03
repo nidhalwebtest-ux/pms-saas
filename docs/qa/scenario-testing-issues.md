@@ -26,7 +26,7 @@
 | 12 | Disable modal tenant form for now (dup of #4, tenants) | 3 | P2 | ✅ Fixed (via #4) |
 | 13 | After editing a tenant, no redirect to tenant detail page | 4 | P2 | ✅ Fixed |
 | 14 | Reservation list filter labels show raw i18n keys | 6 | P2 | Open |
-| 15 | Reservation form steps not responsive | 6 | P2 | Open |
+| 15 | Reservation form steps not responsive | 6 | P2 | ✅ Fixed |
 | 16 | Tenant select after search does not actually select (booking blocked) | 6 | **P1** | ✅ Fixed |
 | 17 | Daily date picker UX poor — align with monthly picker | 6 | P2 | Open |
 | 18 | Reservation number not org-scoped (got 00140) + make format configurable | 6 | **P1** | ✅ Fixed (format UI → #29) |
@@ -234,7 +234,7 @@
 - **Root cause:** Fixed widths / non-wrapping step header in [BookingEngine.tsx](components/dashboard/BookingEngine.tsx) (step bar near the `setStep` map ~line 443; step panels).
 - **Proposed fix:** Responsive pass — wrap/stack steps on `sm`, scrollable step rail, full-width controls. Manual check at 375/768px. Pair with #17.
 - **Files affected:** [components/dashboard/BookingEngine.tsx](components/dashboard/BookingEngine.tsx).
-- **Status:** Open
+- **Status:** ✅ Fixed — step rail now `justify-between sm:justify-center` with `overflow-x-auto` and reduced mobile padding (`px-1.5 sm:px-3`) so the 5 bubbles fit/scroll at 375px (labels already hidden on mobile); panel padding relaxed to `p-4 sm:p-6`; the Step-1 header row wraps (`gap-2 flex-wrap`). Step content grids were already responsive (`grid-cols-1 sm:grid-cols-2/3`). The daily date-picker polish is tracked separately as #17.
 
 ## Issue #16: Selecting a tenant after search doesn't actually select it — booking flow blocked
 - **Scenario:** 6 — Create daily reservation

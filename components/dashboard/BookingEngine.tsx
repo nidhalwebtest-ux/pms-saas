@@ -434,8 +434,8 @@ export default function BookingEngine({
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      {/* Step indicator */}
-      <nav className="flex items-center gap-0">
+      {/* Step indicator — spreads evenly + scrolls if needed on narrow screens (QA #15) */}
+      <nav className="flex items-center justify-between sm:justify-center gap-0 overflow-x-auto">
         {STEP_DEFS.map((s, i) => {
           const done    = step > s.id;
           const current = step === s.id;
@@ -445,7 +445,7 @@ export default function BookingEngine({
               <button
                 disabled={s.id > step}
                 onClick={() => s.id < step && setStep(s.id)}
-                className={`flex flex-col items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+                className={`flex flex-col items-center gap-1 px-1.5 sm:px-3 py-2 rounded-lg transition-colors ${
                   current ? "text-blue-600" :
                   done    ? "text-green-600 hover:bg-gray-100 cursor-pointer" :
                             "text-gray-400 cursor-default"
@@ -473,8 +473,8 @@ export default function BookingEngine({
 
       {/* ── STEP 1: Tenant ─────────────────────────────────────────────────── */}
       {step === 1 && (
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <h2 className="text-lg font-semibold text-gray-900">{tStep1("title")}</h2>
             <button
               onClick={() => setShowAddTenant((v) => !v)}
@@ -625,7 +625,7 @@ export default function BookingEngine({
 
       {/* ── STEP 2: Dates ──────────────────────────────────────────────────── */}
       {step === 2 && (
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm space-y-5">
           <h2 className="text-lg font-semibold text-gray-900">{tStep2("title")}</h2>
 
           <Select
@@ -738,7 +738,7 @@ export default function BookingEngine({
 
       {/* ── STEP 3: Units ──────────────────────────────────────────────────── */}
       {step === 3 && (
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-4">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm space-y-4">
 
           {/* Double-booking conflict error panel */}
           {conflictError && (
@@ -1113,7 +1113,7 @@ export default function BookingEngine({
 
       {/* ── STEP 5: Confirm ────────────────────────────────────────────────── */}
       {step === 5 && (
-        <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm space-y-5">
+        <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm space-y-5">
           <h2 className="text-lg font-semibold text-gray-900">{tStep5("title")}</h2>
 
           {selectedTenant && (

@@ -12,7 +12,7 @@
 
 | # | Title | Scenario | Severity | Status |
 |---|-------|----------|----------|--------|
-| 1 | No logout button on Onboarding wizard | 1 | P2 | Open |
+| 1 | No logout button on Onboarding wizard | 1 | P2 | ✅ Fixed |
 | 2 | Onboarding phone field lacks country-code picker (reuse PhoneField) | 1 | P2 | Open |
 | 3 | App still branded "OmRent" — rename to "Binaya" app-wide | 1 | P2 | Open |
 | 4 | Disable modal (slide-over) forms for now — use full pages | 2 | P2 | Open |
@@ -57,7 +57,7 @@
 - **Root cause:** Feature gap — logout was never added to this screen. A `logout()` server action already exists at [app/login/actions.ts:212](app/login/actions.ts#L212).
 - **Proposed fix:** Add a small logout button (e.g. top-right of the wizard, or under the step counter) that calls the existing `logout()` server action. Reuse the same action used by the dashboard header so behavior is consistent.
 - **Files affected:** [app/onboarding/OnboardingWizard.tsx](app/onboarding/OnboardingWizard.tsx), import `logout` from [app/login/actions.ts](app/login/actions.ts).
-- **Status:** Open
+- **Status:** ✅ Fixed — added a "Log out" button (top-right of the wizard) that calls the existing `logout()` server action. New i18n key `auth.onboarding.logout` in both locales.
 
 ## Issue #2: Onboarding phone field lacks a country-code picker (default Oman)
 - **Scenario:** 1 — Create organization

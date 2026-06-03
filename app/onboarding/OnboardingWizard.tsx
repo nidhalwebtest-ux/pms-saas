@@ -12,8 +12,10 @@ import {
   ArrowRightIcon,
   ArrowLeftIcon,
   CheckIcon,
+  ArrowRightOnRectangleIcon,
 } from "@heroicons/react/24/outline";
 import { createOrganization } from "./actions";
+import { logout } from "@/app/login/actions";
 
 // ── Static data ───────────────────────────────────────────────────────────────
 
@@ -332,6 +334,18 @@ export default function OnboardingWizard() {
 
   return (
     <div className="w-full max-w-lg">
+
+      {/* Logout — lets a user who signed up with the wrong account exit (QA issue #1) */}
+      <div className="mb-4 flex justify-end">
+        <button
+          type="button"
+          onClick={() => logout()}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white transition-colors"
+        >
+          <ArrowRightOnRectangleIcon className="h-4 w-4" />
+          {t("logout")}
+        </button>
+      </div>
 
       {/* Branding */}
       <div className="mb-8 flex flex-col items-center gap-2">

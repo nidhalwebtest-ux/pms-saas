@@ -245,6 +245,7 @@
       "warnEmailFailed": "We couldn't deliver the verification email automatically. This can happen with certain free email providers or restricted sender domains. Please click Resend below — and if that fails too, contact support."
     },
     "onboarding": {
+      "logout": "Log out",
       "header": {
         "title": "Set Up Your Workspace",
         "description": "Tell us about your company — takes 1 minute"

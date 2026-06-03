@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { getDisplayStatus, type StoredStatus } from "@/lib/reservation-status";
+import { calculateNights, calculateGrandTotal } from "@/lib/reservation-engine";
+import { getUnitConflict, type ConflictDetail } from "@/lib/reservation-conflict";
+import { computeUnitPricings } from "@/lib/reservation-pricing";
 
 async function getActor() {
   const supabase = await createClient();
@@ -312,4 +316,180 @@ export async function GET(
       : null,
     createdAt: r.createdAt.toISOString(),
   });
+}
+
+// ── PUT /api/reservations/[id] — edit a reservation (QA #30) ───────────────────
+//
+// Editing is only allowed BEFORE check-in and BEFORE invoices exist: stored
+// status must be PENDING or CONFIRMED and invoicesGenerated must be false.
+// Re-validates availability (excluding this reservation), recomputes pricing +
+// segments via the shared helper, and replaces the reservation_units rows.
+const EDITABLE_STATUSES = ["PENDING", "CONFIRMED"];
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const actor = await getActor();
+  if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+
+  const existing = await prisma.reservation.findUnique({
+    where:  { id },
+    select: { id: true, organizationId: true, status: true, invoicesGenerated: true },
+  });
+  if (!existing || existing.organizationId !== actor.organizationId)
+    return NextResponse.json({ error: "Reservation not found." }, { status: 404 });
+
+  if (!EDITABLE_STATUSES.includes(existing.status))
+    return NextResponse.json(
+      { error: "not_editable", reason: "status", message: `A ${existing.status.toLowerCase()} reservation can't be edited.` },
+      { status: 409 },
+    );
+  if (existing.invoicesGenerated)
+    return NextResponse.json(
+      { error: "not_editable", reason: "invoices", message: "This reservation has generated invoices. Cancel the invoices first, or cancel and rebook." },
+      { status: 409 },
+    );
+
+  const body = await req.json();
+  const {
+    tenantId,
+    unitIds,
+    startDate: startStr,
+    endDate:   endStr,
+    rateType,
+    source,
+    notes,
+    discountAmount: discountRaw = 0,
+    unitOverrides = [] as { unitId: string; rateAmount: number }[],
+  } = body;
+
+  // ── Validation (mirrors POST) ─────────────────────────────────────────────
+  if (!tenantId || !Array.isArray(unitIds) || unitIds.length === 0)
+    return NextResponse.json({ error: "tenantId and at least one unitId are required." }, { status: 400 });
+  if (!startStr || !endStr)
+    return NextResponse.json({ error: "startDate and endDate are required." }, { status: 400 });
+
+  const startDate = new Date(startStr);
+  const endDate   = new Date(endStr);
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime()))
+    return NextResponse.json({ error: "Invalid date format. Use YYYY-MM-DD." }, { status: 400 });
+  if (startDate >= endDate)
+    return NextResponse.json({ error: "checkOut must be after checkIn." }, { status: 400 });
+
+  const rt: "daily" | "monthly" = rateType === "monthly" ? "monthly" : "daily";
+
+  const tenant = await prisma.tenant.findUnique({
+    where:  { id: tenantId },
+    select: { organizationId: true },
+  });
+  if (!tenant || tenant.organizationId !== actor.organizationId)
+    return NextResponse.json({ error: "Tenant not found." }, { status: 404 });
+
+  const unitRecords = await prisma.unit.findMany({
+    where:   { id: { in: unitIds } },
+    include: { property: { select: { organizationId: true } } },
+  });
+  if (unitRecords.length !== unitIds.length)
+    return NextResponse.json({ error: "One or more units not found." }, { status: 404 });
+  for (const u of unitRecords) {
+    if (u.property.organizationId !== actor.organizationId)
+      return NextResponse.json({ error: "Unauthorized access to unit." }, { status: 403 });
+  }
+
+  const unitPricings = await computeUnitPricings(unitIds, rt, startDate, endDate, unitOverrides);
+  const totalNights  = calculateNights(startDate, endDate);
+  const discount     = Math.max(0, Number(discountRaw) || 0);
+  const grandResult  = calculateGrandTotal(unitPricings.map((u) => u.subtotal), discount);
+
+  try {
+    const updated = await prisma.$transaction(
+      async (tx) => {
+        // Re-check availability, excluding THIS reservation so its own units
+        // don't count as conflicts.
+        for (const unitId of unitIds) {
+          const unitName = unitRecords.find((u) => u.id === unitId)?.name ?? unitId;
+          const conflict = await getUnitConflict(tx, unitId, unitName, startDate, endDate, id);
+          if (conflict) throw new Error(`CONFLICT:${JSON.stringify(conflict)}`);
+        }
+
+        const res = await tx.reservation.update({
+          where: { id },
+          data: {
+            startDate,
+            endDate,
+            rateType:       rt,
+            source:         source ?? "walk_in",
+            notes:          notes ?? null,
+            frequency:      rt === "monthly" ? "MONTHLY" : "DAILY",
+            totalNights,
+            amount:         grandResult.grandTotal,
+            totalPrice:     grandResult.grandTotal,
+            totalAmount:    grandResult.totalAmount,
+            discountAmount: grandResult.discountAmount,
+            taxAmount:      grandResult.taxAmount,
+            grandTotal:     grandResult.grandTotal,
+            tenantId,
+            unitId: unitIds.length === 1 ? unitIds[0] : null,
+          },
+        });
+
+        // Replace the reservation_units snapshot.
+        await tx.reservationUnit.deleteMany({ where: { reservationId: id } });
+        await tx.reservationUnit.createMany({
+          data: unitPricings.map((up) => ({
+            reservationId:     id,
+            unitId:            up.unitId,
+            rateType:          up.rateType,
+            rateAmount:        up.rateAmount,
+            rateSource:        up.rateSource,
+            seasonalPriceName: up.seasonalPriceName,
+            nights:            up.nights,
+            subtotal:          up.subtotal,
+            pricingSegments:   up.pricingSegments as unknown as Prisma.InputJsonValue,
+          })),
+        });
+
+        await tx.reservationActivity.create({
+          data: {
+            reservationId: id,
+            organizationId: actor.organizationId!,
+            // No generic "EDITED" action in the enum; DATES_CHANGED is the
+            // closest fit for a full re-save (dates/units/rates).
+            action: "DATES_CHANGED",
+            description: `Reservation edited — ${startStr} → ${endStr}, ${unitIds.length} unit(s), total ${grandResult.grandTotal.toFixed(3)} OMR.`,
+            performedById: actor.id,
+            metadata: {
+              startDate: startDate.toISOString(),
+              endDate:   endDate.toISOString(),
+              unitIds,
+              rateType:  rt,
+              grandTotal: grandResult.grandTotal,
+            },
+          },
+        });
+
+        return res;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+
+    return NextResponse.json({ reservation: updated });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.startsWith("CONFLICT:")) {
+      try {
+        const conflict = JSON.parse(msg.replace("CONFLICT:", "")) as ConflictDetail;
+        if (conflict) return NextResponse.json({ error: "double_booking", conflict }, { status: 409 });
+      } catch { /* fall through */ }
+      return NextResponse.json(
+        { error: "Unit is no longer available for the selected dates." },
+        { status: 409 },
+      );
+    }
+    console.error("[PUT /api/reservations/[id]]", err);
+    return NextResponse.json({ error: "Internal server error." }, { status: 500 });
+  }
 }

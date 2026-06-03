@@ -8,15 +8,10 @@ import {
 } from "@/lib/reservation-status";
 import {
   calculateNights,
-  countCalendarMonths,
-  buildCalendarMonthBreakdown,
-  collapseToSegments,
   calculateGrandTotal,
-  roundOMR,
-  sumSubtotals,
 } from "@/lib/reservation-engine";
 import { getUnitConflict, type ConflictDetail } from "@/lib/reservation-conflict";
-import { getUnitPriceForRange } from "@/lib/pricing";
+import { computeUnitPricings } from "@/lib/reservation-pricing";
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
 
@@ -263,142 +258,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized access to unit." }, { status: 403 });
   }
 
-  // Compute pricing per unit (outside transaction — read-only, safe to do first)
-  // A persisted snapshot of each price segment of the stay (e.g. 3 nights DEFAULT
-  // + 4 nights Khareef SEASONAL). Source of truth for invoices/receipts/reports
-  // so they don't have to recompute from prices+dates later (QA issue #28).
-  type PricingSegment = {
-    label:             string | null;   // e.g. "March 2026" (monthly) — null for daily
-    startDate:         string | null;   // ISO date (daily segments)
-    endDate:           string | null;   // ISO date (daily segments)
-    nights:            number;
-    rateAmount:        number;          // per-night (daily) or monthly rate (monthly)
-    rateSource:        string;          // default_price | seasonal_price | manual_override
-    seasonalPriceName: string | null;
-    subtotal:          number;
-  };
-  type UnitPricing = {
-    unitId:            string;
-    rateType:          string;
-    rateAmount:        number;
-    rateSource:        string;
-    seasonalPriceName: string | null;
-    nights:            number;
-    subtotal:          number;
-    pricingSegments:   PricingSegment[];
-  };
+  // Compute pricing + persisted segments per unit (shared with the edit PUT).
+  const unitPricings = await computeUnitPricings(unitIds, rt, startDate, endDate, unitOverrides);
 
   const totalNightsVal = calculateNights(startDate, endDate);
-  const calMonths      = countCalendarMonths(startDate, endDate);
-  const unitPricings: UnitPricing[] = [];
-
-  for (const unitId of unitIds) {
-    // Check for manual override from the booking UI
-    const override = (unitOverrides as { unitId: string; rateAmount: number }[])
-      .find((o) => o.unitId === unitId);
-
-    if (rt === "daily") {
-      if (override && override.rateAmount > 0) {
-        // Custom daily rate
-        const subtotal = roundOMR(override.rateAmount * totalNightsVal);
-        unitPricings.push({
-          unitId,
-          rateType:          "daily",
-          rateAmount:        override.rateAmount,
-          rateSource:        "manual_override",
-          seasonalPriceName: null,
-          nights:            totalNightsVal,
-          subtotal,
-          pricingSegments: [{
-            label:             null,
-            startDate:         startDate.toISOString(),
-            endDate:           endDate.toISOString(),
-            nights:            totalNightsVal,
-            rateAmount:        override.rateAmount,
-            rateSource:        "manual_override",
-            seasonalPriceName: null,
-            subtotal,
-          }],
-        });
-      } else {
-        const priceResult = await getUnitPriceForRange(unitId, startDate, endDate);
-        const segments    = collapseToSegments(priceResult.dailyBreakdown);
-        const subtotal    = sumSubtotals(segments.map((s) => s.subtotal));
-        const firstSeg    = segments[0];
-        unitPricings.push({
-          unitId,
-          rateType:          "daily",
-          rateAmount:        firstSeg?.ratePerNight ?? 0,
-          rateSource:        firstSeg?.priceType === "SEASONAL" ? "seasonal_price" : "default_price",
-          seasonalPriceName: firstSeg?.priceName ?? null,
-          nights:            totalNightsVal,
-          subtotal,
-          pricingSegments: segments.map((s) => ({
-            label:             null,
-            startDate:         s.startDate,
-            endDate:           s.endDate,
-            nights:            s.nights,
-            rateAmount:        s.ratePerNight,
-            rateSource:        s.priceType === "SEASONAL" ? "seasonal_price" : "default_price",
-            seasonalPriceName: s.priceName,
-            subtotal:          s.subtotal,
-          })),
-        });
-      }
-    } else {
-      // Monthly — calendar month standard
-      if (override && override.rateAmount > 0) {
-        // Custom monthly rate
-        const subtotal = roundOMR(override.rateAmount * calMonths);
-        unitPricings.push({
-          unitId,
-          rateType:          "monthly",
-          rateAmount:        override.rateAmount,
-          rateSource:        "manual_override",
-          seasonalPriceName: null,
-          nights:            totalNightsVal,
-          subtotal,
-          pricingSegments: [{
-            label:             null,
-            startDate:         startDate.toISOString(),
-            endDate:           endDate.toISOString(),
-            nights:            totalNightsVal,
-            rateAmount:        override.rateAmount,
-            rateSource:        "manual_override",
-            seasonalPriceName: null,
-            subtotal,
-          }],
-        });
-      } else {
-        const prices       = await prisma.unitPrice.findMany({ where: { unitId, isActive: true } });
-        const defaultPrice = prices.find((p) => p.priceType === "DEFAULT");
-        const monthlyRate  = defaultPrice ? Number(defaultPrice.monthlyRate) : 0;
-        const segments     = buildCalendarMonthBreakdown(
-          startDate, calMonths, monthlyRate, defaultPrice?.name ?? null, "DEFAULT",
-        );
-        unitPricings.push({
-          unitId,
-          rateType:          "monthly",
-          rateAmount:        monthlyRate,
-          rateSource:        "default_price",
-          seasonalPriceName: null,
-          nights:            totalNightsVal,
-          subtotal:          sumSubtotals(segments.map((s) => s.subtotal)),
-          pricingSegments: segments.map((s) => ({
-            label:             s.label,
-            startDate:         null,
-            endDate:           null,
-            nights:            s.nights,
-            rateAmount:        s.monthlyRate,
-            rateSource:        s.priceType === "SEASONAL" ? "seasonal_price" : "default_price",
-            seasonalPriceName: s.priceType === "SEASONAL" ? s.priceName : null,
-            subtotal:          s.subtotal,
-          })),
-        });
-      }
-    }
-  }
-
   const discount    = Math.max(0, Number(discountRaw) || 0);
   const grandResult = calculateGrandTotal(
     unitPricings.map((u) => u.subtotal),

@@ -11,6 +11,7 @@ import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import {
   ArrowLeftIcon,
   PrinterIcon,
+  PencilSquareIcon,
   XMarkIcon,
   CheckIcon,
   PhoneIcon,
@@ -1586,15 +1587,22 @@ function ProcessRefundModal({ ret, onSuccess, onClose }: {
 
 // ── Action Buttons ─────────────────────────────────────────────────────────────
 
-function ActionButtons({ ds, onAction, reservationId, rateType, allowEarlyCheckIn = false }: {
+function ActionButtons({ ds, onAction, reservationId, rateType, allowEarlyCheckIn = false, canEdit = false }: {
   ds: string;
   onAction: (a: ModalType) => void;
   reservationId: string;
   rateType: string;
   allowEarlyCheckIn?: boolean;
+  canEdit?: boolean;
 }) {
   const t = useTranslations("reservations.detail.actions");
   const openPrint = () => window.open(`/api/reservations/${reservationId}/pdf`, "_blank");
+  // Edit available before check-in and before invoices exist (QA #30).
+  const editLink = canEdit ? (
+    <Link href={`/dashboard/reservations/${reservationId}/edit`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+      <PencilSquareIcon className="h-4 w-4" /> {t("edit")}
+    </Link>
+  ) : null;
 
   switch (ds) {
     case "Upcoming":
@@ -1606,9 +1614,7 @@ function ActionButtons({ ds, onAction, reservationId, rateType, allowEarlyCheckI
               <CheckIcon className="h-4 w-4" /> {t("checkIn")}
             </button>
           )}
-          {/* Edit link removed — the /edit route and update API are not yet
-              built, so the button 404'd. Restore when the edit flow lands
-              (QA issue #23). */}
+          {editLink}
           <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
             {t("print")}
           </Button>
@@ -1629,9 +1635,7 @@ function ActionButtons({ ds, onAction, reservationId, rateType, allowEarlyCheckI
               {t("noShow")}
             </button>
           )}
-          {/* Edit link removed — the /edit route and update API are not yet
-              built, so the button 404'd. Restore when the edit flow lands
-              (QA issue #23). */}
+          {editLink}
           <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
             {t("print")}
           </Button>
@@ -1793,6 +1797,12 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { i
     ? res.tenant.corporateName!.trim().slice(0, 2).toUpperCase()
     : `${res.tenant.firstName[0]}${res.tenant.lastName[0]}`;
 
+  // Editable only before check-in and before invoices exist (QA #30). The PUT
+  // API enforces the same rule as the source of truth.
+  const canEdit =
+    !res.invoicesGenerated &&
+    ["Upcoming", "Arriving Today", "Overdue Arrival"].includes(res.displayStatus);
+
   // Use invoice balances as the source of truth when invoices exist
   const invoiceBalanceDue = res.invoices.length > 0
     ? res.invoices
@@ -1832,7 +1842,7 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { i
 
             {/* Right: action buttons */}
             <div className="flex items-center gap-2 flex-wrap">
-              <ActionButtons ds={res.displayStatus} onAction={setActiveModal} reservationId={res.id} rateType={res.rateType} allowEarlyCheckIn={allowEarlyCheckIn} />
+              <ActionButtons ds={res.displayStatus} onAction={setActiveModal} reservationId={res.id} rateType={res.rateType} allowEarlyCheckIn={allowEarlyCheckIn} canEdit={canEdit} />
             </div>
           </div>
         </div>

@@ -34,14 +34,14 @@
 | 20 | No Check-In button for early check-in despite setting enabled | 6 | **P1** | ✅ Fixed |
 | 21 | Availability modal: Show disabled under "All Properties" (need property selector) | 6 | P2 | ✅ Fixed |
 | 22 | Availability split-day half-square wrong direction in Arabic/RTL | 6 | P3 | ✅ Fixed |
-| 23 | Edit Reservation 404s — route not implemented | 6 | **P1** | ✅ Stopgap (dead link removed; full flow → #30) |
+| 23 | Edit Reservation 404s — route not implemented | 6 | **P1** | ✅ Fixed (full flow → #30; Edit buttons restored) |
 | 24 | Add settings: require contract creation/signing before check-in (feature) | 7 | **P1** | Open |
 | 25 | Corporate tenant: company name shown small on reservation page (contact too prominent) | 8 | P2 | ✅ Fixed (detail; list/PDF → follow-up) |
 | 26 | Add Seasonal Price modal: monthly rate should be optional, not required | 10 | P2 | ✅ Fixed |
 | 27 | Add settings to prevent monthly reservations during certain periods (feature) | 10 | P2 | Open |
 | 28 | Seasonal price breakdown not shown on unit card during selection (and not persisted on reservationUnit) | 10 | **P1** | ✅ Persistence fixed (card UI → #31) |
 | 29 | Configurable reservation-number format (prefix/padding/reset) in settings | 6 (split from #18) | P2 | ✅ Fixed (needs `db push`) |
-| 30 | Full Edit Reservation flow (edit route + PUT API + guards) | 6 (split from #23) | **P1** | Open |
+| 30 | Full Edit Reservation flow (edit route + PUT API + guards) | 6 (split from #23) | **P1** | ✅ Fixed |
 | 31 | Show seasonal segment breakdown on unit card during selection | 10 (split from #28) | P2 | ✅ Fixed |
 
 ---
@@ -401,7 +401,13 @@
 - **Steps to reproduce:** A receptionist needs to change a reservation's dates/units/rate after creation. The Edit button was removed (stopgap for #23), so there is currently no edit path at all.
 - **Proposed fix:** Build the real flow — (a) `app/dashboard/reservations/[id]/edit/page.tsx` reusing BookingEngine in an edit mode (prefill tenant/units/dates/rates), (b) `PUT /api/reservations/[id]` that re-validates availability with `getUnitConflict` excluding the current reservation, recomputes pricing + `pricingSegments`, and guards immutable states (CHECKED_IN past actions, CANCELLED, COMPLETED, or any reservation with issued/non-cancelled invoices). Restore the Edit buttons in [ReservationDetail.tsx](app/dashboard/reservations/[id]/ReservationDetail.tsx) once live.
 - **Dependencies:** Interacts with invoices (#11+) and double-booking. Scope carefully; likely its own slice.
-- **Status:** Open
+- **Status:** ✅ Fixed — full edit flow shipped:
+  - **Edit page** [app/dashboard/reservations/[id]/edit/page.tsx](app/dashboard/reservations/[id]/edit/page.tsx) reuses BookingEngine in edit mode, prefilled with the reservation's tenant/property/dates/rate-type/period/units/manual-rates/discount/source/notes. Direct-URL access to a non-editable reservation redirects to the detail page.
+  - **PUT /api/reservations/[id]** (in [route.ts](app/api/reservations/[id]/route.ts)) guards editability (status ∈ PENDING/CONFIRMED **and** `!invoicesGenerated`), re-validates availability inside a Serializable txn with `getUnitConflict(..., excludeReservationId=id)`, recomputes pricing+segments, replaces `reservation_units`, and logs a `DATES_CHANGED` activity.
+  - **Shared pricing** extracted to [lib/reservation-pricing.ts](lib/reservation-pricing.ts) (`computeUnitPricings`) — POST and PUT now produce identical pricing/segment snapshots.
+  - **Availability API** gained `excludeReservationId` so the reservation's own units aren't shown as occupied during edit.
+  - **BookingEngine** gained edit-mode props (`reservationId` + `default*`), PUT submit, "Save Changes" button, and preserves the prefilled unit selection on the first availability fetch.
+  - **Edit buttons restored** in ReservationDetail (Upcoming + Arriving/Overdue), gated on `canEdit` (= editable status & no invoices) — also closes the #23 stopgap.
 
 ## Issue #31: Show seasonal segment breakdown on unit card during selection (split from #28)
 - **Scenario:** 10 — Seasonal pricing across Khareef boundary

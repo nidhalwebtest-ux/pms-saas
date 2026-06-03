@@ -1802,6 +1802,10 @@
       "addProperty": "+ Add Property",
       "addTenant": "+ Add Tenant"
     },
+    "editPage": {
+      "title": "Edit Reservation",
+      "description": "Update dates, units, rates, or details. Only available before check-in and before invoices are generated."
+    },
     "calendar": {
       "availabilityCalendar": "Availability Calendar",
       "showAvailability": "Show Availability",
@@ -2331,6 +2335,7 @@
         "afterDiscount": "After {amount} OMR discount",
         "submitting": "Creating…",
         "submit": "Confirm & Create Reservation",
+        "saveChanges": "Save Changes",
         "customRateInline": "[custom rate]"
       },
       "sources": {
@@ -2348,6 +2353,8 @@
       },
       "createSuccess": "Reservation created!",
       "createFailed": "Failed to create reservation.",
+      "updateSuccess": "Reservation updated!",
+      "updateFailed": "Failed to update reservation.",
       "networkError": "Network error. Please try again.",
       "omr": "OMR"
     },

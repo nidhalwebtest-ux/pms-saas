@@ -1802,6 +1802,10 @@
       "addProperty": "+ إضافة عقار",
       "addTenant": "+ إضافة مستأجر"
     },
+    "editPage": {
+      "title": "تعديل الحجز",
+      "description": "حدّث التواريخ أو الوحدات أو الأسعار أو التفاصيل. متاح فقط قبل تسجيل الدخول وقبل إنشاء الفواتير."
+    },
     "calendar": {
       "availabilityCalendar": "تقويم التوفر",
       "showAvailability": "عرض التوفر",
@@ -2331,6 +2335,7 @@
         "afterDiscount": "بعد خصم {amount} ر.ع.",
         "submitting": "جاري الإنشاء…",
         "submit": "تأكيد وإنشاء الحجز",
+        "saveChanges": "حفظ التغييرات",
         "customRateInline": "[سعر مخصص]"
       },
       "sources": {
@@ -2348,6 +2353,8 @@
       },
       "createSuccess": "تم إنشاء الحجز!",
       "createFailed": "فشل إنشاء الحجز.",
+      "updateSuccess": "تم تحديث الحجز!",
+      "updateFailed": "فشل تحديث الحجز.",
       "networkError": "خطأ في الشبكة. يرجى المحاولة مرة أخرى.",
       "omr": "ر.ع."
     },

@@ -156,12 +156,35 @@ export default function BookingEngine({
   defaultTenant,
   defaultPropertyId,
   defaultUnitId,
+  // Edit mode (QA #30): when reservationId is set, the wizard prefills from the
+  // existing reservation and submits via PUT instead of POST.
+  reservationId,
+  defaultStartDate,
+  defaultEndDate,
+  defaultRateType,
+  defaultPeriod,
+  defaultSelectedUnitIds,
+  defaultCustomRates,
+  defaultDiscount,
+  defaultSource,
+  defaultNotes,
 }: {
   properties: PropertyOption[];
   defaultTenant?: TenantResult | null;
   defaultPropertyId?: string;
   defaultUnitId?: string;
+  reservationId?: string;
+  defaultStartDate?: string;
+  defaultEndDate?: string;
+  defaultRateType?: "daily" | "monthly";
+  defaultPeriod?: number;
+  defaultSelectedUnitIds?: string[];
+  defaultCustomRates?: Record<string, string>;
+  defaultDiscount?: string;
+  defaultSource?: string;
+  defaultNotes?: string;
 }) {
+  const editMode = !!reservationId;
   const router = useRouter();
   const locale = useLocale();
   const dateFnsLocale: Locale = locale === "ar" ? arLocale : enLocale;
@@ -194,23 +217,26 @@ export default function BookingEngine({
 
   // ── Step 2: Dates ─────────────────────────────────────────────────────────
   const [propertyId, setPropertyId] = useState(defaultPropertyId ?? properties[0]?.id ?? "");
-  const [startDate,  setStartDate]  = useState("");
-  const [endDate,    setEndDate]    = useState("");
-  const [rateType,   setRateType]   = useState<"daily" | "monthly">("daily");
-  const [period,     setPeriod]     = useState(1); // nights OR months
+  const [startDate,  setStartDate]  = useState(defaultStartDate ?? "");
+  const [endDate,    setEndDate]    = useState(defaultEndDate ?? "");
+  const [rateType,   setRateType]   = useState<"daily" | "monthly">(defaultRateType ?? "daily");
+  const [period,     setPeriod]     = useState(defaultPeriod ?? 1); // nights OR months
 
   // ── Step 3: Units ─────────────────────────────────────────────────────────
   const [units,         setUnits]         = useState<UnitOption[]>([]);
   const [unitsLoading,  setUnitsLoading]  = useState(false);
-  const [selectedUnits, setSelectedUnits] = useState<string[]>([]); // unitIds
+  const [selectedUnits, setSelectedUnits] = useState<string[]>(defaultSelectedUnitIds ?? []); // unitIds
   const [unitTypeFilter, setUnitTypeFilter] = useState("ALL");
-  const [customRates,   setCustomRates]   = useState<Record<string, string>>({}); // unitId → rate/night or rate/month
+  const [customRates,   setCustomRates]   = useState<Record<string, string>>(defaultCustomRates ?? {}); // unitId → rate/night or rate/month
   const [customTotals,  setCustomTotals]  = useState<Record<string, string>>({}); // unitId → total amount for period
+  // In edit mode the first units fetch must preserve the prefilled selection
+  // and custom rates instead of clearing them.
+  const editPrefillConsumed = useRef(false);
 
   // ── Step 4: Details ───────────────────────────────────────────────────────
-  const [discount,  setDiscount]  = useState("");
-  const [source,    setSource]    = useState("walk_in");
-  const [notes,     setNotes]     = useState("");
+  const [discount,  setDiscount]  = useState(defaultDiscount ?? "");
+  const [source,    setSource]    = useState(defaultSource ?? "walk_in");
+  const [notes,     setNotes]     = useState(defaultNotes ?? "");
 
   // ── Step 5: Submit ────────────────────────────────────────────────────────
   const [submitting, setSubmitting] = useState(false);
@@ -352,18 +378,26 @@ export default function BookingEngine({
   const fetchUnits = useCallback(async () => {
     if (!propertyId || !startDate || !endDate) return;
     setUnitsLoading(true);
-    setSelectedUnits([]);
-    setCustomRates({});
-    setCustomTotals({});
+    // Preserve the prefilled selection/rates on the FIRST edit-mode fetch only.
+    const preservePrefill = editMode && !editPrefillConsumed.current;
+    if (!preservePrefill) {
+      setSelectedUnits([]);
+      setCustomRates({});
+      setCustomTotals({});
+    }
     setConflictError(null);
     try {
-      const url  = `/api/units/availability?propertyId=${propertyId}&startDate=${startDate}&endDate=${endDate}&rateType=${rateType}`;
-      const res  = await fetch(url);
+      const params = new URLSearchParams({ propertyId, startDate, endDate, rateType });
+      // Exclude this reservation so its own units aren't flagged occupied (QA #30).
+      if (reservationId) params.set("excludeReservationId", reservationId);
+      const res  = await fetch(`/api/units/availability?${params.toString()}`);
       const data = await res.json();
       const fetched: UnitOption[] = data.units ?? [];
       setUnits(fetched);
       setUnitTypeFilter("ALL");
-      if (defaultUnitId && !defaultUnitConsumed.current) {
+      if (preservePrefill) {
+        editPrefillConsumed.current = true;
+      } else if (defaultUnitId && !defaultUnitConsumed.current) {
         defaultUnitConsumed.current = true;
         const match = fetched.find((u) => u.id === defaultUnitId && u.available);
         if (match) setSelectedUnits([match.id]);
@@ -373,7 +407,7 @@ export default function BookingEngine({
     } finally {
       setUnitsLoading(false);
     }
-  }, [propertyId, startDate, endDate, rateType, tStep3, defaultUnitId]);
+  }, [propertyId, startDate, endDate, rateType, tStep3, defaultUnitId, editMode, reservationId]);
 
   // ── Toggle unit selection ─────────────────────────────────────────────────
   function toggleUnit(unitId: string) {
@@ -409,32 +443,36 @@ export default function BookingEngine({
         })
         .map((id) => ({ unitId: id, rateAmount: parseFloat(customRates[id]) }));
 
-      const res = await fetch("/api/reservations", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          tenantId:       selectedTenant.id,
-          unitIds:        selectedUnits,
-          startDate,
-          endDate,
-          rateType,
-          source,
-          notes:          notes || null,
-          discountAmount: parseFloat(discount) || 0,
-          unitOverrides,
-        }),
-      });
+      // Edit mode → PUT the existing reservation; create mode → POST a new one.
+      const res = await fetch(
+        editMode ? `/api/reservations/${reservationId}` : "/api/reservations",
+        {
+          method:  editMode ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            tenantId:       selectedTenant.id,
+            unitIds:        selectedUnits,
+            startDate,
+            endDate,
+            rateType,
+            source,
+            notes:          notes || null,
+            discountAmount: parseFloat(discount) || 0,
+            unitOverrides,
+          }),
+        },
+      );
       const data = await res.json();
       if (!res.ok) {
         if (res.status === 409 && data.error === "double_booking" && data.conflict) {
           setConflictError(data.conflict);
           setStep(3); // go back to unit selection step to show the conflict
         } else {
-          toast.error(data.error ?? t("createFailed"));
+          toast.error(data.error ?? data.message ?? t(editMode ? "updateFailed" : "createFailed"));
         }
         return;
       }
-      toast.success(t("createSuccess"));
+      toast.success(t(editMode ? "updateSuccess" : "createSuccess"));
       router.push(`/dashboard/reservations/${data.reservation.id}`);
     } catch {
       toast.error(t("networkError"));
@@ -1180,7 +1218,7 @@ export default function BookingEngine({
             fullWidth
             rightIcon={<CheckCircleIcon className="h-5 w-5" />}
           >
-            {tStep5("submit")}
+            {editMode ? tStep5("saveChanges") : tStep5("submit")}
           </Button>
         </div>
       )}

@@ -16,7 +16,7 @@
 | 2 | Onboarding phone field lacks country-code picker (reuse PhoneField) | 1 | P2 | Open |
 | 3 | App still branded "OmRent" — rename to "Binaya" app-wide | 1 | P2 | Open |
 | 4 | Disable modal (slide-over) forms for now — use full pages | 2 | P2 | ✅ Fixed |
-| 5 | Base Price should be optional in Bulk Unit Add | 2 | P2 | Open |
+| 5 | Base Price should be optional in Bulk Unit Add | 2 | P2 | ✅ Fixed |
 | 6 | Make unit-row regeneration automatic; remove "Regenerate" button | 2 | P3 | Open |
 | 7 | Remove Price column from Units list page | 2 | P3 | ✅ Fixed |
 | 8 | After create, redirect to LIST page (not detail) once toast shows | 2 | P2 | Open |
@@ -117,7 +117,7 @@
   - Prisma `Unit.basePrice` — confirm column nullability in schema before finalizing fix (likely needs to allow null or default 0).
 - **Proposed fix:** Treat blank base price as valid (default to `0` or null). Remove the required `*`; change validity to `r.name.trim()` only (drop the `basePrice >= 0` gate, or allow blank → 0). Update both the client filters (lines 163, 176) and the server filter (units/actions.ts:235), and ensure `Unit.basePrice` accepts the chosen empty value (schema). Decide: store `0.000` or make the column nullable.
 - **Files affected:** [app/dashboard/units/bulk/BulkCreateForm.tsx](app/dashboard/units/bulk/BulkCreateForm.tsx), [app/dashboard/units/actions.ts](app/dashboard/units/actions.ts), possibly [prisma/schema.prisma](prisma/schema.prisma).
-- **Status:** Open
+- **Status:** ✅ Fixed — removed the required `*` on Base Price; `validCount`/`canSubmit` and the submit filter now gate on `name` only; blank base price defaults to `0` (client `Number.isFinite` guard) and the server `bulkCreateUnits` filter relaxed to name-only with a `0` fallback. No schema change needed (`basePrice` stores `0`).
 
 ## Issue #6: Make unit-row regeneration automatic; remove the "Regenerate" button
 - **Scenario:** 2 — Add building with units

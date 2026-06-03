@@ -233,7 +233,10 @@ export async function bulkCreateUnits(
   if (!property || property.organizationId !== dbUser?.organizationId)
     return { created: 0, error: "Unauthorized" };
 
-  const validUnits = input.units.filter((u) => u.name.trim() && u.basePrice >= 0);
+  // Base price is optional (QA issue #5) — only the name is required.
+  const validUnits = input.units
+    .filter((u) => u.name.trim())
+    .map((u) => ({ ...u, basePrice: Number.isFinite(u.basePrice) && u.basePrice >= 0 ? u.basePrice : 0 }));
   if (validUnits.length === 0) return { created: 0, error: "No valid units provided." };
   if (validUnits.length > 200) return { created: 0, error: "Maximum 200 units per batch." };
 

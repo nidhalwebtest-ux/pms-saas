@@ -160,7 +160,8 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
     setRows((prev) => [...prev, seedRow("")]);
   }
 
-  const validCount = rows.filter((r) => r.name.trim() && parseFloat(r.basePrice) >= 0).length;
+  // Base price is optional (QA issue #5) — a row is valid as long as it has a name.
+  const validCount = rows.filter((r) => r.name.trim()).length;
   const canSubmit  = validCount > 0 && propertyId && (!createPrice || (dailyRate && monthlyRate));
 
   const rangeError = startNum > endNum
@@ -173,15 +174,18 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
     if (!canSubmit) return;
 
     const payloadUnits = rows
-      .filter((r) => r.name.trim() && parseFloat(r.basePrice) >= 0)
-      .map((r) => ({
-        name:      r.name.trim(),
-        unitType:  r.unitType,
-        bedrooms:  r.bedrooms,
-        bathrooms: r.bathrooms,
-        area:      r.area ? parseFloat(r.area) : null,
-        basePrice: parseFloat(r.basePrice),
-      }));
+      .filter((r) => r.name.trim())
+      .map((r) => {
+        const bp = parseFloat(r.basePrice);
+        return {
+          name:      r.name.trim(),
+          unitType:  r.unitType,
+          bedrooms:  r.bedrooms,
+          bathrooms: r.bathrooms,
+          area:      r.area ? parseFloat(r.area) : null,
+          basePrice: Number.isFinite(bp) ? bp : 0, // optional → default 0 (QA #5)
+        };
+      });
 
     startTransition(async () => {
       const res = await bulkCreateUnits({
@@ -364,7 +368,7 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              {t("basePrice")} <span className="text-red-500">*</span>
+              {t("basePrice")}
             </label>
             <input
               type="number"

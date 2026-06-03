@@ -2013,7 +2013,10 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { i
                         <div className="flex items-start justify-between">
                           <div>
                             <p className={`font-semibold text-sm ${u.isMovedOut ? "text-amber-800" : "text-gray-900"}`}>
-                              {u.name}
+                              {/* Unit name links to the unit page (QA issue #19). */}
+                              <Link href={`/dashboard/units/${u.id}`} className="hover:text-brand-600 hover:underline transition-colors">
+                                {u.name}
+                              </Link>
                               {u.isMovedOut && (
                                 <Badge tone="warning" appearance="subtle" size="sm" className="ms-2">
                                   {tStay("movedOutBadge")}

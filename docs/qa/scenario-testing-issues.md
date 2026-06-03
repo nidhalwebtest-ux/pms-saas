@@ -30,7 +30,7 @@
 | 16 | Tenant select after search does not actually select (booking blocked) | 6 | **P1** | ✅ Fixed |
 | 17 | Daily date picker UX poor — align with monthly picker | 6 | P2 | Open |
 | 18 | Reservation number not org-scoped (got 00140) + make format configurable | 6 | **P1** | ✅ Fixed (format UI → #29) |
-| 19 | Unit name in reservation not clickable to unit page | 6 | P3 | Open |
+| 19 | Unit name in reservation not clickable to unit page | 6 | P3 | ✅ Fixed |
 | 20 | No Check-In button for early check-in despite setting enabled | 6 | **P1** | ✅ Fixed |
 | 21 | Availability modal: Show disabled under "All Properties" (need property selector) | 6 | P2 | Open |
 | 22 | Availability split-day half-square wrong direction in Arabic/RTL | 6 | P3 | Open |
@@ -279,7 +279,7 @@
 - **Actual:** Reservation detail renders the unit name as text, not a `Link` (tenant name IS linked — [ReservationDetail.tsx:1883](app/dashboard/reservations/[id]/ReservationDetail.tsx#L1883) — unit isn't).
 - **Proposed fix:** Wrap the unit name in `<Link href={\`/dashboard/units/${unitId}\`}>` in the detail (and consider the list columns for consistency).
 - **Files affected:** [app/dashboard/reservations/[id]/ReservationDetail.tsx](app/dashboard/reservations/[id]/ReservationDetail.tsx); optionally [app/dashboard/reservations/columns.tsx](app/dashboard/reservations/columns.tsx).
-- **Status:** Open
+- **Status:** ✅ Fixed — the unit name in the reservation detail "Units" section is now a `Link` to `/dashboard/units/<unitId>`. (List columns left as-is for now.)
 
 ## Issue #20: No Check-In button before start date even though "Allow early check-in" is enabled
 - **Scenario:** 6 — Create daily reservation

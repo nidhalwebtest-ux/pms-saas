@@ -14,6 +14,9 @@ type FormState = {
   checkInPolicy: CheckInPolicy;
   allowEarlyCheckIn: boolean;
   autoCheckout: boolean;
+  reservationNumberPrefix: string;
+  reservationNumberPadding: number;
+  reservationNumberResetYearly: boolean;
 };
 
 export default function ReservationSettingsForm({ settings }: { settings: FormState }) {
@@ -27,7 +30,16 @@ export default function ReservationSettingsForm({ settings }: { settings: FormSt
   const dirty =
     form.checkInPolicy !== settings.checkInPolicy ||
     form.allowEarlyCheckIn !== settings.allowEarlyCheckIn ||
-    form.autoCheckout !== settings.autoCheckout;
+    form.autoCheckout !== settings.autoCheckout ||
+    form.reservationNumberPrefix !== settings.reservationNumberPrefix ||
+    form.reservationNumberPadding !== settings.reservationNumberPadding ||
+    form.reservationNumberResetYearly !== settings.reservationNumberResetYearly;
+
+  // Live preview of the first reservation number for the current settings.
+  const previewNumber =
+    `${(form.reservationNumberPrefix || "RES")}` +
+    `${form.reservationNumberResetYearly ? `-${new Date().getFullYear()}` : ""}` +
+    `-${"1".padStart(Math.min(Math.max(form.reservationNumberPadding || 1, 1), 10), "0")}`;
 
   function handleSave() {
     setBannerError(null);
@@ -36,6 +48,9 @@ export default function ReservationSettingsForm({ settings }: { settings: FormSt
       fd.append("checkInPolicy", form.checkInPolicy);
       if (form.allowEarlyCheckIn) fd.append("allowEarlyCheckIn", "on");
       if (form.autoCheckout) fd.append("autoCheckout", "on");
+      fd.append("reservationNumberPrefix", form.reservationNumberPrefix);
+      fd.append("reservationNumberPadding", String(form.reservationNumberPadding));
+      if (form.reservationNumberResetYearly) fd.append("reservationNumberResetYearly", "on");
 
       let result;
       try {
@@ -125,6 +140,64 @@ export default function ReservationSettingsForm({ settings }: { settings: FormSt
           <span className="text-xs text-gray-500">{t("autoCheckoutHint")}</span>
         </span>
       </label>
+
+      {/* Reservation numbering (QA #29) */}
+      <div className="border-t border-gray-100 pt-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          {t("numberFormatLabel")}
+        </label>
+        <p className="text-xs text-gray-500 mb-3">{t("numberFormatHint")}</p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t("prefixLabel")}</label>
+            <input
+              type="text"
+              value={form.reservationNumberPrefix}
+              maxLength={8}
+              onChange={(e) => {
+                const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+                setForm((p) => ({ ...p, reservationNumberPrefix: v }));
+                setBannerError(null);
+              }}
+              placeholder="RES"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm uppercase ltr-numbers focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t("paddingLabel")}</label>
+            <input
+              type="number"
+              min={1}
+              max={10}
+              value={form.reservationNumberPadding}
+              onChange={(e) => {
+                setForm((p) => ({ ...p, reservationNumberPadding: parseInt(e.target.value, 10) || 1 }));
+                setBannerError(null);
+              }}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm ltr-numbers focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            />
+          </div>
+        </div>
+
+        <label className="mt-3 flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={form.reservationNumberResetYearly}
+            onChange={(e) => { setForm((p) => ({ ...p, reservationNumberResetYearly: e.target.checked })); setBannerError(null); }}
+            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
+          />
+          <span className="flex flex-col">
+            <span className="text-sm font-medium text-gray-800">{t("resetYearlyLabel")}</span>
+            <span className="text-xs text-gray-500">{t("resetYearlyHint")}</span>
+          </span>
+        </label>
+
+        <div className="mt-3 rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 text-sm">
+          <span className="text-xs text-gray-500">{t("previewLabel")} </span>
+          <span className="font-semibold text-gray-900 ltr-numbers">{previewNumber}</span>
+        </div>
+      </div>
 
       {/* Save */}
       <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">

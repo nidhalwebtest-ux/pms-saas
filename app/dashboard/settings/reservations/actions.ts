@@ -33,10 +33,21 @@ export async function updateReservationSettings(
   const allowEarlyCheckIn = formData.get("allowEarlyCheckIn") === "on";
   const autoCheckout      = formData.get("autoCheckout") === "on";
 
+  // Reservation-number format (QA #29). Sanitize: prefix to A–Z/0–9 (fallback
+  // "RES"), padding clamped to 1–10, reset-yearly boolean.
+  const prefixRaw = (formData.get("reservationNumberPrefix") as string ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const reservationNumberPrefix  = prefixRaw.slice(0, 8) || "RES";
+  const paddingRaw = parseInt(formData.get("reservationNumberPadding") as string, 10);
+  const reservationNumberPadding = Math.min(Math.max(Number.isFinite(paddingRaw) ? paddingRaw : 5, 1), 10);
+  const reservationNumberResetYearly = formData.get("reservationNumberResetYearly") === "on";
+
   try {
     await prisma.organization.update({
       where: { id: dbUser.organizationId },
-      data:  { checkInPolicy, allowEarlyCheckIn, autoCheckout },
+      data:  {
+        checkInPolicy, allowEarlyCheckIn, autoCheckout,
+        reservationNumberPrefix, reservationNumberPadding, reservationNumberResetYearly,
+      },
     });
   } catch (err) {
     console.error("[updateReservationSettings] DB error:", err);

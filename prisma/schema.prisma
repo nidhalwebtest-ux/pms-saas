@@ -167,6 +167,14 @@ model Organization {
   /// (by a scheduled job). When false, staff check out manually.
   autoCheckout       Boolean  @default(false)
 
+  /// Reservation-number format (Settings → Reservations). Number =
+  /// `${prefix}-${year}-${seq}` when reservationNumberResetYearly is true (seq
+  /// restarts each year), else `${prefix}-${seq}` continuous. `seq` is zero-padded
+  /// to reservationNumberPadding. See generateReservationNumber in the API route.
+  reservationNumberPrefix      String  @default("RES")
+  reservationNumberPadding     Int     @default(5)
+  reservationNumberResetYearly Boolean @default(true)
+
   plan               String   @default("FREE")
   maxProperties      Int      @default(1)
   subscriptionStatus String   @default("ACTIVE")

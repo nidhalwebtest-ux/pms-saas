@@ -18,7 +18,10 @@ export default async function ReservationSettingsPage() {
 
   const org = await prisma.organization.findUnique({
     where:  { id: dbUser.organizationId },
-    select: { checkInPolicy: true, allowEarlyCheckIn: true, autoCheckout: true },
+    select: {
+      checkInPolicy: true, allowEarlyCheckIn: true, autoCheckout: true,
+      reservationNumberPrefix: true, reservationNumberPadding: true, reservationNumberResetYearly: true,
+    },
   });
   if (!org) redirect("/onboarding");
 
@@ -41,6 +44,9 @@ export default async function ReservationSettingsPage() {
           checkInPolicy: org.checkInPolicy,
           allowEarlyCheckIn: org.allowEarlyCheckIn,
           autoCheckout: org.autoCheckout,
+          reservationNumberPrefix: org.reservationNumberPrefix,
+          reservationNumberPadding: org.reservationNumberPadding,
+          reservationNumberResetYearly: org.reservationNumberResetYearly,
         }}
       />
     </div>

@@ -40,7 +40,7 @@
 | 26 | Add Seasonal Price modal: monthly rate should be optional, not required | 10 | P2 | ✅ Fixed |
 | 27 | Add settings to prevent monthly reservations during certain periods (feature) | 10 | P2 | Open |
 | 28 | Seasonal price breakdown not shown on unit card during selection (and not persisted on reservationUnit) | 10 | **P1** | ✅ Persistence fixed (card UI → #31) |
-| 29 | Configurable reservation-number format (prefix/padding/reset) in settings | 6 (split from #18) | P2 | Open |
+| 29 | Configurable reservation-number format (prefix/padding/reset) in settings | 6 (split from #18) | P2 | ✅ Fixed (needs `db push`) |
 | 30 | Full Edit Reservation flow (edit route + PUT API + guards) | 6 (split from #23) | **P1** | Open |
 | 31 | Show seasonal segment breakdown on unit card during selection | 10 (split from #28) | P2 | ✅ Fixed |
 
@@ -393,7 +393,7 @@
 - **Requested behavior:** Let owners/managers configure the reservation-number format in Reservation Settings — prefix (e.g. `RES`), whether to include the year token, zero-padding width, and reset-yearly vs continuous.
 - **Proposed design:** Add fields on `Organization` (e.g. `reservationNumberPrefix`, `reservationNumberPadding`, `reservationNumberResetYearly`), read them in `generateReservationNumber()`, and surface them in [app/dashboard/settings/reservations/](app/dashboard/settings/reservations/). Mirror could later apply to invoice/payment numbers for consistency.
 - **Files affected:** [prisma/schema.prisma](prisma/schema.prisma), [app/api/reservations/route.ts](app/api/reservations/route.ts), [app/dashboard/settings/reservations/](app/dashboard/settings/reservations/).
-- **Status:** Open
+- **Status:** ✅ Fixed (code) — added 3 `Organization` columns (`reservationNumberPrefix` def "RES", `reservationNumberPadding` def 5, `reservationNumberResetYearly` def true). `generateReservationNumber()` now reads them: `${prefix}-${year}-${seq}` when reset-yearly else `${prefix}-${seq}` continuous, seq padded to width. Settings → Reservations gained a "Reservation number format" section (prefix/padding inputs + reset toggle + **live preview**), with server-side sanitization (prefix → A–Z/0–9, padding clamped 1–10). **⚠ Requires `npx prisma db push`** to add the columns (additive, defaulted — no backfill); `prisma generate` already run locally.
 
 ## Issue #30: Full Edit Reservation flow (split from #23)
 - **Scenario:** 6 — Create daily reservation

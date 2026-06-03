@@ -34,10 +34,14 @@ async function getActor() {
 // ── Reservation number generator ──────────────────────────────────────────────
 
 /**
- * Generate the next per-organization sequential reservation number for the
- * current year. Format: "RES-YYYY-NNNNN" (zero-padded to 5 digits), reset
- * yearly. Scoped to the org so the first booking in a fresh org is 00001 and
- * one company's volume is never leaked to another (QA issue #18).
+ * Generate the next per-organization sequential reservation number using the
+ * org's configurable format (Settings → Reservations — QA issue #29):
+ *   - prefix   (e.g. "RES")
+ *   - padding  (zero-pad width, e.g. 5 → "00001")
+ *   - resetYearly: when true the number is `${prefix}-${year}-${seq}` and the
+ *     sequence restarts each year; when false it's `${prefix}-${seq}` continuous.
+ * Scoped to the org so a fresh org starts at 1 and cross-company volume never
+ * leaks (QA #18).
  *
  * MUST be called inside a Prisma $transaction (Serializable) so concurrent
  * creates can't read the same "last" number — the @@unique([organizationId,
@@ -47,8 +51,19 @@ async function generateReservationNumber(
   orgId: string,
   tx: Prisma.TransactionClient,
 ): Promise<string> {
-  const year   = new Date().getFullYear();
-  const prefix = `RES-${year}-`;
+  const org = await tx.organization.findUnique({
+    where:  { id: orgId },
+    select: {
+      reservationNumberPrefix:      true,
+      reservationNumberPadding:     true,
+      reservationNumberResetYearly: true,
+    },
+  });
+
+  const base    = (org?.reservationNumberPrefix ?? "RES").trim() || "RES";
+  const padding = Math.min(Math.max(org?.reservationNumberPadding ?? 5, 1), 10);
+  const reset   = org?.reservationNumberResetYearly ?? true;
+  const prefix  = reset ? `${base}-${new Date().getFullYear()}-` : `${base}-`;
 
   const last = await tx.reservation.findFirst({
     where: {
@@ -65,7 +80,7 @@ async function generateReservationNumber(
     seq = parseInt(parts[parts.length - 1], 10) + 1;
   }
 
-  return `${prefix}${String(seq).padStart(5, "0")}`;
+  return `${prefix}${String(seq).padStart(padding, "0")}`;
 }
 
 // ── GET /api/reservations ─────────────────────────────────────────────────────

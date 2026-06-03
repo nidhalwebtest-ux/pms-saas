@@ -15,7 +15,7 @@
 | 1 | No logout button on Onboarding wizard | 1 | P2 | ✅ Fixed |
 | 2 | Onboarding phone field lacks country-code picker (reuse PhoneField) | 1 | P2 | Open |
 | 3 | App still branded "OmRent" — rename to "Binaya" app-wide | 1 | P2 | Open |
-| 4 | Disable modal (slide-over) forms for now — use full pages | 2 | P2 | Open |
+| 4 | Disable modal (slide-over) forms for now — use full pages | 2 | P2 | ✅ Fixed |
 | 5 | Base Price should be optional in Bulk Unit Add | 2 | P2 | Open |
 | 6 | Make unit-row regeneration automatic; remove "Regenerate" button | 2 | P3 | Open |
 | 7 | Remove Price column from Units list page | 2 | P3 | ✅ Fixed |
@@ -23,7 +23,7 @@
 | 9 | Tenants list filter tabs/labels show raw i18n keys (missing translations) | 3 | P2 | Open |
 | 10 | Tenant phone fields hardcode +968 — allow changing country code | 3 | P2 | Open |
 | 11 | Quick Add → Full Form loses typed first/last name (uncontrolled inputs) | 3 | P2 | Open |
-| 12 | Disable modal tenant form for now (dup of #4, tenants) | 3 | P2 | Open |
+| 12 | Disable modal tenant form for now (dup of #4, tenants) | 3 | P2 | ✅ Fixed (via #4) |
 | 13 | After editing a tenant, no redirect to tenant detail page | 4 | P2 | Open |
 | 14 | Reservation list filter labels show raw i18n keys | 6 | P2 | Open |
 | 15 | Reservation form steps not responsive | 6 | P2 | Open |
@@ -103,7 +103,7 @@
 - **Proposed fix:** Disable the interception so links fall through to the real pages. Cleanest options: (a) delete/empty the three `(.)…/new` interceptor route files so the full page renders, **or** (b) replace each interceptor `page.tsx` body with a redirect/`notFound()` so the slot stays empty and the underlying `/new` route shows. The `@modal/default.tsx` should keep returning null. Keep the standalone `/new` pages and the forms' non-modal branch (already present). Verify list-page "Add" buttons are plain `<Link href="/dashboard/.../new">` (they are) so removing the interceptor is sufficient.
 - **Files affected:** [app/dashboard/@modal/(.)properties/new/page.tsx](app/dashboard/@modal/(.)properties/new/page.tsx), [app/dashboard/@modal/(.)units/new/page.tsx](app/dashboard/@modal/(.)units/new/page.tsx), [app/dashboard/@modal/(.)tenants/new/page.tsx](app/dashboard/@modal/(.)tenants/new/page.tsx) (and [app/dashboard/@modal/CreateTenantModal.tsx](app/dashboard/@modal/CreateTenantModal.tsx)). Forms already support non-modal mode; no change needed there.
 - **Note:** This interacts with Issue #8 (redirect-to-list). Once modals are off, the form's `router.replace`/`push` path is the one that runs — fix both together.
-- **Status:** Open
+- **Status:** ✅ Fixed — deleted the three `(.)…/new` interceptor route files (`@modal/(.)properties|units|tenants/new/page.tsx`) so the "Add" links fall through to the full `/new` pages; `@modal/default.tsx` keeps the slot empty. Also removed the now-orphaned `@modal/CreateTenantModal.tsx`. Forms' non-modal navigation branch (`useSlideOver()` → null) is now the active path.
 
 ## Issue #5: Base Price should be optional in Bulk Unit Add
 - **Scenario:** 2 — Add building with units
@@ -201,7 +201,7 @@
 - **Root cause:** Same intercepting-route UX as #4.
 - **Proposed fix:** Covered by Issue #4 — disabling the three `(.)…/new` interceptors handles tenants too. Listed separately only for tracking; **fix together with #4.**
 - **Files affected:** Same as #4.
-- **Status:** Open (consolidate with #4)
+- **Status:** ✅ Fixed (via #4) — the `(.)tenants/new` interceptor and orphaned `CreateTenantModal.tsx` were removed; "Add Tenant" now opens the full `/dashboard/tenants/new` page.
 
 ## Issue #13: After editing a tenant, the user is not redirected to the tenant detail page
 - **Scenario:** 4 — Add tenant (corporate); noticed via edit flow

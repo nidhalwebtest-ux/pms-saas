@@ -26,6 +26,9 @@ export type { PasswordFieldProps } from "./PasswordField";
 export { PhoneField } from "./PhoneField";
 export type { PhoneFieldProps } from "./PhoneField";
 
+export { PhoneInput } from "./PhoneInput";
+export type { PhoneInputProps } from "./PhoneInput";
+
 export { Checkbox } from "./Checkbox";
 export type { CheckboxProps } from "./Checkbox";
 

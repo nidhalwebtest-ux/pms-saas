@@ -26,6 +26,7 @@ import {
   ShieldExclamationIcon,
 } from "@heroicons/react/24/outline";
 import { createTenant, updateTenant } from "@/app/dashboard/tenants/actions";
+import { PhoneInput } from "@/components/ui";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -307,12 +308,7 @@ function QuickAddForm({
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("phone")} <span className="text-red-500">*</span></label>
-          <div className="flex">
-            <span className="flex items-center rounded-s-lg border border-e-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-500 ltr-numbers">+968</span>
-            <input type="tel" name="phone" required value={phone} onChange={(e) => setPhone(e.target.value)}
-              placeholder={tPh("phone")}
-              className="flex-1 rounded-e-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-          </div>
+          <PhoneInput value={phone} onValueChange={setPhone} required placeholder={tPh("phone")} />
         </div>
         <div>
           <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("nationality")} <span className="text-red-500">*</span></label>
@@ -702,12 +698,7 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("phone")} <span className="text-red-500">*</span></label>
-              <div className="flex">
-                <span className="flex items-center rounded-s-lg border border-e-0 border-gray-300 bg-gray-50 px-3 text-sm text-gray-500 ltr-numbers">+968</span>
-                <input type="tel" required value={phone} onChange={(e) => setPhone(e.target.value)}
-                  placeholder={tPh("phone")}
-                  className="flex-1 rounded-e-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-              </div>
+              <PhoneInput value={phone} onValueChange={setPhone} required placeholder={tPh("phone")} />
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("secondaryPhone")} <span className="text-xs font-normal text-gray-400">{tFld("optional")}</span></label>

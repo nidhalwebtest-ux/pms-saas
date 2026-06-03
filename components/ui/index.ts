@@ -62,6 +62,9 @@ export type { PasswordFieldProps } from "./form";
 export { PhoneField } from "./form";
 export type { PhoneFieldProps } from "./form";
 
+export { PhoneInput } from "./form";
+export type { PhoneInputProps } from "./form";
+
 export { Checkbox, CheckboxGroup } from "./form";
 export type { CheckboxProps, CheckboxGroupProps } from "./form";
 

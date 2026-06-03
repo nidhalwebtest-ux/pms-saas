@@ -1,4 +1,8 @@
 {
+  "phoneInput": {
+    "searchCountry": "Search country…",
+    "noMatches": "No matches"
+  },
   "emptyState": {
     "reservations": {
       "firstTime": {

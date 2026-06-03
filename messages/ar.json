@@ -1,4 +1,8 @@
 {
+  "phoneInput": {
+    "searchCountry": "ابحث عن دولة…",
+    "noMatches": "لا توجد نتائج"
+  },
   "emptyState": {
     "reservations": {
       "firstTime": {

@@ -21,7 +21,7 @@
 | 7 | Remove Price column from Units list page | 2 | P3 | ✅ Fixed |
 | 8 | After create, redirect to LIST page (not detail) once toast shows | 2 | P2 | ✅ Fixed |
 | 9 | Tenants list filter tabs/labels show raw i18n keys (missing translations) | 3 | P2 | Open |
-| 10 | Tenant phone fields hardcode +968 — allow changing country code | 3 | P2 | Open |
+| 10 | Tenant phone fields hardcode +968 — allow changing country code | 3 | P2 | ✅ Fixed |
 | 11 | Quick Add → Full Form loses typed first/last name (uncontrolled inputs) | 3 | P2 | ✅ Fixed |
 | 12 | Disable modal tenant form for now (dup of #4, tenants) | 3 | P2 | ✅ Fixed (via #4) |
 | 13 | After editing a tenant, no redirect to tenant detail page | 4 | P2 | ✅ Fixed |
@@ -179,7 +179,7 @@
 - **Root cause:** Form predates the shared component; single-country assumption baked in.
 - **Proposed fix:** Replace the hardcoded-prefix phone inputs in TenantForm (quick + full) with the shared `PhoneField` (`defaultCountry="OM"`). For an actual selectable country code, build/enable the country-picker (see Issue #2 — same v2 picker work). Ensure the lifted `phone` state receives E.164. **Group #2 + #10 into one "phone input" fix** so onboarding and tenants share the solution.
 - **Files affected:** [components/dashboard/TenantForm.tsx](components/dashboard/TenantForm.tsx), [components/ui/form/PhoneField.tsx](components/ui/form/PhoneField.tsx). Related: Issue #2.
-- **Status:** Open
+- **Status:** ✅ Fixed — built the v2 picker as a new [components/ui/form/PhoneInput.tsx](components/ui/form/PhoneInput.tsx): a searchable country-code dropdown (flag + name + dial code, GCC/expat countries prioritized, Oman default) built on `libphonenumber-js` + `Intl.DisplayNames` (locale-aware names), with as-you-type formatting and E.164 output. Wired into TenantForm's Quick-Add **and** Full-form primary phone (replacing the hardcoded +968 prefix). Secondary/WhatsApp inputs left as plain `tel` for now. New `phoneInput` i18n namespace in both locales. (Onboarding wiring → #2.)
 
 ## Issue #11: Quick Add → Full Form loses typed First/Last name (and other uncontrolled fields)
 - **Scenario:** 3 — Add tenant

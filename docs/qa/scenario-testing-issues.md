@@ -42,7 +42,7 @@
 | 28 | Seasonal price breakdown not shown on unit card during selection (and not persisted on reservationUnit) | 10 | **P1** | ✅ Persistence fixed (card UI → #31) |
 | 29 | Configurable reservation-number format (prefix/padding/reset) in settings | 6 (split from #18) | P2 | Open |
 | 30 | Full Edit Reservation flow (edit route + PUT API + guards) | 6 (split from #23) | **P1** | Open |
-| 31 | Show seasonal segment breakdown on unit card during selection | 10 (split from #28) | P2 | Open |
+| 31 | Show seasonal segment breakdown on unit card during selection | 10 (split from #28) | P2 | ✅ Fixed |
 
 ---
 
@@ -409,7 +409,7 @@
 - **Steps to reproduce:** During unit selection, a unit whose stay spans >1 price segment shows a flat "25 OMR / night" on its card even though the summary total is correct. (The underlying data is now persisted — see #28.)
 - **Proposed fix:** When the requested range spans >1 price segment for a unit, render a small breakdown on the card (`3 × 25 + 4 × 45`) or a blended-rate label + "View breakdown" tooltip. The summary step already computes segments — reuse the same component. Can read from the same segment math now persisted as `pricingSegments`.
 - **Files affected:** [components/dashboard/BookingEngine.tsx](components/dashboard/BookingEngine.tsx).
-- **Status:** Open
+- **Status:** ✅ Fixed — typed `UnitOption.breakdown` as `PriceSegment[]` (the availability API already returns it). When a unit's stay spans >1 segment, the card now renders the per-segment breakdown (`3 × 25.000`, `4 × 45.000`, with a 🌟 + season name on seasonal segments) instead of a single flat rate; single-segment stays are unchanged. Monthly multi-segment stays show `label · rate` per month. New `segNights` key in both locales.
 
 ## Issue #28: Seasonal price breakdown not shown on unit card during selection — AND not persisted on reservationUnit
 - **Scenario:** 10 — Seasonal pricing across Khareef boundary (Unit 6, Jun 28 → Jul 5)

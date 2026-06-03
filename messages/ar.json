@@ -2312,6 +2312,7 @@
         "customRateRow": "✏ سعر مخصص",
         "perNight": "{amount} / ليلة",
         "perMonth": "{amount} / شهر",
+        "segNights": "{n} × {amount}",
         "bookingDetails": "تفاصيل الحجز",
         "discount": "الخصم (ر.ع.)",
         "discountPlaceholder": "0.000",

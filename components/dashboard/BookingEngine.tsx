@@ -63,6 +63,20 @@ interface UnitConflict {
   endDate: string;
 }
 
+// One price segment of a stay (from the availability API). Daily segments carry
+// `ratePerNight`; monthly segments carry a `label` + `monthlyRate`.
+interface PriceSegment {
+  startDate?:   string;
+  endDate?:     string;
+  label?:       string;
+  nights:       number;
+  ratePerNight?: number;
+  monthlyRate?:  number;
+  priceType?:   string;
+  priceName?:   string | null;
+  subtotal:     number;
+}
+
 interface UnitOption {
   id:         string;
   name:       string;
@@ -81,7 +95,7 @@ interface UnitOption {
   rateSource: string;
   priceName:  string | null;
   subtotal:   number;
-  breakdown:  object[];
+  breakdown:  PriceSegment[];
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -841,13 +855,32 @@ export default function BookingEngine({
                       {unit.available && (
                         <div className="mt-3 pt-3 border-t border-gray-100 flex items-end justify-between">
                           <div>
-                            <span className={`text-xs ltr-numbers ${hasCustom ? "line-through text-gray-400" : "text-gray-500"}`}>
-                              {rateType === "daily"
-                                ? tStep3("perNight", { amount: fmtOMR(unit.rateAmount) })
-                                : tStep3("perMonth", { amount: fmtOMR(unit.rateAmount) })}
-                            </span>
-                            {unit.priceName && !hasCustom && (
-                              <div className="text-[10px] text-yellow-700 font-medium">🌟 {unit.priceName}</div>
+                            {/* Multi-segment stay (e.g. spans Khareef): show the
+                                per-segment breakdown instead of a flat rate (QA #31). */}
+                            {!hasCustom && unit.breakdown.length > 1 ? (
+                              <div className="space-y-0.5">
+                                {unit.breakdown.map((seg, i) => (
+                                  <div key={i} className="text-[11px] text-gray-600 ltr-numbers">
+                                    {rateType === "daily"
+                                      ? tStep3("segNights", { n: seg.nights, amount: fmtOMR(seg.ratePerNight ?? 0) })
+                                      : `${seg.label ?? ""} · ${fmtOMR(seg.monthlyRate ?? 0)}`}
+                                    {seg.priceType === "SEASONAL" && (
+                                      <span className="ms-1 text-yellow-700">🌟{seg.priceName ? ` ${seg.priceName}` : ""}</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <>
+                                <span className={`text-xs ltr-numbers ${hasCustom ? "line-through text-gray-400" : "text-gray-500"}`}>
+                                  {rateType === "daily"
+                                    ? tStep3("perNight", { amount: fmtOMR(unit.rateAmount) })
+                                    : tStep3("perMonth", { amount: fmtOMR(unit.rateAmount) })}
+                                </span>
+                                {unit.priceName && !hasCustom && (
+                                  <div className="text-[10px] text-yellow-700 font-medium">🌟 {unit.priceName}</div>
+                                )}
+                              </>
                             )}
                             {hasCustom && (
                               <div className="text-[10px] text-purple-700 font-medium ltr-numbers">

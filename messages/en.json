@@ -2312,6 +2312,7 @@
         "customRateRow": "✏ Custom rate",
         "perNight": "{amount} / night",
         "perMonth": "{amount} / month",
+        "segNights": "{n} × {amount}",
         "bookingDetails": "Booking Details",
         "discount": "Discount (OMR)",
         "discountPlaceholder": "0.000",

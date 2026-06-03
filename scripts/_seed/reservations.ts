@@ -566,6 +566,7 @@ async function createReservation(opts: CreateReservationOpts): Promise<Reservati
       cancelledReason:  opts.cancelledReason,
       cancelledAt:      isCancelled || isNoShow ? new Date() : null,
       expectedInvoiceCount: opts.expectedInvoiceCount,
+      organizationId:   opts.orgId,
       tenantId:         opts.tenant.id,
       unitId:           opts.units[0]!.id, // legacy single-unit pointer
       createdById:      opts.userId,

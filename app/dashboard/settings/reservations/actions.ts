@@ -41,12 +41,18 @@ export async function updateReservationSettings(
   const reservationNumberPadding = Math.min(Math.max(Number.isFinite(paddingRaw) ? paddingRaw : 5, 1), 10);
   const reservationNumberResetYearly = formData.get("reservationNumberResetYearly") === "on";
 
+  // Contract gate (QA #24).
+  const requireContractBeforeCheckIn = formData.get("requireContractBeforeCheckIn") === "on";
+  const requireContractScope = formData.get("requireContractScope") === "ALL" ? "ALL" : "MONTHLY";
+  const autoCreateContractOnConfirm = formData.get("autoCreateContractOnConfirm") === "on";
+
   try {
     await prisma.organization.update({
       where: { id: dbUser.organizationId },
       data:  {
         checkInPolicy, allowEarlyCheckIn, autoCheckout,
         reservationNumberPrefix, reservationNumberPadding, reservationNumberResetYearly,
+        requireContractBeforeCheckIn, requireContractScope, autoCreateContractOnConfirm,
       },
     });
   } catch (err) {

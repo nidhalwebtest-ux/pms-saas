@@ -35,7 +35,7 @@
 | 21 | Availability modal: Show disabled under "All Properties" (need property selector) | 6 | P2 | ✅ Fixed |
 | 22 | Availability split-day half-square wrong direction in Arabic/RTL | 6 | P3 | ✅ Fixed |
 | 23 | Edit Reservation 404s — route not implemented | 6 | **P1** | ✅ Fixed (full flow → #30; Edit buttons restored) |
-| 24 | Add settings: require contract creation/signing before check-in (feature) | 7 | **P1** | Open |
+| 24 | Add settings: require contract creation/signing before check-in (feature) | 7 | **P1** | ✅ Fixed (Phase 1 — gate, no PDF) |
 | 25 | Corporate tenant: company name shown small on reservation page (contact too prominent) | 8 | P2 | ✅ Fixed (detail + list + today; PDF → follow-up) |
 | 26 | Add Seasonal Price modal: monthly rate should be optional, not required | 10 | P2 | ✅ Fixed |
 | 27 | Add settings to prevent monthly reservations during certain periods (feature) | 10 | P2 | ✅ Fixed |
@@ -339,7 +339,14 @@
   - Where the deposit amount belongs (contract vs reservation).
 - **Dependencies:** Touches Reservation Settings (related to #20), check-in flow, adds a new Contracts domain to the codebase. **Significant scope** — likely a separate sprint slice.
 - **Files affected (planned):** new `prisma/schema.prisma` `Contract` model, new `app/dashboard/contracts/` and/or contract section under reservation detail, new `app/api/contracts/` routes, [app/dashboard/settings/reservations/](app/dashboard/settings/reservations/), [app/api/reservations/[id]/check-in/route.ts](app/api/reservations/[id]/check-in/route.ts), [components/dashboard/views/TodayView.tsx](components/dashboard/views/TodayView.tsx) (button gating).
-- **Status:** Open — captured per user request; defer implementation until the existing P1s are fixed.
+- **Status:** ✅ Fixed — **Phase 1 (gate only, no PDF — user's choice; org setting default off).**
+  - **Schema:** new `Contract` model (1-1 with Reservation; status DRAFT/SIGNED/CANCELLED + `signedAt`/`signedByName`/`signedById`); Organization gains `requireContractBeforeCheckIn` (def false), `requireContractScope` (ALL|MONTHLY, def MONTHLY), `autoCreateContractOnConfirm` (def false); `ReservationActivityAction` += `CONTRACT_SIGNED`. **db push applied.**
+  - **Settings → Reservations:** toggle + scope select + auto-create toggle (new i18n).
+  - **Contract API** [app/api/reservations/[id]/contract/route.ts](app/api/reservations/[id]/contract/route.ts): POST create draft; PATCH `sign` (records signer + logs `CONTRACT_SIGNED`) / `cancel`.
+  - **Check-in guard** blocks check-in when the gate applies (scope ALL, or MONTHLY + monthly reservation) and the contract isn't SIGNED (409 `contract_required`).
+  - **Auto-create** a DRAFT contract at reservation creation when `autoCreateContractOnConfirm` is on and in scope.
+  - **Reservation detail:** Contract section (status badge, Create / Mark-signed modal / Cancel) + a "contract required before check-in" warning; `contract` added to the reservation GET.
+  - **Deferred (Phase 2):** bilingual React-PDF contract + e-sign, deposit fields, replacing the Check-In button with a CTA. (There's no explicit "confirm reservation" step in the app, so auto-create fires at creation.)
 
 ## Issue #25: Corporate tenant — company name shown too small on reservation page (contact too prominent)
 - **Scenario:** 8 — Multi-unit reservation (Hassan Al Wahaibi / Salalah Marine Services LLC)

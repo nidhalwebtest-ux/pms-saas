@@ -45,6 +45,7 @@ export async function PATCH(
     include: {
       tenant:           { select: { organizationId: true, firstName: true, lastName: true } },
       reservationUnits: { select: { unitId: true } },
+      contract:         { select: { status: true } },
       invoices: {
         where: { status: { notIn: ["CANCELLED", "VOID"] } },
         select: { id: true, status: true, periodStart: true, invoiceType: true },
@@ -55,7 +56,10 @@ export async function PATCH(
   // Effective check-in policy = per-reservation override, else org default.
   const org = await prisma.organization.findUnique({
     where:  { id: actor.organizationId! },
-    select: { checkInPolicy: true, allowEarlyCheckIn: true },
+    select: {
+      checkInPolicy: true, allowEarlyCheckIn: true,
+      requireContractBeforeCheckIn: true, requireContractScope: true,
+    },
   });
   // Body override (if provided) wins over the stored one for this check-in.
   const resolvedOverride =
@@ -84,6 +88,19 @@ export async function PATCH(
     if (todayUTC < startDay) {
       return NextResponse.json(
         { error: "Early check-in is disabled. This reservation cannot be checked in before its start date." },
+        { status: 409 },
+      );
+    }
+  }
+
+  // Contract gate (QA #24): when enabled, an in-scope reservation needs a SIGNED
+  // contract before check-in.
+  if (org?.requireContractBeforeCheckIn) {
+    const scopeAll  = org.requireContractScope === "ALL";
+    const inScope   = scopeAll || res.rateType === "monthly";
+    if (inScope && res.contract?.status !== "SIGNED") {
+      return NextResponse.json(
+        { error: "A signed contract is required before check-in. Create the contract and mark it signed first.", code: "contract_required" },
         { status: 409 },
       );
     }

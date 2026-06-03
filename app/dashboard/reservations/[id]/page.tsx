@@ -19,12 +19,17 @@ export default async function ReservationPage({
   const org = dbUser?.organizationId
     ? await prisma.organization.findUnique({
         where:  { id: dbUser.organizationId },
-        select: { allowEarlyCheckIn: true },
+        select: { allowEarlyCheckIn: true, requireContractBeforeCheckIn: true, requireContractScope: true },
       })
     : null;
 
   const { id } = await params;
   return (
-    <ReservationDetail id={id} allowEarlyCheckIn={org?.allowEarlyCheckIn ?? false} />
+    <ReservationDetail
+      id={id}
+      allowEarlyCheckIn={org?.allowEarlyCheckIn ?? false}
+      requireContractBeforeCheckIn={org?.requireContractBeforeCheckIn ?? false}
+      requireContractScope={org?.requireContractScope ?? "MONTHLY"}
+    />
   );
 }

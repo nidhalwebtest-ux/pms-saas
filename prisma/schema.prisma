@@ -54,6 +54,7 @@ enum ReservationActivityAction {
   NOTE_ADDED
   RETURN_PROCESSED
   REFUND_PROCESSED
+  CONTRACT_SIGNED
 }
 
 enum ReturnType {
@@ -175,6 +176,15 @@ model Organization {
   reservationNumberPadding     Int     @default(5)
   reservationNumberResetYearly Boolean @default(true)
 
+  /// Contract gate (Settings → Reservations — QA #24). When
+  /// requireContractBeforeCheckIn is on, a SIGNED contract is required before
+  /// check-in for reservations matching requireContractScope (ALL | MONTHLY).
+  /// autoCreateContractOnConfirm auto-creates a DRAFT contract at reservation
+  /// creation for matching reservations. All default off.
+  requireContractBeforeCheckIn Boolean @default(false)
+  requireContractScope         String  @default("MONTHLY")
+  autoCreateContractOnConfirm  Boolean @default(false)
+
   plan               String   @default("FREE")
   maxProperties      Int      @default(1)
   subscriptionStatus String   @default("ACTIVE")
@@ -189,6 +199,7 @@ model Organization {
   expenseCategories  ExpenseCat[]
   expenses           Expense[]
   reservations       Reservation[]
+  contracts          Contract[]
 }
 
 // 4. Users
@@ -473,6 +484,7 @@ model Reservation {
   activities        ReservationActivity[]
   charges           ReservationCharge[]
   returns           Return[]
+  contract          Contract?
 
   createdById       String?
   createdBy         User?    @relation("ReservationCreatedBy", fields: [createdById], references: [id])
@@ -766,6 +778,34 @@ model ReturnLineItem {
   lineTotal      Decimal  @db.Decimal(10, 3)
 
   createdAt      DateTime @default(now())
+}
+
+// ── Contracts (QA #24, Phase 1) ───────────────────────────────────────────────
+// One contract per reservation. Phase 1 tracks status + a staff "mark as signed"
+// attestation (no PDF/e-sign yet). The check-in guard requires status=SIGNED when
+// the org's contract gate applies to the reservation.
+model Contract {
+  id             String   @id @default(uuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  reservationId  String   @unique
+  reservation    Reservation  @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  status         String   @default("DRAFT") // DRAFT | SIGNED | CANCELLED
+
+  signedAt       DateTime?
+  signedByName   String?
+  signedById     String?   // actor user id (no FK relation in Phase 1)
+
+  notes          String?
+  createdById    String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
 }
 
 // ── Expense Categories ────────────────────────────────────────────────────────

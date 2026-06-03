@@ -93,6 +93,7 @@ export async function GET(
           createdBy:         { select: { firstName: true, lastName: true } },
         },
       },
+      contract: { select: { id: true, status: true, signedAt: true, signedByName: true } },
       createdBy: { select: { firstName: true, lastName: true } },
     },
   });
@@ -311,6 +312,12 @@ export async function GET(
         lineTotal:   Number(li.lineTotal).toFixed(3),
       })),
     })),
+    contract: r.contract ? {
+      id:           r.contract.id,
+      status:       r.contract.status,
+      signedAt:     r.contract.signedAt?.toISOString() ?? null,
+      signedByName: r.contract.signedByName,
+    } : null,
     createdByName: r.createdBy
       ? `${r.createdBy.firstName ?? ""} ${r.createdBy.lastName ?? ""}`.trim()
       : null,

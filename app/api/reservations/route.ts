@@ -283,6 +283,16 @@ export async function POST(req: NextRequest) {
 
   const totalNights = totalNightsVal;
 
+  // Auto-create a draft contract for in-scope reservations when the org opts in
+  // (QA #24). Read-only settings fetch outside the transaction.
+  const orgContractSettings = await prisma.organization.findUnique({
+    where:  { id: actor.organizationId! },
+    select: { autoCreateContractOnConfirm: true, requireContractScope: true },
+  });
+  const autoCreateContract =
+    !!orgContractSettings?.autoCreateContractOnConfirm &&
+    (orgContractSettings.requireContractScope === "ALL" || rt === "monthly");
+
   // ── Serializable transaction (double-booking prevention) ──────────────────
 
   try {
@@ -339,6 +349,17 @@ export async function POST(req: NextRequest) {
             pricingSegments:   up.pricingSegments as unknown as Prisma.InputJsonValue,
           })),
         });
+
+        if (autoCreateContract) {
+          await tx.contract.create({
+            data: {
+              reservationId:  res.id,
+              organizationId: actor.organizationId!,
+              status:         "DRAFT",
+              createdById:    actor.id,
+            },
+          });
+        }
 
         return res;
       },

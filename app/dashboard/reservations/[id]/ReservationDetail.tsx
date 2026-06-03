@@ -11,7 +11,6 @@ import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import {
   ArrowLeftIcon,
   PrinterIcon,
-  PencilSquareIcon,
   XMarkIcon,
   CheckIcon,
   PhoneIcon,
@@ -1587,11 +1586,12 @@ function ProcessRefundModal({ ret, onSuccess, onClose }: {
 
 // ── Action Buttons ─────────────────────────────────────────────────────────────
 
-function ActionButtons({ ds, onAction, reservationId, rateType }: {
+function ActionButtons({ ds, onAction, reservationId, rateType, allowEarlyCheckIn = false }: {
   ds: string;
   onAction: (a: ModalType) => void;
   reservationId: string;
   rateType: string;
+  allowEarlyCheckIn?: boolean;
 }) {
   const t = useTranslations("reservations.detail.actions");
   const openPrint = () => window.open(`/api/reservations/${reservationId}/pdf`, "_blank");
@@ -1600,9 +1600,15 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
     case "Upcoming":
       return (
         <>
-          <Link href={`/dashboard/reservations/${reservationId}/edit`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PencilSquareIcon className="h-4 w-4" /> {t("edit")}
-          </Link>
+          {/* Early check-in — only when the org allows it (QA issue #20). */}
+          {allowEarlyCheckIn && (
+            <button onClick={() => onAction("check-in")} className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-colors shadow-sm">
+              <CheckIcon className="h-4 w-4" /> {t("checkIn")}
+            </button>
+          )}
+          {/* Edit link removed — the /edit route and update API are not yet
+              built, so the button 404'd. Restore when the edit flow lands
+              (QA issue #23). */}
           <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
             {t("print")}
           </Button>
@@ -1623,9 +1629,9 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
               {t("noShow")}
             </button>
           )}
-          <Link href={`/dashboard/reservations/${reservationId}/edit`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PencilSquareIcon className="h-4 w-4" /> {t("edit")}
-          </Link>
+          {/* Edit link removed — the /edit route and update API are not yet
+              built, so the button 404'd. Restore when the edit flow lands
+              (QA issue #23). */}
           <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
             {t("print")}
           </Button>
@@ -1714,7 +1720,7 @@ function ActivityIcon({ action }: { action: string }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-export default function ReservationDetail({ id }: { id: string }) {
+export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { id: string; allowEarlyCheckIn?: boolean }) {
   const t           = useTranslations("reservations.detail");
   const tGuest      = useTranslations("reservations.detail.guest");
   const tStay       = useTranslations("reservations.detail.stay");
@@ -1815,7 +1821,7 @@ export default function ReservationDetail({ id }: { id: string }) {
 
             {/* Right: action buttons */}
             <div className="flex items-center gap-2 flex-wrap">
-              <ActionButtons ds={res.displayStatus} onAction={setActiveModal} reservationId={res.id} rateType={res.rateType} />
+              <ActionButtons ds={res.displayStatus} onAction={setActiveModal} reservationId={res.id} rateType={res.rateType} allowEarlyCheckIn={allowEarlyCheckIn} />
             </div>
           </div>
         </div>

@@ -180,6 +180,7 @@ model Organization {
   invoices           Invoice[]
   expenseCategories  ExpenseCat[]
   expenses           Expense[]
+  reservations       Reservation[]
 }
 
 // 4. Users
@@ -404,7 +405,12 @@ model Tenant {
 
 model Reservation {
   id                String   @id @default(uuid())
-  reservationNumber String?  @unique
+  reservationNumber String?
+
+  // Denormalized org id (mirrors Tenant.organizationId) so reservation numbers
+  // can be sequenced and uniquely constrained per organization. See @@unique below.
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   startDate         DateTime
   endDate           DateTime
@@ -461,6 +467,12 @@ model Reservation {
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  // Per-org sequential reservation numbers (e.g. RES-2026-00001). NULLs allowed
+  // (legacy/unsaved); Postgres treats NULLs as distinct so the constraint only
+  // bites real numbers within an org.
+  @@unique([organizationId, reservationNumber])
+  @@index([organizationId, createdAt])
 }
 
 model ReservationUnit {
@@ -476,6 +488,12 @@ model ReservationUnit {
   rateAmount          Decimal  @db.Decimal(10, 3)
   rateSource          String   @default("default_price")
   seasonalPriceName   String?
+
+  // Snapshot of the per-night/per-month price breakdown computed at booking time.
+  // Shape: [{ startDate, endDate, nights, rateAmount, rateSource, priceName }].
+  // rateAmount above stays the FIRST segment's rate for back-compat; this column
+  // is the source of truth for stays that span >1 price segment (e.g. Khareef).
+  pricingSegments     Json?
 
   nights              Int      @default(0)
   subtotal            Decimal  @db.Decimal(10, 3)

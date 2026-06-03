@@ -372,10 +372,13 @@ export default function ReservationsView({
   properties,
   defaultPropertyId = "",
   scopedToBuilding = false,
+  allowEarlyCheckIn = false,
 }: {
   properties: PropertyOption[];
   defaultPropertyId?: string;
   scopedToBuilding?: boolean;
+  /** Org setting — when true, Upcoming reservations can be checked in early. */
+  allowEarlyCheckIn?: boolean;
 }) {
   const router = useRouter();
   const t        = useTranslations("reservations");
@@ -574,7 +577,10 @@ export default function ReservationsView({
   const rowActions = useCallback(
     (r: ReservationRow) => {
       const ds = r.displayStatus;
-      const canCheckIn   = ds === "Arriving Today" || ds === "Overdue Arrival";
+      // "Upcoming" qualifies only when the org allows early check-in (the
+      // check-in API enforces the same rule — QA issue #20).
+      const canCheckIn   = ds === "Arriving Today" || ds === "Overdue Arrival"
+        || (allowEarlyCheckIn && ds === "Upcoming");
       const canCheckOut  = ds === "In House" || ds === "Due Checkout" || ds === "Overstay";
       const canNoShow    = ds === "Overdue Arrival";
       const canCancel    = ds === "Upcoming" || ds === "Arriving Today" || ds === "Overdue Arrival";
@@ -616,7 +622,7 @@ export default function ReservationsView({
     // `fetchData`, and the translators — those are stable enough that
     // re-deriving rowActions on every render is fine.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tActions],
+    [tActions, allowEarlyCheckIn],
   );
 
   const today = new Date();

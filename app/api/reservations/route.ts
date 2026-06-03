@@ -33,10 +33,39 @@ async function getActor() {
 
 // ── Reservation number generator ──────────────────────────────────────────────
 
-async function generateReservationNumber(): Promise<string> {
-  const year  = new Date().getFullYear();
-  const count = await prisma.reservation.count();
-  return `RES-${year}-${String(count + 1).padStart(5, "0")}`;
+/**
+ * Generate the next per-organization sequential reservation number for the
+ * current year. Format: "RES-YYYY-NNNNN" (zero-padded to 5 digits), reset
+ * yearly. Scoped to the org so the first booking in a fresh org is 00001 and
+ * one company's volume is never leaked to another (QA issue #18).
+ *
+ * MUST be called inside a Prisma $transaction (Serializable) so concurrent
+ * creates can't read the same "last" number — the @@unique([organizationId,
+ * reservationNumber]) constraint is the final backstop. Mirrors nextInvoiceNumber.
+ */
+async function generateReservationNumber(
+  orgId: string,
+  tx: Prisma.TransactionClient,
+): Promise<string> {
+  const year   = new Date().getFullYear();
+  const prefix = `RES-${year}-`;
+
+  const last = await tx.reservation.findFirst({
+    where: {
+      organizationId:    orgId,
+      reservationNumber: { startsWith: prefix },
+    },
+    orderBy: { reservationNumber: "desc" },
+    select:  { reservationNumber: true },
+  });
+
+  let seq = 1;
+  if (last?.reservationNumber) {
+    const parts = last.reservationNumber.split("-");
+    seq = parseInt(parts[parts.length - 1], 10) + 1;
+  }
+
+  return `${prefix}${String(seq).padStart(5, "0")}`;
 }
 
 // ── GET /api/reservations ─────────────────────────────────────────────────────
@@ -220,6 +249,19 @@ export async function POST(req: NextRequest) {
   }
 
   // Compute pricing per unit (outside transaction — read-only, safe to do first)
+  // A persisted snapshot of each price segment of the stay (e.g. 3 nights DEFAULT
+  // + 4 nights Khareef SEASONAL). Source of truth for invoices/receipts/reports
+  // so they don't have to recompute from prices+dates later (QA issue #28).
+  type PricingSegment = {
+    label:             string | null;   // e.g. "March 2026" (monthly) — null for daily
+    startDate:         string | null;   // ISO date (daily segments)
+    endDate:           string | null;   // ISO date (daily segments)
+    nights:            number;
+    rateAmount:        number;          // per-night (daily) or monthly rate (monthly)
+    rateSource:        string;          // default_price | seasonal_price | manual_override
+    seasonalPriceName: string | null;
+    subtotal:          number;
+  };
   type UnitPricing = {
     unitId:            string;
     rateType:          string;
@@ -228,6 +270,7 @@ export async function POST(req: NextRequest) {
     seasonalPriceName: string | null;
     nights:            number;
     subtotal:          number;
+    pricingSegments:   PricingSegment[];
   };
 
   const totalNightsVal = calculateNights(startDate, endDate);
@@ -242,6 +285,7 @@ export async function POST(req: NextRequest) {
     if (rt === "daily") {
       if (override && override.rateAmount > 0) {
         // Custom daily rate
+        const subtotal = roundOMR(override.rateAmount * totalNightsVal);
         unitPricings.push({
           unitId,
           rateType:          "daily",
@@ -249,7 +293,17 @@ export async function POST(req: NextRequest) {
           rateSource:        "manual_override",
           seasonalPriceName: null,
           nights:            totalNightsVal,
-          subtotal:          roundOMR(override.rateAmount * totalNightsVal),
+          subtotal,
+          pricingSegments: [{
+            label:             null,
+            startDate:         startDate.toISOString(),
+            endDate:           endDate.toISOString(),
+            nights:            totalNightsVal,
+            rateAmount:        override.rateAmount,
+            rateSource:        "manual_override",
+            seasonalPriceName: null,
+            subtotal,
+          }],
         });
       } else {
         const priceResult = await getUnitPriceForRange(unitId, startDate, endDate);
@@ -264,12 +318,23 @@ export async function POST(req: NextRequest) {
           seasonalPriceName: firstSeg?.priceName ?? null,
           nights:            totalNightsVal,
           subtotal,
+          pricingSegments: segments.map((s) => ({
+            label:             null,
+            startDate:         s.startDate,
+            endDate:           s.endDate,
+            nights:            s.nights,
+            rateAmount:        s.ratePerNight,
+            rateSource:        s.priceType === "SEASONAL" ? "seasonal_price" : "default_price",
+            seasonalPriceName: s.priceName,
+            subtotal:          s.subtotal,
+          })),
         });
       }
     } else {
       // Monthly — calendar month standard
       if (override && override.rateAmount > 0) {
         // Custom monthly rate
+        const subtotal = roundOMR(override.rateAmount * calMonths);
         unitPricings.push({
           unitId,
           rateType:          "monthly",
@@ -277,7 +342,17 @@ export async function POST(req: NextRequest) {
           rateSource:        "manual_override",
           seasonalPriceName: null,
           nights:            totalNightsVal,
-          subtotal:          roundOMR(override.rateAmount * calMonths),
+          subtotal,
+          pricingSegments: [{
+            label:             null,
+            startDate:         startDate.toISOString(),
+            endDate:           endDate.toISOString(),
+            nights:            totalNightsVal,
+            rateAmount:        override.rateAmount,
+            rateSource:        "manual_override",
+            seasonalPriceName: null,
+            subtotal,
+          }],
         });
       } else {
         const prices       = await prisma.unitPrice.findMany({ where: { unitId, isActive: true } });
@@ -294,6 +369,16 @@ export async function POST(req: NextRequest) {
           seasonalPriceName: null,
           nights:            totalNightsVal,
           subtotal:          sumSubtotals(segments.map((s) => s.subtotal)),
+          pricingSegments: segments.map((s) => ({
+            label:             s.label,
+            startDate:         null,
+            endDate:           null,
+            nights:            s.nights,
+            rateAmount:        s.monthlyRate,
+            rateSource:        s.priceType === "SEASONAL" ? "seasonal_price" : "default_price",
+            seasonalPriceName: s.priceType === "SEASONAL" ? s.priceName : null,
+            subtotal:          s.subtotal,
+          })),
         });
       }
     }
@@ -321,11 +406,12 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        const resNumber = await generateReservationNumber();
+        const resNumber = await generateReservationNumber(actor.organizationId!, tx);
 
         const res = await tx.reservation.create({
           data: {
             reservationNumber: resNumber,
+            organizationId: actor.organizationId!,
             startDate,
             endDate,
             status:         "PENDING",
@@ -359,6 +445,7 @@ export async function POST(req: NextRequest) {
             seasonalPriceName: up.seasonalPriceName,
             nights:            up.nights,
             subtotal:          up.subtotal,
+            pricingSegments:   up.pricingSegments as unknown as Prisma.InputJsonValue,
           })),
         });
 

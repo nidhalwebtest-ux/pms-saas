@@ -175,6 +175,10 @@ export default function BookingEngine({
   // ── Step 1: Tenant ────────────────────────────────────────────────────────
   const [selectedTenant, setSelectedTenant] = useState<TenantResult | null>(defaultTenant ?? null);
   const [showAddTenant,  setShowAddTenant]  = useState(false);
+  // Cache of tenants seen via search so selecting an option resolves the full
+  // record from the attached `raw` data instead of re-fetching by id (the
+  // /api/tenants search never matches on id). See QA issue #16.
+  const tenantCache = useRef<Map<string, TenantResult>>(new Map());
 
   // ── Step 2: Dates ─────────────────────────────────────────────────────────
   const [propertyId, setPropertyId] = useState(defaultPropertyId ?? properties[0]?.id ?? "");
@@ -519,7 +523,11 @@ export default function BookingEngine({
                   if (!q.trim()) return [];
                   const res = await fetch(`/api/tenants?q=${encodeURIComponent(q)}`);
                   const data = await res.json();
-                  return (data.tenants ?? []).map((tn: TenantResult) => ({
+                  const tenants: TenantResult[] = data.tenants ?? [];
+                  // Remember every tenant we've seen so onValueChange can
+                  // resolve the full record without another fetch.
+                  tenants.forEach((tn) => tenantCache.current.set(tn.id, tn));
+                  return tenants.map((tn) => ({
                     value: tn.id,
                     label: `${tn.firstName} ${tn.lastName}`,
                     description: `${tn.phone}${tn.nationality ? ` · ${tn.nationality}` : ""}`,
@@ -538,20 +546,13 @@ export default function BookingEngine({
                       }
                     : null
                 }
-                onValueChange={async (v) => {
+                onValueChange={(v) => {
                   if (!v) { setSelectedTenant(null); return; }
-                  // Fetch single tenant if we don't already have the full record.
                   if (selectedTenant?.id === v) return;
-                  try {
-                    const res = await fetch(`/api/tenants?q=${encodeURIComponent(v)}`);
-                    const data = await res.json();
-                    const found = (data.tenants ?? []).find(
-                      (t: TenantResult) => t.id === v,
-                    );
-                    if (found) setSelectedTenant(found);
-                  } catch {
-                    /* swallow — selectedOption already shows the label */
-                  }
+                  // Resolve from the cache populated by loadOptions — the
+                  // search API can't look a tenant up by id (QA issue #16).
+                  const found = tenantCache.current.get(v);
+                  if (found) setSelectedTenant(found);
                 }}
                 renderOption={(opt) => {
                   const tn = (opt as SearchableSelectOption & { raw: TenantResult }).raw;

@@ -20,12 +20,12 @@
 | 6 | Make unit-row regeneration automatic; remove "Regenerate" button | 2 | P3 | ✅ Fixed |
 | 7 | Remove Price column from Units list page | 2 | P3 | ✅ Fixed |
 | 8 | After create, redirect to LIST page (not detail) once toast shows | 2 | P2 | ✅ Fixed |
-| 9 | Tenants list filter tabs/labels show raw i18n keys (missing translations) | 3 | P2 | Open |
+| 9 | Tenants list filter tabs/labels show raw i18n keys (missing translations) | 3 | P2 | ✅ Fixed |
 | 10 | Tenant phone fields hardcode +968 — allow changing country code | 3 | P2 | ✅ Fixed |
 | 11 | Quick Add → Full Form loses typed first/last name (uncontrolled inputs) | 3 | P2 | ✅ Fixed |
 | 12 | Disable modal tenant form for now (dup of #4, tenants) | 3 | P2 | ✅ Fixed (via #4) |
 | 13 | After editing a tenant, no redirect to tenant detail page | 4 | P2 | ✅ Fixed |
-| 14 | Reservation list filter labels show raw i18n keys | 6 | P2 | Open |
+| 14 | Reservation list filter labels show raw i18n keys | 6 | P2 | ✅ Fixed |
 | 15 | Reservation form steps not responsive | 6 | P2 | ✅ Fixed |
 | 16 | Tenant select after search does not actually select (booking blocked) | 6 | **P1** | ✅ Fixed |
 | 17 | Daily date picker UX poor — align with monthly picker | 6 | P2 | ✅ Fixed |
@@ -168,7 +168,7 @@
 - **Root cause:** Key drift — the component was renamed/expanded (e.g. `all` → `statusAll`) but the message catalogs weren't updated. Affects both `messages/en.json` and `messages/ar.json` identically.
 - **Proposed fix:** Add the missing keys to `tenants.filters` in **both** locales: `statusAll`, `statusActive`, `statusInactive`, `typeLabel`, `allSources` (EN values: "All", "Active", "Inactive", "Type:", "All Sources"; AR: "الكل", "نشط", "غير نشط", "النوع:", "كل المصادر"). Remove now-unused legacy `all` key if nothing else references it (grep first). Consider an i18n key-coverage check in CI to catch this class of bug — likely exists elsewhere too (worth a follow-up sweep).
 - **Files affected:** [messages/en.json](messages/en.json), [messages/ar.json](messages/ar.json) (`tenants.filters`).
-- **Status:** Open
+- **Status:** ✅ Fixed — `statusAll`, `statusActive`, `statusInactive`, `typeLabel`, `allSources` added to `tenants.filters` in **both** locales (verified present). (Shipped alongside the earlier reservations commit.)
 
 ## Issue #10: Tenant phone inputs hardcode +968 — allow changing the country code
 - **Scenario:** 3 — Add tenant
@@ -223,7 +223,7 @@
 - **Root cause:** i18n key drift; catalogs not updated when filter labels were added.
 - **Proposed fix:** Add the 5 missing keys under `reservations.*` in both locales. **Bundle with #9 and run a repo-wide i18n coverage sweep** — two scenarios already hit this, so other namespaces likely have gaps. Add a script that extracts `t("…")` keys per namespace and diffs against the catalogs (CI check).
 - **Files affected:** [messages/en.json](messages/en.json), [messages/ar.json](messages/ar.json).
-- **Status:** Open
+- **Status:** ✅ Fixed — `propertyLabel`, `dateLabel`, `rateTypeLabel`, `sourceLabel`, `unitsLabel` added under `reservations.*` in both locales (verified present). (Shipped alongside the earlier reservations commit.)
 
 ## Issue #15: Reservation form steps are not responsive
 - **Scenario:** 6 — Create daily reservation

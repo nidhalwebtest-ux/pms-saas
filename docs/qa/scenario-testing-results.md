@@ -22,6 +22,28 @@
 
 ---
 
+## Category C — Invoicing & Payments (Plan)
+
+> **Environment:** tester runs the **`design-system-v2`** branch via Vercel (preview / production-like). Same collaborative format — tester executes in the app; Claude verifies (DB + math) and documents.
+> **Prerequisite met:** all Category A/B issues (#1–#31) are fixed on `design-system-v2`, including #28 (segments now persisted on `reservationUnit`) which was load-bearing for invoicing.
+
+| # | Scenario | Result | Key checks |
+|---|----------|--------|-----------|
+| 11 | Generate invoices — daily / short-term reservation | ⏳ Pending | ONE invoice for the whole stay; status, amounts, line items |
+| 12 | Generate invoices — monthly reservation | ⏳ Pending | First cycle auto-issued PENDING; future cycles DRAFT; cycle follows check-in day |
+| 13 | Issue a DRAFT monthly cycle | ⏳ Pending | status→PENDING, issueDate stamped (revenue posts on issueDate) |
+| 14 | Invoice for the Khareef reservation (S10) | ⏳ Pending | Line items reflect persisted segments (3×25 + 4×45 = 255) — the #28 payoff |
+| 15 | Record a full payment | ⏳ Pending | Invoice→PAID, payment_allocation created, balance 0 |
+| 16 | Record a partial payment | ⏳ Pending | PARTIALLY_PAID, balance correct |
+| 17 | Manual allocation across multiple invoices | ⏳ Pending | Oldest-first auto vs manual selection |
+| 18 | Payment receipt PDF | ⏳ Pending | Bilingual, correct totals |
+| 19 | Overdue calculation | ⏳ Pending | PENDING past due_date shows overdue (calculated, not stored) |
+| 20 | Cancel invoice / cancel-reservation guard | ⏳ Pending | Cancelled excluded from financials; reservation can't cancel while invoices exist |
+
+> Stretch (21+): early-checkout proration (current period full, future cycles cancelled), overstay invoice, returns/refunds.
+
+---
+
 ## Progress
 
 - **Scenarios completed:** 10 / 10 — **TODAY'S TARGET REACHED · Categories A & B COMPLETE**

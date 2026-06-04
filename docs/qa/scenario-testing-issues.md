@@ -35,7 +35,7 @@
 | 21 | Availability modal: Show disabled under "All Properties" (need property selector) | 6 | P2 | ✅ Fixed |
 | 22 | Availability split-day half-square wrong direction in Arabic/RTL | 6 | P3 | ✅ Fixed |
 | 23 | Edit Reservation 404s — route not implemented | 6 | **P1** | ✅ Fixed (full flow → #30; Edit buttons restored) |
-| 24 | Add settings: require contract creation/signing before check-in (feature) | 7 | **P1** | ✅ Fixed (Phase 1 — gate, no PDF) |
+| 24 | Add settings: require contract creation/signing before check-in (feature) | 7 | **P1** | ✅ Reworked into invoice gate (→ #34) |
 | 25 | Corporate tenant: company name shown small on reservation page (contact too prominent) | 8 | P2 | ✅ Fixed (detail + list + today; PDF → follow-up) |
 | 26 | Add Seasonal Price modal: monthly rate should be optional, not required | 10 | P2 | ✅ Fixed |
 | 27 | Add settings to prevent monthly reservations during certain periods (feature) | 10 | P2 | ✅ Fixed |
@@ -45,7 +45,7 @@
 | 31 | Show seasonal segment breakdown on unit card during selection | 10 (split from #28) | P2 | ✅ Fixed |
 | 32 | Invoice recomputes from unit default price — ignores reservation's actual rate/segments | 11 | **P1** | ✅ Fixed |
 | 33 | Check-in allows double physical occupancy (unit already In House) | C | **P0** | ✅ Fixed |
-| 34 | Rework contract gate → invoice (contract = invoice); auto-generate invoice on create | C | **P1** | Open |
+| 34 | Rework contract gate → invoice (contract = invoice); auto-generate invoice on create | C | **P1** | ✅ Fixed |
 
 ---
 
@@ -58,6 +58,19 @@
 - **DB evidence:** `RESNOOR-2026-00001` reservationUnit `rateAmount=22, rateSource=manual_override, subtotal=154, pricingSegments=[22/night]` ✅ but `INV-2026-00001 subtotal=175` ❌.
 - **Root cause:** [lib/invoice-engine.ts](lib/invoice-engine.ts) daily path recomputed line items from `getUnitPriceForRange()` (current UnitPrice records) and only used the reservation's stored rate as a *fallback when no UnitPrice exists*. So manual overrides and booking-time seasonal rates were discarded.
 - **Fix:** ✅ The daily invoice now builds line items from the reservation's persisted `reservationUnit.pricingSegments` (the #28 snapshot) as the source of truth — honoring `manual_override` and booking-time seasonal rates — and only falls back to recompute for legacy rows with no segments. `UnitInfo`/`getReservationUnitInfos` now carry `pricingSegments`/`nights`/`subtotal`. **Note:** existing wrong invoices (e.g. INV-2026-00001) must be cancelled + regenerated to pick up the fix.
+- **Status:** ✅ Fixed
+
+## Issue #34: "Contract" = Invoice — rework the #24 gate to be invoice-based
+- **Scenario:** Category C — clarified during testing ("when I say contract I mean invoice")
+- **Severity:** **P1**
+- **Decision:** There is no separate contract document in this product — the **invoice IS the contract**. So the #24 Contract feature was reworked, and the separate `Contract` model removed. **Lifecycle unchanged** (no confirm step) — auto-generate fires at reservation creation; check-in stays direct.
+- **What changed:**
+  - **Schema:** dropped the `Contract` model + `Reservation.contract`/`Organization.contracts`; replaced Organization `requireContractBeforeCheckIn`/`requireContractScope`/`autoCreateContractOnConfirm` with `requireInvoiceBeforeCheckIn`/`requireInvoiceScope`/`autoGenerateInvoiceOnCreate` (all default off). **db push applied (--accept-data-loss; only default settings dropped).**
+  - **Settings → Reservations:** "Require an invoice before check-in" (+ scope ALL/MONTHLY) and "Auto-generate invoice on reservation creation".
+  - **Check-in guard** ([check-in/route.ts](app/api/reservations/[id]/check-in/route.ts)): blocks when in scope and the reservation has **no** non-cancelled invoice (409 `invoice_required`).
+  - **Auto-generate** ([POST /api/reservations](app/api/reservations/route.ts)): after a reservation in scope is created, calls `generateInvoicesForReservation` (best-effort, post-transaction).
+  - **Removed:** the contract API route, the reservation-detail Contract section + Mark-Signed modal, the contract include in the GET, and the `reservations.detail.contract` i18n namespace.
+- **Why the auto-create "didn't work" before:** it was gated by scope=MONTHLY (default) while a **daily** reservation was created → no contract. Now it's invoice-based with the same scope semantics (clearer labelling).
 - **Status:** ✅ Fixed
 
 ## Issue #33: Check-in allows two guests CHECKED_IN on the same unit (double physical occupancy)

@@ -17,9 +17,9 @@ type FormState = {
   reservationNumberPrefix: string;
   reservationNumberPadding: number;
   reservationNumberResetYearly: boolean;
-  requireContractBeforeCheckIn: boolean;
-  requireContractScope: "ALL" | "MONTHLY";
-  autoCreateContractOnConfirm: boolean;
+  requireInvoiceBeforeCheckIn: boolean;
+  requireInvoiceScope: "ALL" | "MONTHLY";
+  autoGenerateInvoiceOnCreate: boolean;
 };
 
 export default function ReservationSettingsForm({ settings }: { settings: FormState }) {
@@ -37,9 +37,9 @@ export default function ReservationSettingsForm({ settings }: { settings: FormSt
     form.reservationNumberPrefix !== settings.reservationNumberPrefix ||
     form.reservationNumberPadding !== settings.reservationNumberPadding ||
     form.reservationNumberResetYearly !== settings.reservationNumberResetYearly ||
-    form.requireContractBeforeCheckIn !== settings.requireContractBeforeCheckIn ||
-    form.requireContractScope !== settings.requireContractScope ||
-    form.autoCreateContractOnConfirm !== settings.autoCreateContractOnConfirm;
+    form.requireInvoiceBeforeCheckIn !== settings.requireInvoiceBeforeCheckIn ||
+    form.requireInvoiceScope !== settings.requireInvoiceScope ||
+    form.autoGenerateInvoiceOnCreate !== settings.autoGenerateInvoiceOnCreate;
 
   // Live preview of the first reservation number for the current settings.
   const previewNumber =
@@ -57,9 +57,9 @@ export default function ReservationSettingsForm({ settings }: { settings: FormSt
       fd.append("reservationNumberPrefix", form.reservationNumberPrefix);
       fd.append("reservationNumberPadding", String(form.reservationNumberPadding));
       if (form.reservationNumberResetYearly) fd.append("reservationNumberResetYearly", "on");
-      if (form.requireContractBeforeCheckIn) fd.append("requireContractBeforeCheckIn", "on");
-      fd.append("requireContractScope", form.requireContractScope);
-      if (form.autoCreateContractOnConfirm) fd.append("autoCreateContractOnConfirm", "on");
+      if (form.requireInvoiceBeforeCheckIn) fd.append("requireInvoiceBeforeCheckIn", "on");
+      fd.append("requireInvoiceScope", form.requireInvoiceScope);
+      if (form.autoGenerateInvoiceOnCreate) fd.append("autoGenerateInvoiceOnCreate", "on");
 
       let result;
       try {
@@ -150,31 +150,31 @@ export default function ReservationSettingsForm({ settings }: { settings: FormSt
         </span>
       </label>
 
-      {/* Contracts (QA #24) */}
+      {/* Invoice gate (QA #24/#34) */}
       <div className="border-t border-gray-100 pt-4">
         <label className="flex cursor-pointer items-start gap-3">
           <input
             type="checkbox"
-            checked={form.requireContractBeforeCheckIn}
-            onChange={(e) => { setForm((p) => ({ ...p, requireContractBeforeCheckIn: e.target.checked })); setBannerError(null); }}
+            checked={form.requireInvoiceBeforeCheckIn}
+            onChange={(e) => { setForm((p) => ({ ...p, requireInvoiceBeforeCheckIn: e.target.checked })); setBannerError(null); }}
             className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
           />
           <span className="flex flex-col">
-            <span className="text-sm font-medium text-gray-800">{t("requireContractLabel")}</span>
-            <span className="text-xs text-gray-500">{t("requireContractHint")}</span>
+            <span className="text-sm font-medium text-gray-800">{t("requireInvoiceLabel")}</span>
+            <span className="text-xs text-gray-500">{t("requireInvoiceHint")}</span>
           </span>
         </label>
 
-        {form.requireContractBeforeCheckIn && (
+        {form.requireInvoiceBeforeCheckIn && (
           <div className="mt-3 ms-7">
-            <label className="block text-xs font-medium text-gray-600 mb-1">{t("contractScopeLabel")}</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t("invoiceScopeLabel")}</label>
             <select
-              value={form.requireContractScope}
-              onChange={(e) => { setForm((p) => ({ ...p, requireContractScope: e.target.value === "ALL" ? "ALL" : "MONTHLY" })); setBannerError(null); }}
+              value={form.requireInvoiceScope}
+              onChange={(e) => { setForm((p) => ({ ...p, requireInvoiceScope: e.target.value === "ALL" ? "ALL" : "MONTHLY" })); setBannerError(null); }}
               className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             >
-              <option value="MONTHLY">{t("contractScopeMonthly")}</option>
-              <option value="ALL">{t("contractScopeAll")}</option>
+              <option value="MONTHLY">{t("invoiceScopeMonthly")}</option>
+              <option value="ALL">{t("invoiceScopeAll")}</option>
             </select>
           </div>
         )}
@@ -182,13 +182,13 @@ export default function ReservationSettingsForm({ settings }: { settings: FormSt
         <label className="mt-3 flex cursor-pointer items-start gap-3">
           <input
             type="checkbox"
-            checked={form.autoCreateContractOnConfirm}
-            onChange={(e) => { setForm((p) => ({ ...p, autoCreateContractOnConfirm: e.target.checked })); setBannerError(null); }}
+            checked={form.autoGenerateInvoiceOnCreate}
+            onChange={(e) => { setForm((p) => ({ ...p, autoGenerateInvoiceOnCreate: e.target.checked })); setBannerError(null); }}
             className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
           />
           <span className="flex flex-col">
-            <span className="text-sm font-medium text-gray-800">{t("autoCreateContractLabel")}</span>
-            <span className="text-xs text-gray-500">{t("autoCreateContractHint")}</span>
+            <span className="text-sm font-medium text-gray-800">{t("autoGenerateInvoiceLabel")}</span>
+            <span className="text-xs text-gray-500">{t("autoGenerateInvoiceHint")}</span>
           </span>
         </label>
       </div>

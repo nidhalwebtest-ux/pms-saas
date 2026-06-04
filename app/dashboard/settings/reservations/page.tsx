@@ -21,7 +21,7 @@ export default async function ReservationSettingsPage() {
     select: {
       checkInPolicy: true, allowEarlyCheckIn: true, autoCheckout: true,
       reservationNumberPrefix: true, reservationNumberPadding: true, reservationNumberResetYearly: true,
-      requireContractBeforeCheckIn: true, requireContractScope: true, autoCreateContractOnConfirm: true,
+      requireInvoiceBeforeCheckIn: true, requireInvoiceScope: true, autoGenerateInvoiceOnCreate: true,
     },
   });
   if (!org) redirect("/onboarding");
@@ -48,9 +48,9 @@ export default async function ReservationSettingsPage() {
           reservationNumberPrefix: org.reservationNumberPrefix,
           reservationNumberPadding: org.reservationNumberPadding,
           reservationNumberResetYearly: org.reservationNumberResetYearly,
-          requireContractBeforeCheckIn: org.requireContractBeforeCheckIn,
-          requireContractScope: org.requireContractScope === "ALL" ? "ALL" : "MONTHLY",
-          autoCreateContractOnConfirm: org.autoCreateContractOnConfirm,
+          requireInvoiceBeforeCheckIn: org.requireInvoiceBeforeCheckIn,
+          requireInvoiceScope: org.requireInvoiceScope === "ALL" ? "ALL" : "MONTHLY",
+          autoGenerateInvoiceOnCreate: org.autoGenerateInvoiceOnCreate,
         }}
       />
     </div>

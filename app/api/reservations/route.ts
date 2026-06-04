@@ -12,6 +12,7 @@ import {
 } from "@/lib/reservation-engine";
 import { getUnitConflict, type ConflictDetail } from "@/lib/reservation-conflict";
 import { computeUnitPricings, findMonthlyBlock } from "@/lib/reservation-pricing";
+import { generateInvoicesForReservation } from "@/lib/invoice-engine";
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
 
@@ -283,15 +284,15 @@ export async function POST(req: NextRequest) {
 
   const totalNights = totalNightsVal;
 
-  // Auto-create a draft contract for in-scope reservations when the org opts in
-  // (QA #24). Read-only settings fetch outside the transaction.
-  const orgContractSettings = await prisma.organization.findUnique({
+  // Auto-generate invoice(s) for in-scope reservations when the org opts in
+  // (QA #24/#34 — "contract" = invoice). Read-only settings fetch.
+  const orgInvoiceSettings = await prisma.organization.findUnique({
     where:  { id: actor.organizationId! },
-    select: { autoCreateContractOnConfirm: true, requireContractScope: true },
+    select: { autoGenerateInvoiceOnCreate: true, requireInvoiceScope: true },
   });
-  const autoCreateContract =
-    !!orgContractSettings?.autoCreateContractOnConfirm &&
-    (orgContractSettings.requireContractScope === "ALL" || rt === "monthly");
+  const autoGenerateInvoice =
+    !!orgInvoiceSettings?.autoGenerateInvoiceOnCreate &&
+    (orgInvoiceSettings.requireInvoiceScope === "ALL" || rt === "monthly");
 
   // ── Serializable transaction (double-booking prevention) ──────────────────
 
@@ -350,21 +351,21 @@ export async function POST(req: NextRequest) {
           })),
         });
 
-        if (autoCreateContract) {
-          await tx.contract.create({
-            data: {
-              reservationId:  res.id,
-              organizationId: actor.organizationId!,
-              status:         "DRAFT",
-              createdById:    actor.id,
-            },
-          });
-        }
-
         return res;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+
+    // Auto-generate invoice(s) once the reservation is committed (QA #34). The
+    // invoice engine runs its own transaction; failure here shouldn't fail the
+    // booking, so it's best-effort and logged.
+    if (autoGenerateInvoice) {
+      try {
+        await generateInvoicesForReservation(reservation.id, actor.organizationId!, actor.id);
+      } catch (e) {
+        console.error("[POST /api/reservations] auto-generate invoice failed:", e);
+      }
+    }
 
     return NextResponse.json({ reservation }, { status: 201 });
   } catch (err: unknown) {

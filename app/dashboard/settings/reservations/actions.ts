@@ -41,10 +41,10 @@ export async function updateReservationSettings(
   const reservationNumberPadding = Math.min(Math.max(Number.isFinite(paddingRaw) ? paddingRaw : 5, 1), 10);
   const reservationNumberResetYearly = formData.get("reservationNumberResetYearly") === "on";
 
-  // Contract gate (QA #24).
-  const requireContractBeforeCheckIn = formData.get("requireContractBeforeCheckIn") === "on";
-  const requireContractScope = formData.get("requireContractScope") === "ALL" ? "ALL" : "MONTHLY";
-  const autoCreateContractOnConfirm = formData.get("autoCreateContractOnConfirm") === "on";
+  // Invoice gate (QA #24/#34 — "contract" = invoice).
+  const requireInvoiceBeforeCheckIn = formData.get("requireInvoiceBeforeCheckIn") === "on";
+  const requireInvoiceScope = formData.get("requireInvoiceScope") === "ALL" ? "ALL" : "MONTHLY";
+  const autoGenerateInvoiceOnCreate = formData.get("autoGenerateInvoiceOnCreate") === "on";
 
   try {
     await prisma.organization.update({
@@ -52,7 +52,7 @@ export async function updateReservationSettings(
       data:  {
         checkInPolicy, allowEarlyCheckIn, autoCheckout,
         reservationNumberPrefix, reservationNumberPadding, reservationNumberResetYearly,
-        requireContractBeforeCheckIn, requireContractScope, autoCreateContractOnConfirm,
+        requireInvoiceBeforeCheckIn, requireInvoiceScope, autoGenerateInvoiceOnCreate,
       },
     });
   } catch (err) {

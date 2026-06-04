@@ -153,12 +153,11 @@ type ReservationData = {
   invoicesGenerated: boolean;
   invoices: InvoiceRow[];
   returns: ReturnRow[];
-  contract: { id: string; status: string; signedAt: string | null; signedByName: string | null } | null;
   createdByName: string | null;
   createdAt: string;
 };
 
-type ModalType = "check-in" | "check-out" | "cancel" | "payment" | "charge" | "note" | "extend-stay" | "move-unit" | "generate-invoices" | "return" | "mark-contract-signed" | null;
+type ModalType = "check-in" | "check-out" | "cancel" | "payment" | "charge" | "note" | "extend-stay" | "move-unit" | "generate-invoices" | "return" | null;
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -1017,56 +1016,6 @@ function NoteModal({ res, onSuccess, onClose }: {
   );
 }
 
-// ── Mark Contract Signed Modal (QA #24) ─────────────────────────────────────────
-
-function MarkContractSignedModal({ reservationId, onSuccess, onClose }: {
-  reservationId: string; onSuccess: () => void; onClose: () => void;
-}) {
-  const t = useTranslations("reservations.detail.contract");
-  const [signedByName, setSignedByName] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function handleSubmit() {
-    if (!signedByName.trim()) { toast.error(t("signerRequired")); return; }
-    setLoading(true);
-    const r = await fetch(`/api/reservations/${reservationId}/contract`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "sign", signedByName: signedByName.trim() }),
-    });
-    const data = await r.json();
-    setLoading(false);
-    if (!r.ok) { toast.error(data.error ?? t("signFailed")); return; }
-    toast.success(t("signed"));
-    onSuccess();
-  }
-
-  return (
-    <Modal open onClose={onClose} size="md"><ModalHeader title={t("markSigned")} /><ModalBody>
-      <div className="space-y-4">
-        <p className="text-sm text-gray-500">{t("signHint")}</p>
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">{t("signerLabel")}</label>
-          <input
-            value={signedByName}
-            onChange={(e) => setSignedByName(e.target.value)}
-            placeholder={t("signerPlaceholder")}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500"
-            autoFocus
-          />
-        </div>
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full py-3 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
-        >
-          {loading ? t("signing") : t("confirmSign")}
-        </button>
-      </div>
-    </ModalBody></Modal>
-  );
-}
-
 // ── Generate Invoices Modal ────────────────────────────────────────────────────
 
 function GenerateInvoicesModal({ res, onSuccess, onClose }: {
@@ -1775,11 +1724,10 @@ function ActivityIcon({ action }: { action: string }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-export default function ReservationDetail({ id, allowEarlyCheckIn = false, requireContractBeforeCheckIn = false, requireContractScope = "MONTHLY" }: { id: string; allowEarlyCheckIn?: boolean; requireContractBeforeCheckIn?: boolean; requireContractScope?: string }) {
+export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { id: string; allowEarlyCheckIn?: boolean }) {
   const t           = useTranslations("reservations.detail");
   const tGuest      = useTranslations("reservations.detail.guest");
   const tStay       = useTranslations("reservations.detail.stay");
-  const tContract   = useTranslations("reservations.detail.contract");
   const tInvoices   = useTranslations("reservations.detail.invoicesSection");
   const tPricing    = useTranslations("reservations.detail.pricingBreakdown");
   const tFinancial  = useTranslations("reservations.detail.financial");
@@ -1812,34 +1760,6 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, requi
   function afterAction() {
     setActiveModal(null);
     loadData();
-  }
-
-  // Contract actions (QA #24).
-  const [contractBusy, setContractBusy] = useState(false);
-  async function createContract() {
-    setContractBusy(true);
-    try {
-      const r = await fetch(`/api/reservations/${id}/contract`, { method: "POST" });
-      const d = await r.json();
-      if (!r.ok) { toast.error(d.error ?? tContract("createFailed")); return; }
-      toast.success(tContract("created"));
-      loadData();
-    } catch { toast.error(tContract("createFailed")); }
-    finally { setContractBusy(false); }
-  }
-  async function cancelContract() {
-    setContractBusy(true);
-    try {
-      const r = await fetch(`/api/reservations/${id}/contract`, {
-        method: "PATCH", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "cancel" }),
-      });
-      const d = await r.json();
-      if (!r.ok) { toast.error(d.error ?? tContract("cancelFailed")); return; }
-      toast.success(tContract("cancelled"));
-      loadData();
-    } catch { toast.error(tContract("cancelFailed")); }
-    finally { setContractBusy(false); }
   }
 
   if (loading) {
@@ -1883,15 +1803,6 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, requi
     !res.invoicesGenerated &&
     ["Upcoming", "Arriving Today", "Overdue Arrival"].includes(res.displayStatus);
 
-  // Contract gate (QA #24): is a signed contract required for THIS reservation?
-  const contractInScope = requireContractScope === "ALL" || res.rateType === "monthly";
-  const contractRequired = requireContractBeforeCheckIn && contractInScope;
-  const contractSigned = res.contract?.status === "SIGNED";
-  // Show the contract section when there's a contract or one is required, and the
-  // booking is still pre-checkout (no point after the stay).
-  const showContractSection =
-    (!!res.contract || contractRequired) &&
-    !["Checked Out", "Cancelled", "No Show"].includes(res.displayStatus);
 
   // Use invoice balances as the source of truth when invoices exist
   const invoiceBalanceDue = res.invoices.length > 0
@@ -2064,61 +1975,6 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, requi
                 </div>
               )}
             </div>
-
-            {/* Contract section (QA #24) */}
-            {showContractSection && (
-              <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                <div className="flex items-start justify-between gap-3 flex-wrap">
-                  <div>
-                    <h3 className="font-semibold text-gray-800">{tContract("title")}</h3>
-                    {res.contract ? (
-                      <div className="mt-1 flex items-center gap-2 text-sm">
-                        <Badge
-                          tone={res.contract.status === "SIGNED" ? "success" : res.contract.status === "CANCELLED" ? "neutral" : "warning"}
-                          appearance="subtle"
-                          size="sm"
-                        >
-                          {tContract(`status.${res.contract.status}`)}
-                        </Badge>
-                        {res.contract.status === "SIGNED" && res.contract.signedByName && (
-                          <span className="text-gray-500">
-                            {tContract("signedBy", { name: res.contract.signedByName })}
-                            {res.contract.signedAt ? ` · ${fmtDate(res.contract.signedAt, { day: "numeric", month: "short", year: "numeric" })}` : ""}
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="mt-1 text-sm text-gray-500">{tContract("none")}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!res.contract && (
-                      <Button size="sm" onClick={createContract} loading={contractBusy}>
-                        {tContract("create")}
-                      </Button>
-                    )}
-                    {res.contract?.status === "DRAFT" && (
-                      <>
-                        <Button size="sm" onClick={() => setActiveModal("mark-contract-signed")}>
-                          {tContract("markSigned")}
-                        </Button>
-                        <button onClick={cancelContract} disabled={contractBusy}
-                          className="text-xs text-gray-400 hover:text-red-500 px-2 py-1">
-                          {tContract("cancel")}
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-                {/* Check-in blocked warning */}
-                {contractRequired && !contractSigned && (
-                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                    <ExclamationTriangleIcon className="h-4 w-4 shrink-0 mt-0.5" />
-                    <span>{tContract("requiredWarning")}</span>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Section 2: Stay Details */}
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
@@ -2601,7 +2457,6 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, requi
       {activeModal === "payment"   && <PaymentModal  res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "charge"    && <ChargeModal   res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "note"      && <NoteModal     res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
-      {activeModal === "mark-contract-signed" && <MarkContractSignedModal reservationId={res.id} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "extend-stay" && (
         <ExtendStayModal
           reservationId={res.id}

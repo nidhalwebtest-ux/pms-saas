@@ -155,12 +155,20 @@ export async function PATCH(
             throw new Error(`CONFLICT:${JSON.stringify({ ...conflict, reason: "overlap" })}`);
           }
 
-          // REQUIRE_VACANT: also block if another guest is still physically
-          // checked in on this unit (even a back-to-back turnover day) — they
-          // must be checked out first.
-          if (effectivePolicy === "REQUIRE_VACANT") {
-            const occupant = await getCheckedInOccupant(tx, unitId, unitName, id);
-            if (occupant) {
+          // Block double physical occupancy (QA #33): a unit can't have two
+          // guests CHECKED_IN at once. Always check — date-range adjacency
+          // (getUnitConflict) isn't enough because early check-in can place a
+          // second guest into a unit while the first is still mid-stay.
+          //  - REQUIRE_VACANT: block on ANY current occupant (must check out first).
+          //  - ALLOW_BACK_TO_BACK: still permit a same-day turnover (the prior
+          //    guest's stay ends today or earlier), but block if they're still
+          //    mid-stay (endDate in the future) — e.g. an early check-in.
+          const occupant = await getCheckedInOccupant(tx, unitId, unitName, id);
+          if (occupant) {
+            const occEnd    = new Date(occupant.endDate);
+            const occEndDay = new Date(Date.UTC(occEnd.getUTCFullYear(), occEnd.getUTCMonth(), occEnd.getUTCDate()));
+            const occupantStillMidStay = occEndDay > todayDay;
+            if (effectivePolicy === "REQUIRE_VACANT" || occupantStillMidStay) {
               throw new Error(`CONFLICT:${JSON.stringify({ ...occupant, reason: "occupied" })}`);
             }
           }

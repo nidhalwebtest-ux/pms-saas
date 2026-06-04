@@ -44,7 +44,7 @@
 | 30 | Full Edit Reservation flow (edit route + PUT API + guards) | 6 (split from #23) | **P1** | ✅ Fixed |
 | 31 | Show seasonal segment breakdown on unit card during selection | 10 (split from #28) | P2 | ✅ Fixed |
 | 32 | Invoice recomputes from unit default price — ignores reservation's actual rate/segments | 11 | **P1** | ✅ Fixed |
-| 33 | Check-in allows double physical occupancy (unit already In House) | C | **P0** | Open |
+| 33 | Check-in allows double physical occupancy (unit already In House) | C | **P0** | ✅ Fixed |
 | 34 | Rework contract gate → invoice (contract = invoice); auto-generate invoice on create | C | **P1** | Open |
 
 ---
@@ -58,6 +58,14 @@
 - **DB evidence:** `RESNOOR-2026-00001` reservationUnit `rateAmount=22, rateSource=manual_override, subtotal=154, pricingSegments=[22/night]` ✅ but `INV-2026-00001 subtotal=175` ❌.
 - **Root cause:** [lib/invoice-engine.ts](lib/invoice-engine.ts) daily path recomputed line items from `getUnitPriceForRange()` (current UnitPrice records) and only used the reservation's stored rate as a *fallback when no UnitPrice exists*. So manual overrides and booking-time seasonal rates were discarded.
 - **Fix:** ✅ The daily invoice now builds line items from the reservation's persisted `reservationUnit.pricingSegments` (the #28 snapshot) as the source of truth — honoring `manual_override` and booking-time seasonal rates — and only falls back to recompute for legacy rows with no segments. `UnitInfo`/`getReservationUnitInfos` now carry `pricingSegments`/`nights`/`subtotal`. **Note:** existing wrong invoices (e.g. INV-2026-00001) must be cancelled + regenerated to pick up the fix.
+- **Status:** ✅ Fixed
+
+## Issue #33: Check-in allows two guests CHECKED_IN on the same unit (double physical occupancy)
+- **Scenario:** Category C — found during invoicing/check-in testing
+- **Severity:** **P0** (data integrity — two tenants "In House" in one unit)
+- **Steps to reproduce:** `RESNOOR-2026-00001` (Unit 1, 06-03→06-10) is **In House**. Create `RES-2026-00140` (Unit 1, 06-10→06-14) — allowed (dates back-to-back, no overlap). With early check-in on, check `RES-2026-00140` in **today (06-04)** → succeeds, so **both** are CHECKED_IN on Unit 1 at once.
+- **Root cause:** the physical-occupancy guard (`getCheckedInOccupant`) only ran under the **REQUIRE_VACANT** policy; the default **ALLOW_BACK_TO_BACK** skipped it, and date-adjacency (`getUnitConflict`, half-open) can't catch an early check-in placing a 2nd guest mid-stay.
+- **Fix:** ✅ The occupant check runs under **all** policies in [check-in/route.ts](app/api/reservations/[id]/check-in/route.ts). REQUIRE_VACANT blocks on any current occupant; ALLOW_BACK_TO_BACK still allows a genuine **same-day turnover** (occupant `endDate` ≤ today) but **blocks** when the occupant is still **mid-stay** (`endDate` > today). **Note:** the existing double-checked-in pair must be reconciled manually (check one out).
 - **Status:** ✅ Fixed
 
 ## Issue #1: No logout button on Onboarding wizard

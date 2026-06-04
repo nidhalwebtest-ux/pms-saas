@@ -45,6 +45,18 @@ export interface CalendarMonthPeriod {
   isFullMonth:  boolean;  // true only if 1st of month → last day of month
 }
 
+/** Persisted per-segment snapshot from booking time (QA #28). */
+export interface PersistedSegment {
+  label?:             string | null;
+  startDate?:         string | null;
+  endDate?:           string | null;
+  nights:             number;
+  rateAmount:         number;
+  rateSource:         string;
+  seasonalPriceName:  string | null;
+  subtotal:           number;
+}
+
 export interface UnitInfo {
   unitId:             string;
   rateType:           string;       // "daily" | "monthly"
@@ -52,6 +64,9 @@ export interface UnitInfo {
   rateSource:         string;       // "default_price" | "seasonal_price" | "manual_override"
   seasonalPriceName:  string | null;
   propertyId:         string | null;
+  nights?:            number;       // persisted at booking
+  subtotal?:          number;       // persisted at booking
+  pricingSegments?:   PersistedSegment[] | null; // persisted snapshot (QA #28)
 }
 
 export interface GenerateInvoicesResult {
@@ -332,6 +347,9 @@ export function getReservationUnitInfos(reservation: {
     rateAmount:         number | { toNumber(): number };
     rateSource:         string;
     seasonalPriceName?: string | null;
+    nights?:            number;
+    subtotal?:          number | { toNumber(): number };
+    pricingSegments?:   unknown;
     isMovedOut?:        boolean;
     unit?: {
       id:       string;
@@ -340,6 +358,8 @@ export function getReservationUnitInfos(reservation: {
   }[];
 }): UnitInfo[] {
   const infos: UnitInfo[] = [];
+  const num = (v: number | { toNumber(): number } | undefined): number | undefined =>
+    v == null ? undefined : (typeof v === "object" ? v.toNumber() : v);
 
   // --- New junction table pattern ---
   if (
@@ -357,6 +377,11 @@ export function getReservationUnitInfos(reservation: {
         rateSource:        ru.rateSource,
         seasonalPriceName: ru.seasonalPriceName ?? null,
         propertyId:        ru.unit?.property?.id ?? null,
+        nights:            ru.nights,
+        subtotal:          num(ru.subtotal),
+        pricingSegments:   Array.isArray(ru.pricingSegments)
+                            ? (ru.pricingSegments as PersistedSegment[])
+                            : null,
       });
     }
     return infos;
@@ -524,12 +549,42 @@ async function _generateShortTermInvoice(
     let sortOrder = 0;
 
     for (const ui of unitInfos) {
-      // Fetch daily pricing breakdown (from UnitPrice table)
-      const pricing = await getUnitPriceForRange(ui.unitId, res.startDate, res.endDate);
-      const segments = collapseToSegments(pricing.dailyBreakdown);
-
       // Resolve unit name from reservation relation
       const unitName = _resolveUnitName(res, ui.unitId) ?? ui.unitId;
+
+      // SOURCE OF TRUTH: the segments snapshotted at booking (QA #28/#32) honor
+      // manual overrides and the seasonal rates in effect when booked. Only fall
+      // back to recomputing from current UnitPrice records for legacy rows that
+      // predate segment persistence.
+      const persisted = ui.pricingSegments;
+      if (persisted && persisted.length > 0 && persisted.reduce((s, sg) => s + sg.subtotal, 0) > 0) {
+        for (const seg of persisted) {
+          const lineTotal = roundOMR(seg.subtotal);
+          subtotal = roundOMR(subtotal + lineTotal);
+          const from = seg.startDate ? seg.startDate.slice(0, 10) : "";
+          const to   = seg.endDate ? seg.endDate.slice(0, 10) : "";
+          const span = from && to ? ` (${from} – ${to})` : "";
+          lineItemsData.push({
+            organizationId:    orgId,
+            description:       `${unitName} — ${seg.seasonalPriceName ?? "Default"} rate${span}`,
+            category:          "ROOM_CHARGE",
+            unitId:            ui.unitId,
+            quantity:          seg.nights,
+            unitPrice:         seg.rateAmount,
+            lineTotal,
+            rateType:          "DAILY",
+            rateSource:        mapRateSource(seg.rateSource),
+            seasonalPriceName: seg.seasonalPriceName,
+            priceBreakdown:    persisted as any,
+            sortOrder:         sortOrder++,
+          });
+        }
+        continue;
+      }
+
+      // Fetch daily pricing breakdown (from UnitPrice table) — legacy fallback.
+      const pricing = await getUnitPriceForRange(ui.unitId, res.startDate, res.endDate);
+      const segments = collapseToSegments(pricing.dailyBreakdown);
 
       if (segments.length > 0 && segments.reduce((s, seg) => s + seg.subtotal, 0) > 0) {
         // Normal path: use the pricing-engine segments. Defensive guard:

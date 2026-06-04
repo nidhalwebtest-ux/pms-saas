@@ -43,10 +43,22 @@
 | 29 | Configurable reservation-number format (prefix/padding/reset) in settings | 6 (split from #18) | P2 | ✅ Fixed (needs `db push`) |
 | 30 | Full Edit Reservation flow (edit route + PUT API + guards) | 6 (split from #23) | **P1** | ✅ Fixed |
 | 31 | Show seasonal segment breakdown on unit card during selection | 10 (split from #28) | P2 | ✅ Fixed |
+| 32 | Invoice recomputes from unit default price — ignores reservation's actual rate/segments | 11 | **P1** | ✅ Fixed |
+| 33 | Check-in allows double physical occupancy (unit already In House) | C | **P0** | Open |
+| 34 | Rework contract gate → invoice (contract = invoice); auto-generate invoice on create | C | **P1** | Open |
 
 ---
 
 <!-- Issues appended below as discovered -->
+
+## Issue #32: Invoice ignores the reservation's actual rate (recomputes from unit default price)
+- **Scenario:** 11 — Generate invoices (daily reservation)
+- **Severity:** **P1** (wrong financials on every custom-rate / seasonal invoice)
+- **Steps to reproduce:** Book a daily unit, override the rate to 22/night (default 25), 7 nights → reservation correctly stores `rateAmount=22, subtotal=154`. Generate invoices → invoice total **175** (7×25) with a line item "Default rate … unitPrice=25".
+- **DB evidence:** `RESNOOR-2026-00001` reservationUnit `rateAmount=22, rateSource=manual_override, subtotal=154, pricingSegments=[22/night]` ✅ but `INV-2026-00001 subtotal=175` ❌.
+- **Root cause:** [lib/invoice-engine.ts](lib/invoice-engine.ts) daily path recomputed line items from `getUnitPriceForRange()` (current UnitPrice records) and only used the reservation's stored rate as a *fallback when no UnitPrice exists*. So manual overrides and booking-time seasonal rates were discarded.
+- **Fix:** ✅ The daily invoice now builds line items from the reservation's persisted `reservationUnit.pricingSegments` (the #28 snapshot) as the source of truth — honoring `manual_override` and booking-time seasonal rates — and only falls back to recompute for legacy rows with no segments. `UnitInfo`/`getReservationUnitInfos` now carry `pricingSegments`/`nights`/`subtotal`. **Note:** existing wrong invoices (e.g. INV-2026-00001) must be cancelled + regenerated to pick up the fix.
+- **Status:** ✅ Fixed
 
 ## Issue #1: No logout button on Onboarding wizard
 - **Scenario:** 1 — Create organization

@@ -51,10 +51,27 @@
 | 37 | Arabic: check-in toast + reservation status (detail page) still English | 11 | P2 | ✅ Fixed |
 | 38 | Auto-generate invoice didn't fire (scope only settable when require-toggle on) | 11 | **P1** | ✅ Fixed |
 | 39 | Require-invoice-before-check-in not enforced (same scope-coupling root as #38) | 11 | **P1** | ✅ Fixed |
+| 40 | DRAFT invoices shown as "Pending" on the reservation detail (no DRAFT case) | 12 | P2 | ✅ Fixed |
+| 41 | Monthly invoice line item: days × per-day ≠ flat monthly rate (31-day months) | 12 | P2 | ✅ Fixed |
 
 ---
 
 <!-- Issues appended below as discovered -->
+
+## Issue #40: DRAFT invoices shown as "Pending" on the reservation detail
+- **Scenario:** 12 (monthly invoicing) — **Severity:** P2
+- **Symptom:** A future-dated monthly reservation (`RESNOOR-2026-00008`, 3 cycles) — DB had all 3 cycles **DRAFT** (correct — the stay starts in the future, so no cycle is current yet), but the reservation-detail invoices table showed them as **"Pending"**.
+- **Root cause:** the invoices-table status logic had no `DRAFT` case, so DRAFT fell through to the final `else` (`statuses.pending`). The payment-modal `fmtInvStatus` also lumped DRAFT into pending.
+- **Fix:** ✅ added a DRAFT case (gray "Draft" pill, excluded from the overdue check) and split DRAFT out of `fmtInvStatus`; new `statuses.draft` / `invStatus.draft` keys in both locales. [ReservationDetail.tsx](app/dashboard/reservations/[id]/ReservationDetail.tsx).
+- **Note:** all-DRAFT was the **correct** engine behavior here (`status = periodStart > today ? DRAFT : PENDING`). A reservation starting today/in the past would auto-issue cycle 1 as PENDING; future cycles stay DRAFT until issued (Scenario 13).
+- **Status:** ✅ Fixed
+
+## Issue #41: Monthly invoice line item — days × per-day ≠ flat monthly rate
+- **Scenario:** 12 — **Severity:** P2
+- **Symptom:** Line item for a 31-day month read `qty 31 × unit 20 = 620` while `lineTotal = 600` (the flat monthly rate). The numbers didn't reconcile.
+- **Root cause:** [_createMonthlyInvoice](lib/invoice-engine.ts) always showed `quantity = days`, `unitPrice = monthlyRate / 30` — fine for 30-day months, wrong for 28/31-day months where the rate is flat.
+- **Fix:** ✅ a **full** month now bills as `qty 1 × monthlyRate` (reconciles); a **partial** month stays prorated `qty days × (monthlyRate / 30)`. So qty × unitPrice == lineTotal in both cases.
+- **Status:** ✅ Fixed
 
 ## Issue #35: Booking summary shows checkout − 1 day
 - **Scenario:** 11 re-test — **Severity:** P2

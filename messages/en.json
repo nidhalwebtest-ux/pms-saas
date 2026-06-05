@@ -1885,7 +1885,8 @@
           "partial": "Partial",
           "cancelled": "Cancelled",
           "overdue": "Overdue",
-          "pending": "Pending"
+          "pending": "Pending",
+          "draft": "Draft"
         }
       },
       "pricingBreakdown": {
@@ -2018,7 +2019,8 @@
         "success": "Payment recorded",
         "invStatus": {
           "partial": "Partial",
-          "pending": "Pending"
+          "pending": "Pending",
+          "draft": "Draft"
         }
       },
       "chargeModal": {

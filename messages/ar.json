@@ -1885,7 +1885,8 @@
           "partial": "جزئي",
           "cancelled": "ملغى",
           "overdue": "متأخر",
-          "pending": "معلّق"
+          "pending": "معلّق",
+          "draft": "مسودة"
         }
       },
       "pricingBreakdown": {
@@ -2018,7 +2019,8 @@
         "success": "تم تسجيل الدفعة",
         "invStatus": {
           "partial": "جزئي",
-          "pending": "معلّق"
+          "pending": "معلّق",
+          "draft": "مسودة"
         }
       },
       "chargeModal": {

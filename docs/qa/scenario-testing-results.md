@@ -30,7 +30,7 @@
 | # | Scenario | Result | Key checks |
 |---|----------|--------|-----------|
 | 11 | Generate invoices — daily / short-term reservation | ✅ PASS (after fixes) | Custom-rate invoice now correct (154); found+fixed #32, #33, #35–#39 |
-| 12 | Generate invoices — monthly reservation | ⏳ Pending | First cycle auto-issued PENDING; future cycles DRAFT; cycle follows check-in day |
+| 12 | Generate invoices — monthly reservation | ✅ PASS (after fixes) | Cycles correct (15th→15th, 3×600); all-DRAFT correct for a future stay. Fixed #40 (DRAFT shown as Pending), #41 (monthly line math) |
 | 13 | Issue a DRAFT monthly cycle | ⏳ Pending | status→PENDING, issueDate stamped (revenue posts on issueDate) |
 | 14 | Invoice for the Khareef reservation (S10) | ⏳ Pending | Line items reflect persisted segments (3×25 + 4×45 = 255) — the #28 payoff |
 | 15 | Record a full payment | ⏳ Pending | Invoice→PAID, payment_allocation created, balance 0 |

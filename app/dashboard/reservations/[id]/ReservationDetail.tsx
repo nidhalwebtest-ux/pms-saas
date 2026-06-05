@@ -756,7 +756,8 @@ function PaymentModal({ res, onSuccess, onClose }: {
 
   const fmtInvStatus = (s: string) => {
     if (s === "PARTIALLY_PAID" || s === "PARTIAL") return t("invStatus.partial");
-    if (s === "PENDING" || s === "DRAFT" || s === "DUE" || s === "ISSUED") return t("invStatus.pending");
+    if (s === "DRAFT") return t("invStatus.draft");
+    if (s === "PENDING" || s === "DUE" || s === "ISSUED") return t("invStatus.pending");
     return s;
   };
   const isOverdue = (inv: InvoiceRow) =>
@@ -2110,13 +2111,16 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { i
                         const isCancelled = inv.status === "CANCELLED" || inv.status === "VOID";
                         const isPaid      = inv.status === "PAID";
                         const isPartial   = inv.status === "PARTIALLY_PAID" || inv.status === "PARTIAL";
-                        const isOverdue   = !isPaid && !isCancelled && new Date(inv.dueDate) < new Date();
+                        const isDraft     = inv.status === "DRAFT";
+                        const isOverdue   = !isPaid && !isCancelled && !isDraft && new Date(inv.dueDate) < new Date();
                         const statusClass = isPaid
                           ? "bg-green-100 text-green-700"
                           : isPartial
                           ? "bg-yellow-100 text-yellow-700"
                           : isCancelled
                           ? "bg-gray-100 text-gray-400"
+                          : isDraft
+                          ? "bg-gray-100 text-gray-600"
                           : isOverdue
                           ? "bg-red-100 text-red-700"
                           : "bg-orange-100 text-orange-700";
@@ -2126,6 +2130,8 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { i
                           ? tInvoices("statuses.partial")
                           : isCancelled
                           ? tInvoices("statuses.cancelled")
+                          : isDraft
+                          ? tInvoices("statuses.draft")
                           : isOverdue
                           ? tInvoices("statuses.overdue")
                           : tInvoices("statuses.pending");

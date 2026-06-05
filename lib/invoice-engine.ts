@@ -778,7 +778,11 @@ async function _createMonthlyInvoice(opts: {
 
       const unitName = _resolveUnitName(res, ui.unitId) ?? ui.unitId;
 
-      const unitPrice = roundOMR(monthlyRate / 30); // per-day equivalent
+      // Full month bills flat (qty 1 × monthly rate); a partial month is prorated
+      // per-day. Keep qty × unitPrice == lineTotal so the invoice reconciles
+      // (a flat monthly rate shown as days × per-day broke for 31-day months).
+      const quantity  = period.isFullMonth ? 1 : period.days;
+      const unitPrice = period.isFullMonth ? roundOMR(monthlyRate) : roundOMR(monthlyRate / 30);
       const lineTotal = amount;
       subtotal = roundOMR(subtotal + lineTotal);
 
@@ -787,7 +791,7 @@ async function _createMonthlyInvoice(opts: {
         description:       `${unitName} — ${periodLabel}`,
         category:          "ROOM_CHARGE",
         unitId:            ui.unitId,
-        quantity:          period.days,
+        quantity,
         unitPrice,
         lineTotal,
         rateType:          "MONTHLY",

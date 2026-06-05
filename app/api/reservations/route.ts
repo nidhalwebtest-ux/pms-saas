@@ -362,6 +362,12 @@ export async function POST(req: NextRequest) {
     if (autoGenerateInvoice) {
       try {
         await generateInvoicesForReservation(reservation.id, actor.organizationId!, actor.id);
+        // Mirror the manual "Generate Invoices" route so the flag stays in sync
+        // (drives the edit guard + detail UI).
+        await prisma.reservation.update({
+          where: { id: reservation.id },
+          data:  { invoicesGenerated: true, invoicesGeneratedAt: new Date(), invoicesGeneratedById: actor.id },
+        });
       } catch (e) {
         console.error("[POST /api/reservations] auto-generate invoice failed:", e);
       }

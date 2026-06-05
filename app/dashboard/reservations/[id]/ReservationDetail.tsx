@@ -251,11 +251,29 @@ function ClassBadge({ c }: { c: string | null }) {
   );
 }
 
+// English display label → reservations.statuses i18n key (QA — Arabic statuses).
+const DISPLAY_STATUS_I18N: Record<string, string> = {
+  "Upcoming": "upcoming",
+  "Arriving Today": "arrivingToday",
+  "Overdue Arrival": "overdueArrival",
+  "In House": "inHouse",
+  "Due Checkout": "dueCheckout",
+  "Overstay": "overstay",
+  "Checked Out": "checkedOut",
+  "Cancelled": "cancelled",
+  "No Show": "noShow",
+  "Pending": "pending",
+};
+
 function StatusBadge({ label }: { label: string }) {
+  const tStatus = useTranslations("reservations.statuses");
   const key = reservationStatusKeyFromDisplayLabel(label);
+  const i18nKey = DISPLAY_STATUS_I18N[label];
+  let text = label;
+  try { if (i18nKey) text = tStatus(i18nKey); } catch { /* fall back to English label */ }
   return (
     <Badge {...getReservationStatusBadge(key)} size="md">
-      {label}
+      {text}
     </Badge>
   );
 }
@@ -338,14 +356,7 @@ function CheckInModal({ res, onSuccess, onClose }: {
   res: ReservationData; onSuccess: () => void; onClose: () => void;
 }) {
   const t = useTranslations("reservations.detail.checkInModal");
-  const tp = useTranslations("settings.reservations");
   const [loading, setLoading] = useState(false);
-
-  // Effective policy for this reservation: per-reservation override, else org default.
-  const effectivePolicy = res.checkInPolicyOverride ?? res.orgCheckInPolicy;
-  const [policy, setPolicy] = useState<"ALLOW_BACK_TO_BACK" | "REQUIRE_VACANT">(effectivePolicy);
-  // Send an override only when the chosen policy differs from the org default.
-  const overrideToSend = policy === res.orgCheckInPolicy ? null : policy;
 
   const checkInDate = res.startDate;
   const daysUntil = diffDays(new Date().toISOString(), checkInDate);
@@ -355,12 +366,12 @@ function CheckInModal({ res, onSuccess, onClose }: {
     const r = await fetch(`/api/reservations/${res.id}/check-in`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ checkInPolicyOverride: overrideToSend }),
+      body: JSON.stringify({}),
     });
     const data = await r.json();
     setLoading(false);
     if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
-    toast.success(data.message ?? t("successDefault"));
+    toast.success(t("successDefault"));
     onSuccess();
   }
 
@@ -406,44 +417,6 @@ function CheckInModal({ res, onSuccess, onClose }: {
             description={t("invoicesExist", { count: res.invoices.length })}
           />
         )}
-
-        {/* Check-in policy (per-reservation override of the org default) */}
-        <div className="rounded-xl border border-gray-200 p-3">
-          <p className="text-sm font-medium text-gray-700 mb-1">{tp("checkInPolicyLabel")}</p>
-          <p className="text-xs text-gray-500 mb-2.5">{t("policyOverrideHint")}</p>
-          <div className="space-y-2">
-            {(["ALLOW_BACK_TO_BACK", "REQUIRE_VACANT"] as const).map((value) => (
-              <label
-                key={value}
-                className={`flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2 transition ${
-                  policy === value
-                    ? "border-green-500 bg-green-50/50 ring-1 ring-green-500/30"
-                    : "border-gray-200 bg-white hover:border-gray-300"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="checkInPolicyOverride"
-                  value={value}
-                  checked={policy === value}
-                  onChange={() => setPolicy(value)}
-                  className="mt-0.5 h-4 w-4 text-green-600 focus:ring-green-500/30"
-                />
-                <span className="flex flex-col">
-                  <span className="text-sm font-medium text-gray-800">
-                    {tp(value === "ALLOW_BACK_TO_BACK" ? "checkInPolicyBackToBackTitle" : "checkInPolicyRequireVacantTitle")}
-                    {value === res.orgCheckInPolicy && (
-                      <span className="ms-1.5 text-xs font-normal text-gray-400">({t("policyDefault")})</span>
-                    )}
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {tp(value === "ALLOW_BACK_TO_BACK" ? "checkInPolicyBackToBackDesc" : "checkInPolicyRequireVacantDesc")}
-                  </span>
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
 
         <button
           onClick={handleConfirm}

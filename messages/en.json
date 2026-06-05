@@ -1708,7 +1708,8 @@
       "overstay": "Overstay",
       "checkedOut": "Checked Out",
       "cancelled": "Cancelled",
-      "noShow": "No Show"
+      "noShow": "No Show",
+      "pending": "Pending"
     },
     "actions": {
       "checkIn": "Check In",

@@ -165,20 +165,6 @@ export default function ReservationSettingsForm({ settings }: { settings: FormSt
           </span>
         </label>
 
-        {form.requireInvoiceBeforeCheckIn && (
-          <div className="mt-3 ms-7">
-            <label className="block text-xs font-medium text-gray-600 mb-1">{t("invoiceScopeLabel")}</label>
-            <select
-              value={form.requireInvoiceScope}
-              onChange={(e) => { setForm((p) => ({ ...p, requireInvoiceScope: e.target.value === "ALL" ? "ALL" : "MONTHLY" })); setBannerError(null); }}
-              className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-            >
-              <option value="MONTHLY">{t("invoiceScopeMonthly")}</option>
-              <option value="ALL">{t("invoiceScopeAll")}</option>
-            </select>
-          </div>
-        )}
-
         <label className="mt-3 flex cursor-pointer items-start gap-3">
           <input
             type="checkbox"
@@ -191,6 +177,22 @@ export default function ReservationSettingsForm({ settings }: { settings: FormSt
             <span className="text-xs text-gray-500">{t("autoGenerateInvoiceHint")}</span>
           </span>
         </label>
+
+        {/* Shared scope — governs BOTH the require gate and auto-generate (QA).
+            Shown whenever either is on so it isn't stuck at the MONTHLY default. */}
+        {(form.requireInvoiceBeforeCheckIn || form.autoGenerateInvoiceOnCreate) && (
+          <div className="mt-3 ms-7">
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t("invoiceScopeLabel")}</label>
+            <select
+              value={form.requireInvoiceScope}
+              onChange={(e) => { setForm((p) => ({ ...p, requireInvoiceScope: e.target.value === "ALL" ? "ALL" : "MONTHLY" })); setBannerError(null); }}
+              className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            >
+              <option value="MONTHLY">{t("invoiceScopeMonthly")}</option>
+              <option value="ALL">{t("invoiceScopeAll")}</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Reservation numbering (QA #29) */}

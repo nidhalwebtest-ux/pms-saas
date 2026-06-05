@@ -29,7 +29,7 @@
 
 | # | Scenario | Result | Key checks |
 |---|----------|--------|-----------|
-| 11 | Generate invoices — daily / short-term reservation | ⏳ Pending | ONE invoice for the whole stay; status, amounts, line items |
+| 11 | Generate invoices — daily / short-term reservation | ✅ PASS (after fixes) | Custom-rate invoice now correct (154); found+fixed #32, #33, #35–#39 |
 | 12 | Generate invoices — monthly reservation | ⏳ Pending | First cycle auto-issued PENDING; future cycles DRAFT; cycle follows check-in day |
 | 13 | Issue a DRAFT monthly cycle | ⏳ Pending | status→PENDING, issueDate stamped (revenue posts on issueDate) |
 | 14 | Invoice for the Khareef reservation (S10) | ⏳ Pending | Line items reflect persisted segments (3×25 + 4×45 = 255) — the #28 payoff |

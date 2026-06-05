@@ -136,6 +136,13 @@ function parseLocalDate(s: string): Date {
   return new Date(y, m - 1, d);
 }
 
+/** YYYY-MM-DD one day after the given date string (last night → checkout). */
+function nextDayStr(s: string): string {
+  const d = parseLocalDate(s);
+  d.setDate(d.getDate() + 1);
+  return toDateInput(d);
+}
+
 function ClassBadge({ c, t }: { c: string | null; t: (k: string) => string }) {
   const key = (c === "vip" || c === "blacklisted" ? c : "regular") as TenantClassKey;
   const label =
@@ -1036,7 +1043,9 @@ export default function BookingEngine({
                     return [{ label: `${startDate} → ${endDate}`, nights, rate: customRate, subtotal: roundOMR(customRate * nights), priceName: null, isCustom: true }];
                   }
                   const segs = unit.breakdown as ReturnType<typeof collapseToSegments>;
-                  return segs.map((s) => ({ label: `${s.startDate} → ${s.endDate}`, nights: s.nights, rate: s.ratePerNight, subtotal: s.subtotal, priceName: s.priceName, isCustom: false }));
+                  // collapseToSegments.endDate is the last *night*; show the
+                  // checkout (last night + 1) so it reads as a half-open range (QA).
+                  return segs.map((s) => ({ label: `${s.startDate} → ${nextDayStr(s.endDate)}`, nights: s.nights, rate: s.ratePerNight, subtotal: s.subtotal, priceName: s.priceName, isCustom: false }));
                 })()
               : (() => {
                   const rate = customRate ?? unit.rateAmount;

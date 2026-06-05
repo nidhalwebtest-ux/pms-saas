@@ -1708,7 +1708,8 @@
       "overstay": "تجاوز المغادرة",
       "checkedOut": "غادر",
       "cancelled": "ملغي",
-      "noShow": "لم يحضر"
+      "noShow": "لم يحضر",
+      "pending": "قيد الانتظار"
     },
     "actions": {
       "checkIn": "تسجيل دخول",

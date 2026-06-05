@@ -46,10 +46,46 @@
 | 32 | Invoice recomputes from unit default price — ignores reservation's actual rate/segments | 11 | **P1** | ✅ Fixed |
 | 33 | Check-in allows double physical occupancy (unit already In House) | C | **P0** | ✅ Fixed |
 | 34 | Rework contract gate → invoice (contract = invoice); auto-generate invoice on create | C | **P1** | ✅ Fixed |
+| 35 | Booking summary shows checkout − 1 (last night instead of checkout date) | 11 | P2 | ✅ Fixed |
+| 36 | Remove the check-in policy control from the check-in modal | 11 | P2 | ✅ Fixed |
+| 37 | Arabic: check-in toast + reservation status (detail page) still English | 11 | P2 | ✅ Fixed |
+| 38 | Auto-generate invoice didn't fire (scope only settable when require-toggle on) | 11 | **P1** | ✅ Fixed |
+| 39 | Require-invoice-before-check-in not enforced (same scope-coupling root as #38) | 11 | **P1** | ✅ Fixed |
 
 ---
 
 <!-- Issues appended below as discovered -->
+
+## Issue #35: Booking summary shows checkout − 1 day
+- **Scenario:** 11 re-test — **Severity:** P2
+- **Symptom:** Check-in 06-05 + 7 nights → summary's period showed checkout **06-11** (the DB stored 06-12 correctly — display only). Only on **non-custom** daily bookings (the custom-rate path used the real checkout).
+- **Root cause:** the summary's per-segment label used `collapseToSegments.endDate`, which is the last **night**, not checkout. [BookingEngine.tsx](components/dashboard/BookingEngine.tsx).
+- **Fix:** ✅ display segment end as `endDate + 1 day` (half-open checkout) via a `nextDayStr` helper.
+- **Status:** ✅ Fixed
+
+## Issue #36: Remove the check-in policy control from the check-in modal
+- **Scenario:** 11 re-test — **Severity:** P2 (user request)
+- **Fix:** ✅ removed the per-reservation "check-in policy" radio group (+ its state) from `CheckInModal`; check-in now sends no policy override (org default applies). [ReservationDetail.tsx](app/dashboard/reservations/[id]/ReservationDetail.tsx).
+- **Status:** ✅ Fixed
+
+## Issue #37: Arabic — check-in toast + reservation status (detail) still English
+- **Scenario:** 11 re-test — **Severity:** P2
+- **Fix:** ✅ check-in success toast now uses the localized `t("successDefault")` instead of the API's English message; the detail-page `StatusBadge` now translates the display status via `reservations.statuses` (added a `pending` key in both locales). [ReservationDetail.tsx](app/dashboard/reservations/[id]/ReservationDetail.tsx). (API error strings remain English — follow-up.)
+- **Status:** ✅ Fixed
+
+## Issue #38: Auto-generate invoice didn't fire
+- **Scenario:** 11 re-test — **Severity:** **P1**
+- **Symptom:** Enabled "Auto-generate invoice on creation", created a daily reservation → no invoice (DB: `RESNOOR-2026-00005`, invoices=0).
+- **Root cause:** auto-generate was gated by `requireInvoiceScope`, but the scope selector only appeared when **require-invoice** was on — so with only auto-generate enabled, scope stayed at the **MONTHLY** default and daily bookings fell out of scope.
+- **Fix:** ✅ the shared scope selector now shows whenever **either** toggle is on and governs both ([ReservationSettingsForm.tsx](app/dashboard/settings/reservations/ReservationSettingsForm.tsx)). Auto-gen also stamps `invoicesGenerated` (engine is idempotent, so no duplicates). 
+- **Status:** ✅ Fixed
+
+## Issue #39: Require-invoice-before-check-in not enforced
+- **Scenario:** 11 re-test — **Severity:** **P1**
+- **Symptom:** Enabled require-invoice, created a daily reservation with no invoice, but check-in succeeded.
+- **Root cause:** same scope-coupling as #38 — with scope defaulting to MONTHLY, a **daily** reservation was out of the gate's scope, so the guard was skipped. (The check-in guard logic itself is correct.)
+- **Fix:** ✅ resolved by the #38 scope-selector fix — the user can set scope = ALL so daily reservations are in scope and the guard ([check-in/route.ts](app/api/reservations/[id]/check-in/route.ts)) blocks check-in when no invoice exists.
+- **Status:** ✅ Fixed
 
 ## Issue #32: Invoice ignores the reservation's actual rate (recomputes from unit default price)
 - **Scenario:** 11 — Generate invoices (daily reservation)

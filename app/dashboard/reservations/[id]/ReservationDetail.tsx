@@ -693,8 +693,8 @@ function CancelModal({ res, onSuccess, onClose }: {
 
 // ── Payment Modal ──────────────────────────────────────────────────────────────
 
-function PaymentModal({ res, onSuccess, onClose }: {
-  res: ReservationData; onSuccess: () => void; onClose: () => void;
+function PaymentModal({ res, onSuccess, onClose, overpaymentPolicy = "WARN" }: {
+  res: ReservationData; onSuccess: () => void; onClose: () => void; overpaymentPolicy?: string;
 }) {
   const t = useTranslations("reservations.detail.paymentModal");
   const fmtDate = useFmtDate();
@@ -740,6 +740,15 @@ function PaymentModal({ res, onSuccess, onClose }: {
         toast.error(t("mismatch", { allocated: manualTotal.toFixed(3), amount: amt.toFixed(3) }));
         return;
       }
+    }
+
+    // Overpayment policy (QA #46). Server enforces BLOCK as the backstop.
+    const totalOutstanding = outstandingInvoices.reduce((s, inv) => s + Number(inv.balanceDue), 0);
+    const over = amt - totalOutstanding;
+    if (over > 0.001) {
+      const overAmt = over.toFixed(3);
+      if (overpaymentPolicy === "BLOCK") { toast.error(t("overpayBlock", { amount: overAmt })); return; }
+      if (overpaymentPolicy === "WARN" && !window.confirm(t("overpayWarn", { amount: overAmt }))) return;
     }
 
     setLoading(true);
@@ -1716,7 +1725,7 @@ function ActivityIcon({ action }: { action: string }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { id: string; allowEarlyCheckIn?: boolean }) {
+export default function ReservationDetail({ id, allowEarlyCheckIn = false, overpaymentPolicy = "WARN" }: { id: string; allowEarlyCheckIn?: boolean; overpaymentPolicy?: string }) {
   const t           = useTranslations("reservations.detail");
   const tGuest      = useTranslations("reservations.detail.guest");
   const tStay       = useTranslations("reservations.detail.stay");
@@ -2123,6 +2132,7 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { i
                         <th className="text-start pb-2 font-medium">{tInvoices("table.invoice")}</th>
                         <th className="text-start pb-2 font-medium">{tInvoices("table.period")}</th>
                         <th className="text-end pb-2 font-medium">{tInvoices("table.total")}</th>
+                        <th className="text-end pb-2 font-medium">{tInvoices("table.balance")}</th>
                         <th className="text-end pb-2 font-medium">{tInvoices("table.due")}</th>
                         <th className="text-center pb-2 font-medium">{tInvoices("table.status")}</th>
                         <th className="pb-2"></th>
@@ -2172,6 +2182,9 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { i
                             </td>
                             <td className="py-2 text-end font-medium text-gray-800 pe-2 ltr-numbers">
                               {Number(inv.totalAmount).toFixed(3)}
+                            </td>
+                            <td className={`py-2 text-end pe-2 ltr-numbers ${Number(inv.balanceDue) > 0 && !isCancelled ? "font-medium text-orange-700" : "text-gray-400"}`}>
+                              {Number(inv.balanceDue).toFixed(3)}
                             </td>
                             <td className={`py-2 text-end text-xs pe-2 ltr-numbers ${isOverdue && !isCancelled ? "text-red-600 font-medium" : "text-gray-400"}`}>
                               {fmtDate(inv.dueDate, { day: "numeric", month: "short" })}
@@ -2473,7 +2486,7 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { i
       {activeModal === "check-in"  && <CheckInModal  res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "check-out" && <CheckOutModal res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "cancel"    && <CancelModal   res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
-      {activeModal === "payment"   && <PaymentModal  res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
+      {activeModal === "payment"   && <PaymentModal  res={res} overpaymentPolicy={overpaymentPolicy} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "charge"    && <ChargeModal   res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "note"      && <NoteModal     res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "extend-stay" && (

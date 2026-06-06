@@ -386,6 +386,7 @@
     "reservationList": "Reservations list",
     "newReservation": "New reservation",
     "reservationSettings": "Reservation Settings",
+    "paymentSettings": "Payment Settings",
     "unitSettings": "Unit Settings"
   },
   "dashboard": {
@@ -1877,6 +1878,7 @@
           "invoice": "Invoice",
           "period": "Period",
           "total": "Total",
+          "balance": "Balance",
           "due": "Due",
           "status": "Status"
         },
@@ -2014,6 +2016,8 @@
         "confirm": "Record Payment",
         "invalidAmount": "Enter a valid amount",
         "allocateAtLeastOne": "Allocate at least one invoice",
+        "overpayBlock": "Payment exceeds the balance due by {amount} OMR.",
+        "overpayWarn": "This exceeds the balance due by {amount} OMR. The extra will be recorded as a credit. Continue?",
         "mismatch": "Allocated {allocated} OMR but payment amount is {amount} OMR — they must match",
         "failed": "Payment failed",
         "success": "Payment recorded",
@@ -3489,6 +3493,29 @@
       "resetYearlyLabel": "Reset numbering each year",
       "resetYearlyHint": "When on, the year is included and the sequence restarts every year (RES-2026-00001). When off, numbering is continuous (RES-00001).",
       "previewLabel": "Preview:"
+    },
+    "payments": {
+      "title": "Payment Settings",
+      "subtitle": "Control how payments are recorded.",
+      "save": "Save changes",
+      "revert": "Discard changes",
+      "savedToast": "Payment settings saved.",
+      "overpaymentLabel": "Overpayment (paying more than the balance due)",
+      "overpaymentHint": "What happens when a recorded payment is larger than the outstanding balance.",
+      "overpayment": {
+        "BLOCK": {
+          "title": "Block overpayment",
+          "desc": "Reject any payment larger than the outstanding balance. (Also prevents recording an advance/deposit when no invoice exists yet.)"
+        },
+        "WARN": {
+          "title": "Warn, then allow",
+          "desc": "Ask the receptionist to confirm; the extra is recorded as an unapplied credit."
+        },
+        "ALLOW": {
+          "title": "Allow (record as credit)",
+          "desc": "Accept it silently; the extra becomes an unapplied credit on the account."
+        }
+      }
     },
     "units": {
       "title": "Units",

@@ -189,6 +189,11 @@ model Organization {
   autoIssueOnCheckIn       String @default("ALL_STARTED")
   requireInvoiceForCheckIn String @default("OFF")
 
+  /// Payment Settings (Settings → Payments — QA #46). How a payment exceeding the
+  /// outstanding balance is handled: BLOCK (reject), WARN (confirm then allow as
+  /// credit), ALLOW (silent credit).
+  overpaymentPolicy        String @default("WARN")
+
   plan               String   @default("FREE")
   maxProperties      Int      @default(1)
   subscriptionStatus String   @default("ACTIVE")

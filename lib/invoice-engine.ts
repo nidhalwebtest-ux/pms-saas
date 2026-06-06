@@ -1502,6 +1502,15 @@ export async function recordPayment(
 
     const overpayment = remaining > 0 ? remaining : 0;
     if (overpayment > 0) {
+      // Overpayment policy (QA #46): BLOCK rejects; WARN/ALLOW record it as an
+      // unapplied credit. The client surfaces the WARN confirm before submitting.
+      const orgPolicy = await tx.organization.findUnique({
+        where:  { id: orgId },
+        select: { overpaymentPolicy: true },
+      });
+      if ((orgPolicy?.overpaymentPolicy ?? "WARN") === "BLOCK") {
+        throw new Error(`Payment exceeds the outstanding balance by ${overpayment.toFixed(3)} OMR.`);
+      }
       // Log overpayment in payment notes — do not fail
       await tx.payment.update({
         where: { id: payment.id },

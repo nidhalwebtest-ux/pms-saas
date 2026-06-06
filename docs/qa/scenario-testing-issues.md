@@ -57,10 +57,26 @@
 | 43 | Invoice Settings: configurable generation timing + auto-issue at check-in (DRAFT-until-check-in) | 13 | **P1** | ✅ Fixed (verified) |
 | 44 | Unit card shows raw `segNights` key (key placed under step4, not step3) | 14 | P2 | ✅ Fixed |
 | 45 | Reservation detail shows flat rate (25/night) for seasonal-spanning stays instead of per-segment | 14 | **P1** | ✅ Fixed |
+| 46 | Reservation detail invoices table missing the remaining-balance column | 15 | P2 | ✅ Fixed |
+| 47 | Overpayment silently accepted → add configurable Payment Settings (BLOCK/WARN/ALLOW) | 15 | P2 | ✅ Built |
 
 ---
 
 <!-- Issues appended below as discovered -->
+
+## Issue #46: Invoices table missing the remaining-balance column
+- **Scenario:** 15 (partial payment) — **Severity:** P2
+- **Symptom:** After a partial payment the reservation-detail invoices table showed total + due-date + status, but not the **remaining balance**, so you couldn't see what's still owed per invoice.
+- **Fix:** ✅ added a **Balance** column (shows `balanceDue`, highlighted when > 0) to the invoices table; new `table.balance` key (both locales). [ReservationDetail.tsx](app/dashboard/reservations/[id]/ReservationDetail.tsx).
+- **Status:** ✅ Fixed
+
+## Issue #47: Overpayment silently accepted — add configurable Payment Settings
+- **Scenario:** 15D — **Severity:** P2
+- **Symptom:** Recording 300 against a 175 invoice was accepted with no warning (the engine fills each invoice to its balance and logs the extra as an unapplied credit).
+- **Decision (user):** make it configurable via a new **Payment Settings** page.
+- **Fix:** ✅ new `Organization.overpaymentPolicy` (**BLOCK | WARN | ALLOW**, default WARN; db push applied). New **Settings → Payments** page ([app/dashboard/settings/payments/](app/dashboard/settings/payments/)) + nav entry. Enforcement: `recordPayment` throws on overpayment when policy = BLOCK; the reservation PaymentModal blocks (BLOCK) or confirms (WARN) client-side before submitting; ALLOW keeps the silent-credit behavior. New i18n (settings.payments + paymentModal.overpay*).
+- **Note:** BLOCK also prevents recording an advance/deposit when no invoice exists yet (documented in the setting).
+- **Status:** ✅ Built — needs a quick test pass (BLOCK/WARN/ALLOW).
 
 ## Issue #44: Unit card shows raw `segNights` i18n key
 - **Scenario:** 14 — **Severity:** P2

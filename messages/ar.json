@@ -385,6 +385,8 @@
     "organization": "المؤسسة",
     "reservationList": "قائمة الحجوزات",
     "newReservation": "حجز جديد",
+    "paymentsList": "قائمة المدفوعات",
+    "recordPayment": "تسجيل دفعة",
     "reservationSettings": "إعدادات الحجوزات",
     "paymentSettings": "إعدادات المدفوعات",
     "unitSettings": "إعدادات الوحدات"

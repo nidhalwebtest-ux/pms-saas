@@ -59,7 +59,15 @@ const navigationConfig: NavItem[] = [
     ],
   },
   { key: "invoices",     labelKey: "invoices",     href: "/dashboard/invoices" },
-  { key: "payments",     labelKey: "payments",     href: "/dashboard/payments" },
+  {
+    key:      "payments",
+    labelKey: "payments",
+    href:     "/dashboard/payments",
+    children: [
+      { labelKey: "paymentsList",  href: "/dashboard/payments" },
+      { labelKey: "recordPayment", href: "/dashboard/payments/new" },
+    ],
+  },
   {
     key:            "expenses",
     labelKey:       "expenses",

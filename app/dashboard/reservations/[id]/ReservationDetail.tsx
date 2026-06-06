@@ -698,9 +698,10 @@ function PaymentModal({ res, onSuccess, onClose, overpaymentPolicy = "WARN" }: {
 }) {
   const t = useTranslations("reservations.detail.paymentModal");
   const fmtDate = useFmtDate();
-  // Outstanding invoices (not cancelled/paid) sorted by due date
+  // Outstanding, payable invoices for THIS reservation (issued only — drafts
+  // must be issued before they can be paid; QA #48).
   const outstandingInvoices = res.invoices.filter(
-    (inv) => !["CANCELLED", "VOID", "PAID"].includes(inv.status) && Number(inv.balanceDue) > 0,
+    (inv) => !["CANCELLED", "VOID", "PAID", "DRAFT"].includes(inv.status) && Number(inv.balanceDue) > 0,
   );
   const hasInvoices = outstandingInvoices.length > 0;
 

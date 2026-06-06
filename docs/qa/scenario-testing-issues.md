@@ -59,10 +59,25 @@
 | 45 | Reservation detail shows flat rate (25/night) for seasonal-spanning stays instead of per-segment | 14 | **P1** | ✅ Fixed |
 | 46 | Reservation detail invoices table missing the remaining-balance column | 15 | P2 | ✅ Fixed |
 | 47 | Overpayment silently accepted → add configurable Payment Settings (BLOCK/WARN/ALLOW) | 15 | P2 | ✅ Built |
+| 48 | Auto-allocation spread a reservation's payment across OTHER reservations' invoices | 17 | **P1** | ✅ Fixed |
+| 49 | New Payment: tenant dropdown clipped; Payments nav needs List/Record dropdown | 17 | P2 | ✅ Fixed |
 
 ---
 
 <!-- Issues appended below as discovered -->
+
+## Issue #48: Payment auto-allocation crossed into other reservations (P1)
+- **Scenario:** 17A — **Severity:** **P1** (wrong financial linkage)
+- **Symptom:** Recorded 900 (auto) from `RESNOOR-2026-00011`; the modal previewed cycle 1 (600) + cycle 2 (300) correctly, but after save the 900 was allocated to `INV-2026-00012` (this reservation) **plus** `INV-2026-00011` and `INV-2026-00015` — invoices from **other reservations** of the same tenant.
+- **Root cause:** `recordPayment`'s auto-allocation queried the tenant's outstanding invoices **org-wide** (oldest-first) and ignored the `reservationId` it was given. It also included DRAFT invoices.
+- **Fix:** ✅ when a `reservationId` is provided, auto-allocation is scoped to that reservation's invoices; DRAFT removed from the payable set (drafts must be issued first). The PaymentModal's invoice list now also excludes DRAFT so its preview matches the server. (The standalone payments page with no reservation still does tenant-wide oldest-first.)
+- **Status:** ✅ Fixed
+
+## Issue #49: New-Payment tenant dropdown clipped + Payments nav dropdown
+- **Scenario:** 17 — **Severity:** P2
+- **Symptoms:** (a) On the New Payment page, the tenant search results were cut off — most options hidden. (b) The Payments nav item had no submenu.
+- **Fix:** ✅ (a) removed `overflow-hidden` from the tenant card on [SmartPaymentForm.tsx](app/dashboard/payments/new/SmartPaymentForm.tsx) (it clipped the absolute Combobox dropdown), rounded the header corners to compensate. (b) Payments nav now has a dropdown — **Payments list** + **Record payment** (new `paymentsList`/`recordPayment` nav keys, both locales).
+- **Status:** ✅ Fixed
 
 ## Issue #46: Invoices table missing the remaining-balance column
 - **Scenario:** 15 (partial payment) — **Severity:** P2

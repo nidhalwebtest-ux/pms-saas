@@ -1468,11 +1468,16 @@ export async function recordPayment(
       }
     } else {
       // ── 3b. Auto allocation: oldest outstanding invoices first ─────────────
+      // Scope to THIS reservation when paying from a reservation (QA #48) — else
+      // the payment would spread across the tenant's other reservations. When
+      // no reservation context (e.g. the standalone payments page), fall back to
+      // tenant-wide oldest-first.
       const outstandingInvoices = await tx.invoice.findMany({
         where: {
           tenantId,
           organizationId: orgId,
-          status: { in: ["PENDING", "PARTIALLY_PAID", "PARTIAL", "DUE", "ISSUED", "DRAFT"] },
+          ...(reservationId ? { reservationId } : {}),
+          status: { in: ["PENDING", "PARTIALLY_PAID", "PARTIAL", "DUE", "ISSUED"] },
           balanceDue: { gt: 0 },
         },
         orderBy: { dueDate: "asc" },

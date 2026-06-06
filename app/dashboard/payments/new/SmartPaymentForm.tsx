@@ -360,9 +360,10 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
       )}
 
       {/* ─────────── Mode B: Tenant search ─────────── */}
+      {/* No overflow-hidden here: it would clip the tenant search dropdown (QA #49). */}
       {mode === "tenant" && (
-        <div className="bg-white rounded-lg shadow-sm ring-1 ring-gray-200 overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+        <div className="bg-white rounded-lg shadow-sm ring-1 ring-gray-200">
+          <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 rounded-t-lg flex items-center gap-2">
             <UserCircleIcon className="h-4 w-4 text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-700">{tForm("step1Tenant")}</h2>
           </div>

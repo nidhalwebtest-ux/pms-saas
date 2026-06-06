@@ -385,6 +385,8 @@
     "organization": "Organization",
     "reservationList": "Reservations list",
     "newReservation": "New reservation",
+    "paymentsList": "Payments list",
+    "recordPayment": "Record payment",
     "reservationSettings": "Reservation Settings",
     "paymentSettings": "Payment Settings",
     "unitSettings": "Unit Settings"

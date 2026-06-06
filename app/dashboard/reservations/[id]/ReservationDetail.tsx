@@ -42,11 +42,18 @@ import {
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
+type PriceSeg = {
+  label?: string | null; startDate?: string | null; endDate?: string | null;
+  nights: number; rateAmount: number; rateSource: string;
+  seasonalPriceName: string | null; subtotal: number;
+};
+
 type UnitRow = {
   id: string; name: string; floor: number; unitType: string;
   propertyId: string; propertyName: string;
   rateType: string; rateAmount: string; rateSource: string;
   seasonalPriceName: string | null; nights: number; subtotal: string;
+  pricingSegments?: PriceSeg[] | null;
   isMovedOut?: boolean;
   movedToUnitId?: string | null;
   movedToUnitName?: string | null;
@@ -264,6 +271,17 @@ const DISPLAY_STATUS_I18N: Record<string, string> = {
   "No Show": "noShow",
   "Pending": "pending",
 };
+
+/** Multi-segment stays (e.g. crossing Khareef) — segments persisted at booking. */
+function unitSegments(u: UnitRow): PriceSeg[] {
+  return Array.isArray(u.pricingSegments) ? (u.pricingSegments as PriceSeg[]) : [];
+}
+/** "3 × 25.000 + 4 × 45.000" when a stay spans >1 price segment, else null. */
+function compactRateBreakdown(u: UnitRow): string | null {
+  const segs = unitSegments(u);
+  if (segs.length <= 1) return null;
+  return segs.map((s) => `${s.nights} × ${Number(s.rateAmount).toFixed(3)}`).join(" + ");
+}
 
 function StatusBadge({ label }: { label: string }) {
   const tStatus = useTranslations("reservations.statuses");
@@ -2044,8 +2062,12 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { i
                           </p>
                         </div>
                         <p className="text-xs text-gray-400 mt-1">
-                          <span className="ltr-numbers">{Number(u.rateAmount).toFixed(3)} OMR</span>/{u.rateType === "monthly" ? tStay("perMonth") : tStay("perNight")}
-                          {u.seasonalPriceName && <span className="text-orange-600 ms-1">({u.seasonalPriceName})</span>}
+                          {compactRateBreakdown(u)
+                            ? <span className="ltr-numbers">{compactRateBreakdown(u)} OMR</span>
+                            : <>
+                                <span className="ltr-numbers">{Number(u.rateAmount).toFixed(3)} OMR</span>/{u.rateType === "monthly" ? tStay("perMonth") : tStay("perNight")}
+                              </>}
+                          {!compactRateBreakdown(u) && u.seasonalPriceName && <span className="text-orange-600 ms-1">({u.seasonalPriceName})</span>}
                           {u.rateSource === "manual_override" && <span className="text-purple-600 ms-1">({tStay("manualRate")})</span>}
                         </p>
                       </div>
@@ -2196,19 +2218,37 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { i
                   {res.units.map((u) => (
                     <div key={u.id}>
                       <p className="font-medium text-sm text-gray-800 mb-2">{u.name} — {u.propertyName}</p>
-                      <div className="flex justify-between text-sm text-gray-700 ps-4">
-                        <span>
-                          <span className="ltr-numbers">
-                            {u.rateType === "monthly"
-                              ? t("generateInvoicesModal.durationMonths", { count: u.nights })
-                              : t("generateInvoicesModal.durationNights", { count: u.nights })}
-                            {" × "}
-                            {Number(u.rateAmount).toFixed(3)} OMR
+                      {unitSegments(u).length > 1 ? (
+                        <div className="space-y-1">
+                          {unitSegments(u).map((s, i) => (
+                            <div key={i} className="flex justify-between text-sm text-gray-700 ps-4">
+                              <span className="ltr-numbers">
+                                {s.nights} × {Number(s.rateAmount).toFixed(3)} OMR
+                                {s.seasonalPriceName && <span className="text-orange-600 ms-1">({s.seasonalPriceName})</span>}
+                              </span>
+                              <span className="ltr-numbers">{Number(s.subtotal).toFixed(3)} OMR</span>
+                            </div>
+                          ))}
+                          <div className="flex justify-between text-sm text-gray-800 ps-4 pt-1 border-t border-gray-100">
+                            <span className="font-medium">{u.name}</span>
+                            <span className="font-medium ltr-numbers">{Number(u.subtotal).toFixed(3)} OMR</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between text-sm text-gray-700 ps-4">
+                          <span>
+                            <span className="ltr-numbers">
+                              {u.rateType === "monthly"
+                                ? t("generateInvoicesModal.durationMonths", { count: u.nights })
+                                : t("generateInvoicesModal.durationNights", { count: u.nights })}
+                              {" × "}
+                              {Number(u.rateAmount).toFixed(3)} OMR
+                            </span>
+                            {u.seasonalPriceName && <span className="text-orange-600 ms-1">({u.seasonalPriceName})</span>}
                           </span>
-                          {u.seasonalPriceName && <span className="text-orange-600 ms-1">({u.seasonalPriceName})</span>}
-                        </span>
-                        <span className="font-medium ltr-numbers">{Number(u.subtotal).toFixed(3)} OMR</span>
-                      </div>
+                          <span className="font-medium ltr-numbers">{Number(u.subtotal).toFixed(3)} OMR</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                   {res.charges.length > 0 && (
@@ -2251,7 +2291,7 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false }: { i
                 {res.units.map((u) => (
                   <div key={u.id} className="flex justify-between text-sm text-gray-700">
                     <span className="text-gray-500">
-                      {u.name}: <span className="ltr-numbers">{u.nights} × {Number(u.rateAmount).toFixed(3)}</span>
+                      {u.name}: <span className="ltr-numbers">{compactRateBreakdown(u) ?? `${u.nights} × ${Number(u.rateAmount).toFixed(3)}`}</span>
                     </span>
                     <span className="ltr-numbers">{Number(u.subtotal).toFixed(3)}</span>
                   </div>

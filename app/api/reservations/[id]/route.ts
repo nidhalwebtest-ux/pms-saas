@@ -121,6 +121,7 @@ export async function GET(
     propertyId: string; propertyName: string;
     rateType: string; rateAmount: string; rateSource: string;
     seasonalPriceName: string | null; nights: number; subtotal: string;
+    pricingSegments: unknown;
     isMovedOut: boolean;
     movedToUnitId: string | null;
     movedToUnitName: string | null;
@@ -145,6 +146,7 @@ export async function GET(
       seasonalPriceName: ru?.seasonalPriceName ?? null,
       nights: ru?.nights ?? args.fallbackNights,
       subtotal: ru ? ru.subtotal.toString() : args.fallbackSubtotal,
+      pricingSegments: ru?.pricingSegments ?? null,
       isMovedOut: ru?.isMovedOut ?? false,
       movedToUnitId: movedTo?.unitId ?? null,
       movedToUnitName: movedTo?.unit.name ?? null,

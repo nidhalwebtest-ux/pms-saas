@@ -55,10 +55,25 @@
 | 41 | Monthly invoice line item: days × per-day ≠ flat monthly rate (31-day months) | 12 | P2 | ✅ Fixed |
 | 42 | Issuing a DRAFT set status=ISSUED (legacy) instead of PENDING | 13 | P2 | ✅ Fixed |
 | 43 | Invoice Settings: configurable generation timing + auto-issue at check-in (DRAFT-until-check-in) | 13 | **P1** | ✅ Fixed (verified) |
+| 44 | Unit card shows raw `segNights` key (key placed under step4, not step3) | 14 | P2 | ✅ Fixed |
+| 45 | Reservation detail shows flat rate (25/night) for seasonal-spanning stays instead of per-segment | 14 | **P1** | ✅ Fixed |
 
 ---
 
 <!-- Issues appended below as discovered -->
+
+## Issue #44: Unit card shows raw `segNights` i18n key
+- **Scenario:** 14 — **Severity:** P2
+- **Root cause:** the #31 `segNights` key was added under `reservations.bookingEngine.step4`, but the unit card renders it via `tStep3` → `reservations.bookingEngine.step3`, so it resolved to the raw key path.
+- **Fix:** ✅ moved `segNights` to `step3` (removed the stray `step4` copy) in both locales.
+- **Status:** ✅ Fixed
+
+## Issue #45: Reservation detail shows a flat rate for seasonal-spanning stays
+- **Scenario:** 14 (Khareef invoice — RESNOOR-2026-00014, Unit 4) — **Severity:** P1
+- **Symptom:** total is correct (255) but **Stay Details**, **Price Breakdown**, and **Financial Summary** all showed **25/night** (the first-segment rate × nights = misleading), not the 3×25 + 4×45 split.
+- **Root cause:** the reservation GET didn't expose `reservationUnit.pricingSegments`, and the detail rendered `rateAmount × nights` flat. (#28/#31/#32 covered persistence, the booking card, and invoices — but not the detail page.)
+- **Fix:** ✅ GET now returns `pricingSegments` per unit; the detail renders a per-segment breakdown when a stay spans >1 segment (Price Breakdown lists each segment; Stay Details + Financial Summary show "3 × 25.000 + 4 × 45.000"). Single-segment stays unchanged.
+- **Status:** ✅ Fixed
 
 ## Issue #43: Invoice Settings — configurable generation timing & auto-issue (DRAFT-until-check-in)
 - **Scenario:** 13 — **Severity:** P1 (feature, user-driven). Supersedes the #24/#34/#38 invoice toggles.

@@ -54,7 +54,7 @@
 | 40 | DRAFT invoices shown as "Pending" on the reservation detail (no DRAFT case) | 12 | P2 | ✅ Fixed |
 | 41 | Monthly invoice line item: days × per-day ≠ flat monthly rate (31-day months) | 12 | P2 | ✅ Fixed |
 | 42 | Issuing a DRAFT set status=ISSUED (legacy) instead of PENDING | 13 | P2 | ✅ Fixed |
-| 43 | Invoice Settings: configurable generation timing + auto-issue at check-in (DRAFT-until-check-in) | 13 | **P1** | ✅ Built |
+| 43 | Invoice Settings: configurable generation timing + auto-issue at check-in (DRAFT-until-check-in) | 13 | **P1** | ✅ Fixed (verified) |
 
 ---
 
@@ -72,7 +72,7 @@
 - **POST /api/reservations:** generates invoices at create when the rate type's timing = ON_CREATE (DRAFT).
 - **Check-in:** generates when timing = ON_CHECK_IN (if none yet), then issues DRAFT cycles per `autoIssueOnCheckIn`; require-gate uses `requireInvoiceForCheckIn`.
 - **Settings UI + i18n** reworked to the 4 selects (both locales). `issueDate` kept as a placeholder for drafts (overwritten on issue; column is non-nullable).
-- **Status:** ✅ Built — needs a test pass (Scenario 13 + matrix of timing/auto-issue combos).
+- **Status:** ✅ Fixed — verified via 6 test combos (RESNOOR-2026-00009…00013 + 00008): timing (manual/on-create/on-check-in), auto-issue (all-started/first-only), require-gate, and DRAFT-until-check-in all confirmed in the DB. **Minor cosmetic:** DRAFT cycles carry a placeholder `issueDate` (non-nullable column); overwritten on issue. Make nullable later if desired.
 
 ## Issue #42: Issuing a DRAFT invoice sets status=ISSUED (legacy) instead of PENDING
 - **Scenario:** 13 (issue a DRAFT cycle) — **Severity:** P2 (found by code review before testing)

@@ -61,10 +61,18 @@
 | 47 | Overpayment silently accepted → add configurable Payment Settings (BLOCK/WARN/ALLOW) | 15 | P2 | ✅ Built |
 | 48 | Auto-allocation spread a reservation's payment across OTHER reservations' invoices | 17 | **P1** | ✅ Fixed |
 | 49 | New Payment: tenant dropdown clipped; Payments nav needs List/Record dropdown | 17 | P2 | ✅ Fixed |
+| 50 | Manual allocation: allow under-allocation (rest = credit) + cap each entry to invoice balance | 17 | P2 | ✅ Fixed |
 
 ---
 
 <!-- Issues appended below as discovered -->
+
+## Issue #50: Manual allocation too strict — force full allocation; no balance cap
+- **Scenario:** 17 — **Severity:** P2
+- **Symptoms:** (a) The modal required the manual allocations to **equal** the payment amount ("must allocate to invoices"), so you couldn't record a payment and leave part as credit. (b) You could type an allocation **larger than an invoice's balance** (e.g. 600 on a 300-balance cycle); the server capped it but the UI didn't.
+- **Fix:** ✅ (a) Manual allocations may total **less than** the payment (the remainder is recorded as an unapplied credit); only **over**-allocation (allocating more than the payment) is blocked. Footer now shows "X unallocated → credit" or an over-allocation error. (b) Each manual input is **clamped to the invoice's remaining balance** on entry. 
+- **Overpayment semantics fixed too:** the BLOCK policy now keys off **true overpayment** (amount > total outstanding for the scope), not the unallocated remainder — so an intentional under-allocation is never blocked. [ReservationDetail.tsx](app/dashboard/reservations/[id]/ReservationDetail.tsx), [invoice-engine.ts](lib/invoice-engine.ts).
+- **Status:** ✅ Fixed
 
 ## Issue #48: Payment auto-allocation crossed into other reservations (P1)
 - **Scenario:** 17A — **Severity:** **P1** (wrong financial linkage)

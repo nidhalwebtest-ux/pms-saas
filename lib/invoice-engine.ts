@@ -1432,6 +1432,33 @@ export async function recordPayment(
     const createdAllocations: any[] = [];
     let remaining = paymentAmount;
 
+    // Overpayment policy (QA #46/#50): BLOCK only TRUE overpayment — paying more
+    // than the total outstanding for the scope — NOT an intentional under-
+    // allocation (leaving part as an unapplied credit on purpose).
+    {
+      const scopeInvoices = await tx.invoice.findMany({
+        where: {
+          tenantId,
+          organizationId: orgId,
+          ...(reservationId ? { reservationId } : {}),
+          status: { in: ["PENDING", "PARTIALLY_PAID", "PARTIAL", "DUE", "ISSUED"] },
+          balanceDue: { gt: 0 },
+        },
+        select: { balanceDue: true },
+      });
+      const scopeOutstanding = roundOMR(scopeInvoices.reduce((s, i) => s + Number(i.balanceDue), 0));
+      const trueOverpayment  = roundOMR(Math.max(0, paymentAmount - scopeOutstanding));
+      if (trueOverpayment > 0) {
+        const org = await tx.organization.findUnique({
+          where:  { id: orgId },
+          select: { overpaymentPolicy: true },
+        });
+        if ((org?.overpaymentPolicy ?? "WARN") === "BLOCK") {
+          throw new Error(`Payment exceeds the outstanding balance by ${trueOverpayment.toFixed(3)} OMR.`);
+        }
+      }
+    }
+
     if (invoiceAllocations && invoiceAllocations.length > 0) {
       // ── 3a. Manual allocation ──────────────────────────────────────────────
       // Cap each allocation at the invoice's current balanceDue. Anything the
@@ -1507,16 +1534,8 @@ export async function recordPayment(
 
     const overpayment = remaining > 0 ? remaining : 0;
     if (overpayment > 0) {
-      // Overpayment policy (QA #46): BLOCK rejects; WARN/ALLOW record it as an
-      // unapplied credit. The client surfaces the WARN confirm before submitting.
-      const orgPolicy = await tx.organization.findUnique({
-        where:  { id: orgId },
-        select: { overpaymentPolicy: true },
-      });
-      if ((orgPolicy?.overpaymentPolicy ?? "WARN") === "BLOCK") {
-        throw new Error(`Payment exceeds the outstanding balance by ${overpayment.toFixed(3)} OMR.`);
-      }
-      // Log overpayment in payment notes — do not fail
+      // Unapplied remainder (true overpayment was already gated above by policy,
+      // or this is an intentional under-allocation) → record as a credit.
       await tx.payment.update({
         where: { id: payment.id },
         data: {

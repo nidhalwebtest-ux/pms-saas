@@ -736,9 +736,10 @@ function PaymentModal({ res, onSuccess, onClose, overpaymentPolicy = "WARN" }: {
     if (!amt || amt <= 0) { toast.error(t("invalidAmount")); return; }
 
     if (allocationMode === "manual" && hasInvoices) {
-      if (manualTotal <= 0) { toast.error(t("allocateAtLeastOne")); return; }
-      if (Math.abs(manualTotal - amt) > 0.001) {
-        toast.error(t("mismatch", { allocated: manualTotal.toFixed(3), amount: amt.toFixed(3) }));
+      // Allocations may total LESS than the payment (the rest becomes a credit),
+      // but never MORE than the payment amount.
+      if (manualTotal - amt > 0.001) {
+        toast.error(t("allocExceedsAmount", { allocated: manualTotal.toFixed(3), amount: amt.toFixed(3) }));
         return;
       }
     }
@@ -857,9 +858,15 @@ function PaymentModal({ res, onSuccess, onClose, overpaymentPolicy = "WARN" }: {
                           min="0"
                           max={Number(inv.balanceDue)}
                           value={manualAmounts[inv.id] ?? ""}
-                          onChange={(e) =>
-                            setManualAmounts((m) => ({ ...m, [inv.id]: e.target.value }))
-                          }
+                          onChange={(e) => {
+                            // Cap to the invoice's remaining balance (QA #50).
+                            const bal = Number(inv.balanceDue);
+                            const raw = parseFloat(e.target.value);
+                            const next = e.target.value === "" || isNaN(raw)
+                              ? e.target.value
+                              : String(Math.min(Math.max(raw, 0), bal));
+                            setManualAmounts((m) => ({ ...m, [inv.id]: next }));
+                          }}
                           placeholder="0.000"
                           className="w-24 text-end rounded-md border border-gray-300 px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 ltr-numbers"
                         />
@@ -870,19 +877,23 @@ function PaymentModal({ res, onSuccess, onClose, overpaymentPolicy = "WARN" }: {
               })}
             </div>
 
-            {allocationMode === "manual" && (
-              <div className="flex justify-between items-center px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs">
-                <span className="text-gray-500">{t("totalAllocated")}</span>
-                <span className={`font-semibold ${Math.abs(manualTotal - Number(form.amount)) > 0.001 ? "text-red-600" : "text-green-600"}`}>
-                  <span className="ltr-numbers">{manualTotal.toFixed(3)}</span> OMR
-                  {Math.abs(manualTotal - Number(form.amount)) > 0.001 && (
-                    <span className="text-red-500 ms-1">
-                      {t("mustEqual", { amount: Number(form.amount).toFixed(3) })}
-                    </span>
-                  )}
-                </span>
-              </div>
-            )}
+            {allocationMode === "manual" && (() => {
+              const amt = Number(form.amount) || 0;
+              const over = manualTotal - amt > 0.001;          // allocated more than paid → invalid
+              const unallocated = amt - manualTotal;            // > 0 → recorded as credit
+              return (
+                <div className="flex justify-between items-center px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs">
+                  <span className="text-gray-500">{t("totalAllocated")}</span>
+                  <span className={`font-semibold ${over ? "text-red-600" : "text-green-600"}`}>
+                    <span className="ltr-numbers">{manualTotal.toFixed(3)}</span> OMR
+                    {over && <span className="text-red-500 ms-1">{t("exceedsAmount")}</span>}
+                    {!over && unallocated > 0.001 && (
+                      <span className="text-gray-400 ms-1">{t("unallocatedCredit", { amount: unallocated.toFixed(3) })}</span>
+                    )}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
         )}
 

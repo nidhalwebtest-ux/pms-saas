@@ -17,9 +17,10 @@ type FormState = {
   reservationNumberPrefix: string;
   reservationNumberPadding: number;
   reservationNumberResetYearly: boolean;
-  requireInvoiceBeforeCheckIn: boolean;
-  requireInvoiceScope: "ALL" | "MONTHLY";
-  autoGenerateInvoiceOnCreate: boolean;
+  dailyInvoiceTiming: string;
+  monthlyInvoiceTiming: string;
+  autoIssueOnCheckIn: string;
+  requireInvoiceForCheckIn: string;
 };
 
 export default function ReservationSettingsForm({ settings }: { settings: FormState }) {
@@ -37,9 +38,10 @@ export default function ReservationSettingsForm({ settings }: { settings: FormSt
     form.reservationNumberPrefix !== settings.reservationNumberPrefix ||
     form.reservationNumberPadding !== settings.reservationNumberPadding ||
     form.reservationNumberResetYearly !== settings.reservationNumberResetYearly ||
-    form.requireInvoiceBeforeCheckIn !== settings.requireInvoiceBeforeCheckIn ||
-    form.requireInvoiceScope !== settings.requireInvoiceScope ||
-    form.autoGenerateInvoiceOnCreate !== settings.autoGenerateInvoiceOnCreate;
+    form.dailyInvoiceTiming !== settings.dailyInvoiceTiming ||
+    form.monthlyInvoiceTiming !== settings.monthlyInvoiceTiming ||
+    form.autoIssueOnCheckIn !== settings.autoIssueOnCheckIn ||
+    form.requireInvoiceForCheckIn !== settings.requireInvoiceForCheckIn;
 
   // Live preview of the first reservation number for the current settings.
   const previewNumber =
@@ -57,9 +59,10 @@ export default function ReservationSettingsForm({ settings }: { settings: FormSt
       fd.append("reservationNumberPrefix", form.reservationNumberPrefix);
       fd.append("reservationNumberPadding", String(form.reservationNumberPadding));
       if (form.reservationNumberResetYearly) fd.append("reservationNumberResetYearly", "on");
-      if (form.requireInvoiceBeforeCheckIn) fd.append("requireInvoiceBeforeCheckIn", "on");
-      fd.append("requireInvoiceScope", form.requireInvoiceScope);
-      if (form.autoGenerateInvoiceOnCreate) fd.append("autoGenerateInvoiceOnCreate", "on");
+      fd.append("dailyInvoiceTiming", form.dailyInvoiceTiming);
+      fd.append("monthlyInvoiceTiming", form.monthlyInvoiceTiming);
+      fd.append("autoIssueOnCheckIn", form.autoIssueOnCheckIn);
+      fd.append("requireInvoiceForCheckIn", form.requireInvoiceForCheckIn);
 
       let result;
       try {
@@ -150,49 +153,63 @@ export default function ReservationSettingsForm({ settings }: { settings: FormSt
         </span>
       </label>
 
-      {/* Invoice gate (QA #24/#34) */}
+      {/* Invoice Settings (QA #43) */}
       <div className="border-t border-gray-100 pt-4">
-        <label className="flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            checked={form.requireInvoiceBeforeCheckIn}
-            onChange={(e) => { setForm((p) => ({ ...p, requireInvoiceBeforeCheckIn: e.target.checked })); setBannerError(null); }}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
-          />
-          <span className="flex flex-col">
-            <span className="text-sm font-medium text-gray-800">{t("requireInvoiceLabel")}</span>
-            <span className="text-xs text-gray-500">{t("requireInvoiceHint")}</span>
-          </span>
-        </label>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">{t("invoiceSettingsLabel")}</label>
+        <p className="text-xs text-gray-500 mb-3">{t("invoiceSettingsHint")}</p>
 
-        <label className="mt-3 flex cursor-pointer items-start gap-3">
-          <input
-            type="checkbox"
-            checked={form.autoGenerateInvoiceOnCreate}
-            onChange={(e) => { setForm((p) => ({ ...p, autoGenerateInvoiceOnCreate: e.target.checked })); setBannerError(null); }}
-            className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
-          />
-          <span className="flex flex-col">
-            <span className="text-sm font-medium text-gray-800">{t("autoGenerateInvoiceLabel")}</span>
-            <span className="text-xs text-gray-500">{t("autoGenerateInvoiceHint")}</span>
-          </span>
-        </label>
-
-        {/* Shared scope — governs BOTH the require gate and auto-generate (QA).
-            Shown whenever either is on so it isn't stuck at the MONTHLY default. */}
-        {(form.requireInvoiceBeforeCheckIn || form.autoGenerateInvoiceOnCreate) && (
-          <div className="mt-3 ms-7">
-            <label className="block text-xs font-medium text-gray-600 mb-1">{t("invoiceScopeLabel")}</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t("dailyTimingLabel")}</label>
             <select
-              value={form.requireInvoiceScope}
-              onChange={(e) => { setForm((p) => ({ ...p, requireInvoiceScope: e.target.value === "ALL" ? "ALL" : "MONTHLY" })); setBannerError(null); }}
-              className="w-full max-w-xs rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              value={form.dailyInvoiceTiming}
+              onChange={(e) => { setForm((p) => ({ ...p, dailyInvoiceTiming: e.target.value })); setBannerError(null); }}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
             >
-              <option value="MONTHLY">{t("invoiceScopeMonthly")}</option>
-              <option value="ALL">{t("invoiceScopeAll")}</option>
+              <option value="ON_CREATE">{t("timing.onCreate")}</option>
+              <option value="ON_CHECK_IN">{t("timing.onCheckIn")}</option>
+              <option value="MANUAL">{t("timing.manual")}</option>
             </select>
           </div>
-        )}
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t("monthlyTimingLabel")}</label>
+            <select
+              value={form.monthlyInvoiceTiming}
+              onChange={(e) => { setForm((p) => ({ ...p, monthlyInvoiceTiming: e.target.value })); setBannerError(null); }}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            >
+              <option value="ON_CREATE">{t("timing.onCreate")}</option>
+              <option value="ON_CHECK_IN">{t("timing.onCheckIn")}</option>
+              <option value="MANUAL">{t("timing.manual")}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t("autoIssueLabel")}</label>
+            <select
+              value={form.autoIssueOnCheckIn}
+              onChange={(e) => { setForm((p) => ({ ...p, autoIssueOnCheckIn: e.target.value })); setBannerError(null); }}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            >
+              <option value="ALL_STARTED">{t("autoIssue.allStarted")}</option>
+              <option value="FIRST_ONLY">{t("autoIssue.firstOnly")}</option>
+              <option value="NONE">{t("autoIssue.none")}</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">{t("requireInvoiceLabel")}</label>
+            <select
+              value={form.requireInvoiceForCheckIn}
+              onChange={(e) => { setForm((p) => ({ ...p, requireInvoiceForCheckIn: e.target.value })); setBannerError(null); }}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            >
+              <option value="OFF">{t("require.off")}</option>
+              <option value="DAILY">{t("require.daily")}</option>
+              <option value="MONTHLY">{t("require.monthly")}</option>
+              <option value="BOTH">{t("require.both")}</option>
+            </select>
+          </div>
+        </div>
+        <p className="mt-2 text-xs text-gray-400">{t("invoiceSettingsNote")}</p>
       </div>
 
       {/* Reservation numbering (QA #29) */}

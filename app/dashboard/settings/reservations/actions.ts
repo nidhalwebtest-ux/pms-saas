@@ -41,10 +41,16 @@ export async function updateReservationSettings(
   const reservationNumberPadding = Math.min(Math.max(Number.isFinite(paddingRaw) ? paddingRaw : 5, 1), 10);
   const reservationNumberResetYearly = formData.get("reservationNumberResetYearly") === "on";
 
-  // Invoice gate (QA #24/#34 — "contract" = invoice).
-  const requireInvoiceBeforeCheckIn = formData.get("requireInvoiceBeforeCheckIn") === "on";
-  const requireInvoiceScope = formData.get("requireInvoiceScope") === "ALL" ? "ALL" : "MONTHLY";
-  const autoGenerateInvoiceOnCreate = formData.get("autoGenerateInvoiceOnCreate") === "on";
+  // Invoice Settings (QA #43).
+  const pick = (key: string, allowed: string[], fallback: string) => {
+    const v = formData.get(key) as string;
+    return allowed.includes(v) ? v : fallback;
+  };
+  const TIMINGS = ["ON_CREATE", "ON_CHECK_IN", "MANUAL"];
+  const dailyInvoiceTiming       = pick("dailyInvoiceTiming", TIMINGS, "MANUAL");
+  const monthlyInvoiceTiming     = pick("monthlyInvoiceTiming", TIMINGS, "MANUAL");
+  const autoIssueOnCheckIn       = pick("autoIssueOnCheckIn", ["ALL_STARTED", "FIRST_ONLY", "NONE"], "ALL_STARTED");
+  const requireInvoiceForCheckIn = pick("requireInvoiceForCheckIn", ["OFF", "DAILY", "MONTHLY", "BOTH"], "OFF");
 
   try {
     await prisma.organization.update({
@@ -52,7 +58,7 @@ export async function updateReservationSettings(
       data:  {
         checkInPolicy, allowEarlyCheckIn, autoCheckout,
         reservationNumberPrefix, reservationNumberPadding, reservationNumberResetYearly,
-        requireInvoiceBeforeCheckIn, requireInvoiceScope, autoGenerateInvoiceOnCreate,
+        dailyInvoiceTiming, monthlyInvoiceTiming, autoIssueOnCheckIn, requireInvoiceForCheckIn,
       },
     });
   } catch (err) {

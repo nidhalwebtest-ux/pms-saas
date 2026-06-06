@@ -176,14 +176,18 @@ model Organization {
   reservationNumberPadding     Int     @default(5)
   reservationNumberResetYearly Boolean @default(true)
 
-  /// Invoice gate (Settings → Reservations — QA #24/#34). In this product the
-  /// "contract" IS the invoice. When requireInvoiceBeforeCheckIn is on, an
-  /// invoice must exist before check-in for reservations matching
-  /// requireInvoiceScope (ALL | MONTHLY). autoGenerateInvoiceOnCreate generates
-  /// the invoice(s) automatically at reservation creation. All default off.
-  requireInvoiceBeforeCheckIn Boolean @default(false)
-  requireInvoiceScope         String  @default("MONTHLY")
-  autoGenerateInvoiceOnCreate Boolean @default(false)
+  /// Invoice Settings (Settings → Reservations — QA #43). In this product the
+  /// "contract" IS the invoice. Per-rate-type generation timing and an auto-issue
+  /// policy drive when invoices are created and posted:
+  ///   *InvoiceTiming:    ON_CREATE | ON_CHECK_IN | MANUAL
+  ///   autoIssueOnCheckIn: ALL_STARTED | FIRST_ONLY | NONE
+  ///   requireInvoiceForCheckIn: OFF | DAILY | MONTHLY | BOTH
+  /// Invoices generated while the reservation is NOT checked in are DRAFT
+  /// (provisional); check-in issues them per autoIssueOnCheckIn.
+  dailyInvoiceTiming       String @default("MANUAL")
+  monthlyInvoiceTiming     String @default("MANUAL")
+  autoIssueOnCheckIn       String @default("ALL_STARTED")
+  requireInvoiceForCheckIn String @default("OFF")
 
   plan               String   @default("FREE")
   maxProperties      Int      @default(1)

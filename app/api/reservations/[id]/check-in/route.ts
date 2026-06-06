@@ -3,7 +3,7 @@ import { Prisma } from "@prisma/client";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { canTransitionTo, type StoredStatus } from "@/lib/reservation-status";
-import { generateInvoicesForReservation } from "@/lib/invoice-engine";
+import { generateInvoicesForReservation, issueDraftInvoicesOnCheckIn } from "@/lib/invoice-engine";
 import { getUnitConflict, getCheckedInOccupant } from "@/lib/reservation-conflict";
 
 async function getActor() {
@@ -57,7 +57,8 @@ export async function PATCH(
     where:  { id: actor.organizationId! },
     select: {
       checkInPolicy: true, allowEarlyCheckIn: true,
-      requireInvoiceBeforeCheckIn: true, requireInvoiceScope: true,
+      requireInvoiceForCheckIn: true, autoIssueOnCheckIn: true,
+      dailyInvoiceTiming: true, monthlyInvoiceTiming: true,
     },
   });
   // Body override (if provided) wins over the stored one for this check-in.
@@ -92,11 +93,15 @@ export async function PATCH(
     }
   }
 
-  // Invoice gate (QA #24/#34): when enabled, an in-scope reservation must have an
-  // invoice generated before check-in. (res.invoices excludes CANCELLED/VOID.)
-  if (org?.requireInvoiceBeforeCheckIn) {
-    const scopeAll = org.requireInvoiceScope === "ALL";
-    const inScope  = scopeAll || res.rateType === "monthly";
+  // Invoice gate (QA #43): require an invoice before check-in per the org's
+  // requireInvoiceForCheckIn scope (OFF | DAILY | MONTHLY | BOTH).
+  // res.invoices excludes CANCELLED/VOID.
+  {
+    const gate     = org?.requireInvoiceForCheckIn ?? "OFF";
+    const isMonthlyRes = res.rateType === "monthly";
+    const inScope  = gate === "BOTH"
+      || (gate === "MONTHLY" && isMonthlyRes)
+      || (gate === "DAILY" && !isMonthlyRes);
     if (inScope && res.invoices.length === 0) {
       return NextResponse.json(
         { error: "An invoice must be generated before check-in. Click \"Generate Invoices\" on this reservation first.", code: "invoice_required" },
@@ -232,45 +237,49 @@ export async function PATCH(
     throw err;
   }
 
-  // ── Auto-generate invoices on check-in (if not yet generated) ───────────────
+  // ── Invoices on check-in (QA #43) ──────────────────────────────────────────
+  // 1. If the org generates ON_CHECK_IN and none exist yet, generate now (the
+  //    reservation is CHECKED_IN, so the engine issues current cycles directly).
+  // 2. Then issue any remaining DRAFT cycles per autoIssueOnCheckIn — this posts
+  //    invoices that were generated earlier (ON_CREATE / Manual) as DRAFT.
   let generatedCount = 0;
-  if (!res.invoicesGenerated) {
-    try {
-      const invoiceResult = await generateInvoicesForReservation(
-        id,
-        actor.organizationId!,
-        actor.id,
-      );
+  let issuedCount = 0;
+  const timing = isMonthly ? org?.monthlyInvoiceTiming : org?.dailyInvoiceTiming;
+  try {
+    if (!res.invoicesGenerated && timing === "ON_CHECK_IN") {
+      const invoiceResult = await generateInvoicesForReservation(id, actor.organizationId!, actor.id);
       generatedCount = invoiceResult.invoices.length;
-
       await prisma.reservation.update({
         where: { id },
-        data: {
-          invoicesGenerated:     true,
-          invoicesGeneratedAt:   new Date(),
-          invoicesGeneratedById: actor.id,
-        },
+        data:  { invoicesGenerated: true, invoicesGeneratedAt: new Date(), invoicesGeneratedById: actor.id },
       });
+    }
 
+    issuedCount = await issueDraftInvoicesOnCheckIn(
+      id, actor.organizationId!, org?.autoIssueOnCheckIn ?? "ALL_STARTED",
+    );
+
+    if (generatedCount > 0 || issuedCount > 0) {
       await prisma.reservationActivity.create({
         data: {
           reservationId:  id,
           organizationId: actor.organizationId!,
           action:         "CHARGE_ADDED",
-          description:    `${generatedCount} invoice(s) auto-generated on check-in`,
+          description:    `Check-in: ${generatedCount} invoice(s) generated, ${issuedCount} issued`,
           performedById:  actor.id,
-          metadata:       { invoiceCount: generatedCount, totalExpected: invoiceResult.totalExpected },
+          metadata:       { generatedCount, issuedCount },
         },
       });
-    } catch (invErr) {
-      // Log but don't fail check-in if invoice generation has an error
-      console.error("[check-in] auto-generate invoices failed:", invErr);
     }
+  } catch (invErr) {
+    // Don't fail check-in if invoicing has an error.
+    console.error("[check-in] invoice generation/issue failed:", invErr);
   }
 
   return NextResponse.json({
     success:        true,
-    message:        `${res.tenant.firstName} ${res.tenant.lastName} checked in${unitLabel ? ` to ${unitLabel}` : ""}${generatedCount > 0 ? `. ${generatedCount} invoice(s) generated.` : ""}.`,
+    message:        `${res.tenant.firstName} ${res.tenant.lastName} checked in${unitLabel ? ` to ${unitLabel}` : ""}.`,
     invoicesGenerated: generatedCount,
+    invoicesIssued:    issuedCount,
   });
 }

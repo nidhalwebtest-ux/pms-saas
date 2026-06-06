@@ -437,6 +437,39 @@ function deriveInvoiceStatus(
   return InvoiceStatus.PARTIALLY_PAID;
 }
 
+/**
+ * Issue DRAFT invoices for a reservation at check-in (QA #43).
+ *   - ALL_STARTED: issue every DRAFT whose period has started (periodStart ≤ today)
+ *   - FIRST_ONLY:  issue only the earliest DRAFT cycle
+ *   - NONE:        leave everything DRAFT
+ * Issuing sets status → PENDING and stamps issueDate = now. Returns the count.
+ */
+export async function issueDraftInvoicesOnCheckIn(
+  reservationId: string,
+  orgId: string,
+  mode: string,
+): Promise<number> {
+  if (mode === "NONE") return 0;
+  const todayD = toDay(new Date());
+  const drafts = await prisma.invoice.findMany({
+    where:   { reservationId, organizationId: orgId, status: "DRAFT" },
+    orderBy: [{ monthNumber: "asc" }, { periodStart: "asc" }],
+    select:  { id: true, periodStart: true },
+  });
+  if (drafts.length === 0) return 0;
+
+  const ids = mode === "FIRST_ONLY"
+    ? [drafts[0].id]
+    : drafts.filter((d) => toDay(d.periodStart) <= todayD).map((d) => d.id);
+  if (ids.length === 0) return 0;
+
+  await prisma.invoice.updateMany({
+    where: { id: { in: ids } },
+    data:  { status: "PENDING", issueDate: new Date() },
+  });
+  return ids.length;
+}
+
 // ── Generate invoices for a reservation ──────────────────────────────────────
 
 /**
@@ -538,6 +571,9 @@ async function _generateShortTermInvoice(
   nights: number,
 ): Promise<GenerateInvoicesResult> {
   const today = new Date();
+  // Invoices generated while the reservation isn't checked in are DRAFT
+  // (provisional). Check-in issues them per the org's autoIssueOnCheckIn (QA #43).
+  const isCheckedIn = res.status === "CHECKED_IN";
   const discountAmount = roundOMR(Number(res.discountAmount ?? 0));
 
   const result = await prisma.$transaction(async (tx) => {
@@ -665,7 +701,8 @@ async function _generateShortTermInvoice(
         totalAmount,
         amountPaid:     0,
         balanceDue,
-        status:         "PENDING",
+        status:         isCheckedIn ? "PENDING" : "DRAFT",
+        // Placeholder for drafts; overwritten with the real issue time when issued.
         issueDate:      today,
         dueDate:        res.startDate,   // due on check-in
         createdById:    userId,
@@ -707,14 +744,17 @@ async function _generateAllMonthlyInvoices(
 
   const today    = new Date();
   const todayDay = toDay(today);
+  // A cycle is issued (PENDING) only once the reservation is checked in AND the
+  // cycle's period has started; otherwise it stays DRAFT until check-in (QA #43).
+  const isCheckedIn = res.status === "CHECKED_IN";
 
   const createdInvoices: any[] = [];
 
   for (const period of periods) {
-    const isFuture = toDay(period.periodStart) > todayDay;
-    const status   = isFuture ? InvoiceStatus.DRAFT : InvoiceStatus.PENDING;
+    const periodStarted = toDay(period.periodStart) <= todayDay;
+    const status   = (isCheckedIn && periodStarted) ? InvoiceStatus.PENDING : InvoiceStatus.DRAFT;
     // Due today for current/past cycles; on cycle start for future cycles
-    const dueDate  = isFuture ? period.periodStart : todayDay;
+    const dueDate  = periodStarted ? todayDay : period.periodStart;
 
     const invoice = await _createMonthlyInvoice({
       res,
@@ -824,6 +864,7 @@ async function _createMonthlyInvoice(opts: {
         amountPaid:     0,
         balanceDue,
         status,
+        // Placeholder for drafts; overwritten with the real issue time when issued.
         issueDate:      today,
         dueDate:        opts.dueDate,
         createdById:    userId,

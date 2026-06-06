@@ -3459,13 +3459,29 @@
       "allowEarlyCheckInHint": "When off, a guest cannot be checked in before their reservation start date.",
       "autoCheckoutLabel": "Automatic check-out",
       "autoCheckoutHint": "When on, reservations past their end date are checked out automatically by a daily job. (Note: the scheduled job is not yet active — this preference is saved for when it is enabled.)",
+      "invoiceSettingsLabel": "Invoice settings",
+      "invoiceSettingsHint": "Control when invoices are generated and issued. Invoices generated before check-in are saved as drafts.",
+      "invoiceSettingsNote": "At check-in, draft invoices are issued (draft → pending) according to the auto-issue setting.",
+      "dailyTimingLabel": "Daily invoice generation",
+      "monthlyTimingLabel": "Monthly invoice generation",
+      "timing": {
+        "onCreate": "On reservation creation",
+        "onCheckIn": "On check-in",
+        "manual": "Manual"
+      },
+      "autoIssueLabel": "Auto-issue at check-in",
+      "autoIssue": {
+        "allStarted": "All started cycles",
+        "firstOnly": "First cycle only",
+        "none": "Don't auto-issue"
+      },
       "requireInvoiceLabel": "Require an invoice before check-in",
-      "requireInvoiceHint": "When on, staff cannot check a guest in until an invoice has been generated for the reservation.",
-      "invoiceScopeLabel": "Applies to",
-      "invoiceScopeMonthly": "Monthly (long-term) reservations only",
-      "invoiceScopeAll": "All reservations",
-      "autoGenerateInvoiceLabel": "Auto-generate invoice on reservation creation",
-      "autoGenerateInvoiceHint": "When on, invoices are generated automatically for new reservations in scope, so staff don't forget.",
+      "require": {
+        "off": "Off",
+        "daily": "Daily reservations",
+        "monthly": "Monthly reservations",
+        "both": "Both"
+      },
       "numberFormatLabel": "Reservation number format",
       "numberFormatHint": "How new reservation numbers are generated. Numbering is per-organization and starts at 1.",
       "prefixLabel": "Prefix",

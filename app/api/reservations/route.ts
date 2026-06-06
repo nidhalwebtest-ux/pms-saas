@@ -284,15 +284,16 @@ export async function POST(req: NextRequest) {
 
   const totalNights = totalNightsVal;
 
-  // Auto-generate invoice(s) for in-scope reservations when the org opts in
-  // (QA #24/#34 — "contract" = invoice). Read-only settings fetch.
+  // Invoice generation timing per rate type (QA #43). ON_CREATE generates the
+  // invoice(s) now (DRAFT — the reservation isn't checked in yet).
   const orgInvoiceSettings = await prisma.organization.findUnique({
     where:  { id: actor.organizationId! },
-    select: { autoGenerateInvoiceOnCreate: true, requireInvoiceScope: true },
+    select: { dailyInvoiceTiming: true, monthlyInvoiceTiming: true },
   });
-  const autoGenerateInvoice =
-    !!orgInvoiceSettings?.autoGenerateInvoiceOnCreate &&
-    (orgInvoiceSettings.requireInvoiceScope === "ALL" || rt === "monthly");
+  const invoiceTiming = rt === "monthly"
+    ? orgInvoiceSettings?.monthlyInvoiceTiming
+    : orgInvoiceSettings?.dailyInvoiceTiming;
+  const generateOnCreate = invoiceTiming === "ON_CREATE";
 
   // ── Serializable transaction (double-booking prevention) ──────────────────
 
@@ -359,17 +360,16 @@ export async function POST(req: NextRequest) {
     // Auto-generate invoice(s) once the reservation is committed (QA #34). The
     // invoice engine runs its own transaction; failure here shouldn't fail the
     // booking, so it's best-effort and logged.
-    if (autoGenerateInvoice) {
+    if (generateOnCreate) {
       try {
         await generateInvoicesForReservation(reservation.id, actor.organizationId!, actor.id);
-        // Mirror the manual "Generate Invoices" route so the flag stays in sync
-        // (drives the edit guard + detail UI).
+        // Keep the flag in sync (drives the edit guard + detail UI).
         await prisma.reservation.update({
           where: { id: reservation.id },
           data:  { invoicesGenerated: true, invoicesGeneratedAt: new Date(), invoicesGeneratedById: actor.id },
         });
       } catch (e) {
-        console.error("[POST /api/reservations] auto-generate invoice failed:", e);
+        console.error("[POST /api/reservations] generate-on-create failed:", e);
       }
     }
 

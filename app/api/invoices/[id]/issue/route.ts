@@ -12,7 +12,9 @@ function ser(obj: unknown): unknown {
   );
 }
 
-// ── PATCH /api/invoices/[id]/issue — DRAFT → ISSUED ──────────────────────────
+// ── PATCH /api/invoices/[id]/issue — DRAFT → PENDING ─────────────────────────
+// Issuing a DRAFT posts it: status → PENDING (the simplified model; ISSUED is
+// legacy-only) and stamps issueDate = now (revenue posts on issueDate).
 
 export async function PATCH(
   _req: NextRequest,
@@ -44,7 +46,7 @@ export async function PATCH(
 
   const updated = await prisma.invoice.update({
     where: { id },
-    data: { status: "ISSUED", issueDate: new Date() },
+    data: { status: "PENDING", issueDate: new Date() },
   });
 
   return NextResponse.json({ invoice: ser(updated) });

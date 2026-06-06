@@ -53,10 +53,17 @@
 | 39 | Require-invoice-before-check-in not enforced (same scope-coupling root as #38) | 11 | **P1** | ✅ Fixed |
 | 40 | DRAFT invoices shown as "Pending" on the reservation detail (no DRAFT case) | 12 | P2 | ✅ Fixed |
 | 41 | Monthly invoice line item: days × per-day ≠ flat monthly rate (31-day months) | 12 | P2 | ✅ Fixed |
+| 42 | Issuing a DRAFT set status=ISSUED (legacy) instead of PENDING | 13 | P2 | ✅ Fixed |
 
 ---
 
 <!-- Issues appended below as discovered -->
+
+## Issue #42: Issuing a DRAFT invoice sets status=ISSUED (legacy) instead of PENDING
+- **Scenario:** 13 (issue a DRAFT cycle) — **Severity:** P2 (found by code review before testing)
+- **Root cause:** [PATCH /api/invoices/[id]/issue](app/api/invoices/[id]/issue/route.ts) set `status: "ISSUED"`, but the simplified status model (CLAUDE.md) uses **PENDING** for issued invoices (ISSUED is legacy-only). An issued cycle would show inconsistently and sit in the legacy bucket.
+- **Fix:** ✅ issue now sets `status: "PENDING"` (+ `issueDate = now`). The invoice UI's `canPay` already includes PENDING, so the Pay action appears after issuing.
+- **Status:** ✅ Fixed
 
 ## Issue #40: DRAFT invoices shown as "Pending" on the reservation detail
 - **Scenario:** 12 (monthly invoicing) — **Severity:** P2

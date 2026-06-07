@@ -32,7 +32,7 @@
 | 11 | Generate invoices — daily / short-term reservation | ✅ PASS (after fixes) | Custom-rate invoice now correct (154); found+fixed #32, #33, #35–#39 |
 | 12 | Generate invoices — monthly reservation | ✅ PASS (after fixes) | Cycles correct (15th→15th, 3×600); all-DRAFT correct for a future stay. Fixed #40 (DRAFT shown as Pending), #41 (monthly line math) |
 | 13 | Issue a DRAFT monthly cycle + Invoice Settings | ✅ PASS | Built configurable Invoice Settings (#43); 6 timing/auto-issue/require combos verified in DB. Fixed #42 (issue→PENDING) |
-| 14 | Invoice for the Khareef reservation (S10) | ⏳ Pending | Line items reflect persisted segments (3×25 + 4×45 = 255) — the #28 payoff |
+| 14 | Invoice for the Khareef reservation | ✅ Pass | Line items mirror persisted segments — the #28 payoff. RESNOOR-2026-00017: 3×45 + 1×25 = 160; INV-2026-00022 has matching Khareef/Default lines |
 | 15 | Record a full payment | ✅ PASS | full→PAID, allocation created, balance 0 |
 | 16 | Record a partial payment | ✅ PASS (after fixes) | partial→PARTIALLY_PAID. Fixed #46 (balance column), #47 (overpayment policy + Payment Settings) |
 | 17 | Manual allocation across multiple invoices | ⏳ Pending | Oldest-first auto vs manual selection |
@@ -49,6 +49,11 @@
 - **Scenarios completed:** 10 / 10 — **TODAY'S TARGET REACHED · Categories A & B COMPLETE**
 - **Issues found:** 28
 - **P0:** 0 · **P1:** 6 · **P2:** 16 · **P3:** 6
+
+### Scenario 14 notes (Khareef invoice — #28 payoff, clean pass)
+- **RESNOOR-2026-00017** (Unit 6, Al Noor Residence, DAILY, 2026-08-29→2026-09-02): segments persisted as 3 nights @ 45 (Khareef 2026 seasonal) + 1 night @ 25 (default), total **160.000 OMR**.
+- Generated **one** invoice **INV-2026-00022** (DRAFT — reservation still PENDING, correct per #43). Line items mirror the persisted segments exactly: `Khareef 2026 rate (08-29–08-31) 3×45=135` + `Default rate (09-01) 1×25=25`. No flat-rate collapse — the #28 fix holds end-to-end (booking → reservationUnit.pricingSegments → invoice line items).
+- Old pre-#28 reservations (e.g. RES-2026-00143) still have `pricingSegments: null` and would fall back to flat rate; only affects reservations created before the fix.
 
 ### Scenario 19 notes (Overdue calculation)
 - **Core rule correct:** overdue is always *calculated*, never stored. Spot-checked INV-2026-00003 (RES-2026-00004, due 2026-05-01, bal 150) and INV-2026-00008 (RES-2026-00002, due 2026-04-28, bal 2) — both correctly overdue.

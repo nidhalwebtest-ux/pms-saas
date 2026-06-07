@@ -808,8 +808,9 @@ async function applyReturnCredit(
 
   let status = invoice.status;
   if (status !== "DRAFT") {
-    const settled = roundOMR(paid + credited);
-    status = settled <= 0 ? "PENDING" : roundOMR(total - settled) <= 0 ? "PAID" : "PARTIALLY_PAID";
+    // Fully settled (cash + credit) → PAID. Otherwise PARTIALLY_PAID only when
+    // real cash was paid; a credit-only invoice stays PENDING.
+    status = balanceDue <= 0 ? "PAID" : paid > 0 ? "PARTIALLY_PAID" : "PENDING";
   }
 
   const creditNote = `Credited by return ${returnNumber}: ${creditAmount.toFixed(3)} OMR`;

@@ -436,11 +436,11 @@ function deriveInvoiceStatus(
   // A DRAFT is not auto-promoted by payments or return credits — it stays DRAFT
   // until explicitly issued (revenue posts on issue).
   if (existingStatus === "DRAFT") return InvoiceStatus.DRAFT;
-  // Return credits count toward settling the invoice alongside cash paid.
-  const settled = roundOMR(amountPaid + creditedAmount);
-  if (settled <= 0) return InvoiceStatus.PENDING;
-  if (roundOMR(totalAmount - settled) <= 0) return InvoiceStatus.PAID;
-  return InvoiceStatus.PARTIALLY_PAID;
+  // Net owed after cash paid + return credits. Fully settled → PAID. Otherwise
+  // PARTIALLY_PAID only when actual cash was paid (a credit-only invoice with no
+  // payment stays PENDING — "Partially Paid" would imply money changed hands).
+  if (roundOMR(totalAmount - amountPaid - creditedAmount) <= 0) return InvoiceStatus.PAID;
+  return amountPaid > 0 ? InvoiceStatus.PARTIALLY_PAID : InvoiceStatus.PENDING;
 }
 
 /**

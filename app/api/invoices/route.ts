@@ -87,8 +87,9 @@ export async function GET(req: NextRequest) {
     prisma.invoice.count({ where }),
   ]);
 
-  // Status counts for tab badges
-  const today = new Date();
+  // Status counts for tab badges. Day-start: an invoice due *today* isn't overdue yet.
+  const nowTs = new Date();
+  const today = new Date(nowTs.getFullYear(), nowTs.getMonth(), nowTs.getDate());
   const [all, draft, issued, partiallyPaid, paid, cancelled, overdue] = await Promise.all([
     prisma.invoice.count({ where: { organizationId: orgUser.organizationId } }),
     prisma.invoice.count({ where: { organizationId: orgUser.organizationId, status: "DRAFT" } }),
@@ -99,7 +100,7 @@ export async function GET(req: NextRequest) {
     prisma.invoice.count({
       where: {
         organizationId: orgUser.organizationId,
-        status: { in: ["ISSUED", "PARTIALLY_PAID"] },
+        status: { in: ["ISSUED", "PENDING", "PARTIALLY_PAID"] },
         dueDate: { lt: today },
       },
     }),

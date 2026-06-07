@@ -158,10 +158,13 @@ export function resolveInvoiceBadge(
   const key: InvoiceStatusKey | "overdue" =
     normalized === "issued" ? "pending" : (normalized as InvoiceStatusKey);
 
-  // Overdue check applies to pending + partially-paid only.
+  // Overdue check applies to pending + partially-paid only (DRAFT excluded —
+  // not yet issued). Day-level compare: an invoice due *today* isn't overdue yet.
   if ((key === "pending" || key === "partially-paid") && dueDate) {
     const due = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
-    if (due < today) {
+    const dueDay   = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    const todayDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    if (dueDay < todayDay) {
       return {
         props: { tone: "danger", appearance: "subtle", dot: true },
         key:   "overdue",

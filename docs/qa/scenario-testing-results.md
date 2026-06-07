@@ -37,8 +37,8 @@
 | 16 | Record a partial payment | ✅ PASS (after fixes) | partial→PARTIALLY_PAID. Fixed #46 (balance column), #47 (overpayment policy + Payment Settings) |
 | 17 | Manual allocation across multiple invoices | ⏳ Pending | Oldest-first auto vs manual selection |
 | 18 | Payment receipt PDF | ⏳ Pending | Bilingual, correct totals |
-| 19 | Overdue calculation | ⏳ Pending | PENDING past due_date shows overdue (calculated, not stored) |
-| 20 | Cancel invoice / cancel-reservation guard | ⏳ Pending | Cancelled excluded from financials; reservation can't cancel while invoices exist |
+| 19 | Overdue calculation | ✅ Pass (after fix) | Calculated, never stored. Found+fixed #51 (inconsistent rule: DRAFT counted, "due today" flagged, missing PENDING) — unified to one canonical rule across 7 call sites |
+| 20 | Cancel invoice / cancel-reservation guard | ✅ Pass | Cancel blocked only if invoices have payments; unpaid DRAFT/PENDING auto-cancelled & excluded from financials. Rule clarified in CLAUDE.md |
 
 > Stretch (21+): early-checkout proration (current period full, future cycles cancelled), overstay invoice, returns/refunds.
 
@@ -49,6 +49,15 @@
 - **Scenarios completed:** 10 / 10 — **TODAY'S TARGET REACHED · Categories A & B COMPLETE**
 - **Issues found:** 28
 - **P0:** 0 · **P1:** 6 · **P2:** 16 · **P3:** 6
+
+### Scenario 19 notes (Overdue calculation)
+- **Core rule correct:** overdue is always *calculated*, never stored. Spot-checked INV-2026-00003 (RES-2026-00004, due 2026-05-01, bal 150) and INV-2026-00008 (RES-2026-00002, due 2026-04-28, bal 2) — both correctly overdue.
+- **Found #51 (P2):** the overdue derivation was duplicated across ~7 call sites with **three** divergent definitions — (1) DRAFT counted as overdue in the reservation summary + manager receivables/aging; (2) "due today" wrongly flagged because of a timestamp (not day-level) compare; (3) the `/api/invoices` count omitted PENDING. Unified all to one canonical rule: `status ∈ {ISSUED, PENDING, PARTIALLY_PAID} AND dueDate(day) < today(day) AND balance > 0`.
+- **DB verification after fix:** 78 billed invoices overdue · 3 DRAFT past-due now excluded · 2 due-today now excluded · manager receivables/aging now exclude DRAFT (no revenue posted).
+
+### Scenario 20 notes (Cancel-reservation guard)
+- **Behavior confirmed safe:** cancel is blocked only if an invoice has recorded payments (PAID/PARTIALLY_PAID) — "cancel those invoices first"; unpaid DRAFT/PENDING invoices are auto-cancelled, units freed, `refundPending` flagged if any payment existed.
+- Documented rule in CLAUDE.md was overly literal ("can't cancel if any invoice exists") — updated to match the implemented (safer + more convenient) behavior. User chose to keep current behavior.
 
 ### Scenario 10 notes
 - **Math correct:** RES-2026-00143, DAILY, 7 nights, **grandTotal 255.000 OMR** = 3×25 + 4×45 ✅. Seasonal record won at priority 1 (vs DEFAULT priority 10) for Jul 1–4. Engine correctly used the half-open Khareef window: Jul 1 night = Khareef, Jul 5 check-out night not slept-in.

@@ -1670,8 +1670,13 @@ export async function getTenantFinancialSummary(
   const outstandingInvoicesList = nonCancelledInvoices.filter((inv) =>
     ["ISSUED", "PARTIALLY_PAID", "DRAFT", "PENDING", "PARTIAL", "DUE"].includes(inv.status),
   );
+  // Overdue = a *billed* invoice (DRAFT excluded — not yet issued, no revenue
+  // posted) whose due date is strictly in the past, with a remaining balance.
   const overdueInvoices = outstandingInvoicesList.filter(
-    (inv) => toDay(inv.dueDate) < toDay(today) && Number(inv.balanceDue) > 0,
+    (inv) =>
+      inv.status !== "DRAFT" &&
+      toDay(inv.dueDate) < toDay(today) &&
+      Number(inv.balanceDue) > 0,
   );
 
   return {

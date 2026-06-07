@@ -48,7 +48,13 @@ export interface InvoiceRow {
 
 function isOverdue(status: string, dueDateIso: string): boolean {
   const OUTSTANDING = ["ISSUED", "PENDING", "PARTIALLY_PAID"];
-  return OUTSTANDING.includes(status) && new Date(dueDateIso) < new Date();
+  if (!OUTSTANDING.includes(status)) return false;
+  // Day-level compare: an invoice due *today* is not overdue yet.
+  const due = new Date(dueDateIso);
+  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  const now = new Date();
+  const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return dueDay < todayDay;
 }
 
 export function invoiceRowVariant(

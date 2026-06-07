@@ -49,7 +49,9 @@ export default async function InvoicesPage({
   const page = Math.max(1, parseInt(params.page || "1", 10));
   const propertyId = params.propertyId || "";
 
-  const today = new Date();
+  // Start of today: an invoice due *today* is not overdue yet (overdue = past due).
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   // ── i18n ──────────────────────────────────────────────────────────────────────
   const currency = await getCurrentCurrency();

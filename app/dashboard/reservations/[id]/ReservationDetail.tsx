@@ -789,8 +789,15 @@ function PaymentModal({ res, onSuccess, onClose, overpaymentPolicy = "WARN" }: {
     if (s === "PENDING" || s === "DUE" || s === "ISSUED") return t("invStatus.pending");
     return s;
   };
-  const isOverdue = (inv: InvoiceRow) =>
-    new Date(inv.dueDate) < new Date() && !["PAID", "CANCELLED", "VOID"].includes(inv.status);
+  // Overdue = a billed (non-DRAFT) unpaid invoice past its due date (day-level).
+  const isOverdue = (inv: InvoiceRow) => {
+    if (["PAID", "CANCELLED", "VOID", "DRAFT"].includes(inv.status)) return false;
+    const due = new Date(inv.dueDate);
+    const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    const now = new Date();
+    const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return dueDay < todayDay;
+  };
 
   return (
     <Modal open onClose={onClose} size="md"><ModalHeader title={t("title")} /><ModalBody>
@@ -2156,7 +2163,11 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
                         const isPaid      = inv.status === "PAID";
                         const isPartial   = inv.status === "PARTIALLY_PAID" || inv.status === "PARTIAL";
                         const isDraft     = inv.status === "DRAFT";
-                        const isOverdue   = !isPaid && !isCancelled && !isDraft && new Date(inv.dueDate) < new Date();
+                        const _due        = new Date(inv.dueDate);
+                        const _dueDay     = new Date(_due.getFullYear(), _due.getMonth(), _due.getDate());
+                        const _now        = new Date();
+                        const _todayDay   = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate());
+                        const isOverdue   = !isPaid && !isCancelled && !isDraft && _dueDay < _todayDay;
                         const statusClass = isPaid
                           ? "bg-green-100 text-green-700"
                           : isPartial

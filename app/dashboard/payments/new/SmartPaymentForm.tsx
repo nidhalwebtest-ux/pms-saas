@@ -62,10 +62,16 @@ function roundOMR(n: number) {
 }
 
 function isOverdue(inv: Invoice): boolean {
-  return (
-    (inv.status === "PENDING" || inv.status === "PARTIALLY_PAID" || inv.status === "DUE" || inv.status === "ISSUED") &&
-    new Date(inv.dueDate) < new Date()
-  );
+  const billed =
+    inv.status === "PENDING" || inv.status === "PARTIALLY_PAID" ||
+    inv.status === "DUE" || inv.status === "ISSUED";
+  if (!billed) return false;
+  // Day-level compare: an invoice due *today* isn't overdue yet.
+  const due = new Date(inv.dueDate);
+  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  const now = new Date();
+  const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return dueDay < todayDay;
 }
 
 function computeAllocations(invoices: Invoice[], amount: number): AllocationPreview[] {

@@ -62,6 +62,7 @@
 | 48 | Auto-allocation spread a reservation's payment across OTHER reservations' invoices | 17 | **P1** | ✅ Fixed |
 | 49 | New Payment: tenant dropdown clipped; Payments nav needs List/Record dropdown | 17 | P2 | ✅ Fixed |
 | 50 | Manual allocation: allow under-allocation (rest = credit) + cap each entry to invoice balance | 17 | P2 | ✅ Fixed |
+| 51 | Overdue calculation inconsistent across pages (DRAFT counted; "due today" flagged) | 19 | P2 | ✅ Fixed |
 
 ---
 
@@ -72,6 +73,16 @@
 - **Symptoms:** (a) The modal required the manual allocations to **equal** the payment amount ("must allocate to invoices"), so you couldn't record a payment and leave part as credit. (b) You could type an allocation **larger than an invoice's balance** (e.g. 600 on a 300-balance cycle); the server capped it but the UI didn't.
 - **Fix:** ✅ (a) Manual allocations may total **less than** the payment (the remainder is recorded as an unapplied credit); only **over**-allocation (allocating more than the payment) is blocked. Footer now shows "X unallocated → credit" or an over-allocation error. (b) Each manual input is **clamped to the invoice's remaining balance** on entry. 
 - **Overpayment semantics fixed too:** the BLOCK policy now keys off **true overpayment** (amount > total outstanding for the scope), not the unallocated remainder — so an intentional under-allocation is never blocked. [ReservationDetail.tsx](app/dashboard/reservations/[id]/ReservationDetail.tsx), [invoice-engine.ts](lib/invoice-engine.ts).
+- **Status:** ✅ Fixed
+
+## Issue #51: Overdue calculation inconsistent across pages
+- **Scenario:** 19 — **Severity:** P2
+- **Symptoms:** "Overdue" was computed independently in ~7 places with three different definitions, so the same invoice could show overdue on one page and not another:
+  - **DRAFT counted as overdue** — the reservation financial summary ([invoice-engine.ts](lib/invoice-engine.ts)) and the manager dashboard receivables/aging ([dashboard/manager](app/api/dashboard/manager/route.ts)) included DRAFT invoices, which aren't issued (no revenue posted). The invoice list correctly excluded them. *(DB: 3 DRAFT past-due invoices were being mis-counted.)*
+  - **"Due today" flagged as overdue** — list page, columns, badge helper, reservation detail (×2) and the smart-payment form all used a **timestamp** compare (`new Date(dueDate) < new Date()`), so an invoice due *today* (stored at midnight) flipped to overdue at 00:01 of its own due date. *(DB: 2 invoices due today were wrongly overdue.)*
+  - **Missing PENDING** — the `/api/invoices` overdue tab count only checked `ISSUED, PARTIALLY_PAID`, omitting the modern `PENDING` status.
+- **Fix:** ✅ One canonical rule applied everywhere — **`status ∈ {ISSUED, PENDING, PARTIALLY_PAID}` AND `dueDate(day) < today(day)` AND `balanceDue > 0`** (DRAFT/CANCELLED/VOID never overdue; due-today not overdue; day-level compare). Touched: [invoice-engine.ts](lib/invoice-engine.ts), [badge-helpers.tsx](components/ui/badge-helpers.tsx), [invoices/columns.tsx](app/dashboard/invoices/columns.tsx), [invoices/page.tsx](app/dashboard/invoices/page.tsx), [api/invoices/route.ts](app/api/invoices/route.ts), [ReservationDetail.tsx](app/dashboard/reservations/[id]/ReservationDetail.tsx) (×2), [SmartPaymentForm.tsx](app/dashboard/payments/new/SmartPaymentForm.tsx). Manager receivables/aging now also exclude DRAFT (no revenue posted).
+- **Verified (DB):** 78 billed invoices correctly overdue; 3 DRAFT past-due now excluded; 2 due-today now excluded.
 - **Status:** ✅ Fixed
 
 ## Issue #48: Payment auto-allocation crossed into other reservations (P1)

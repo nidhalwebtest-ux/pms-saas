@@ -49,7 +49,7 @@
 | # | Scenario | Result | Key checks |
 |---|----------|--------|-----------|
 | 21 | Monthly early checkout / return | ✅ Pass | A: current period rejected (earliest = next cycle). B: RESNOOR-2026-00012 returned Jul cycle → INV-016 CANCELLED, INV-015 kept, RET-2026-00001 (600, no refund) |
-| 22 | Daily early checkout / return | 🔧 Reworked | Original test exposed two issues → returns redesigned as **credit-note transactions** (#52). Re-test pending. |
+| 22 | Daily early checkout / return | ✅ Pass | Credit-note model (#52). RESNOOR-2026-00018: invoice total frozen 154, credit 44 @ 22/night (not 25), balance 110, RET-2026-00003, no refund. Credit-only invoice stays PENDING. |
 | 23 | Refund processing | ⏳ Pending | PAID return → refund posts negative isRefund payment; return → COMPLETED; excluded/handled in financials |
 | 24 | Overstay charge | ⏳ Pending | Verify whether a separate OVERSTAY invoice is created (CLAUDE.md rule) vs. only a reservation adjustment/charge |
 

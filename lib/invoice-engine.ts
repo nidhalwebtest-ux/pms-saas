@@ -427,13 +427,19 @@ function deriveInvoiceStatus(
   totalAmount: number,
   amountPaid: number,
   existingStatus: string,
+  creditedAmount = 0,
 ): InvoiceStatus {
   // Never un-cancel an invoice
   if (existingStatus === "CANCELLED" || existingStatus === "VOID") {
     return existingStatus as InvoiceStatus;
   }
-  if (amountPaid <= 0) return InvoiceStatus.PENDING;
-  if (roundOMR(totalAmount - amountPaid) <= 0) return InvoiceStatus.PAID;
+  // A DRAFT is not auto-promoted by payments or return credits — it stays DRAFT
+  // until explicitly issued (revenue posts on issue).
+  if (existingStatus === "DRAFT") return InvoiceStatus.DRAFT;
+  // Return credits count toward settling the invoice alongside cash paid.
+  const settled = roundOMR(amountPaid + creditedAmount);
+  if (settled <= 0) return InvoiceStatus.PENDING;
+  if (roundOMR(totalAmount - settled) <= 0) return InvoiceStatus.PAID;
   return InvoiceStatus.PARTIALLY_PAID;
 }
 
@@ -1565,13 +1571,15 @@ async function _applyAllocationToInvoice(
 ): Promise<void> {
   const invoice = await tx.invoice.findUniqueOrThrow({
     where:  { id: invoiceId },
-    select: { totalAmount: true, amountPaid: true, status: true },
+    select: { totalAmount: true, amountPaid: true, creditedAmount: true, status: true },
   });
 
   const totalAmount = roundOMR(Number(invoice.totalAmount));
+  const credited    = roundOMR(Number(invoice.creditedAmount));
   const amountPaid  = roundOMR(Number(invoice.amountPaid) + amount);
-  const balanceDue  = roundOMR(Math.max(0, totalAmount - amountPaid));
-  const newStatus   = deriveInvoiceStatus(totalAmount, amountPaid, invoice.status);
+  // balanceDue is net of return credits (credit-note model).
+  const balanceDue  = roundOMR(Math.max(0, totalAmount - amountPaid - credited));
+  const newStatus   = deriveInvoiceStatus(totalAmount, amountPaid, invoice.status, credited);
 
   await tx.invoice.update({
     where: { id: invoiceId },
@@ -1645,6 +1653,12 @@ export async function getTenantFinancialSummary(
     (sum, inv) => roundOMR(sum + Number(inv.totalAmount)),
     0,
   );
+  // Return credits applied to invoices (credit-note model): reduce the effective
+  // charge without touching the frozen invoice total.
+  const totalCredited = nonCancelledInvoices.reduce(
+    (sum, inv) => roundOMR(sum + Number(inv.creditedAmount ?? 0)),
+    0,
+  );
 
   const nonRefundPayments = payments.filter((p) => !p.isRefund);
   const refundPayments    = payments.filter((p) => p.isRefund);
@@ -1658,7 +1672,8 @@ export async function getTenantFinancialSummary(
     0,
   );
 
-  const currentBalance = roundOMR(totalCharged - totalPaid + totalRefunded);
+  // Net owed = effective charges (charged − credited) − cash in + cash refunded.
+  const currentBalance = roundOMR(totalCharged - totalCredited - totalPaid + totalRefunded);
 
   // Invoice counts
   const paidInvoices = nonCancelledInvoices.filter(

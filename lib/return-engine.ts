@@ -93,6 +93,79 @@ function toDay(d: Date): Date {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
 }
 
+function addDays(d: Date, n: number): Date {
+  const next = new Date(d);
+  next.setUTCDate(next.getUTCDate() + n);
+  return next;
+}
+
+// ── Return settings (Settings → Returns) ────────────────────────────────────────
+
+export interface ReturnSettings {
+  draftPolicy:   "CANCEL" | "CREDIT";       // unissued monthly DRAFT cycles
+  balancePolicy: "NET" | "GROSS";           // presentation only
+  rateBasis:     "CHARGED" | "PRICE_LIST";  // rate for the returned period
+}
+
+async function getReturnSettings(orgId: string): Promise<ReturnSettings> {
+  const org = await prisma.organization.findUnique({
+    where:  { id: orgId },
+    select: { returnDraftPolicy: true, returnBalancePolicy: true, returnRateBasis: true },
+  });
+  return {
+    draftPolicy:   (org?.returnDraftPolicy   as ReturnSettings["draftPolicy"])   ?? "CANCEL",
+    balancePolicy: (org?.returnBalancePolicy as ReturnSettings["balancePolicy"]) ?? "NET",
+    rateBasis:     (org?.returnRateBasis     as ReturnSettings["rateBasis"])     ?? "CHARGED",
+  };
+}
+
+/**
+ * Build return line items for the returned tail of a DAILY stay from the rate the
+ * guest was actually charged (persisted reservationUnit.pricingSegments — QA #28).
+ * A night belongs to the returned portion when its date is >= the new checkout.
+ * Falls back to the unit's stored rateAmount when no segments are persisted.
+ */
+function chargedDailyReturnLines(
+  ui:        UnitInfo,
+  newOut:    Date,
+  returnDays: number,
+): ReturnLineItemInput[] {
+  const segments = ui.pricingSegments;
+  if (segments && segments.length > 0) {
+    const lines: ReturnLineItemInput[] = [];
+    for (const seg of segments) {
+      if (!seg.startDate) continue;
+      const segStart = toDay(new Date(seg.startDate));
+      let nights = 0;
+      for (let i = 0; i < seg.nights; i++) {
+        if (addDays(segStart, i) >= newOut) nights++;
+      }
+      if (nights > 0) {
+        const rate      = seg.rateAmount;
+        const lineTotal = roundOMR(rate * nights);
+        lines.push({
+          unitId:      ui.unitId,
+          description: `Unit — ${nights} night(s) × ${rate.toFixed(3)} OMR${seg.seasonalPriceName ? ` (${seg.seasonalPriceName})` : ""}`,
+          quantity:    nights,
+          unitPrice:   rate,
+          lineTotal,
+        });
+      }
+    }
+    if (lines.length > 0) return lines;
+  }
+  // Fallback: stored charged rate × returned nights
+  const rate      = ui.rateAmount > 0 ? ui.rateAmount : 0;
+  const lineTotal = roundOMR(rate * returnDays);
+  return [{
+    unitId:      ui.unitId,
+    description: `Unit — ${returnDays} night(s) × ${rate.toFixed(3)} OMR`,
+    quantity:    returnDays,
+    unitPrice:   rate,
+    lineTotal,
+  }];
+}
+
 // ── Calculate daily return preview ────────────────────────────────────────────
 
 export async function previewDailyReturn(params: {
@@ -145,8 +218,11 @@ export async function previewDailyReturn(params: {
   if (returnDays <= 0) throw new Error("No days to return");
 
   const unitInfos = getReservationUnitInfos(res as Parameters<typeof getReservationUnitInfos>[0]);
+  const settings  = await getReturnSettings(orgId);
 
-  // Calculate return amount using the original rates stored on reservation units
+  // Calculate return amount. Default basis = CHARGED (the rate the guest was
+  // actually charged, from persisted segments). PRICE_LIST re-prices from the
+  // current price tables. A manual rateOverride always wins.
   const lineItems: ReturnLineItemInput[] = [];
   let returnAmount = 0;
 
@@ -165,7 +241,16 @@ export async function previewDailyReturn(params: {
       continue;
     }
 
-    // Try to get actual pricing breakdown for the returned segment
+    if (settings.rateBasis === "CHARGED") {
+      const lines = chargedDailyReturnLines(ui, newOut, returnDays);
+      for (const line of lines) {
+        returnAmount = roundOMR(returnAmount + line.lineTotal);
+        lineItems.push(line);
+      }
+      continue;
+    }
+
+    // PRICE_LIST: re-price the returned segment from the current price tables.
     const pricing  = await getUnitPriceForRange(ui.unitId, newOut, origOut);
     const segments = collapseToSegments(pricing.dailyBreakdown);
 
@@ -315,6 +400,7 @@ export async function previewMonthlyReturn(params: {
     throw new Error("No future billing periods to return");
 
   const unitInfos = getReservationUnitInfos(res as Parameters<typeof getReservationUnitInfos>[0]);
+  const settings  = await getReturnSettings(orgId);
 
   // Map invoices to periods by periodStart date
   const invoiceByPeriodStart = new Map<string, typeof res.invoices[0]>();
@@ -361,7 +447,10 @@ export async function previewMonthlyReturn(params: {
         refundAmount   = roundOMR(refundAmount + refundNeeded);
       }
 
-      if (invoice.status === "PENDING" || invoice.status === "DRAFT") {
+      // Only unissued DRAFT cycles are cancelled, and only under the CANCEL
+      // policy. Everything else (issued PENDING/PARTIALLY_PAID/PAID, or DRAFT
+      // under CREDIT) gets a return credit applied instead — invoice untouched.
+      if (invoice.status === "DRAFT" && settings.draftPolicy === "CANCEL") {
         invoicesToCancel.push(invoice.id);
       }
 
@@ -418,32 +507,13 @@ export async function executeDailyReturn(params: {
       notes,
     });
 
-    // Update the invoice
+    // Credit-note model: never change the invoice total or line items. Apply the
+    // full returned value as a credit against the invoice (reduces effective
+    // charge). Any portion already paid surfaces as an over-payment and is
+    // returned via the separate refund step.
     if (preview.affectedInvoices.length > 0) {
-      const inv     = preview.affectedInvoices[0];
-      const invoice = await tx.invoice.findUnique({
-        where: { id: inv.id },
-        select: { status: true, totalAmount: true, amountPaid: true },
-      });
-      if (invoice) {
-        const paid  = roundOMR(Number(invoice.amountPaid));
-        const total = roundOMR(Number(invoice.totalAmount));
-
-        if (paid === 0) {
-          // Unpaid: reduce invoice total by return amount
-          const newTotal = roundOMR(total - preview.returnAmount);
-          const newBalance = roundOMR(Math.max(0, newTotal - paid));
-          await tx.invoice.update({
-            where: { id: inv.id },
-            data: {
-              totalAmount:  newTotal,
-              balanceDue:   newBalance,
-              notes:        `Reduced by return ${ret.returnNumber}: ${preview.returnAmount.toFixed(3)} OMR`,
-            },
-          });
-        }
-        // PAID / PARTIALLY_PAID: invoice left unchanged, refund tracked on return
-      }
+      const inv = preview.affectedInvoices[0];
+      await applyReturnCredit(tx, inv.id, roundOMR(preview.returnAmount), ret.returnNumber);
     }
 
     // Get unit IDs
@@ -541,7 +611,10 @@ export async function executeMonthlyReturn(params: {
       notes,
     });
 
-    // Cancel PENDING invoices for returned periods
+    // Unissued DRAFT cycles (CANCEL policy) → cancel outright. Every other
+    // affected invoice gets a return credit applied (total/line items untouched);
+    // already-paid amounts become a refund tracked on the return.
+    const cancelSet = new Set(preview.invoicesToCancel);
     for (const invoiceId of preview.invoicesToCancel) {
       await tx.invoice.update({
         where: { id: invoiceId },
@@ -552,9 +625,10 @@ export async function executeMonthlyReturn(params: {
         },
       });
     }
-
-    // For PAID invoices in returned periods, refund is tracked on the return
-    // (invoice stays PAID, return record documents the credit)
+    for (const ai of preview.affectedInvoices) {
+      if (cancelSet.has(ai.id)) continue;
+      await applyReturnCredit(tx, ai.id, roundOMR(ai.returnAmount), ret.returnNumber);
+    }
 
     // Get unit IDs
     const reservation = await tx.reservation.findUnique({
@@ -708,6 +782,47 @@ export async function processRefund(params: {
 }
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
+
+/**
+ * Apply a return credit to an invoice WITHOUT changing its total or line items
+ * (credit-note model). balanceDue = total − paid − credited (net, clamped ≥ 0);
+ * status re-derived (DRAFT stays DRAFT; PAID when fully settled by cash+credit).
+ */
+async function applyReturnCredit(
+  tx: Prisma.TransactionClient,
+  invoiceId: string,
+  creditAmount: number,
+  returnNumber: string,
+) {
+  if (creditAmount <= 0) return;
+  const invoice = await tx.invoice.findUnique({
+    where:  { id: invoiceId },
+    select: { status: true, totalAmount: true, amountPaid: true, creditedAmount: true, notes: true },
+  });
+  if (!invoice || invoice.status === "CANCELLED" || invoice.status === "VOID") return;
+
+  const total       = roundOMR(Number(invoice.totalAmount));
+  const paid        = roundOMR(Number(invoice.amountPaid));
+  const credited    = roundOMR(Number(invoice.creditedAmount) + creditAmount);
+  const balanceDue  = roundOMR(Math.max(0, total - paid - credited));
+
+  let status = invoice.status;
+  if (status !== "DRAFT") {
+    const settled = roundOMR(paid + credited);
+    status = settled <= 0 ? "PENDING" : roundOMR(total - settled) <= 0 ? "PAID" : "PARTIALLY_PAID";
+  }
+
+  const creditNote = `Credited by return ${returnNumber}: ${creditAmount.toFixed(3)} OMR`;
+  await tx.invoice.update({
+    where: { id: invoiceId },
+    data: {
+      creditedAmount: credited,
+      balanceDue,
+      status,
+      notes: invoice.notes ? `${invoice.notes}\n${creditNote}` : creditNote,
+    },
+  });
+}
 
 async function _createReturnRecord(
   tx: Prisma.TransactionClient,

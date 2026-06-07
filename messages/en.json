@@ -372,6 +372,7 @@
     "tenantLedger": "Tenant Ledger",
     "reservations": "Reservations",
     "invoices": "Invoices",
+    "returns": "Returns",
     "payments": "Payments",
     "expenses": "Expenses",
     "allExpenses": "All Expenses",
@@ -389,6 +390,7 @@
     "recordPayment": "Record payment",
     "reservationSettings": "Reservation Settings",
     "paymentSettings": "Payment Settings",
+    "returnSettings": "Return Settings",
     "unitSettings": "Unit Settings"
   },
   "dashboard": {
@@ -2601,6 +2603,114 @@
     },
     "scopedNote": "Locked to the building selected in the header."
   },
+  "returns": {
+    "title": "Returns",
+    "recordsCount": "{count} returns",
+    "footer": {
+      "returned": "Returned",
+      "refunded": "Refunded"
+    },
+    "tabs": {
+      "all": "All",
+      "active": "No refund",
+      "refundPending": "Refund pending",
+      "refunded": "Refunded",
+      "cancelled": "Cancelled"
+    },
+    "search": {
+      "placeholder": "Search return #, tenant, reservation…"
+    },
+    "table": {
+      "returnNumber": "Return #",
+      "status": "Status",
+      "tenant": "Tenant",
+      "reservation": "Reservation",
+      "viewReservation": "View",
+      "invoice": "Invoice",
+      "viewInvoice": "View",
+      "type": "Type",
+      "period": "Period",
+      "amount": "Return",
+      "refund": "Refund",
+      "created": "Created"
+    },
+    "statuses": {
+      "active": "No refund",
+      "refundPending": "Refund pending",
+      "refunded": "Refunded",
+      "cancelled": "Cancelled"
+    },
+    "types": {
+      "daily": "Daily",
+      "monthly": "Monthly"
+    },
+    "rowActions": {
+      "view": "View",
+      "processRefund": "Process refund"
+    },
+    "empty": {
+      "firstTitle": "No returns yet",
+      "firstDesc": "Returns are created from a reservation using the Return Days action.",
+      "goToReservations": "Go to reservations",
+      "noResultsTitle": "No returns match your filters",
+      "noResultsDesc": "Try clearing the search or status filter.",
+      "clearFilters": "Clear filters"
+    },
+    "actions": {
+      "processRefund": "Process refund",
+      "refundTitle": "Process refund",
+      "amountLabel": "Refund amount",
+      "refundDueHint": "Refund due: {amount} OMR",
+      "method": "Method",
+      "reference": "Reference",
+      "optional": "(optional)",
+      "notes": "Notes",
+      "cancel": "Cancel",
+      "confirmRefund": "Confirm refund",
+      "refundSuccess": "Refund processed",
+      "refundFailed": "Could not process refund",
+      "invalidAmount": "Enter a valid amount",
+      "somethingWentWrong": "Something went wrong"
+    },
+    "detail": {
+      "breadcrumb": "Returns",
+      "backToList": "Back to list",
+      "returnDetails": "Return details",
+      "type": "Type",
+      "period": "Period",
+      "quantity": "Quantity",
+      "months": "{n} month(s)",
+      "nights": "{n} night(s)",
+      "created": "Created",
+      "createdBy": "Created by",
+      "reason": "Reason:",
+      "notes": "Notes:",
+      "lineItems": "Line items",
+      "description": "Description",
+      "qty": "Qty",
+      "unitPrice": "Unit price",
+      "lineTotal": "Line total",
+      "noLineItems": "No line items",
+      "returnTotal": "Return total",
+      "refund": "Refund",
+      "noRefund": "Not required",
+      "refunded": "Refunded",
+      "refundDue": "Refund due",
+      "refundInfo": "Refund",
+      "refundStatus": "Status",
+      "refundAmount": "Amount",
+      "refundMethod": "Method",
+      "refundReference": "Reference",
+      "refundDate": "Date",
+      "refundProcessedBy": "Processed by",
+      "tenant": "Tenant",
+      "reservation": "Reservation",
+      "viewReservation": "View reservation",
+      "unitLabel": "Unit",
+      "appliedInvoice": "Applied to invoice",
+      "noInvoice": "No invoice linked"
+    }
+  },
   "invoices": {
     "title": "Invoices",
     "recordsCount": "{count, plural, =0 {No records} one {# record} other {# records}}",
@@ -2712,6 +2822,7 @@
       "tax": "Tax",
       "grandTotal": "Total",
       "amountPaid": "Amount Paid",
+      "creditsApplied": "Credits applied (returns)",
       "balanceDue": "Balance Due",
       "paymentDate": "Date",
       "paymentMethod": "Method",
@@ -3519,6 +3630,49 @@
         "ALLOW": {
           "title": "Allow (record as credit)",
           "desc": "Accept it silently; the extra becomes an unapplied credit on the account."
+        }
+      }
+    },
+    "returns": {
+      "title": "Return Settings",
+      "subtitle": "Control how early-checkout returns and refunds behave.",
+      "save": "Save changes",
+      "revert": "Discard changes",
+      "savedToast": "Return settings saved.",
+      "draftLabel": "Unissued future cycles (monthly early checkout)",
+      "draftHint": "How to handle not-yet-issued future DRAFT cycles when a guest leaves early.",
+      "draft": {
+        "CANCEL": {
+          "title": "Cancel unissued drafts",
+          "desc": "Cancel future DRAFT cycles outright (never billed). Issued/paid cycles still get a return credit."
+        },
+        "CREDIT": {
+          "title": "Keep draft & credit it",
+          "desc": "Never touch any invoice — keep the DRAFT and apply a full return credit so it nets to zero."
+        }
+      },
+      "balanceLabel": "How returns affect the balance due",
+      "balanceHint": "A return never changes the invoice total or line items. This controls how the credit is shown.",
+      "balance": {
+        "NET": {
+          "title": "Balance reflects the credit",
+          "desc": "The invoice's balance due shows net of return credits (total − paid − credits)."
+        },
+        "GROSS": {
+          "title": "Keep the gross total visible",
+          "desc": "Show the full total with the credit listed as a separate deduction, then the net due."
+        }
+      },
+      "rateLabel": "Rate used for the returned period",
+      "rateHint": "Which rate prices the returned nights/cycles. A manual per-return override is always available.",
+      "rate": {
+        "CHARGED": {
+          "title": "Rate the guest was charged",
+          "desc": "Use the rate stored at booking (handles custom/seasonal rates correctly)."
+        },
+        "PRICE_LIST": {
+          "title": "Current price list",
+          "desc": "Re-price the returned period from the unit's current price tables."
         }
       }
     },

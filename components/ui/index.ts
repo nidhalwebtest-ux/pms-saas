@@ -24,6 +24,8 @@ export {
   getExpenseStatusBadge,
   getPropertyTypeBadge,
   getUserRoleBadge,
+  getReturnStatusBadge,
+  returnStatusKey,
 } from "./badge-helpers";
 export type {
   BadgeVariantProps,
@@ -37,6 +39,7 @@ export type {
   ExpenseStatusKey,
   PropertyTypeKey,
   UserRoleKey,
+  ReturnStatusKey,
 } from "./badge-helpers";
 
 /* ── Form fields (Tier 1) ───────────────────────────────────────────── */

@@ -63,6 +63,7 @@
 | 49 | New Payment: tenant dropdown clipped; Payments nav needs List/Record dropdown | 17 | P2 | ✅ Fixed |
 | 50 | Manual allocation: allow under-allocation (rest = credit) + cap each entry to invoice balance | 17 | P2 | ✅ Fixed |
 | 51 | Overdue calculation inconsistent across pages (DRAFT counted; "due today" flagged) | 19 | P2 | ✅ Fixed |
+| 52 | Returns silently mutated the invoice + wrong rate → redesign as credit-note transactions | 22 | **P1** | ✅ Built |
 
 ---
 
@@ -84,6 +85,17 @@
 - **Fix:** ✅ One canonical rule applied everywhere — **`status ∈ {ISSUED, PENDING, PARTIALLY_PAID}` AND `dueDate(day) < today(day)` AND `balanceDue > 0`** (DRAFT/CANCELLED/VOID never overdue; due-today not overdue; day-level compare). Touched: [invoice-engine.ts](lib/invoice-engine.ts), [badge-helpers.tsx](components/ui/badge-helpers.tsx), [invoices/columns.tsx](app/dashboard/invoices/columns.tsx), [invoices/page.tsx](app/dashboard/invoices/page.tsx), [api/invoices/route.ts](app/api/invoices/route.ts), [ReservationDetail.tsx](app/dashboard/reservations/[id]/ReservationDetail.tsx) (×2), [SmartPaymentForm.tsx](app/dashboard/payments/new/SmartPaymentForm.tsx). Manager receivables/aging now also exclude DRAFT (no revenue posted).
 - **Verified (DB):** 78 billed invoices correctly overdue; 3 DRAFT past-due now excluded; 2 due-today now excluded.
 - **Status:** ✅ Fixed
+
+## Issue #52: Returns mutated the invoice + used the wrong rate → credit-note redesign
+- **Scenario:** 22 — **Severity:** **P1** (silent financial mutation)
+- **Symptoms:** (a) A daily return **reduced the invoice's `totalAmount`** (175→131) directly — opening the invoice gave no indication a return happened. (b) The return **re-priced the returned nights from the current price list (25/night)** via `getUnitPriceForRange`, not the rate the guest was actually charged (22/night `manual_override`, persisted on `reservationUnit.pricingSegments`). Monthly returns also **cancelled issued PENDING invoices** rather than crediting them.
+- **Fix (redesign):** ✅ Returns are now **credit-note transactions** that never change an invoice's total or line items:
+  - New `Invoice.creditedAmount`; `balanceDue = total − amountPaid − creditedAmount` (stored net). `getTenantFinancialSummary` subtracts `totalCredited`. Already-paid portions surface as over-payment refunded via the existing refund step. [invoice-engine.ts](lib/invoice-engine.ts), [return-engine.ts](lib/return-engine.ts).
+  - **Return Settings** page (Settings → Returns): `returnDraftPolicy` (CANCEL default / CREDIT), `returnBalancePolicy` (NET default / GROSS), `returnRateBasis` (CHARGED default / PRICE_LIST). [settings/returns](app/dashboard/settings/returns).
+  - Daily returns price from persisted `pricingSegments` under CHARGED (fixes 22-vs-25); manual override still wins.
+  - Monthly: DRAFT cancelled (CANCEL) or credited (CREDIT); issued/paid cycles credited (+ refund if paid), never silently cancelled.
+  - **Returns list** (`/dashboard/returns`) + **detail** (invoice-style) pages, nav entry, reservation cards link to detail, invoice detail shows "Credits applied (returns)".
+- **Status:** ✅ Built — pending collaborative re-test (Scenario 22/23).
 
 ## Issue #48: Payment auto-allocation crossed into other reservations (P1)
 - **Scenario:** 17A — **Severity:** **P1** (wrong financial linkage)

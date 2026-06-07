@@ -194,6 +194,15 @@ model Organization {
   /// credit), ALLOW (silent credit).
   overpaymentPolicy        String @default("WARN")
 
+  /// Return Settings (Settings → Returns). Returns are credit-note transactions that
+  /// never change an invoice's total/line items.
+  ///   returnDraftPolicy:   CANCEL (cancel unissued future DRAFT cycles) | CREDIT (keep + credit)
+  ///   returnBalancePolicy: NET (headline balance shows net of credits) | GROSS (show gross total + credit line)
+  ///   returnRateBasis:     CHARGED (rate the guest was charged, from pricingSegments) | PRICE_LIST (current price list)
+  returnDraftPolicy        String @default("CANCEL")
+  returnBalancePolicy      String @default("NET")
+  returnRateBasis          String @default("CHARGED")
+
   plan               String   @default("FREE")
   maxProperties      Int      @default(1)
   subscriptionStatus String   @default("ACTIVE")
@@ -600,6 +609,9 @@ model Invoice {
   taxAmount       Decimal       @default(0) @db.Decimal(10, 3)
   totalAmount     Decimal       @db.Decimal(10, 3)
   amountPaid      Decimal       @default(0) @db.Decimal(10, 3)
+  // Running sum of return credits applied to this invoice (credit-note model).
+  // totalAmount + line items are frozen; balanceDue = totalAmount - amountPaid - creditedAmount.
+  creditedAmount  Decimal       @default(0) @db.Decimal(10, 3)
   balanceDue      Decimal       @db.Decimal(10, 3)
 
   status          InvoiceStatus @default(DRAFT)

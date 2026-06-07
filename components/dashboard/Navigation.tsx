@@ -59,6 +59,7 @@ const navigationConfig: NavItem[] = [
     ],
   },
   { key: "invoices",     labelKey: "invoices",     href: "/dashboard/invoices" },
+  { key: "returns",      labelKey: "returns",      href: "/dashboard/returns" },
   {
     key:      "payments",
     labelKey: "payments",
@@ -95,6 +96,7 @@ const navigationConfig: NavItem[] = [
       { labelKey: "organization", href: "/dashboard/settings/organization" },
       { labelKey: "reservationSettings", href: "/dashboard/settings/reservations" },
       { labelKey: "paymentSettings", href: "/dashboard/settings/payments" },
+      { labelKey: "returnSettings", href: "/dashboard/settings/returns" },
       { labelKey: "unitSettings", href: "/dashboard/settings/units" },
     ],
   },

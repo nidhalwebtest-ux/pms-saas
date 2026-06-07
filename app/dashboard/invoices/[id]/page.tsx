@@ -140,6 +140,7 @@ export default async function InvoiceDetailPage({
 
   const totalAmount = Number(invoice.totalAmount);
   const amountPaid  = Number(invoice.amountPaid);
+  const creditedAmount = Number(invoice.creditedAmount);
   const balanceDue  = Number(invoice.balanceDue);
   const subtotal    = Number(invoice.subtotal);
   const discount    = Number(invoice.discountAmount);
@@ -357,6 +358,12 @@ export default async function InvoiceDetailPage({
                   <dt>{tDet("amountPaid")}</dt>
                   <dd className="ltr-numbers">−{amountPaid.toFixed(3)} OMR</dd>
                 </div>
+                {creditedAmount > 0 && (
+                  <div className="flex justify-between text-purple-700 font-medium">
+                    <dt>{tDet("creditsApplied")}</dt>
+                    <dd className="ltr-numbers">−{creditedAmount.toFixed(3)} OMR</dd>
+                  </div>
+                )}
                 <div className={`flex justify-between font-bold text-base ${balanceDue > 0 ? "text-red-600" : "text-green-700"}`}>
                   <dt>{tDet("balanceDue")}</dt>
                   <dd className="ltr-numbers">{balanceDue.toFixed(3)} OMR</dd>

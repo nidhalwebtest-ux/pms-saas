@@ -2412,7 +2412,12 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
                       {/* Header row */}
                       <div className="flex items-start justify-between gap-2 flex-wrap">
                         <div>
-                          <span className="font-mono font-bold text-purple-800 text-sm ltr-numbers">{ret.returnNumber}</span>
+                          <Link
+                            href={`/dashboard/returns/${ret.id}`}
+                            className="font-mono font-bold text-purple-800 text-sm ltr-numbers hover:underline"
+                          >
+                            {ret.returnNumber}
+                          </Link>
                           <span className="ms-2 text-sm text-gray-600 ltr-numbers">
                             {fmtDate(ret.returnFrom)} → {fmtDate(ret.returnTo)}
                             {" "}({ret.returnDays} {ret.returnType === "MONTHLY" ? t("returnModal.monthsLabel") : t("returnModal.nightsLabel")})

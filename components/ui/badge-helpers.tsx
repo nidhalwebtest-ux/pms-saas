@@ -184,6 +184,37 @@ export function resolveInvoiceBadge(
 }
 
 /* ----------------------------------------------------------------------------
+ *  Return statuses (credit-note transactions)
+ *  Keyed by refund state, with a cancelled override.
+ * ------------------------------------------------------------------------- */
+
+export type ReturnStatusKey =
+  | "active"          // no refund needed
+  | "refundPending"
+  | "refunded"
+  | "cancelled";
+
+export function getReturnStatusBadge(key: ReturnStatusKey): BadgeVariantProps {
+  switch (key) {
+    case "active":        return { tone: "success", appearance: "subtle", dot: true };
+    case "refundPending": return { tone: "warning", appearance: "subtle", dot: true };
+    case "refunded":      return { tone: "info",    appearance: "subtle", dot: true };
+    case "cancelled":     return { tone: "neutral", appearance: "subtle", strikethrough: true };
+  }
+}
+
+/** Map a return's status + refundStatus → badge key. */
+export function returnStatusKey(
+  status: string,
+  refundStatus: string,
+): ReturnStatusKey {
+  if (status === "cancelled") return "cancelled";
+  if (refundStatus === "COMPLETED") return "refunded";
+  if (refundStatus === "PENDING")   return "refundPending";
+  return "active";
+}
+
+/* ----------------------------------------------------------------------------
  *  Unit statuses (per user decisions 2/3/4: spec colors win)
  * ------------------------------------------------------------------------- */
 

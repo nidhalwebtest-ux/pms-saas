@@ -42,6 +42,17 @@
 
 > Stretch (21+): early-checkout proration (current period full, future cycles cancelled), overstay invoice, returns/refunds.
 
+## Category D — Stretch: early checkout, returns, refunds, overstay (Plan)
+
+> Mechanism: early checkout = the **Return Days** flow (lib/return-engine.ts), not the plain checkout. Daily returns remaining nights; monthly returns whole future cycles (current period never prorated). Refund is a separate manager step (negative `isRefund` payment).
+
+| # | Scenario | Result | Key checks |
+|---|----------|--------|-----------|
+| 21 | Monthly early checkout / return | ✅ Pass | A: current period rejected (earliest = next cycle). B: RESNOOR-2026-00012 returned Jul cycle → INV-016 CANCELLED, INV-015 kept, RET-2026-00001 (600, no refund) |
+| 22 | Daily early checkout / return | 🔧 Reworked | Original test exposed two issues → returns redesigned as **credit-note transactions** (#52). Re-test pending. |
+| 23 | Refund processing | ⏳ Pending | PAID return → refund posts negative isRefund payment; return → COMPLETED; excluded/handled in financials |
+| 24 | Overstay charge | ⏳ Pending | Verify whether a separate OVERSTAY invoice is created (CLAUDE.md rule) vs. only a reservation adjustment/charge |
+
 ---
 
 ## Progress
@@ -49,6 +60,13 @@
 - **Scenarios completed:** Categories A & B (10/10) · **Category C 9/10** (only #18 receipt PDF deferred to the PDF pass)
 - **Issues found:** 51 (A/B: #1–31 · C: #32–51)
 - Category C scenarios: 11✅ 12✅ 13✅ 14✅ 15✅ 16✅ 17✅ 18⏸(deferred) 19✅ 20✅
+
+### Returns redesigned as credit-note transactions (#52)
+Scenario 22 surfaced two problems: (1) a return **silently reduced the invoice total** (175→131) with no trace on the invoice; (2) the daily return **re-priced from the price list (25)** instead of the rate the guest was charged (22, `manual_override`). Reworked returns into a credit-note model:
+- A return **never** changes an invoice's total/line items. It applies the full returned value as a credit (`Invoice.creditedAmount`); `balanceDue = total − paid − credited` (stored net). Already-paid portions surface as an over-payment refunded via the existing refund step. Tenant financial summary subtracts `totalCredited`.
+- New **Return Settings** page (`settings/returns`): `returnDraftPolicy` (CANCEL default — cancel unissued future monthly DRAFT cycles; CREDIT keeps + credits), `returnBalancePolicy` (NET default / GROSS), `returnRateBasis` (CHARGED default — from persisted `pricingSegments`; PRICE_LIST).
+- New **Returns list** (`/dashboard/returns`) + **detail** (`/dashboard/returns/[id]`) pages (invoice-style), nav entry, reservation return cards link to detail, invoice detail shows a "Credits applied (returns)" line.
+- Monthly: DRAFT cancelled (CANCEL) or credited (CREDIT); issued/paid cycles credited (+ refund if paid) instead of cancelled.
 
 ### Scenario 17 notes (Manual allocation — #48/#50 confirmed)
 - **RESNOOR-2026-00011** (Nidhal Ghdiri, Unit 14 @ Al Noor Residence). Started with INV-013 & INV-014 both PARTIALLY_PAID, bal 300 each.

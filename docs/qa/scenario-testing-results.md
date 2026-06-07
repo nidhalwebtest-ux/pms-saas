@@ -35,7 +35,7 @@
 | 14 | Invoice for the Khareef reservation | ✅ Pass | Line items mirror persisted segments — the #28 payoff. RESNOOR-2026-00017: 3×45 + 1×25 = 160; INV-2026-00022 has matching Khareef/Default lines |
 | 15 | Record a full payment | ✅ PASS | full→PAID, allocation created, balance 0 |
 | 16 | Record a partial payment | ✅ PASS (after fixes) | partial→PARTIALLY_PAID. Fixed #46 (balance column), #47 (overpayment policy + Payment Settings) |
-| 17 | Manual allocation across multiple invoices | ⏳ Pending | Oldest-first auto vs manual selection |
+| 17 | Manual allocation across multiple invoices | ✅ Pass | RESNOOR-2026-00011: manual cap (400→300), under-allocation→100 credit (WARN), auto oldest-first scoped to reservation. Confirms #48/#50 |
 | 18 | Payment receipt PDF | ⏳ Pending | Bilingual, correct totals |
 | 19 | Overdue calculation | ✅ Pass (after fix) | Calculated, never stored. Found+fixed #51 (inconsistent rule: DRAFT counted, "due today" flagged, missing PENDING) — unified to one canonical rule across 7 call sites |
 | 20 | Cancel invoice / cancel-reservation guard | ✅ Pass | Cancel blocked only if invoices have payments; unpaid DRAFT/PENDING auto-cancelled & excluded from financials. Rule clarified in CLAUDE.md |
@@ -46,9 +46,17 @@
 
 ## Progress
 
-- **Scenarios completed:** 10 / 10 — **TODAY'S TARGET REACHED · Categories A & B COMPLETE**
-- **Issues found:** 28
-- **P0:** 0 · **P1:** 6 · **P2:** 16 · **P3:** 6
+- **Scenarios completed:** Categories A & B (10/10) · **Category C 9/10** (only #18 receipt PDF deferred to the PDF pass)
+- **Issues found:** 51 (A/B: #1–31 · C: #32–51)
+- Category C scenarios: 11✅ 12✅ 13✅ 14✅ 15✅ 16✅ 17✅ 18⏸(deferred) 19✅ 20✅
+
+### Scenario 17 notes (Manual allocation — #48/#50 confirmed)
+- **RESNOOR-2026-00011** (Nidhal Ghdiri, Unit 14 @ Al Noor Residence). Started with INV-013 & INV-014 both PARTIALLY_PAID, bal 300 each.
+- **Manual cap:** payment 500 → typed 400 into INV-013 (bal 300) → clamped to **300**; 100 into INV-014. ✅
+- **Under-allocation → credit:** 400 of the 500 allocated, **100 left as unapplied credit** (WARN policy allowed save, not blocked). ✅
+- **Auto oldest-first, scoped:** payment 200 auto-allocated entirely to INV-014 (the remaining open invoice); no bleed to other reservations. ✅
+- Final: INV-013 & INV-014 both PAID. DB totals: payments 700 (new), allocations 600, credit 100.
+- *Historical note:* an older 900 payment (pre-#48-fix) is still in the data allocated across INV-011/INV-015 (other reservations) — that's the original #48 bug captured before the fix, not a regression.
 
 ### Scenario 14 notes (Khareef invoice — #28 payoff, clean pass)
 - **RESNOOR-2026-00017** (Unit 6, Al Noor Residence, DAILY, 2026-08-29→2026-09-02): segments persisted as 3 nights @ 45 (Khareef 2026 seasonal) + 1 night @ 25 (default), total **160.000 OMR**.

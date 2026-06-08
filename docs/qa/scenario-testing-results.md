@@ -51,7 +51,7 @@
 | 21 | Monthly early checkout / return | ✅ Pass | A: current period rejected (earliest = next cycle). B: RESNOOR-2026-00012 returned Jul cycle → INV-016 CANCELLED, INV-015 kept, RET-2026-00001 (600, no refund) |
 | 22 | Daily early checkout / return | ✅ Pass | Credit-note model (#52). RESNOOR-2026-00018: invoice total frozen 154, credit 44 @ 22/night (not 25), balance 110, RET-2026-00003, no refund. Credit-only invoice stays PENDING. |
 | 23 | Refund processing | ✅ Pass | Refund on a paid return posts a negative isRefund payment (D57EBB10); ledger nets to 0. Also fixed #53 (returns missing from tenant ledger). |
-| 24 | Extend Stay (overstay not charged per decision) | 🔧 Fixed, re-test | Modal clean; dates/availability/pricing correct. Found #54 (extension left extra nights uninvoiced) → now creates an ADDITIONAL invoice for the extension period. |
+| 24 | Extend Stay (overstay not charged per decision) | ✅ Pass | RESNOOR-2026-00021: base INV-00025 (125) + ADDITIONAL INV-00026 (75, Jun13–16); grand 200, invoice balances sum to 200. #54 fixed. Note: surfaced lingering CHECKED_IN test data blocking many units. |
 
 ---
 

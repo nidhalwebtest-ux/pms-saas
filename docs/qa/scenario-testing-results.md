@@ -57,6 +57,9 @@
 
 ## Responsive / mobile pass
 - **Core nav + layout** — ✅ verified on device. Fixed: top-nav dropdowns were hover-only → unreachable on touch; now open on tap (#55). Header/property-selector/shell padding already responsive.
+- **List pages (tables)** — ✅ audited; already responsive. Shared DataTable swaps to a mobile card view (<768px); FilterBar collapses advanced filters into a drawer (<1024px) with scrollable quick tabs. All 5 lists use it. No changes.
+- **Detail + modals** — ✅ audited. Fixed: reservation-detail invoices table (7 cols) now scrolls on mobile (#56). Detail pages use grid-cols-1 lg:grid-cols-3 (stack); all action modals use shared <Modal> → full-width bottom-sheet < sm.
+- **Forms** — ✅ audited; already responsive. Standardized FormComponents (grid-cols-1 → sm:grid-cols-6), settings single-column, booking engine grids collapse + scrollable step nav. No changes.
 
 ## Progress
 

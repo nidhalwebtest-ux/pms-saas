@@ -2142,8 +2142,8 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
               ) : res.invoices.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-2">{tInvoices("noneFound")}</p>
               ) : (
-                <div>
-                  <table className="w-full text-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[560px] text-sm">
                     <thead>
                       <tr className="text-xs text-gray-400 border-b border-gray-100">
                         <th className="text-start pb-2 font-medium">{tInvoices("table.invoice")}</th>

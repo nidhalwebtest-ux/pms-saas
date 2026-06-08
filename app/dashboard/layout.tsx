@@ -52,7 +52,7 @@ export default async function DashboardLayout({
        * child can never push the viewport wider than the window — that
        * was breaking modal sizing and forcing horizontal scroll on mobile.
        */}
-      <div className="min-h-screen bg-gray-50 overflow-x-hidden">
+      <div className="min-h-screen bg-gray-100 overflow-x-hidden">
         {/* Global navigation progress bar */}
         <NavigationProgress />
 

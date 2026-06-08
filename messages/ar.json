@@ -1475,7 +1475,8 @@
       "types": {
         "invoice": "فاتورة",
         "payment": "دفعة",
-        "return": "استرداد"
+        "return": "مرتجع",
+        "refund": "استرداد"
       },
       "empty": {
         "title": "لا توجد معاملات",
@@ -3798,6 +3799,7 @@
       "types": {
         "Invoice": "فاتورة",
         "Payment": "دفعة",
+        "Return": "مرتجع",
         "Refund": "استرداد"
       },
       "month": "الشهر {n}",

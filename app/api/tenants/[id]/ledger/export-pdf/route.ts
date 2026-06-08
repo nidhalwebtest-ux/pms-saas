@@ -40,7 +40,7 @@ export async function GET(
   const dateGte = dateFrom ? new Date(dateFrom) : undefined;
   const dateLte = dateTo   ? new Date(new Date(dateTo).setHours(23, 59, 59, 999)) : undefined;
 
-  const [invoices, payments, refunds] = await Promise.all([
+  const [invoices, payments, refunds, returns] = await Promise.all([
     prisma.invoice.findMany({
       where: {
         tenantId,
@@ -75,6 +75,16 @@ export async function GET(
       select: { id: true, paymentNumber: true, amount: true, date: true, method: true, reference: true },
       orderBy: { date: "asc" },
     }),
+    prisma.return.findMany({
+      where: {
+        tenantId,
+        organizationId: orgUser.organizationId,
+        status: "active",
+        ...(dateGte || dateLte ? { createdAt: { ...(dateGte ? { gte: dateGte } : {}), ...(dateLte ? { lte: dateLte } : {}) } } : {}),
+      },
+      select: { id: true, returnNumber: true, returnAmount: true, createdAt: true },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
 
   // ── i18n ──────────────────────────────────────────────────────────────────
@@ -91,7 +101,7 @@ export async function GET(
 
   // Build transactions
   type TxRow = {
-    date: Date; type: "Invoice" | "Payment" | "Refund";
+    date: Date; type: "Invoice" | "Payment" | "Return" | "Refund";
     description: string; reference: string;
     debit: number; credit: number; balance: number;
   };
@@ -125,6 +135,17 @@ export async function GET(
     });
   }
 
+  for (const ret of returns) {
+    rows.push({
+      date:        ret.createdAt,
+      type:        "Return",
+      description: ret.returnNumber,
+      reference:   ret.returnNumber,
+      debit:       0,
+      credit:      roundOMR(Number(ret.returnAmount)),
+    });
+  }
+
   for (const ref of refunds) {
     const num = ref.paymentNumber ?? ref.id.slice(0, 8).toUpperCase();
     rows.push({
@@ -139,18 +160,20 @@ export async function GET(
 
   rows.sort((a, b) => a.date.getTime() - b.date.getTime());
 
+  // Running balance (AR view): debit increases, credit decreases.
   let balance = 0;
   const finalRows: TxRow[] = rows.map((row) => {
-    if (row.type === "Invoice" || row.type === "Refund") balance = roundOMR(balance + row.debit);
-    else balance = roundOMR(balance - row.credit);
+    balance = roundOMR(balance + row.debit - row.credit);
     return { ...row, balance };
   });
 
   // Summaries
   const totalCharged  = roundOMR(invoices.reduce((s, i) => s + Number(i.totalAmount), 0));
   const totalPaid     = roundOMR(payments.reduce((s, p) => s + Number(p.amount), 0));
-  const totalReturned = roundOMR(refunds.reduce((s, r) => s + Number(r.amount), 0));
-  const currentBalance = roundOMR(totalCharged - totalPaid + totalReturned);
+  const totalCredited = roundOMR(returns.reduce((s, r) => s + Number(r.returnAmount), 0));
+  const totalRefunded = roundOMR(refunds.reduce((s, r) => s + Number(r.amount), 0));
+  const totalReturned = totalCredited;
+  const currentBalance = roundOMR(totalCharged - totalCredited - totalPaid + totalRefunded);
 
   const tenantName     = `${tenant.firstName} ${tenant.lastName}`;
   const tenantNameAr   = tenant.fullNameArabic ?? "";
@@ -348,7 +371,8 @@ export async function GET(
   }
   .badge-invoice { background: #dbeafe; color: #1d4ed8; }
   .badge-payment { background: #dcfce7; color: #15803d; }
-  .badge-refund  { background: #fef3c7; color: #92400e; }
+  .badge-return  { background: #fef3c7; color: #92400e; }
+  .badge-refund  { background: #ffe4e6; color: #9f1239; }
 
   .debit  { color: #dc2626; font-weight: 600; }
   .credit { color: #16a34a; font-weight: 600; }

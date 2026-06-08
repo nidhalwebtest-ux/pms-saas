@@ -24,7 +24,7 @@ import {
 interface LedgerEntry {
   id: string;
   date: string;
-  type: "invoice" | "payment" | "return";
+  type: "invoice" | "payment" | "return" | "refund";
   description: string;
   debit: number;
   credit: number;
@@ -38,6 +38,7 @@ interface LedgerSummary {
   totalCharged: number;
   totalPaid: number;
   totalReturned: number;
+  totalRefunded?: number;
   currentBalance: number;
   invoiceCount: number;
   paymentCount: number;
@@ -58,6 +59,7 @@ const TYPE_STYLE = {
   invoice: { bg: "bg-blue-100",    text: "text-blue-800",    dot: "bg-blue-500" },
   payment: { bg: "bg-emerald-100", text: "text-emerald-800", dot: "bg-emerald-500" },
   return:  { bg: "bg-amber-100",   text: "text-amber-800",   dot: "bg-amber-500" },
+  refund:  { bg: "bg-rose-100",    text: "text-rose-800",    dot: "bg-rose-500" },
 } as const;
 
 // ── Skeleton ──────────────────────────────────────────────────────────────────
@@ -124,15 +126,19 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
     all:      transactions.length,
     invoices: transactions.filter((r) => r.type === "invoice").length,
     payments: transactions.filter((r) => r.type === "payment").length,
-    returns:  transactions.filter((r) => r.type === "return").length,
+    returns:  transactions.filter((r) => r.type === "return" || r.type === "refund").length,
   }), [transactions]);
 
   // ── Client-side filtering ─────────────────────────────────────────────
   const filtered = useMemo(() => {
     let rows = transactions;
     if (typeFilter !== "all") {
-      const map = { invoices: "invoice", payments: "payment", returns: "return" } as const;
-      rows = rows.filter((r) => r.type === map[typeFilter]);
+      if (typeFilter === "returns") {
+        rows = rows.filter((r) => r.type === "return" || r.type === "refund");
+      } else {
+        const map = { invoices: "invoice", payments: "payment" } as const;
+        rows = rows.filter((r) => r.type === map[typeFilter]);
+      }
     }
     if (dateFrom) {
       const from = new Date(dateFrom);
@@ -149,8 +155,8 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
   const hasFilters = typeFilter !== "all" || dateFrom || dateTo;
 
   const footerTotals = useMemo(() => ({
-    charges:  filtered.filter((r) => r.type === "invoice").reduce((s, r) => s + r.debit, 0),
-    paid:     filtered.filter((r) => r.type === "payment").reduce((s, r) => s + r.credit, 0),
+    charges:  filtered.reduce((s, r) => s + r.debit, 0),
+    paid:     filtered.reduce((s, r) => s + r.credit, 0),
     returned: filtered.filter((r) => r.type === "return").reduce((s, r) => s + r.credit, 0),
   }), [filtered]);
 
@@ -480,6 +486,8 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
                           href={
                             row.type === "invoice"
                               ? `/dashboard/invoices/${row.referenceId}`
+                              : row.type === "return"
+                              ? `/dashboard/returns/${row.referenceId}`
                               : `/dashboard/payments/${row.referenceId}`
                           }
                           className="font-medium text-gray-800 hover:text-blue-600 transition-colors"

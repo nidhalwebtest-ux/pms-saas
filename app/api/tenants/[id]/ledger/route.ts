@@ -126,11 +126,37 @@ export async function GET(
     orderBy: { date: "asc" },
   });
 
+  // 3b. Fetch return credit notes (reduce what the tenant owes; credit-note model)
+  const returnDateFilter: Record<string, unknown> = {};
+  if (dateFrom || dateTo) {
+    returnDateFilter.createdAt = {
+      ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+      ...(dateTo   ? { lte: new Date(dateTo)   } : {}),
+    };
+  }
+  const returns = await prisma.return.findMany({
+    where: {
+      tenantId,
+      organizationId: orgUser.organizationId,
+      status: "active",
+      ...returnDateFilter,
+      ...reservationFilter,
+    },
+    select: {
+      id: true,
+      returnNumber: true,
+      returnAmount: true,
+      createdAt: true,
+      reservationId: true,
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
   // 4. Build transaction array
   type LedgerEntry = {
     id: string;
     date: string;
-    type: "invoice" | "payment" | "return";
+    type: "invoice" | "payment" | "return" | "refund";
     description: string;
     debit: number;
     credit: number;
@@ -176,12 +202,28 @@ export async function GET(
     });
   }
 
+  // Return credit notes — CR, reduce what the tenant owes (invoice untouched).
+  for (const ret of returns) {
+    transactions.push({
+      id: `ret-${ret.id}`,
+      date: ret.createdAt.toISOString(),
+      type: "return",
+      description: `Return ${ret.returnNumber}`,
+      debit: 0,
+      credit: roundOMR(Number(ret.returnAmount)),
+      referenceId: ret.id,
+      referenceNumber: ret.returnNumber,
+      reservationId: ret.reservationId ?? null,
+    });
+  }
+
+  // Refunds — DR, cash returned to the tenant (settles an over-payment/credit).
   for (const ref of refunds) {
     const num = ref.paymentNumber ?? ref.id.slice(0, 8).toUpperCase();
     transactions.push({
-      id: `ret-${ref.id}`,
+      id: `ref-${ref.id}`,
       date: ref.date.toISOString(),
-      type: "return",
+      type: "refund",
       description: `Refund ${num}`,
       debit: roundOMR(Number(ref.amount)),
       credit: 0,
@@ -194,40 +236,38 @@ export async function GET(
   // 5. Sort by date ascending
   transactions.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  // 6. Calculate running balance
+  // 6. Running balance (accounts-receivable view): debit increases what the
+  // tenant owes, credit decreases it. balance += debit − credit.
   let balance = 0;
   for (const tx of transactions) {
-    if (tx.type === "invoice") {
-      balance = roundOMR(balance + tx.debit);
-    } else if (tx.type === "payment") {
-      balance = roundOMR(balance - tx.credit);
-    } else {
-      // return/refund
-      balance = roundOMR(balance + tx.debit);
-    }
+    balance = roundOMR(balance + tx.debit - tx.credit);
     tx.runningBalance = balance;
   }
 
   // Summary (before type filtering)
   const totalCharged  = roundOMR(invoices.reduce((s, i) => s + Number(i.totalAmount), 0));
   const totalPaid     = roundOMR(payments.reduce((s, p) => s + Number(p.amount), 0));
-  const totalReturned = roundOMR(refunds.reduce((s, r) => s + Number(r.amount), 0));
-  const currentBalance = roundOMR(totalCharged - totalPaid + totalReturned);
+  const totalCredited = roundOMR(returns.reduce((s, r) => s + Number(r.returnAmount), 0));
+  const totalRefunded = roundOMR(refunds.reduce((s, r) => s + Number(r.amount), 0));
+  // Net owed = charges − return credits − cash paid + cash refunded.
+  const currentBalance = roundOMR(totalCharged - totalCredited - totalPaid + totalRefunded);
 
   const summary = {
     totalCharged,
     totalPaid,
-    totalReturned,
+    // "Returned" card = return credit notes issued to the tenant.
+    totalReturned: totalCredited,
+    totalRefunded,
     currentBalance,
     invoiceCount: invoices.length,
     paymentCount: payments.length,
   };
 
-  // Apply type filter
+  // Apply type filter ("returns" tab shows both return credits and refunds)
   let filtered = transactions;
   if (typeFilter === "invoices")  filtered = transactions.filter((t) => t.type === "invoice");
   if (typeFilter === "payments")  filtered = transactions.filter((t) => t.type === "payment");
-  if (typeFilter === "returns")   filtered = transactions.filter((t) => t.type === "return");
+  if (typeFilter === "returns")   filtered = transactions.filter((t) => t.type === "return" || t.type === "refund");
 
   // 8. Reverse to newest-first before returning
   const reversed = [...filtered].reverse();

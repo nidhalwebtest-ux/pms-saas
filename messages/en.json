@@ -1475,7 +1475,8 @@
       "types": {
         "invoice": "Invoice",
         "payment": "Payment",
-        "return": "Refund"
+        "return": "Return",
+        "refund": "Refund"
       },
       "empty": {
         "title": "No transactions found",
@@ -3798,6 +3799,7 @@
       "types": {
         "Invoice": "Invoice",
         "Payment": "Payment",
+        "Return": "Return",
         "Refund": "Refund"
       },
       "month": "Month {n}",

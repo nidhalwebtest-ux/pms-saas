@@ -2112,7 +2112,7 @@
         "paidRefundMsg": "→ Invoice stays PAID. Refund of {amount} OMR required.",
         "cancelMsg": "→ This invoice will be CANCELLED (unpaid, full period returned)",
         "refundRequiredMsg": "Refund of <b>{amount} OMR</b> is required. You can process it after the return.",
-        "noRefundMsg": "No refund required — invoice was not paid.",
+        "noRefundMsg": "No refund required — nothing was overpaid for the returned period.",
         "reasonLabel": "Reason",
         "selectReason": "Select reason…",
         "notesLabel": "Notes (optional)",

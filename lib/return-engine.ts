@@ -293,10 +293,14 @@ export async function previewDailyReturn(params: {
   if (invoice) {
     const paid     = roundOMR(Number(invoice.amountPaid));
     const total    = roundOMR(Number(invoice.totalAmount));
-    const newTotal = roundOMR(total - returnAmount);
+    const credited = roundOMR(Number(invoice.creditedAmount));
+    // Effective charge once THIS return's credit is also applied. Must subtract
+    // credits already applied by prior returns, else a second return on an
+    // already-paid invoice under-detects the refund.
+    const newEffective = roundOMR(total - credited - returnAmount);
 
-    // Refund needed if paid > new effective total
-    const refundNeeded = roundOMR(Math.max(0, paid - newTotal));
+    // Refund needed when cash paid now exceeds the remaining effective charge.
+    const refundNeeded = roundOMR(Math.max(0, paid - newEffective));
     if (refundNeeded > 0) {
       refundRequired = true;
       refundAmount   = refundNeeded;

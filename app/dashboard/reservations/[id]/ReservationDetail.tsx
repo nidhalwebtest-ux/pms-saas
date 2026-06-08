@@ -1458,8 +1458,6 @@ function ReturnModal({ res, onSuccess, onClose }: {
           />
         </div>
 
-        <Alert variant="warning" size="sm" description={t("warning")} />
-
         <button
           onClick={handleConfirm}
           disabled={loading || !preview || !!previewError || !reason}

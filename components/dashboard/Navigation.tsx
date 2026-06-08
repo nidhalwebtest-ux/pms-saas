@@ -120,6 +120,9 @@ export default function Navigation({ role }: { role: Role }) {
   // Stored in logical (start) units; rendered as `left` in LTR and `right` in RTL.
   const [panelStart, setPanelStart] = useState(0);
   const [isRTL, setIsRTL] = useState(false);
+  // True once the user interacts via touch — lets us skip the synthetic
+  // mouseenter a tap fires (which would otherwise fight the click toggle).
+  const touchRef = useRef(false);
 
   useEffect(() => {
     const update = () => setIsRTL(document.documentElement.dir === "rtl");
@@ -145,18 +148,28 @@ export default function Navigation({ role }: { role: Role }) {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  function handleTriggerEnter(key: string, btn: HTMLElement) {
+  function computePanelStart(btn: HTMLElement) {
     const navEl = navRef.current;
-    if (navEl) {
-      const btnRect = btn.getBoundingClientRect();
-      const navRect = navEl.getBoundingClientRect();
-      // In RTL the inline-start edge of the panel is the right edge of the trigger.
-      const offset = isRTL
-        ? navRect.right - btnRect.right
-        : btnRect.left - navRect.left;
-      setPanelStart(offset);
-    }
+    if (!navEl) return;
+    const btnRect = btn.getBoundingClientRect();
+    const navRect = navEl.getBoundingClientRect();
+    // In RTL the inline-start edge of the panel is the right edge of the trigger.
+    setPanelStart(isRTL ? navRect.right - btnRect.right : btnRect.left - navRect.left);
+  }
+
+  // Desktop hover-open (skipped on touch — a tap fires a synthetic mouseenter
+  // that would otherwise reopen what the click just toggled closed).
+  function handleTriggerEnter(key: string, btn: HTMLElement) {
+    if (touchRef.current) return;
+    computePanelStart(btn);
     setOpenKey(key);
+    setOpenSub(null);
+  }
+
+  // Tap / click toggle — the primary way to open a menu on touch devices.
+  function handleTriggerClick(key: string, btn: HTMLElement) {
+    computePanelStart(btn);
+    setOpenKey((cur) => (cur === key ? null : key));
     setOpenSub(null);
   }
 
@@ -210,7 +223,10 @@ export default function Navigation({ role }: { role: Role }) {
               <button
                 key={item.key}
                 type="button"
+                onTouchStart={() => { touchRef.current = true; }}
                 onMouseEnter={(e) => handleTriggerEnter(item.key, e.currentTarget)}
+                onClick={(e) => handleTriggerClick(item.key, e.currentTarget)}
+                aria-expanded={openKey === item.key}
                 className={baseTabCls}
               >
                 {t(item.labelKey)}

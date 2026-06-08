@@ -65,6 +65,7 @@
 | 51 | Overdue calculation inconsistent across pages (DRAFT counted; "due today" flagged) | 19 | P2 | ✅ Fixed |
 | 52 | Returns silently mutated the invoice + wrong rate → redesign as credit-note transactions | 22 | **P1** | ✅ Fixed |
 | 53 | Return credit notes missing from tenant ledger → wrong balance + refund mislabeled | 23 | **P1** | ✅ Fixed |
+| 54 | Extend Stay didn't bill the extra nights (no invoice for extension) | 24 | **P1** | ✅ Fixed |
 
 ---
 
@@ -97,6 +98,12 @@
   - Monthly: DRAFT cancelled (CANCEL) or credited (CREDIT); issued/paid cycles credited (+ refund if paid), never silently cancelled.
   - **Returns list** (`/dashboard/returns`) + **detail** (invoice-style) pages, nav entry, reservation cards link to detail, invoice detail shows "Credits applied (returns)".
 - **Status:** ✅ Built — pending collaborative re-test (Scenario 22/23).
+
+## Issue #54: Extend Stay left the extra nights uninvoiced
+- **Scenario:** 24 (Extend Stay) — **Severity:** **P1** (revenue not billed)
+- **Symptom:** Extending a daily stay (Unit 9, +3 nights) updated the reservation to 8 nights / grand total 200, but the only invoice stayed at 125 and the reservation balance showed 125 — the 3 extra nights were never billed.
+- **Fix:** ✅ On extension, when the reservation already has issued invoices, create a dedicated **ADDITIONAL** invoice for the extension period `[originalEnd, newCheckout)` with per-unit line items (`quantity × rate = additional subtotal`). Any payment collected in the extend modal is allocated to the new invoice. If no invoice exists yet, the normal Generate Invoices still covers the full extended stay. [extend/route.ts](app/api/reservations/[id]/extend/route.ts).
+- **Status:** ✅ Fixed — pending collaborative re-test.
 
 ## Issue #53: Return credit notes missing from tenant ledger
 - **Scenario:** 23 — **Severity:** **P1** (wrong tenant balance)

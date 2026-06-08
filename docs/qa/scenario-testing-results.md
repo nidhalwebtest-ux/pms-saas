@@ -55,6 +55,9 @@
 
 ---
 
+## Responsive / mobile pass
+- **Core nav + layout** — ✅ verified on device. Fixed: top-nav dropdowns were hover-only → unreachable on touch; now open on tap (#55). Header/property-selector/shell padding already responsive.
+
 ## Progress
 
 - **Scenarios completed:** Categories A & B (10/10) · **Category C 9/10** (only #18 receipt PDF deferred to the PDF pass)

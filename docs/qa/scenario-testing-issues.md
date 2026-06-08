@@ -63,7 +63,8 @@
 | 49 | New Payment: tenant dropdown clipped; Payments nav needs List/Record dropdown | 17 | P2 | ✅ Fixed |
 | 50 | Manual allocation: allow under-allocation (rest = credit) + cap each entry to invoice balance | 17 | P2 | ✅ Fixed |
 | 51 | Overdue calculation inconsistent across pages (DRAFT counted; "due today" flagged) | 19 | P2 | ✅ Fixed |
-| 52 | Returns silently mutated the invoice + wrong rate → redesign as credit-note transactions | 22 | **P1** | ✅ Built |
+| 52 | Returns silently mutated the invoice + wrong rate → redesign as credit-note transactions | 22 | **P1** | ✅ Fixed |
+| 53 | Return credit notes missing from tenant ledger → wrong balance + refund mislabeled | 23 | **P1** | ✅ Fixed |
 
 ---
 
@@ -96,6 +97,13 @@
   - Monthly: DRAFT cancelled (CANCEL) or credited (CREDIT); issued/paid cycles credited (+ refund if paid), never silently cancelled.
   - **Returns list** (`/dashboard/returns`) + **detail** (invoice-style) pages, nav entry, reservation cards link to detail, invoice detail shows "Credits applied (returns)".
 - **Status:** ✅ Built — pending collaborative re-test (Scenario 22/23).
+
+## Issue #53: Return credit notes missing from tenant ledger
+- **Scenario:** 23 — **Severity:** **P1** (wrong tenant balance)
+- **Symptom:** The Tenant Statement built rows from invoices + payments + refunds but **never the `Return` credit notes**, so credits that reduce what the tenant owes weren't posted and the running balance ended wrong (88 instead of 0). Refunds were also mislabeled as type "return" with a debit.
+- **Fix:** ✅ Returns now post as **CREDIT** entries (type "return"); refunds are their own type "refund" (**DEBIT**, cash returned). Running balance = `balance + debit − credit`. Summary `currentBalance = charged − returnCredits − paid + refunded`. Same correction in the Excel + PDF exports; frontend gains a "refund" type style/label, the Returns tab shows returns + refunds, and return rows link to `/dashboard/returns/[id]`. [ledger route](app/api/tenants/[id]/ledger/route.ts), [TenantLedger.tsx](app/dashboard/tenants/[id]/TenantLedger.tsx).
+- **Verified (DB):** RESNOOR-2026-00018 ledger nets to 0 (154 − 44 − 110 − 44 + 44).
+- **Status:** ✅ Fixed
 
 ## Issue #48: Payment auto-allocation crossed into other reservations (P1)
 - **Scenario:** 17A — **Severity:** **P1** (wrong financial linkage)

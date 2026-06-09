@@ -87,9 +87,9 @@ function Chevron({ open, onClick }: { open: boolean; onClick: () => void }) {
 
 // ── Filter dropdown ─────────────────────────────────────────────────────────
 function FilterControl({
-  label, value, options, onChange, icon, active,
+  label, value, display, options, onChange, icon, active, span2,
 }: {
-  label: string; value: string; options: string[]; onChange: (v: string) => void; icon?: React.ReactNode; active?: boolean;
+  label: string; value: string; display?: string; options: string[]; onChange: (v: string) => void; icon?: React.ReactNode; active?: boolean; span2?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -100,12 +100,12 @@ function FilterControl({
     return () => document.removeEventListener("mousedown", h);
   }, [open]);
   return (
-    <div className="fpanel-field">
+    <div className={`fpanel-field${span2 ? " span-2" : ""}`}>
       <span className="fpanel-label">{label}</span>
       <div className="rdrop" ref={ref}>
         <button type="button" className={`fpanel-control${active ? " is-active" : ""}`} onClick={() => setOpen((v) => !v)}>
           {icon}
-          <span>{value}</span>
+          <span>{display ?? value}</span>
           <svg className="ic-xs chev"><use href="#i-chev-down" /></svg>
         </button>
         {open && (
@@ -143,8 +143,14 @@ export default function RevenueByBuilding() {
   const [compare, setCompare] = useState("Q1 2025");
   const [unitType, setUnitType] = useState("All types");
   const [status, setStatus] = useState("Confirmed + checked-in");
+  const [buildings, setBuildings] = useState("All buildings");
 
-  const dateRange = PRESETS.find((p) => p.key === preset)?.range ?? "Custom";
+  const presetLabel = PRESETS.find((p) => p.key === preset)?.label ?? "Custom…";
+  const dateRange = PRESETS.find((p) => p.key === preset)?.range ?? "Custom range";
+  const setPresetByLabel = (label: string) => {
+    const p = PRESETS.find((x) => x.label === label);
+    setPreset(p ? p.key : "custom");
+  };
 
   function applyLevel(l: typeof level) {
     setLevel(l);
@@ -203,21 +209,21 @@ export default function RevenueByBuilding() {
         </div>
         <div className="fpanel-body">
           <div className="fpanel-grid">
-            <div className="fpanel-field span-2">
-              <span className="fpanel-label">Date range</span>
-              <button className="fpanel-control is-active">
-                <svg className="ic-sm ic-cal"><use href="#i-cal" /></svg><span>{dateRange}</span><svg className="ic-xs chev"><use href="#i-chev-down" /></svg>
-              </button>
-            </div>
+            <FilterControl
+              label="Date range" span2 active icon={<svg className="ic-sm ic-cal"><use href="#i-cal" /></svg>}
+              value={presetLabel} display={dateRange}
+              options={[...PRESETS.map((p) => p.label), "Custom…"]}
+              onChange={setPresetByLabel}
+            />
             <FilterControl label="Compare with" value={compare} active options={["Q1 2025", "Previous period", "Same period last year", "None"]} onChange={setCompare} />
             <FilterControl label="Granularity" value={granularity} options={["Daily", "Weekly", "Monthly", "Quarterly"]} onChange={setGranularity} />
             <FilterControl label="Currency" value="OMR — 3 decimals" options={["OMR — 3 decimals", "OMR — 0 decimals"]} onChange={() => {}} />
-            <div className="fpanel-field span-2">
-              <span className="fpanel-label">Buildings</span>
-              <button className="fpanel-control is-active">
-                <svg className="ic-sm" style={{ color: "var(--brand-500)" }}><use href="#i-building" /></svg><span>All buildings</span><svg className="ic-xs chev"><use href="#i-chev-down" /></svg>
-              </button>
-            </div>
+            <FilterControl
+              label="Buildings" span2 active icon={<svg className="ic-sm" style={{ color: "var(--brand-500)" }}><use href="#i-building" /></svg>}
+              value={buildings}
+              options={["All buildings", "Salalah Plaza", "Mirbat Resort", "Khareef Heights"]}
+              onChange={setBuildings}
+            />
             <FilterControl label="Unit type" value={unitType} options={["All types", "Studio", "1BR", "2BR", "3BR", "Suite"]} onChange={setUnitType} />
             <FilterControl label="Status" value={status} active options={["Confirmed + checked-in", "All statuses", "Checked-in only", "Completed"]} onChange={setStatus} />
           </div>

@@ -123,9 +123,11 @@
 .reports-root .btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
 .reports-root .btn .chev { color: currentColor; opacity: 0.6; }
 
-/* ── Filter panel ── */
-.fpanel { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 10px; margin-bottom: 20px; overflow: hidden; }
-.fpanel-head { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle); font-size: 12px; }
+/* ── Filter panel ──
+   overflow is visible so filter dropdown popovers can escape the panel; the
+   header carries the top radius since the panel no longer clips it. */
+.fpanel { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 10px; margin-bottom: 20px; position: relative; z-index: 20; }
+.fpanel-head { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--bg-surface); border-bottom: 1px solid var(--border-subtle); font-size: 12px; border-radius: 10px 10px 0 0; }
 .fpanel-head .title { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; color: var(--gray-900); }
 .fpanel-head .title .chev { color: var(--gray-500); transition: transform 120ms; }
 .fpanel.is-collapsed .fpanel-body, .fpanel.is-collapsed .date-presets { display: none; }
@@ -258,7 +260,7 @@
 /* ── Filter / control dropdown popover ── */
 .rdrop { position: relative; }
 .rdrop-menu {
-  position: absolute; z-index: 30; top: calc(100% + 4px); inset-inline-start: 0;
+  position: absolute; z-index: 60; top: calc(100% + 4px); inset-inline-start: 0;
   min-width: 100%; max-height: 280px; overflow-y: auto;
   background: var(--bg-surface); border: 1px solid var(--border-default);
   border-radius: 8px; box-shadow: var(--shadow-lg); padding: 4px;

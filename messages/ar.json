@@ -3470,22 +3470,6 @@
       "closeHint": "إغلاق (Esc)"
     }
   },
-  "reports": {
-    "title": "التقارير",
-    "revenue": "تقرير الإيرادات",
-    "occupancy": "تقرير الإشغال",
-    "expenses": "تقرير المصروفات",
-    "aging": "تقرير الأرصدة المتأخرة",
-    "receptionistPerformance": "أداء موظفي الاستقبال",
-    "grossRevenue": "إجمالي الإيرادات",
-    "returns": "المرتجعات",
-    "netRevenue": "صافي الإيرادات",
-    "period": "الفترة",
-    "thisMonth": "هذا الشهر",
-    "lastMonth": "الشهر الماضي",
-    "thisYear": "هذا العام",
-    "custom": "فترة مخصصة"
-  },
   "settings": {
     "title": "الإعدادات",
     "companyProfile": "ملف الشركة",

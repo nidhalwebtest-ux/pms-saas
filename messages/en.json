@@ -3470,22 +3470,6 @@
       "closeHint": "Close (Esc)"
     }
   },
-  "reports": {
-    "title": "Reports",
-    "revenue": "Revenue Report",
-    "occupancy": "Occupancy Report",
-    "expenses": "Expense Report",
-    "aging": "Aging Receivables",
-    "receptionistPerformance": "Receptionist Performance",
-    "grossRevenue": "Gross Revenue",
-    "returns": "Returns",
-    "netRevenue": "Net Revenue",
-    "period": "Period",
-    "thisMonth": "This Month",
-    "lastMonth": "Last Month",
-    "thisYear": "This Year",
-    "custom": "Custom Range"
-  },
   "settings": {
     "title": "Settings",
     "companyProfile": "Company Profile",

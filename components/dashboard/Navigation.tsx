@@ -80,6 +80,7 @@ const navigationConfig: NavItem[] = [
       { labelKey: "manageCategories", href: "/dashboard/settings/expense-categories" },
     ],
   },
+  { key: "reports", labelKey: "reports", href: "/dashboard/reports" },
   {
     key:      "settings",
     labelKey: "settings",

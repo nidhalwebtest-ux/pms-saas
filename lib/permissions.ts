@@ -20,8 +20,10 @@ export const NAV_ACCESS: Record<string, Role[]> = {
   tenants:      ["OWNER", "MANAGER", "STAFF"],
   reservations: ["OWNER", "MANAGER", "STAFF"],
   invoices:     ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],
+  returns:      ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],
   payments:     ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],
   expenses:     ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],  // All roles — receptionist submits, manager approves, accountant processes
+  reports:      ["OWNER", "MANAGER"],
   settings:     ["OWNER", "MANAGER"],
 };
 

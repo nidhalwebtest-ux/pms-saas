@@ -8,8 +8,8 @@ import {
   PrinterIcon,
   CreditCardIcon,
   CheckCircleIcon,
-  XMarkIcon,
 } from "@heroicons/react/24/outline";
+import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
 
 interface Props {
   invoiceId: string;
@@ -35,13 +35,7 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
 
-  // Close modal on Esc
-  useEffect(() => {
-    if (!showPayment) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setShowPayment(false); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [showPayment]);
+  // ESC and scroll lock are handled by Modal (Headless UI).
 
   async function handleIssue() {
     setIssuing(true);
@@ -135,28 +129,15 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
       </div>
 
       {/* Payment modal */}
-      {showPayment && canPay && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowPayment(false); }}
-        >
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-              <h3 className="text-base font-semibold text-gray-900">{t("inlineTitle")}</h3>
-              <button
-                onClick={() => setShowPayment(false)}
-                className="rounded-full p-1 hover:bg-gray-100 transition-colors"
-                aria-label={t("cancel")}
-              >
-                <XMarkIcon className="h-5 w-5 text-gray-500" />
-              </button>
-            </div>
-
-            <form onSubmit={handlePaymentSubmit} className="px-5 py-4 space-y-4">
+      {canPay && (
+        <Modal open={showPayment} onClose={() => setShowPayment(false)} size="md">
+          <ModalHeader title={t("inlineTitle")} />
+          <form id="invoice-payment-form" onSubmit={handlePaymentSubmit}>
+            <ModalBody>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {/* Amount */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
+                  <label className="block text-xs font-medium text-fg-secondary mb-1">
                     {t("amountLabel")}
                   </label>
                   <input
@@ -168,20 +149,20 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
                     onChange={(e) => setAmount(e.target.value)}
                     required
                     autoFocus
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 ltr-numbers"
+                    className="w-full rounded-md border border-border-default px-3 py-2 text-sm focus:border-success-500 focus:outline-none focus:ring-1 focus:ring-success-500 ltr-num"
                   />
-                  <p className="mt-0.5 text-xs text-gray-400 ltr-numbers">
+                  <p className="mt-0.5 text-xs text-fg-tertiary ltr-num">
                     {t("balanceDueHint", { amount: balanceDue.toFixed(3) })}
                   </p>
                 </div>
 
                 {/* Method */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">{t("method")}</label>
+                  <label className="block text-xs font-medium text-fg-secondary mb-1">{t("method")}</label>
                   <select
                     value={method}
                     onChange={(e) => setMethod(e.target.value as PaymentMethod)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className="w-full rounded-md border border-border-default px-3 py-2 text-sm focus:border-success-500 focus:outline-none focus:ring-1 focus:ring-success-500"
                   >
                     <option value="CASH">{tMethod("CASH")}</option>
                     <option value="BANK_TRANSFER">{tMethod("BANK_TRANSFER")}</option>
@@ -194,64 +175,58 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
 
                 {/* Date */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">{t("date")}</label>
+                  <label className="block text-xs font-medium text-fg-secondary mb-1">{t("date")}</label>
                   <input
                     type="date"
                     value={paymentDate}
                     onChange={(e) => setPaymentDate(e.target.value)}
                     required
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 ltr-numbers"
+                    className="w-full rounded-md border border-border-default px-3 py-2 text-sm focus:border-success-500 focus:outline-none focus:ring-1 focus:ring-success-500 ltr-num"
                   />
                 </div>
 
                 {/* Reference */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    {t("reference")} <span className="text-gray-400">{t("optional")}</span>
+                  <label className="block text-xs font-medium text-fg-secondary mb-1">
+                    {t("reference")} <span className="text-fg-tertiary">{t("optional")}</span>
                   </label>
                   <input
                     type="text"
                     value={reference}
                     onChange={(e) => setReference(e.target.value)}
                     placeholder={t("referencePlaceholder")}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className="w-full rounded-md border border-border-default px-3 py-2 text-sm focus:border-success-500 focus:outline-none focus:ring-1 focus:ring-success-500"
                   />
                 </div>
 
                 {/* Notes */}
                 <div className="sm:col-span-2">
-                  <label className="block text-xs font-medium text-gray-700 mb-1">
-                    {t("notes")} <span className="text-gray-400">{t("optional")}</span>
+                  <label className="block text-xs font-medium text-fg-secondary mb-1">
+                    {t("notes")} <span className="text-fg-tertiary">{t("optional")}</span>
                   </label>
                   <input
                     type="text"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                    className="w-full rounded-md border border-border-default px-3 py-2 text-sm focus:border-success-500 focus:outline-none focus:ring-1 focus:ring-success-500"
                   />
                 </div>
               </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setShowPayment(false)}
-                  className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                >
-                  {t("cancel")}
-                </button>
-                <button
-                  type="submit"
-                  disabled={paymentLoading}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white hover:bg-green-500 disabled:opacity-60 transition-colors"
-                >
-                  <CreditCardIcon className="h-4 w-4" />
-                  {paymentLoading ? t("saving") : t("confirmPayment")}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button variant="ghost" type="button" onClick={() => setShowPayment(false)}>
+                {t("cancel")}
+              </Button>
+              <Button
+                type="submit"
+                loading={paymentLoading}
+                leftIcon={<CreditCardIcon className="h-4 w-4" />}
+              >
+                {t("confirmPayment")}
+              </Button>
+            </ModalFooter>
+          </form>
+        </Modal>
       )}
     </div>
   );

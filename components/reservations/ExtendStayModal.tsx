@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import { XMarkIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { Button } from "@/components/ui";
 
 interface Props {
   reservationId: string;
@@ -534,13 +535,16 @@ export default function ExtendStayModal({
               )}
 
               {/* Confirm button */}
-              <button
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
                 onClick={handleConfirm}
-                disabled={submitting || !someAvailableToExtend}
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors"
+                loading={submitting}
+                disabled={!someAvailableToExtend}
               >
-                {submitting ? t("confirming") : t("confirmButton")}
-              </button>
+                {t("confirmButton")}
+              </Button>
             </div>
           )}
 

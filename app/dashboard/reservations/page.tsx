@@ -15,11 +15,15 @@ export default async function ReservationsPage() {
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
 
-  const [allProperties, selectedPropertyId] = await Promise.all([
+  const [allProperties, org, selectedPropertyId] = await Promise.all([
     prisma.property.findMany({
       where:   { organizationId: dbUser.organizationId, isArchived: false },
       select:  { id: true, name: true },
       orderBy: { name: "asc" },
+    }),
+    prisma.organization.findUnique({
+      where:  { id: dbUser.organizationId },
+      select: { allowEarlyCheckIn: true },
     }),
     getSelectedPropertyId(),
   ]);
@@ -35,6 +39,7 @@ export default async function ReservationsPage() {
       properties={properties}
       defaultPropertyId={selectedPropertyId ?? ""}
       scopedToBuilding={!!selectedPropertyId}
+      allowEarlyCheckIn={org?.allowEarlyCheckIn ?? false}
     />
   );
 }

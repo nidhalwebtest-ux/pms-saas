@@ -143,9 +143,10 @@ export default function PropertyForm({ initialData }: Props) {
         toast.error(result.error);
       } else {
         toast.success(isEditMode ? t("toasts.updated") : t("toasts.created"));
+        // Edit → detail page; create → list page (QA issue #8).
         const dest = isEditMode
           ? `/dashboard/properties/${initialData.id}`
-          : `/dashboard/properties/${result?.id}`;
+          : `/dashboard/properties`;
         if (slideOver) {
           // Inside the intercepted modal: animate the panel out, then navigate.
           slideOver.closeAndNavigate(dest);

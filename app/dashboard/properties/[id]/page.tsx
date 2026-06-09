@@ -17,20 +17,12 @@ import {
 import { prisma } from "@/lib/prisma";
 import PropertyDangerZone from "@/components/dashboard/PropertyDangerZone";
 import { getUnitDisplayStatus } from "@/lib/unit-status";
-
-const TYPE_BADGE_STYLE: Record<string, string> = {
-  RESIDENTIAL: "bg-blue-100 text-blue-700",
-  MIXED:       "bg-violet-100 text-violet-700",
-  HOTEL:       "bg-amber-100 text-amber-700",
-  COMMERCIAL:  "bg-green-100 text-green-700",
-};
-
-const STATUS_BADGE_STYLE: Record<string, { badge: string; dot: string }> = {
-  vacant:      { badge: "bg-emerald-100 text-emerald-700", dot: "bg-emerald-500" },
-  occupied:    { badge: "bg-blue-100 text-blue-700",       dot: "bg-blue-500"    },
-  reserved:    { badge: "bg-violet-100 text-violet-700",   dot: "bg-violet-500"  },
-  maintenance: { badge: "bg-amber-100 text-amber-700",     dot: "bg-amber-500"   },
-};
+import {
+  Badge,
+  getPropertyTypeBadge,
+  getUnitStatusBadge,
+  type PropertyTypeKey,
+} from "@/components/ui";
 
 export default async function PropertyDetailsPage({
   params,
@@ -44,8 +36,9 @@ export default async function PropertyDetailsPage({
 
   const dbUser = await prisma.user.findUnique({
     where:  { id: user.id },
-    select: { organizationId: true },
+    select: { organizationId: true, organization: { select: { showReservedStatus: true } } },
   });
+  const showReserved = dbUser?.organization?.showReservedStatus ?? false;
 
   const property = await prisma.property.findUnique({
     where:   { id },
@@ -55,7 +48,7 @@ export default async function PropertyDetailsPage({
         include: {
           reservations: {
             where:  { status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN"] } },
-            select: { status: true },
+            select: { status: true, endDate: true },
           },
         },
       },
@@ -109,21 +102,21 @@ export default async function PropertyDetailsPage({
               <h2 className="text-2xl font-bold text-gray-900 sm:text-3xl sm:tracking-tight">
                 {property.name}
               </h2>
-              <span className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ${TYPE_BADGE_STYLE[property.type] ?? "bg-gray-100 text-gray-600"}`}>
+              <Badge {...getPropertyTypeBadge(property.type as PropertyTypeKey)} size="md">
                 {typeLabel}
-              </span>
+              </Badge>
               {property.isArchived ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-gray-200 px-2.5 py-0.5 text-xs font-semibold text-gray-600">
-                  <ArchiveBoxIcon className="h-3.5 w-3.5" /> {t("archived")}
-                </span>
+                <Badge tone="neutral" appearance="subtle" size="md" icon={<ArchiveBoxIcon className="h-full w-full" />}>
+                  {t("archived")}
+                </Badge>
               ) : property.isActive ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
-                  <CheckCircleIcon className="h-3.5 w-3.5" /> {t("active")}
-                </span>
+                <Badge tone="success" appearance="subtle" size="md" icon={<CheckCircleIcon className="h-full w-full" />}>
+                  {t("active")}
+                </Badge>
               ) : (
-                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">
-                  <WrenchScrewdriverIcon className="h-3.5 w-3.5" /> {t("inactive")}
-                </span>
+                <Badge tone="warning" appearance="subtle" size="md" icon={<WrenchScrewdriverIcon className="h-full w-full" />}>
+                  {t("inactive")}
+                </Badge>
               )}
             </div>
             <p className="mt-1 text-sm text-gray-500">
@@ -206,8 +199,7 @@ export default async function PropertyDetailsPage({
                 </tr>
               ) : (
                 property.units.map((unit) => {
-                  const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations);
-                  const cfg = STATUS_BADGE_STYLE[displayStatus];
+                  const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations, new Date(), { showReserved });
                   const statusLabel = tryT((k) => tStat(k), displayStatus, displayStatus);
                   return (
                   <tr key={unit.id} className="hover:bg-blue-50/40 transition-colors">
@@ -231,10 +223,9 @@ export default async function PropertyDetailsPage({
                       <span className="text-xs font-normal text-gray-500">{t("table.omr")}</span>
                     </td>
                     <td className="whitespace-nowrap px-3 py-4 text-sm">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.badge}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                      <Badge {...getUnitStatusBadge(displayStatus)} size="sm">
                         {statusLabel}
-                      </span>
+                      </Badge>
                     </td>
                     <td className="relative whitespace-nowrap py-4 ps-3 pe-4 text-end text-sm font-medium sm:pe-6">
                       <Link href={`/dashboard/units/${unit.id}/edit`} className="text-blue-600 hover:text-blue-900">

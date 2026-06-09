@@ -104,7 +104,7 @@ export async function sendInvitation(
       email,
       inviteUrl,
       caller.firstName ?? "Your team admin",
-      org?.name ?? "OmRent",
+      org?.name ?? "Binaya",
       ROLE_LABELS[role],
     );
   } catch (err) {

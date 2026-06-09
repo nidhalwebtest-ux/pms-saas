@@ -12,12 +12,12 @@ import {
   PlusCircleIcon,
   XMarkIcon,
   ArrowLeftIcon,
-  ArrowPathIcon,
   ListBulletIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
 import { bulkCreateUnits } from "@/app/dashboard/units/actions";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -134,11 +134,6 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
     }
   }, [generatedNames, hasCustomized]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function regenerate() {
-    setRows(generatedNames.map(seedRow));
-    setHasCustomized(false);
-  }
-
   function patchRow(i: number, patch: Partial<UnitRow>) {
     setHasCustomized(true);
     setRows((prev) => prev.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
@@ -159,7 +154,8 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
     setRows((prev) => [...prev, seedRow("")]);
   }
 
-  const validCount = rows.filter((r) => r.name.trim() && parseFloat(r.basePrice) >= 0).length;
+  // Base price is optional (QA issue #5) — a row is valid as long as it has a name.
+  const validCount = rows.filter((r) => r.name.trim()).length;
   const canSubmit  = validCount > 0 && propertyId && (!createPrice || (dailyRate && monthlyRate));
 
   const rangeError = startNum > endNum
@@ -172,15 +168,18 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
     if (!canSubmit) return;
 
     const payloadUnits = rows
-      .filter((r) => r.name.trim() && parseFloat(r.basePrice) >= 0)
-      .map((r) => ({
-        name:      r.name.trim(),
-        unitType:  r.unitType,
-        bedrooms:  r.bedrooms,
-        bathrooms: r.bathrooms,
-        area:      r.area ? parseFloat(r.area) : null,
-        basePrice: parseFloat(r.basePrice),
-      }));
+      .filter((r) => r.name.trim())
+      .map((r) => {
+        const bp = parseFloat(r.basePrice);
+        return {
+          name:      r.name.trim(),
+          unitType:  r.unitType,
+          bedrooms:  r.bedrooms,
+          bathrooms: r.bathrooms,
+          area:      r.area ? parseFloat(r.area) : null,
+          basePrice: Number.isFinite(bp) ? bp : 0, // optional → default 0 (QA #5)
+        };
+      });
 
     startTransition(async () => {
       const res = await bulkCreateUnits({
@@ -197,9 +196,8 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
         toast.error(res.error);
       } else {
         toast.success(t("unitsCreatedToast", { count: res.created ?? 0 }));
-        router.push(propertyId
-          ? `/dashboard/properties/${propertyId}`
-          : "/dashboard/units");
+        // Always land on the units list after a bulk create (QA issue #8).
+        router.push("/dashboard/units");
       }
     });
   }
@@ -363,7 +361,7 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
           </div>
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">
-              {t("basePrice")} <span className="text-red-500">*</span>
+              {t("basePrice")}
             </label>
             <input
               type="number"
@@ -431,22 +429,11 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
         icon={ListBulletIcon}
         title={t("preview")}
         badge={
-          <div className="ms-auto flex items-center gap-2">
-            {validCount > 0 && (
-              <span className="rounded-full bg-blue-600 px-2 py-0.5 text-xs font-bold text-white ltr-numbers">
-                {validCount}
-              </span>
-            )}
-            <button
-              type="button"
-              onClick={regenerate}
-              title={t("regenerateTitle")}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-            >
-              <ArrowPathIcon className="h-3.5 w-3.5" />
-              {t("regenerate")}
-            </button>
-          </div>
+          validCount > 0 ? (
+            <span className="ms-auto rounded-full bg-blue-600 px-2 py-0.5 text-xs font-bold text-white ltr-numbers">
+              {validCount}
+            </span>
+          ) : undefined
         }
       >
         {rows.length === 0 ? (
@@ -571,24 +558,15 @@ export default function BulkCreateForm({ properties, defaultPropertyId }: Props)
           <ArrowLeftIcon className="h-4 w-4" />
           {t("cancel")}
         </Link>
-        <button
+        <Button
           type="button"
           onClick={handleSubmit}
-          disabled={!canSubmit || isPending}
-          className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-40 transition-colors shadow-sm"
+          loading={isPending}
+          disabled={!canSubmit}
+          leftIcon={<CheckCircleIcon className="h-4 w-4" />}
         >
-          {isPending ? (
-            <>
-              <ArrowPathIcon className="h-4 w-4 animate-spin" />
-              {t("creating")}
-            </>
-          ) : (
-            <>
-              <CheckCircleIcon className="h-4 w-4" />
-              {validCount > 0 ? t("createCount", { count: validCount }) : t("createCountZero")}
-            </>
-          )}
-        </button>
+          {validCount > 0 ? t("createCount", { count: validCount }) : t("createCountZero")}
+        </Button>
       </div>
     </div>
   );

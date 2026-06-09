@@ -4,18 +4,18 @@
  *
  * Required env vars:
  *   RESEND_API_KEY=re_xxxxxxxxxxxxxxxxx   (from resend.com dashboard)
- *   RESEND_FROM_EMAIL=OmRent <noreply@yourdomain.com>
+ *   RESEND_FROM_EMAIL=Binaya <noreply@yourdomain.com>
  *
  * Sender address:
  *   - The default `onboarding@resend.dev` ONLY delivers to the email
  *     registered on the Resend account — every other recipient is dropped.
  *     If verification emails aren't arriving in production, this is almost
  *     always the cause: verify a domain in Resend and set
- *     RESEND_FROM_EMAIL to something like `OmRent <noreply@yourdomain.com>`.
+ *     RESEND_FROM_EMAIL to something like `Binaya <noreply@yourdomain.com>`.
  */
 
 const RESEND_API = "https://api.resend.com/emails";
-const FROM = process.env.RESEND_FROM_EMAIL ?? "OmRent <onboarding@resend.dev>";
+const FROM = process.env.RESEND_FROM_EMAIL ?? "Binaya <onboarding@resend.dev>";
 
 // ─── Send ─────────────────────────────────────────────────────────────────────
 
@@ -35,7 +35,7 @@ export async function sendVerificationEmail(
     body: JSON.stringify({
       from: FROM,
       to,
-      subject: "Verify your email — OmRent",
+      subject: "Verify your email — Binaya",
       html: verificationEmailHtml(verificationUrl),
     }),
   });
@@ -69,7 +69,7 @@ export async function sendInvitationEmail(
     body: JSON.stringify({
       from:    FROM,
       to,
-      subject: `You've been invited to join ${orgName} on OmRent`,
+      subject: `You've been invited to join ${orgName} on Binaya`,
       html:    invitationEmailHtml(inviteUrl, inviterName, orgName, roleLabel),
     }),
   });
@@ -92,7 +92,7 @@ function verificationEmailHtml(url: string): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Verify your email — OmRent</title>
+  <title>Verify your email — Binaya</title>
 </head>
 <body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
   <table width="100%" cellpadding="0" cellspacing="0" role="presentation">
@@ -103,7 +103,7 @@ function verificationEmailHtml(url: string): string {
           <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,#0f172a 0%,#1d4ed8 100%);padding:32px 40px;border-radius:12px 12px 0 0;text-align:center;">
-              <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:800;letter-spacing:-0.5px;">OmRent</h1>
+              <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:800;letter-spacing:-0.5px;">Binaya</h1>
               <p style="color:#bfdbfe;margin:6px 0 0;font-size:13px;letter-spacing:0.5px;text-transform:uppercase;">Property Management System</p>
             </td>
           </tr>
@@ -115,7 +115,7 @@ function verificationEmailHtml(url: string): string {
               <h2 style="color:#111827;margin:0 0 12px;font-size:22px;font-weight:700;">Verify your email address</h2>
 
               <p style="color:#6b7280;margin:0 0 28px;font-size:15px;line-height:1.7;">
-                Welcome to OmRent! One quick step — click the button below to verify your email address and activate your account.
+                Welcome to Binaya! One quick step — click the button below to verify your email address and activate your account.
               </p>
 
               <!-- CTA Button -->
@@ -144,7 +144,7 @@ function verificationEmailHtml(url: string): string {
               <!-- Warning -->
               <p style="color:#9ca3af;font-size:12px;margin:0;line-height:1.6;text-align:center;">
                 This link expires in <strong style="color:#6b7280;">24 hours</strong>.<br />
-                If you didn't create an OmRent account, you can safely ignore this email.
+                If you didn't create an Binaya account, you can safely ignore this email.
               </p>
 
             </td>
@@ -154,7 +154,7 @@ function verificationEmailHtml(url: string): string {
           <tr>
             <td style="padding:24px 0;text-align:center;">
               <p style="color:#9ca3af;font-size:12px;margin:0;">
-                © ${year} OmRent · Property Management System
+                © ${year} Binaya · Property Management System
               </p>
             </td>
           </tr>
@@ -193,7 +193,7 @@ function invitationEmailHtml(
           <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,#0f172a 0%,#1d4ed8 100%);padding:32px 40px;border-radius:12px 12px 0 0;text-align:center;">
-              <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:800;letter-spacing:-0.5px;">OmRent</h1>
+              <h1 style="color:#ffffff;margin:0;font-size:28px;font-weight:800;letter-spacing:-0.5px;">Binaya</h1>
               <p style="color:#bfdbfe;margin:6px 0 0;font-size:13px;letter-spacing:0.5px;text-transform:uppercase;">Property Management System</p>
             </td>
           </tr>
@@ -205,7 +205,7 @@ function invitationEmailHtml(
               <h2 style="color:#111827;margin:0 0 8px;font-size:22px;font-weight:700;">You've been invited! 🎉</h2>
               <p style="color:#6b7280;margin:0 0 24px;font-size:15px;line-height:1.7;">
                 <strong style="color:#111827;">${inviterName}</strong> has invited you to join
-                <strong style="color:#111827;">${orgName}</strong> on OmRent as a
+                <strong style="color:#111827;">${orgName}</strong> on Binaya as a
                 <strong style="color:#2563eb;">${roleLabel}</strong>.
               </p>
 
@@ -250,7 +250,7 @@ function invitationEmailHtml(
           <tr>
             <td style="padding:24px 0;text-align:center;">
               <p style="color:#9ca3af;font-size:12px;margin:0;">
-                © ${year} OmRent · Property Management System
+                © ${year} Binaya · Property Management System
               </p>
             </td>
           </tr>

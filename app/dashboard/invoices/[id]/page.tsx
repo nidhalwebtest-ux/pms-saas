@@ -15,6 +15,13 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import InvoiceActions from "./InvoiceActions";
+import {
+  Alert,
+  Badge,
+  resolveInvoiceBadge,
+  getPaymentMethodBadge,
+  type PaymentMethodKey,
+} from "@/components/ui";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -39,40 +46,19 @@ function StatusBadge({
   dueDate: Date;
   t: StatusT;
 }) {
-  const overdue =
-    (status === "ISSUED" || status === "PARTIALLY_PAID") &&
-    new Date(dueDate) < new Date();
-
-  if (overdue) {
-    return (
-      <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-sm font-semibold text-red-700 ring-1 ring-inset ring-red-600/20">
-        {t("overdue")}
-      </span>
-    );
-  }
-
-  const map: Record<string, string> = {
-    DRAFT:          "bg-gray-100 text-gray-600 ring-gray-500/20",
-    ISSUED:         "bg-blue-100 text-blue-700 ring-blue-700/20",
-    PARTIALLY_PAID: "bg-amber-100 text-amber-700 ring-amber-600/20",
-    PAID:           "bg-green-100 text-green-700 ring-green-600/20",
-    CANCELLED:      "bg-red-50 text-red-400 ring-red-400/20",
-  };
-
-  const labelKey: Record<string, string> = {
-    DRAFT:          "draft",
-    ISSUED:         "issued",
-    PARTIALLY_PAID: "partiallyPaid",
-    PAID:           "paid",
-    CANCELLED:      "cancelled",
-  };
-
-  const cls = map[status] || "bg-gray-100 text-gray-600 ring-gray-400/20";
-  const key = labelKey[status];
+  const { props, key } = resolveInvoiceBadge(status, dueDate);
+  const labelKey =
+    key === "overdue"        ? "overdue" :
+    key === "draft"          ? "draft" :
+    key === "pending"        ? (status === "PENDING" ? "pending" : "issued") :
+    key === "partially-paid" ? "partiallyPaid" :
+    key === "paid"           ? "paid" :
+    key === "returned"       ? "returned" :
+                               "cancelled";
   return (
-    <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ring-1 ring-inset ${cls}`}>
-      {key ? t(key) : status}
-    </span>
+    <Badge {...props} size="md">
+      {t(labelKey)}
+    </Badge>
   );
 }
 
@@ -154,6 +140,7 @@ export default async function InvoiceDetailPage({
 
   const totalAmount = Number(invoice.totalAmount);
   const amountPaid  = Number(invoice.amountPaid);
+  const creditedAmount = Number(invoice.creditedAmount);
   const balanceDue  = Number(invoice.balanceDue);
   const subtotal    = Number(invoice.subtotal);
   const discount    = Number(invoice.discountAmount);
@@ -267,9 +254,12 @@ export default async function InvoiceDetailPage({
               )}
             </dl>
             {invoice.cancelledReason && (
-              <p className="mt-3 text-xs text-red-500 bg-red-50 rounded-md px-3 py-2">
-                {tDet("cancellationReason", { reason: invoice.cancelledReason })}
-              </p>
+              <Alert
+                variant="error"
+                size="sm"
+                className="mt-3"
+                description={tDet("cancellationReason", { reason: invoice.cancelledReason })}
+              />
             )}
           </div>
 
@@ -368,6 +358,12 @@ export default async function InvoiceDetailPage({
                   <dt>{tDet("amountPaid")}</dt>
                   <dd className="ltr-numbers">−{amountPaid.toFixed(3)} OMR</dd>
                 </div>
+                {creditedAmount > 0 && (
+                  <div className="flex justify-between text-purple-700 font-medium">
+                    <dt>{tDet("creditsApplied")}</dt>
+                    <dd className="ltr-numbers">−{creditedAmount.toFixed(3)} OMR</dd>
+                  </div>
+                )}
                 <div className={`flex justify-between font-bold text-base ${balanceDue > 0 ? "text-red-600" : "text-green-700"}`}>
                   <dt>{tDet("balanceDue")}</dt>
                   <dd className="ltr-numbers">{balanceDue.toFixed(3)} OMR</dd>
@@ -401,13 +397,13 @@ export default async function InvoiceDetailPage({
                         {fmtDate(alloc.payment.date)}
                       </td>
                       <td className="px-3 py-3 text-sm">
-                        <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600 ring-1 ring-inset ring-gray-500/10">
+                        <Badge {...getPaymentMethodBadge(alloc.payment.method as PaymentMethodKey)} size="sm">
                           {methodLabel(alloc.payment.method)}
-                        </span>
+                        </Badge>
                         {alloc.payment.isRefund && (
-                          <span className="ms-1.5 inline-flex items-center rounded-md bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">
+                          <Badge tone="danger" appearance="subtle" size="sm" className="ms-1.5">
                             {tDet("refund")}
-                          </span>
+                          </Badge>
                         )}
                       </td>
                       <td className="px-3 py-3 text-sm text-gray-500 ltr-numbers">
@@ -459,14 +455,12 @@ export default async function InvoiceDetailPage({
               <CalendarDaysIcon className="h-4 w-4 text-gray-400" />
               <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">{tDet("reservation")}</h3>
             </div>
-            {invoice.reservation.reservationNumber && (
-              <Link
-                href={`/dashboard/reservations/${invoice.reservationId}`}
-                className="font-mono font-semibold text-indigo-600 hover:text-indigo-900 transition-colors ltr-numbers"
-              >
-                {invoice.reservation.reservationNumber}
-              </Link>
-            )}
+            <Link
+              href={`/dashboard/reservations/${invoice.reservationId}`}
+              className="font-mono font-semibold text-indigo-600 hover:text-indigo-900 transition-colors ltr-numbers"
+            >
+              {invoice.reservation.reservationNumber ?? tDet("viewReservation")}
+            </Link>
             <p className="text-sm text-gray-600 mt-1 ltr-numbers">
               {fmtDate(invoice.reservation.startDate)} – {fmtDate(invoice.reservation.endDate)}
             </p>

@@ -22,6 +22,7 @@ import {
 import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
 import { ar, enGB } from "date-fns/locale";
+import { Button } from "@/components/ui";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ interface UnitPrice {
   endDate:     string | null;
   priority:    number;
   isActive:    boolean;
+  disallowMonthly?: boolean;
 }
 
 interface Props {
@@ -312,9 +314,9 @@ function PriceModal({
         {/* Header */}
         <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
           <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 transition-colors">
+          <Button size="icon" variant="ghost" onClick={onClose} aria-label="Close">
             <XCircleIcon className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 p-6">
@@ -386,6 +388,19 @@ function PriceModal({
                   </select>
                 </div>
               </div>
+              {/* Block monthly reservations during this season (QA #27). */}
+              <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
+                <input
+                  type="checkbox"
+                  name="disallowMonthly"
+                  defaultChecked={editPrice?.disallowMonthly ?? false}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/30"
+                />
+                <span className="flex flex-col">
+                  <span className="text-sm font-medium text-gray-800">{tM("disallowMonthlyLabel")}</span>
+                  <span className="text-xs text-gray-500">{tM("disallowMonthlyHint")}</span>
+                </span>
+              </label>
             </>
           )}
 
@@ -424,8 +439,10 @@ function PriceModal({
                 step="0.001"
                 min="0"
                 defaultValue={editPrice?.monthlyRate ?? ""}
-                required
-                placeholder={tM("ratePlaceholder")}
+                // Optional for seasonal prices (QA #26) — falls back to the unit's
+                // DEFAULT monthly rate. Still required for the DEFAULT price itself.
+                required={!isSeasonal}
+                placeholder={isSeasonal ? tM("rateOptional") : tM("ratePlaceholder")}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
               />
             </div>

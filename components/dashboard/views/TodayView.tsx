@@ -17,6 +17,18 @@ import {
   UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { useFormatCurrency } from "@/lib/org-context";
+import {
+  Alert,
+  Badge,
+  Button,
+  EmptyState,
+  SkeletonCard,
+  SkeletonCircle,
+  SkeletonLine,
+  SkeletonRectangle,
+  SkeletonText,
+  getTenantClassBadge,
+} from "@/components/ui";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -60,13 +72,13 @@ interface TodayData {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-const ACTION_COLORS: Record<string, string> = {
-  CREATED:          "bg-blue-100 text-blue-700",
-  CHECKED_IN:       "bg-green-100 text-green-700",
-  CHECKED_OUT:      "bg-orange-100 text-orange-700",
-  CANCELLED:        "bg-red-100 text-red-600",
-  PAYMENT_RECORDED: "bg-emerald-100 text-emerald-700",
-  NO_SHOW:          "bg-gray-100 text-gray-500",
+const ACTION_TONE: Record<string, "info" | "success" | "warning" | "danger" | "neutral"> = {
+  CREATED:          "info",
+  CHECKED_IN:       "success",
+  CHECKED_OUT:      "warning",
+  CANCELLED:        "danger",
+  PAYMENT_RECORDED: "success",
+  NO_SHOW:          "neutral",
 };
 
 const METHOD_KEYS = ["CASH", "CARD", "BANK_TRANSFER", "CHEQUE", "OTHER"] as const;
@@ -86,7 +98,7 @@ function StatCard({
   return (
     <div className={`relative rounded-xl p-5 text-white ${color} overflow-hidden`}>
       {pulse && value > 0 && (
-        <span className="absolute top-3 right-3 flex h-3 w-3">
+        <span className="absolute top-3 inset-ie-3 flex h-3 w-3">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
           <span className="relative inline-flex rounded-full h-3 w-3 bg-white" />
         </span>
@@ -129,19 +141,19 @@ function GuestRow({ res, type }: { res: ReservationRow; type: "arrival" | "depar
               {res.tenant.name}
             </span>
             {res.tenant.classification === "vip" && (
-              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+              <Badge {...getTenantClassBadge("vip")} size="sm">
                 {t("vipBadge")}
-              </span>
+              </Badge>
             )}
             {isOverdue && (
-              <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">
+              <Badge tone="danger" appearance="solid" size="sm">
                 {t("overdueBadge", { days: daysOverdue })}
-              </span>
+              </Badge>
             )}
             {type === "overstay" && (
-              <span className="rounded-full bg-red-200 px-2 py-0.5 text-xs font-bold text-red-800">
+              <Badge tone="danger" appearance="solid" size="sm" pulse>
                 {t("overstayBadge", { days: daysPastEnd })}
-              </span>
+              </Badge>
             )}
           </div>
           <p className="mt-0.5 text-xs text-gray-500">
@@ -164,18 +176,16 @@ function GuestRow({ res, type }: { res: ReservationRow; type: "arrival" | "depar
           )}
           <div className="flex gap-1.5 justify-end">
             {(type === "departure" || type === "overstay") && res.balance > 0.001 && (
-              <Link
-                href={`/dashboard/payments/new?reservationId=${res.id}`}
-                className="rounded-md bg-green-600 px-2.5 py-1 text-xs font-semibold text-white hover:bg-green-700 transition-colors"
-              >
-                {t("collect")}
+              <Link href={`/dashboard/payments/new?reservationId=${res.id}`} className="inline-flex">
+                <Button variant="primary" size="sm" onClick={(e) => e.preventDefault()}>
+                  {t("collect")}
+                </Button>
               </Link>
             )}
-            <Link
-              href={`/dashboard/reservations/${res.id}`}
-              className="rounded-md bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-200 transition-colors"
-            >
-              {t("view")}
+            <Link href={`/dashboard/reservations/${res.id}`} className="inline-flex">
+              <Button variant="secondary" size="sm" onClick={(e) => e.preventDefault()}>
+                {t("view")}
+              </Button>
             </Link>
           </div>
         </div>
@@ -194,25 +204,89 @@ function SectionCard({
   emptyText: string;
 }) {
   return (
-    <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
-      <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-3">
+    <div className="overflow-hidden rounded-xl bg-surface border border-border-subtle">
+      <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-3">
         <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
-        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-        <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-          count > 0 ? "bg-gray-100 text-gray-600" : "bg-gray-50 text-gray-400"
-        }`}>
+        <h3 className="text-sm font-semibold text-fg">{title}</h3>
+        <Badge tone="neutral" size="sm" className="ms-1">
           {count}
-        </span>
+        </Badge>
       </div>
       {count === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8">
-          <CheckCircleIcon className="mb-2 h-8 w-8 text-gray-200" />
-          <p className="text-sm text-gray-400">{emptyText}</p>
-        </div>
+        <EmptyState
+          inline
+          variant="positive"
+          size="sm"
+          illustration={<CheckCircleIcon className="h-6 w-6" />}
+          title={emptyText}
+        />
       ) : (
-        <ul className="divide-y divide-gray-50">{children}</ul>
+        <ul className="divide-y divide-border-subtle">{children}</ul>
       )}
     </div>
+  );
+}
+
+/* ============================================================================
+ *  Skeleton — mirrors the real grid (4 stat tiles, 2-col guest sections,
+ *  2-col financial + activity). Announce as a single live region via the
+ *  outer SkeletonCard so screen readers receive one update on first load.
+ * ========================================================================= */
+
+function TodayViewSkeleton({ ariaLabel }: { ariaLabel: string }) {
+  return (
+    <SkeletonCard padding={0} bordered={false} announce aria-label={ariaLabel} className="bg-transparent">
+      <div className="space-y-5">
+        {/* Stat tiles */}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonCard key={i} padding={20} bordered={false} announce={false} className="bg-subtle">
+              <SkeletonLine width="60%" size="sm" />
+              <SkeletonRectangle width="40%" height={32} className="mt-3" />
+              <SkeletonLine width="55%" size="sm" className="mt-3" />
+            </SkeletonCard>
+          ))}
+        </div>
+
+        {/* Guest section columns */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <SkeletonCard key={i} padding={16} announce={false}>
+              <div className="flex items-center gap-2">
+                <SkeletonCircle size={10} />
+                <SkeletonLine width={140} size="sm" />
+              </div>
+              <div className="mt-4 space-y-3">
+                {Array.from({ length: 3 }).map((_, j) => (
+                  <div key={j} className="flex items-center gap-3">
+                    <SkeletonCircle size={32} />
+                    <div className="flex-1">
+                      <SkeletonLine width="60%" size="sm" />
+                      <SkeletonLine width="40%" size="sm" className="mt-1.5" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SkeletonCard>
+          ))}
+        </div>
+
+        {/* Financial + activity columns */}
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <SkeletonCard padding={20} announce={false}>
+            <SkeletonLine width={120} size="sm" />
+            <div className="mt-4 grid grid-cols-2 gap-4">
+              <div><SkeletonText lines={4} size="sm" /></div>
+              <div><SkeletonText lines={4} size="sm" /></div>
+            </div>
+          </SkeletonCard>
+          <SkeletonCard padding={16} announce={false}>
+            <SkeletonLine width={120} size="sm" />
+            <div className="mt-4"><SkeletonText lines={6} size="sm" /></div>
+          </SkeletonCard>
+        </div>
+      </div>
+    </SkeletonCard>
   );
 }
 
@@ -254,17 +328,18 @@ export function TodayView({ propertyId }: { propertyId: string }) {
     return () => clearInterval(id);
   }, [fetchData]);
 
-  if (loading)
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-sm text-gray-400">{t("loadingData")}</div>
-      </div>
-    );
+  if (loading) return <TodayViewSkeleton ariaLabel={t("loadingData")} />;
   if (error || !data)
     return (
-      <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-        {error ?? t("noData")}
-      </div>
+      <Alert
+        variant="error"
+        title={error ?? t("noData")}
+        actions={
+          <Button variant="secondary" size="sm" onClick={fetchData}>
+            {t("retry")}
+          </Button>
+        }
+      />
     );
 
   const allArrivals = [...data.overdueArrivals, ...data.arrivals];
@@ -355,7 +430,7 @@ export function TodayView({ propertyId }: { propertyId: string }) {
       {/* ── Financial summary + Activity feed ── */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Financial summary */}
-        <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 p-5">
+        <div className="rounded-xl bg-surface border border-border-subtle p-5">
           <div className="flex items-center gap-2 mb-4">
             <BanknotesIcon className="h-5 w-5 text-green-600" />
             <h3 className="text-sm font-semibold text-gray-900">
@@ -416,20 +491,28 @@ export function TodayView({ propertyId }: { propertyId: string }) {
               )}
 
               {/* Quick links */}
-              <div className="mt-4 space-y-1.5">
-                <Link
-                  href="/dashboard/payments/new"
-                  className="flex items-center gap-1.5 rounded-lg bg-green-50 px-3 py-2 text-xs font-semibold text-green-700 hover:bg-green-100 transition-colors"
-                >
-                  <BanknotesIcon className="h-3.5 w-3.5" />
-                  {tFin("recordPayment")}
+              <div className="mt-4 flex flex-col gap-1.5">
+                <Link href="/dashboard/payments/new" className="block">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<BanknotesIcon className="h-3.5 w-3.5" />}
+                    onClick={(e) => e.preventDefault()}
+                    fullWidth
+                  >
+                    {tFin("recordPayment")}
+                  </Button>
                 </Link>
-                <Link
-                  href="/dashboard/expenses/new"
-                  className="flex items-center gap-1.5 rounded-lg bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 transition-colors"
-                >
-                  <ArrowUpIcon className="h-3.5 w-3.5" />
-                  {tFin("logExpense")}
+                <Link href="/dashboard/expenses/new" className="block">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<ArrowUpIcon className="h-3.5 w-3.5" />}
+                    onClick={(e) => e.preventDefault()}
+                    fullWidth
+                  >
+                    {tFin("logExpense")}
+                  </Button>
                 </Link>
               </div>
             </div>
@@ -437,49 +520,51 @@ export function TodayView({ propertyId }: { propertyId: string }) {
         </div>
 
         {/* Recent activity feed */}
-        <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
-          <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+        <div className="overflow-hidden rounded-xl bg-surface border border-border-subtle">
+          <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
             <div className="flex items-center gap-2">
-              <ClockIcon className="h-4 w-4 text-gray-400" />
-              <h3 className="text-sm font-semibold text-gray-900">
+              <ClockIcon className="h-4 w-4 text-fg-tertiary" />
+              <h3 className="text-sm font-semibold text-fg">
                 {tAct("title")}
               </h3>
             </div>
-            <Link
-              href="/dashboard/reservations"
-              className="flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800"
-            >
-              {tAct("allReservations")}
-              <ArrowRightIcon className="h-3 w-3 rtl:rotate-180" />
+            <Link href="/dashboard/reservations" className="inline-flex">
+              <Button
+                variant="link"
+                size="sm"
+                rightIcon={<ArrowRightIcon className="h-3 w-3 rtl:rotate-180" />}
+                onClick={(e) => e.preventDefault()}
+              >
+                {tAct("allReservations")}
+              </Button>
             </Link>
           </div>
 
           {data.recentActivities.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-10">
-              <UserGroupIcon className="mb-2 h-8 w-8 text-gray-200" />
-              <p className="text-sm text-gray-400">{tAct("noActivity")}</p>
-            </div>
+            <EmptyState
+              inline
+              variant="encouraging"
+              size="sm"
+              illustration={<UserGroupIcon className="h-6 w-6" />}
+              title={tAct("noActivity")}
+            />
           ) : (
-            <ul className="divide-y divide-gray-50 max-h-80 overflow-y-auto">
+            <ul className="divide-y divide-border-subtle max-h-80 overflow-y-auto">
               {data.recentActivities.map((act) => {
                 const actionLabel = tActLab.has(act.action) ? tActLab(act.action) : act.action;
                 return (
-                  <li key={act.id} className="px-4 py-2.5 hover:bg-gray-50 transition-colors">
+                  <li key={act.id} className="px-4 py-2.5 hover:bg-subtle transition-colors">
                     <div className="flex items-start gap-2.5">
-                      <span
-                        className={`mt-0.5 inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
-                          ACTION_COLORS[act.action] ?? "bg-gray-100 text-gray-500"
-                        }`}
-                      >
+                      <Badge tone={ACTION_TONE[act.action] ?? "neutral"} size="sm" appearance="subtle">
                         {actionLabel}
-                      </span>
+                      </Badge>
                     </div>
-                    <p className="mt-0.5 text-xs text-gray-600 truncate">
+                    <p className="mt-0.5 text-xs text-fg-secondary truncate">
                       {act.description}
                     </p>
-                    <div className="mt-0.5 flex items-center gap-2 text-[10px] text-gray-400">
+                    <div className="mt-0.5 flex items-center gap-2 text-[10px] text-fg-tertiary">
                       {act.performedBy && (
-                        <span className="font-medium text-gray-500">
+                        <span className="font-medium text-fg-tertiary">
                           {act.performedBy}
                         </span>
                       )}
@@ -492,7 +577,7 @@ export function TodayView({ propertyId }: { propertyId: string }) {
                       {act.reservationId && (
                         <Link
                           href={`/dashboard/reservations/${act.reservationId}`}
-                          className="text-blue-500 hover:text-blue-700"
+                          className="text-brand-600 hover:text-brand-700"
                         >
                           {act.reservationNumber ?? tAct("viewLink")}
                         </Link>

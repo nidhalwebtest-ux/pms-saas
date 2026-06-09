@@ -45,6 +45,18 @@ export interface CalendarMonthPeriod {
   isFullMonth:  boolean;  // true only if 1st of month → last day of month
 }
 
+/** Persisted per-segment snapshot from booking time (QA #28). */
+export interface PersistedSegment {
+  label?:             string | null;
+  startDate?:         string | null;
+  endDate?:           string | null;
+  nights:             number;
+  rateAmount:         number;
+  rateSource:         string;
+  seasonalPriceName:  string | null;
+  subtotal:           number;
+}
+
 export interface UnitInfo {
   unitId:             string;
   rateType:           string;       // "daily" | "monthly"
@@ -52,6 +64,9 @@ export interface UnitInfo {
   rateSource:         string;       // "default_price" | "seasonal_price" | "manual_override"
   seasonalPriceName:  string | null;
   propertyId:         string | null;
+  nights?:            number;       // persisted at booking
+  subtotal?:          number;       // persisted at booking
+  pricingSegments?:   PersistedSegment[] | null; // persisted snapshot (QA #28)
 }
 
 export interface GenerateInvoicesResult {
@@ -332,6 +347,9 @@ export function getReservationUnitInfos(reservation: {
     rateAmount:         number | { toNumber(): number };
     rateSource:         string;
     seasonalPriceName?: string | null;
+    nights?:            number;
+    subtotal?:          number | { toNumber(): number };
+    pricingSegments?:   unknown;
     isMovedOut?:        boolean;
     unit?: {
       id:       string;
@@ -340,6 +358,8 @@ export function getReservationUnitInfos(reservation: {
   }[];
 }): UnitInfo[] {
   const infos: UnitInfo[] = [];
+  const num = (v: number | { toNumber(): number } | undefined): number | undefined =>
+    v == null ? undefined : (typeof v === "object" ? v.toNumber() : v);
 
   // --- New junction table pattern ---
   if (
@@ -357,6 +377,11 @@ export function getReservationUnitInfos(reservation: {
         rateSource:        ru.rateSource,
         seasonalPriceName: ru.seasonalPriceName ?? null,
         propertyId:        ru.unit?.property?.id ?? null,
+        nights:            ru.nights,
+        subtotal:          num(ru.subtotal),
+        pricingSegments:   Array.isArray(ru.pricingSegments)
+                            ? (ru.pricingSegments as PersistedSegment[])
+                            : null,
       });
     }
     return infos;
@@ -402,14 +427,53 @@ function deriveInvoiceStatus(
   totalAmount: number,
   amountPaid: number,
   existingStatus: string,
+  creditedAmount = 0,
 ): InvoiceStatus {
   // Never un-cancel an invoice
   if (existingStatus === "CANCELLED" || existingStatus === "VOID") {
     return existingStatus as InvoiceStatus;
   }
-  if (amountPaid <= 0) return InvoiceStatus.PENDING;
-  if (roundOMR(totalAmount - amountPaid) <= 0) return InvoiceStatus.PAID;
-  return InvoiceStatus.PARTIALLY_PAID;
+  // A DRAFT is not auto-promoted by payments or return credits — it stays DRAFT
+  // until explicitly issued (revenue posts on issue).
+  if (existingStatus === "DRAFT") return InvoiceStatus.DRAFT;
+  // Net owed after cash paid + return credits. Fully settled → PAID. Otherwise
+  // PARTIALLY_PAID only when actual cash was paid (a credit-only invoice with no
+  // payment stays PENDING — "Partially Paid" would imply money changed hands).
+  if (roundOMR(totalAmount - amountPaid - creditedAmount) <= 0) return InvoiceStatus.PAID;
+  return amountPaid > 0 ? InvoiceStatus.PARTIALLY_PAID : InvoiceStatus.PENDING;
+}
+
+/**
+ * Issue DRAFT invoices for a reservation at check-in (QA #43).
+ *   - ALL_STARTED: issue every DRAFT whose period has started (periodStart ≤ today)
+ *   - FIRST_ONLY:  issue only the earliest DRAFT cycle
+ *   - NONE:        leave everything DRAFT
+ * Issuing sets status → PENDING and stamps issueDate = now. Returns the count.
+ */
+export async function issueDraftInvoicesOnCheckIn(
+  reservationId: string,
+  orgId: string,
+  mode: string,
+): Promise<number> {
+  if (mode === "NONE") return 0;
+  const todayD = toDay(new Date());
+  const drafts = await prisma.invoice.findMany({
+    where:   { reservationId, organizationId: orgId, status: "DRAFT" },
+    orderBy: [{ monthNumber: "asc" }, { periodStart: "asc" }],
+    select:  { id: true, periodStart: true },
+  });
+  if (drafts.length === 0) return 0;
+
+  const ids = mode === "FIRST_ONLY"
+    ? [drafts[0].id]
+    : drafts.filter((d) => toDay(d.periodStart) <= todayD).map((d) => d.id);
+  if (ids.length === 0) return 0;
+
+  await prisma.invoice.updateMany({
+    where: { id: { in: ids } },
+    data:  { status: "PENDING", issueDate: new Date() },
+  });
+  return ids.length;
 }
 
 // ── Generate invoices for a reservation ──────────────────────────────────────
@@ -513,6 +577,9 @@ async function _generateShortTermInvoice(
   nights: number,
 ): Promise<GenerateInvoicesResult> {
   const today = new Date();
+  // Invoices generated while the reservation isn't checked in are DRAFT
+  // (provisional). Check-in issues them per the org's autoIssueOnCheckIn (QA #43).
+  const isCheckedIn = res.status === "CHECKED_IN";
   const discountAmount = roundOMR(Number(res.discountAmount ?? 0));
 
   const result = await prisma.$transaction(async (tx) => {
@@ -524,12 +591,42 @@ async function _generateShortTermInvoice(
     let sortOrder = 0;
 
     for (const ui of unitInfos) {
-      // Fetch daily pricing breakdown (from UnitPrice table)
-      const pricing = await getUnitPriceForRange(ui.unitId, res.startDate, res.endDate);
-      const segments = collapseToSegments(pricing.dailyBreakdown);
-
       // Resolve unit name from reservation relation
       const unitName = _resolveUnitName(res, ui.unitId) ?? ui.unitId;
+
+      // SOURCE OF TRUTH: the segments snapshotted at booking (QA #28/#32) honor
+      // manual overrides and the seasonal rates in effect when booked. Only fall
+      // back to recomputing from current UnitPrice records for legacy rows that
+      // predate segment persistence.
+      const persisted = ui.pricingSegments;
+      if (persisted && persisted.length > 0 && persisted.reduce((s, sg) => s + sg.subtotal, 0) > 0) {
+        for (const seg of persisted) {
+          const lineTotal = roundOMR(seg.subtotal);
+          subtotal = roundOMR(subtotal + lineTotal);
+          const from = seg.startDate ? seg.startDate.slice(0, 10) : "";
+          const to   = seg.endDate ? seg.endDate.slice(0, 10) : "";
+          const span = from && to ? ` (${from} – ${to})` : "";
+          lineItemsData.push({
+            organizationId:    orgId,
+            description:       `${unitName} — ${seg.seasonalPriceName ?? "Default"} rate${span}`,
+            category:          "ROOM_CHARGE",
+            unitId:            ui.unitId,
+            quantity:          seg.nights,
+            unitPrice:         seg.rateAmount,
+            lineTotal,
+            rateType:          "DAILY",
+            rateSource:        mapRateSource(seg.rateSource),
+            seasonalPriceName: seg.seasonalPriceName,
+            priceBreakdown:    persisted as any,
+            sortOrder:         sortOrder++,
+          });
+        }
+        continue;
+      }
+
+      // Fetch daily pricing breakdown (from UnitPrice table) — legacy fallback.
+      const pricing = await getUnitPriceForRange(ui.unitId, res.startDate, res.endDate);
+      const segments = collapseToSegments(pricing.dailyBreakdown);
 
       if (segments.length > 0 && segments.reduce((s, seg) => s + seg.subtotal, 0) > 0) {
         // Normal path: use the pricing-engine segments. Defensive guard:
@@ -610,7 +707,8 @@ async function _generateShortTermInvoice(
         totalAmount,
         amountPaid:     0,
         balanceDue,
-        status:         "PENDING",
+        status:         isCheckedIn ? "PENDING" : "DRAFT",
+        // Placeholder for drafts; overwritten with the real issue time when issued.
         issueDate:      today,
         dueDate:        res.startDate,   // due on check-in
         createdById:    userId,
@@ -652,14 +750,17 @@ async function _generateAllMonthlyInvoices(
 
   const today    = new Date();
   const todayDay = toDay(today);
+  // A cycle is issued (PENDING) only once the reservation is checked in AND the
+  // cycle's period has started; otherwise it stays DRAFT until check-in (QA #43).
+  const isCheckedIn = res.status === "CHECKED_IN";
 
   const createdInvoices: any[] = [];
 
   for (const period of periods) {
-    const isFuture = toDay(period.periodStart) > todayDay;
-    const status   = isFuture ? InvoiceStatus.DRAFT : InvoiceStatus.PENDING;
+    const periodStarted = toDay(period.periodStart) <= todayDay;
+    const status   = (isCheckedIn && periodStarted) ? InvoiceStatus.PENDING : InvoiceStatus.DRAFT;
     // Due today for current/past cycles; on cycle start for future cycles
-    const dueDate  = isFuture ? period.periodStart : todayDay;
+    const dueDate  = periodStarted ? todayDay : period.periodStart;
 
     const invoice = await _createMonthlyInvoice({
       res,
@@ -723,7 +824,11 @@ async function _createMonthlyInvoice(opts: {
 
       const unitName = _resolveUnitName(res, ui.unitId) ?? ui.unitId;
 
-      const unitPrice = roundOMR(monthlyRate / 30); // per-day equivalent
+      // Full month bills flat (qty 1 × monthly rate); a partial month is prorated
+      // per-day. Keep qty × unitPrice == lineTotal so the invoice reconciles
+      // (a flat monthly rate shown as days × per-day broke for 31-day months).
+      const quantity  = period.isFullMonth ? 1 : period.days;
+      const unitPrice = period.isFullMonth ? roundOMR(monthlyRate) : roundOMR(monthlyRate / 30);
       const lineTotal = amount;
       subtotal = roundOMR(subtotal + lineTotal);
 
@@ -732,7 +837,7 @@ async function _createMonthlyInvoice(opts: {
         description:       `${unitName} — ${periodLabel}`,
         category:          "ROOM_CHARGE",
         unitId:            ui.unitId,
-        quantity:          period.days,
+        quantity,
         unitPrice,
         lineTotal,
         rateType:          "MONTHLY",
@@ -765,6 +870,7 @@ async function _createMonthlyInvoice(opts: {
         amountPaid:     0,
         balanceDue,
         status,
+        // Placeholder for drafts; overwritten with the real issue time when issued.
         issueDate:      today,
         dueDate:        opts.dueDate,
         createdById:    userId,
@@ -1332,6 +1438,33 @@ export async function recordPayment(
     const createdAllocations: any[] = [];
     let remaining = paymentAmount;
 
+    // Overpayment policy (QA #46/#50): BLOCK only TRUE overpayment — paying more
+    // than the total outstanding for the scope — NOT an intentional under-
+    // allocation (leaving part as an unapplied credit on purpose).
+    {
+      const scopeInvoices = await tx.invoice.findMany({
+        where: {
+          tenantId,
+          organizationId: orgId,
+          ...(reservationId ? { reservationId } : {}),
+          status: { in: ["PENDING", "PARTIALLY_PAID", "PARTIAL", "DUE", "ISSUED"] },
+          balanceDue: { gt: 0 },
+        },
+        select: { balanceDue: true },
+      });
+      const scopeOutstanding = roundOMR(scopeInvoices.reduce((s, i) => s + Number(i.balanceDue), 0));
+      const trueOverpayment  = roundOMR(Math.max(0, paymentAmount - scopeOutstanding));
+      if (trueOverpayment > 0) {
+        const org = await tx.organization.findUnique({
+          where:  { id: orgId },
+          select: { overpaymentPolicy: true },
+        });
+        if ((org?.overpaymentPolicy ?? "WARN") === "BLOCK") {
+          throw new Error(`Payment exceeds the outstanding balance by ${trueOverpayment.toFixed(3)} OMR.`);
+        }
+      }
+    }
+
     if (invoiceAllocations && invoiceAllocations.length > 0) {
       // ── 3a. Manual allocation ──────────────────────────────────────────────
       // Cap each allocation at the invoice's current balanceDue. Anything the
@@ -1368,11 +1501,16 @@ export async function recordPayment(
       }
     } else {
       // ── 3b. Auto allocation: oldest outstanding invoices first ─────────────
+      // Scope to THIS reservation when paying from a reservation (QA #48) — else
+      // the payment would spread across the tenant's other reservations. When
+      // no reservation context (e.g. the standalone payments page), fall back to
+      // tenant-wide oldest-first.
       const outstandingInvoices = await tx.invoice.findMany({
         where: {
           tenantId,
           organizationId: orgId,
-          status: { in: ["PENDING", "PARTIALLY_PAID", "PARTIAL", "DUE", "ISSUED", "DRAFT"] },
+          ...(reservationId ? { reservationId } : {}),
+          status: { in: ["PENDING", "PARTIALLY_PAID", "PARTIAL", "DUE", "ISSUED"] },
           balanceDue: { gt: 0 },
         },
         orderBy: { dueDate: "asc" },
@@ -1402,7 +1540,8 @@ export async function recordPayment(
 
     const overpayment = remaining > 0 ? remaining : 0;
     if (overpayment > 0) {
-      // Log overpayment in payment notes — do not fail
+      // Unapplied remainder (true overpayment was already gated above by policy,
+      // or this is an intentional under-allocation) → record as a credit.
       await tx.payment.update({
         where: { id: payment.id },
         data: {
@@ -1432,13 +1571,15 @@ async function _applyAllocationToInvoice(
 ): Promise<void> {
   const invoice = await tx.invoice.findUniqueOrThrow({
     where:  { id: invoiceId },
-    select: { totalAmount: true, amountPaid: true, status: true },
+    select: { totalAmount: true, amountPaid: true, creditedAmount: true, status: true },
   });
 
   const totalAmount = roundOMR(Number(invoice.totalAmount));
+  const credited    = roundOMR(Number(invoice.creditedAmount));
   const amountPaid  = roundOMR(Number(invoice.amountPaid) + amount);
-  const balanceDue  = roundOMR(Math.max(0, totalAmount - amountPaid));
-  const newStatus   = deriveInvoiceStatus(totalAmount, amountPaid, invoice.status);
+  // balanceDue is net of return credits (credit-note model).
+  const balanceDue  = roundOMR(Math.max(0, totalAmount - amountPaid - credited));
+  const newStatus   = deriveInvoiceStatus(totalAmount, amountPaid, invoice.status, credited);
 
   await tx.invoice.update({
     where: { id: invoiceId },
@@ -1512,6 +1653,12 @@ export async function getTenantFinancialSummary(
     (sum, inv) => roundOMR(sum + Number(inv.totalAmount)),
     0,
   );
+  // Return credits applied to invoices (credit-note model): reduce the effective
+  // charge without touching the frozen invoice total.
+  const totalCredited = nonCancelledInvoices.reduce(
+    (sum, inv) => roundOMR(sum + Number(inv.creditedAmount ?? 0)),
+    0,
+  );
 
   const nonRefundPayments = payments.filter((p) => !p.isRefund);
   const refundPayments    = payments.filter((p) => p.isRefund);
@@ -1525,7 +1672,8 @@ export async function getTenantFinancialSummary(
     0,
   );
 
-  const currentBalance = roundOMR(totalCharged - totalPaid + totalRefunded);
+  // Net owed = effective charges (charged − credited) − cash in + cash refunded.
+  const currentBalance = roundOMR(totalCharged - totalCredited - totalPaid + totalRefunded);
 
   // Invoice counts
   const paidInvoices = nonCancelledInvoices.filter(
@@ -1537,8 +1685,13 @@ export async function getTenantFinancialSummary(
   const outstandingInvoicesList = nonCancelledInvoices.filter((inv) =>
     ["ISSUED", "PARTIALLY_PAID", "DRAFT", "PENDING", "PARTIAL", "DUE"].includes(inv.status),
   );
+  // Overdue = a *billed* invoice (DRAFT excluded — not yet issued, no revenue
+  // posted) whose due date is strictly in the past, with a remaining balance.
   const overdueInvoices = outstandingInvoicesList.filter(
-    (inv) => toDay(inv.dueDate) < toDay(today) && Number(inv.balanceDue) > 0,
+    (inv) =>
+      inv.status !== "DRAFT" &&
+      toDay(inv.dueDate) < toDay(today) &&
+      Number(inv.balanceDue) > 0,
   );
 
   return {

@@ -68,14 +68,17 @@ export default function LanguageSwitcher({ variant = "dropdown", className = "" 
   }
 
   // dropdown variant
+  // On mobile (sub-sm), hide the icon and use the short locale code so the
+  // header end-group can fit. The native select still renders its full
+  // option list when opened.
   return (
-    <div className={`inline-flex items-center gap-1.5 ${className}`}>
-      <LanguageIcon className="h-4 w-4 text-gray-400" />
+    <div className={`inline-flex items-center gap-1.5 flex-shrink-0 ${className}`}>
+      <LanguageIcon className="h-4 w-4 text-gray-400 hidden sm:block" />
       <select
         value={locale}
         disabled={pending}
         onChange={(e) => setLocale(e.target.value as Locale)}
-        className="bg-transparent border-0 text-xs font-medium text-gray-700 focus:ring-0 focus:outline-none cursor-pointer"
+        className="bg-transparent border-0 text-xs font-medium text-gray-700 focus:ring-0 focus:outline-none cursor-pointer max-w-[40px] sm:max-w-none truncate"
         aria-label="Language"
       >
         {locales.map((l) => (

@@ -7,31 +7,43 @@
     "build": "npx prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "seed:test": "tsx --env-file=.env scripts/seed-test-data.ts",
+    "verify:integrity": "tsx --env-file=.env scripts/verify-data-integrity.ts"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.9",
     "@heroicons/react": "^2.2.0",
     "@prisma/client": "^6.3.0",
+    "@radix-ui/react-tabs": "^1.1.13",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.93.1",
+    "@tanstack/react-table": "^8.21.3",
+    "@tanstack/react-virtual": "^3.13.24",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "libphonenumber-js": "^1.13.1",
+    "lucide-react": "^1.16.0",
     "next": "^16.1.5",
     "next-intl": "^4.9.1",
     "react": "^19.2.4",
     "react-day-picker": "^9.13.1",
     "react-dom": "^19.2.4",
+    "react-dropzone": "^15.0.0",
+    "react-textarea-autosize": "^8.5.9",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "@tailwindcss/forms": "^0.5.11",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "postcss": "^8",
     "prisma": "^6.3.0",
     "tailwindcss": "^3.4.1",
+    "tailwindcss-rtl": "^0.9.0",
+    "tsx": "^4.22.3",
     "typescript": "^5"
   }
 }

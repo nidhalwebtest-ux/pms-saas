@@ -12,8 +12,11 @@ import {
   ArrowRightIcon,
   ArrowLeftIcon,
   CheckIcon,
+  ArrowRightOnRectangleIcon,
 } from "@heroicons/react/24/outline";
 import { createOrganization } from "./actions";
+import { logout } from "@/app/login/actions";
+import { PhoneInput } from "@/components/ui";
 
 // ── Static data ───────────────────────────────────────────────────────────────
 
@@ -333,6 +336,18 @@ export default function OnboardingWizard() {
   return (
     <div className="w-full max-w-lg">
 
+      {/* Logout — lets a user who signed up with the wrong account exit (QA issue #1) */}
+      <div className="mb-4 flex justify-end">
+        <button
+          type="button"
+          onClick={() => logout()}
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white transition-colors"
+        >
+          <ArrowRightOnRectangleIcon className="h-4 w-4" />
+          {t("logout")}
+        </button>
+      </div>
+
       {/* Branding */}
       <div className="mb-8 flex flex-col items-center gap-2">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-500/40">
@@ -378,14 +393,18 @@ export default function OnboardingWizard() {
               required
               error={fieldError?.field === "name" ? fieldError.message : null}
             />
-            <InputField
-              label={tCompany("phoneLabel")}
-              name="phone"
-              type="tel"
-              value={form.phone}
-              onChange={(v) => set("phone", v)}
-              placeholder={tCompany("phonePlaceholder")}
-            />
+            {/* Phone with country-code picker (QA #2) — dark variant. */}
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1.5">
+                {tCompany("phoneLabel")}
+              </label>
+              <PhoneInput
+                variant="dark"
+                value={form.phone}
+                onValueChange={(v) => set("phone", v)}
+                placeholder={tCompany("phonePlaceholder")}
+              />
+            </div>
             <LogoUploader
               file={form.logo}
               onChange={(f) => set("logo", f)}

@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { useTranslations, useLocale } from "next-intl";
 import { ar as arLocale, enUS as enLocale } from "date-fns/locale";
 import type { Role } from "@/lib/permissions";
+import { SegmentedControl } from "@/components/ui";
 import { TodayView } from "./views/TodayView";
 import { ReceptionistView } from "./views/ReceptionistView";
 import { ManagerView } from "./views/ManagerView";
@@ -90,25 +91,16 @@ export function DashboardShell({ user, propertyId, properties }: Props) {
           </p>
         </div>
 
-        {/* View switcher */}
-        <nav
-          className="flex gap-1 rounded-xl bg-gray-100 p-1 self-start"
-          aria-label={t("viewSwitcher")}
-        >
-          {tabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => switchTab(tab)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-all ${
-                activeTab === tab
-                  ? "bg-white text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
-              {t(TAB_KEYS[tab])}
-            </button>
-          ))}
-        </nav>
+        {/* View switcher — spec calls this the canonical brand/lg SegmentedControl */}
+        <SegmentedControl<Tab>
+          value={activeTab}
+          onValueChange={switchTab}
+          size="lg"
+          variant="brand"
+          ariaLabel={t("viewSwitcher")}
+          className="self-start"
+          options={tabs.map((tab) => ({ value: tab, label: t(TAB_KEYS[tab]) }))}
+        />
       </div>
 
       {/* ── Active view ── */}

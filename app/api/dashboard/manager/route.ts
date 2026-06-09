@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import {
   addMonths,
   startOfMonth,
@@ -74,9 +75,10 @@ export async function GET(req: NextRequest) {
       ...(propertyId ? { propertyId } : {}),
     },
   };
-  const invoiceBase = {
+  // Receivables exclude DRAFT (not yet issued — no revenue posted), CANCELLED and VOID.
+  const invoiceBase: Prisma.InvoiceWhereInput = {
     organizationId: orgId,
-    status: { not: "CANCELLED" as const },
+    status: { notIn: ["CANCELLED", "VOID", "DRAFT"] },
     ...(propertyId ? { propertyId } : {}),
   };
 

@@ -17,6 +17,7 @@ import {
   ChevronUpDownIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
+import { Alert, Button } from "@/components/ui";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -61,10 +62,16 @@ function roundOMR(n: number) {
 }
 
 function isOverdue(inv: Invoice): boolean {
-  return (
-    (inv.status === "PENDING" || inv.status === "PARTIALLY_PAID" || inv.status === "DUE" || inv.status === "ISSUED") &&
-    new Date(inv.dueDate) < new Date()
-  );
+  const billed =
+    inv.status === "PENDING" || inv.status === "PARTIALLY_PAID" ||
+    inv.status === "DUE" || inv.status === "ISSUED";
+  if (!billed) return false;
+  // Day-level compare: an invoice due *today* isn't overdue yet.
+  const due = new Date(inv.dueDate);
+  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+  const now = new Date();
+  const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return dueDay < todayDay;
 }
 
 function computeAllocations(invoices: Invoice[], amount: number): AllocationPreview[] {
@@ -359,9 +366,10 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
       )}
 
       {/* ─────────── Mode B: Tenant search ─────────── */}
+      {/* No overflow-hidden here: it would clip the tenant search dropdown (QA #49). */}
       {mode === "tenant" && (
-        <div className="bg-white rounded-lg shadow-sm ring-1 ring-gray-200 overflow-hidden">
-          <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+        <div className="bg-white rounded-lg shadow-sm ring-1 ring-gray-200">
+          <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 rounded-t-lg flex items-center gap-2">
             <UserCircleIcon className="h-4 w-4 text-gray-400" />
             <h2 className="text-sm font-semibold text-gray-700">{tForm("step1Tenant")}</h2>
           </div>
@@ -625,10 +633,12 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
               </div>
             ))}
             {overpayment > 0 && (
-              <div className="mt-2 flex items-center gap-2 text-sm text-amber-700 bg-amber-50 rounded px-3 py-2 border border-amber-200">
-                <ExclamationTriangleIcon className="h-4 w-4 flex-shrink-0" />
-                {tForm("overpaymentNotice", { amount: overpayment.toFixed(3) })}
-              </div>
+              <Alert
+                variant="warning"
+                size="sm"
+                className="mt-2"
+                description={tForm("overpaymentNotice", { amount: overpayment.toFixed(3) })}
+              />
             )}
           </div>
         </div>
@@ -644,14 +654,13 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
           >
             {tForm("cancel")}
           </button>
-          <button
+          <Button
             type="button"
-            disabled={submitting}
             onClick={() => handleSubmit(false)}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 disabled:opacity-50"
+            loading={submitting}
           >
-            {submitting ? tForm("recording") : tForm("recordPayment")}
-          </button>
+            {tForm("recordPayment")}
+          </Button>
           <button
             type="button"
             disabled={submitting}

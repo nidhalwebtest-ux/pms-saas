@@ -38,7 +38,7 @@ export async function GET(
   const tenantName = `${tenant.firstName} ${tenant.lastName}`.replace(/[^a-zA-Z0-9 ]/g, "");
 
   // Fetch all data (same as ledger endpoint, no date filtering for export)
-  const [invoices, payments, refunds] = await Promise.all([
+  const [invoices, payments, refunds, returns] = await Promise.all([
     prisma.invoice.findMany({
       where: {
         tenantId,
@@ -89,6 +89,21 @@ export async function GET(
       },
       orderBy: { date: "asc" },
     }),
+    prisma.return.findMany({
+      where: {
+        tenantId,
+        organizationId: orgUser.organizationId,
+        status: "active",
+      },
+      select: {
+        id: true,
+        returnNumber: true,
+        returnAmount: true,
+        createdAt: true,
+        reservationId: true,
+      },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
 
   type TxRow = {
@@ -130,11 +145,22 @@ export async function GET(
     });
   }
 
+  for (const ret of returns) {
+    rows.push({
+      date: ret.createdAt,
+      type: "Return",
+      description: `Return ${ret.returnNumber}`,
+      reference: ret.returnNumber,
+      debit: 0,
+      credit: roundOMR(Number(ret.returnAmount)),
+    });
+  }
+
   for (const ref of refunds) {
     const num = ref.paymentNumber ?? ref.id.slice(0, 8).toUpperCase();
     rows.push({
       date: ref.date,
-      type: "Return",
+      type: "Refund",
       description: `Refund ${num}`,
       reference: num,
       debit: roundOMR(Number(ref.amount)),
@@ -145,14 +171,10 @@ export async function GET(
   // Sort by date ascending
   rows.sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  // Calculate running balance
+  // Running balance (AR view): debit increases, credit decreases.
   let balance = 0;
   const finalRows = rows.map((row) => {
-    if (row.type === "Invoice" || row.type === "Return") {
-      balance = roundOMR(balance + row.debit);
-    } else {
-      balance = roundOMR(balance - row.credit);
-    }
+    balance = roundOMR(balance + row.debit - row.credit);
     return { ...row, balance };
   });
 

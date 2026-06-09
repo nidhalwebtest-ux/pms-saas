@@ -1,4 +1,139 @@
 {
+  "phoneInput": {
+    "searchCountry": "Search country…",
+    "noMatches": "No matches"
+  },
+  "emptyState": {
+    "reservations": {
+      "firstTime": {
+        "title": "No reservations yet",
+        "description": "Create your first reservation to start tracking arrivals and balances.",
+        "primary": "+ New reservation",
+        "secondary": "Import"
+      },
+      "filtered": {
+        "title": "No reservations match these filters",
+        "description": "Try clearing or widening your filters to see more reservations.",
+        "primary": "Clear filters"
+      }
+    },
+    "tenants": {
+      "firstTime": {
+        "title": "No tenants in your database",
+        "description": "Add tenants individually, or import a list to start tracking contacts and contracts.",
+        "primary": "+ Add tenant",
+        "secondary": "Import"
+      },
+      "filtered": {
+        "title": "No tenants found for \"{query}\"",
+        "description": "Try a partial phone number or national ID, or clear your search.",
+        "primary": "Clear search",
+        "secondary": "+ Add tenant"
+      }
+    },
+    "buildings": {
+      "firstTime": {
+        "title": "No buildings added yet",
+        "description": "Add your first building to unlock units, occupancy and revenue tracking.",
+        "primary": "+ Add building"
+      },
+      "noUnits": {
+        "title": "No units in {buildingName}",
+        "description": "Add units to start tracking occupancy and pricing.",
+        "primary": "+ Add unit"
+      }
+    },
+    "invoices": {
+      "firstTime": {
+        "title": "No invoices yet",
+        "description": "Generate the first invoice from any active reservation.",
+        "primary": "View reservations"
+      },
+      "filtered": {
+        "title": "No invoices match these filters",
+        "description": "Try clearing or widening your filters to see more invoices.",
+        "primary": "Clear filters"
+      }
+    },
+    "payments": {
+      "firstTime": {
+        "title": "No payments recorded",
+        "description": "Record a payment against an outstanding invoice to get started.",
+        "primary": "Record payment"
+      }
+    },
+    "expenses": {
+      "pending": {
+        "title": "All caught up",
+        "description": "No expenses are waiting on your approval.",
+        "primary": "View approved expenses"
+      },
+      "filtered": {
+        "title": "No expenses match these filters",
+        "description": "Try clearing or widening your filters to see more expenses.",
+        "primary": "Clear filters"
+      }
+    },
+    "activity": {
+      "title": "No activity to show yet",
+      "description": "Once you create reservations and record payments, recent activity will appear here.",
+      "primary": "Take the tour"
+    },
+    "search": {
+      "title": "No results for \"{query}\"",
+      "description": "Check the spelling or try a different keyword.",
+      "primary": "Clear search"
+    },
+    "comingSoon": {
+      "title": "{feature} — coming soon",
+      "description": "This feature is in development. Join the waitlist to hear when it ships.",
+      "primary": "Join waitlist"
+    },
+    "unitsAvailable": {
+      "title": "Units available",
+      "description": "Selected units are free for {dateRange}."
+    }
+  },
+  "dataTable": {
+    "pagination": {
+      "rowsLabel": "Rows",
+      "rowsPerPageAriaLabel": "Rows per page",
+      "firstPage": "First page",
+      "previousPage": "Previous page",
+      "nextPage": "Next page",
+      "lastPage": "Last page",
+      "pageAriaLabel": "Page {page}",
+      "range": "{start}–{end} of {total}",
+      "navAriaLabel": "Pagination"
+    },
+    "toolbar": {
+      "deselectAll": "Deselect all",
+      "rowsSelected": "{count, plural, =1 {1 row selected} other {# rows selected}}"
+    },
+    "empty": {
+      "noData": "No data yet",
+      "noMatches": "No matches",
+      "noMatchesHint": "Try clearing or adjusting your filters.",
+      "clearFilters": "Clear filters"
+    },
+    "error": {
+      "retry": "Retry"
+    },
+    "mobile": {
+      "sortLabel": "Sort",
+      "sortColumnAriaLabel": "Sort column",
+      "sortNone": "None",
+      "sortAsc": "Asc",
+      "sortDesc": "Desc",
+      "rowActionsAriaLabel": "Row actions",
+      "selectRowAriaLabel": "Select row"
+    },
+    "header": {
+      "selectAllAriaLabel": "Select all rows on this page",
+      "selectRowAriaLabel": "Select row"
+    },
+    "loading": "Loading"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -29,7 +164,7 @@
   },
   "auth": {
     "brand": {
-      "name": "OmRent",
+      "name": "Binaya",
       "tagline": "Property Management System"
     },
     "common": {
@@ -114,6 +249,7 @@
       "warnEmailFailed": "We couldn't deliver the verification email automatically. This can happen with certain free email providers or restricted sender domains. Please click Resend below — and if that fails too, contact support."
     },
     "onboarding": {
+      "logout": "Log out",
       "header": {
         "title": "Set Up Your Workspace",
         "description": "Tell us about your company — takes 1 minute"
@@ -236,6 +372,7 @@
     "tenantLedger": "Tenant Ledger",
     "reservations": "Reservations",
     "invoices": "Invoices",
+    "returns": "Returns",
     "payments": "Payments",
     "expenses": "Expenses",
     "allExpenses": "All Expenses",
@@ -248,7 +385,13 @@
     "myProfile": "My Profile",
     "organization": "Organization",
     "reservationList": "Reservations list",
-    "newReservation": "New reservation"
+    "newReservation": "New reservation",
+    "paymentsList": "Payments list",
+    "recordPayment": "Record payment",
+    "reservationSettings": "Reservation Settings",
+    "paymentSettings": "Payment Settings",
+    "returnSettings": "Return Settings",
+    "unitSettings": "Unit Settings"
   },
   "dashboard": {
     "goodMorning": "Good morning, {name}",
@@ -272,7 +415,7 @@
     "outstandingBalance": "Outstanding Balance",
     "pendingApprovals": "Pending Approvals",
     "header": {
-      "appName": "OmRent",
+      "appName": "Binaya",
       "version": "v1.0",
       "viewNotifications": "View notifications",
       "logout": "Logout"
@@ -282,6 +425,7 @@
       "loadFailed": "Failed to load dashboard data",
       "loadingData": "Loading today's data…",
       "noData": "No data",
+      "retry": "Retry",
       "stats": {
         "arrivingToday": "Arriving Today",
         "checkingOut": "Checking Out",
@@ -770,7 +914,8 @@
         "confirmYes": "Delete Forever",
         "working": "Deleting…",
         "successToast": "\"{name}\" has been permanently deleted.",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "typeToConfirmLabel": "Type \"{name}\" to confirm"
       }
     },
     "errors": {
@@ -833,7 +978,8 @@
       "vacant": "Vacant",
       "occupied": "Occupied",
       "reserved": "Reserved",
-      "maintenance": "Under Maintenance"
+      "maintenance": "Under Maintenance",
+      "overstay": "Overstay"
     },
     "filters": {
       "searchPlaceholder": "Search by unit name or number…",
@@ -1007,8 +1153,6 @@
       "amenitiesTitle": "Amenities",
       "preview": "Preview",
       "previewHelp": "Edit names or remove units before creating",
-      "regenerate": "Regenerate",
-      "regenerateTitle": "Regenerate from pattern",
       "emptyPreviewTitle": "Set a naming pattern to preview units",
       "namePlaceholder": "Unit name…",
       "addBlank": "Add blank unit",
@@ -1068,6 +1212,8 @@
         "statusLabel": "Status",
         "active": "Active",
         "inactive": "Inactive",
+        "disallowMonthlyLabel": "Block monthly bookings during this season",
+        "disallowMonthlyHint": "Guests can only book nightly in this date range — useful to keep units open for premium short stays (e.g. Khareef).",
         "dailyRate": "Daily Rate * (OMR)",
         "weeklyRate": "Weekly (OMR)",
         "monthlyRate": "Monthly * (OMR)",
@@ -1108,8 +1254,13 @@
       "regular": "Regular",
       "vip": "⭐ VIP",
       "blacklisted": "🚫 Blacklisted",
+      "statusAll": "All",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "typeLabel": "Type",
       "allTypes": "All Types",
-      "sourceLabel": "Source:",
+      "allSources": "All Sources",
+      "sourceLabel": "Source",
       "clearAll": "Clear all"
     },
     "types": {
@@ -1324,7 +1475,8 @@
       "types": {
         "invoice": "Invoice",
         "payment": "Payment",
-        "return": "Refund"
+        "return": "Return",
+        "refund": "Refund"
       },
       "empty": {
         "title": "No transactions found",
@@ -1504,6 +1656,11 @@
     "allProperties": "All Properties",
     "allRateTypes": "All Rate Types",
     "allSources": "All Sources",
+    "propertyLabel": "Property",
+    "dateLabel": "Date",
+    "rateTypeLabel": "Rate Type",
+    "sourceLabel": "Source",
+    "unitsLabel": "Units:",
     "today": "Today",
     "loading": "Loading reservations…",
     "loadFailed": "Failed to load reservations.",
@@ -1557,7 +1714,8 @@
       "overstay": "Overstay",
       "checkedOut": "Checked Out",
       "cancelled": "Cancelled",
-      "noShow": "No Show"
+      "noShow": "No Show",
+      "pending": "Pending"
     },
     "actions": {
       "checkIn": "Check In",
@@ -1590,12 +1748,12 @@
     "cancelModal": {
       "title": "Cancel Reservation",
       "totalPaidRefund": "Total paid: <b>{amount} OMR</b> — a refund may be required.",
-      "reasonLabel": "Reason *",
+      "reasonLabel": "Reason",
       "selectReason": "Select reason…",
-      "notesLabelRequired": "Notes *",
-      "notesLabelOptional": "Notes (optional)",
+      "notesLabel": "Notes",
       "notesPlaceholder": "Add any additional details…",
       "confirm": "Cancel Reservation",
+      "keep": "Keep Reservation",
       "errors": {
         "selectReason": "Please select a cancellation reason.",
         "notesRequired": "Notes are required when reason is 'Other'.",
@@ -1653,6 +1811,10 @@
       "addProperty": "+ Add Property",
       "addTenant": "+ Add Tenant"
     },
+    "editPage": {
+      "title": "Edit Reservation",
+      "description": "Update dates, units, rates, or details. Only available before check-in and before invoices are generated."
+    },
     "calendar": {
       "availabilityCalendar": "Availability Calendar",
       "showAvailability": "Show Availability",
@@ -1678,6 +1840,7 @@
       },
       "guest": {
         "viewProfile": "View Full Profile →",
+        "contactPerson": "Contact",
         "vip": "VIP",
         "blacklisted": "Blacklisted",
         "whatsapp": "WhatsApp",
@@ -1720,6 +1883,7 @@
           "invoice": "Invoice",
           "period": "Period",
           "total": "Total",
+          "balance": "Balance",
           "due": "Due",
           "status": "Status"
         },
@@ -1728,7 +1892,8 @@
           "partial": "Partial",
           "cancelled": "Cancelled",
           "overdue": "Overdue",
-          "pending": "Pending"
+          "pending": "Pending",
+          "draft": "Draft"
         }
       },
       "pricingBreakdown": {
@@ -1786,7 +1951,9 @@
         "checking": "Checking In…",
         "confirm": "✓ Confirm Check In",
         "failed": "Check-in failed",
-        "successDefault": "Checked in successfully"
+        "successDefault": "Checked in successfully",
+        "policyOverrideHint": "Choose how unit availability is enforced for this check-in. Defaults to your organization setting.",
+        "policyDefault": "default"
       },
       "checkOutModal": {
         "title": "Check Out — {ref}",
@@ -1808,7 +1975,9 @@
         "processing": "Processing…",
         "confirm": "Complete Check Out",
         "failed": "Check-out failed",
-        "successDefault": "Checked out successfully"
+        "successDefault": "Checked out successfully",
+        "balanceRemaining": "This guest still has an outstanding balance of {amount} OMR. Collect payment separately from the Payments section.",
+        "fullyPaid": "This guest has no outstanding balance — fully paid."
       },
       "cancelModal": {
         "title": "Cancel Reservation",
@@ -1852,12 +2021,18 @@
         "confirm": "Record Payment",
         "invalidAmount": "Enter a valid amount",
         "allocateAtLeastOne": "Allocate at least one invoice",
+        "allocExceedsAmount": "Allocated ({allocated}) exceeds the payment amount ({amount}).",
+        "exceedsAmount": "exceeds payment amount",
+        "unallocatedCredit": "{amount} OMR unallocated → credit",
+        "overpayBlock": "Payment exceeds the balance due by {amount} OMR.",
+        "overpayWarn": "This exceeds the balance due by {amount} OMR. The extra will be recorded as a credit. Continue?",
         "mismatch": "Allocated {allocated} OMR but payment amount is {amount} OMR — they must match",
         "failed": "Payment failed",
         "success": "Payment recorded",
         "invStatus": {
           "partial": "Partial",
-          "pending": "Pending"
+          "pending": "Pending",
+          "draft": "Draft"
         }
       },
       "chargeModal": {
@@ -1938,7 +2113,7 @@
         "paidRefundMsg": "→ Invoice stays PAID. Refund of {amount} OMR required.",
         "cancelMsg": "→ This invoice will be CANCELLED (unpaid, full period returned)",
         "refundRequiredMsg": "Refund of <b>{amount} OMR</b> is required. You can process it after the return.",
-        "noRefundMsg": "No refund required — invoice was not paid.",
+        "noRefundMsg": "No refund required — nothing was overpaid for the returned period.",
         "reasonLabel": "Reason",
         "selectReason": "Select reason…",
         "notesLabel": "Notes (optional)",
@@ -2106,6 +2281,7 @@
         "nightsHint": "nights",
         "autoComputed": "Auto-computed",
         "lockedHint": "Locked — based on check-in + months",
+        "lockedHintNights": "Locked — based on check-in + nights",
         "nightsSummary": "{count, plural, one {# night} other {# nights}}",
         "monthsSummary": "{count, plural, one {# calendar month} other {# calendar months}}"
       },
@@ -2119,6 +2295,7 @@
         "occupied": "Occupied",
         "perNight": "{amount} / night",
         "perMonth": "{amount} / month",
+        "segNights": "{n} × {amount}",
         "customRateNight": "✏ {amount} / night (custom)",
         "customRateMonth": "✏ {amount} / month (custom)",
         "omrTotal": "OMR total",
@@ -2175,6 +2352,7 @@
         "afterDiscount": "After {amount} OMR discount",
         "submitting": "Creating…",
         "submit": "Confirm & Create Reservation",
+        "saveChanges": "Save Changes",
         "customRateInline": "[custom rate]"
       },
       "sources": {
@@ -2192,6 +2370,8 @@
       },
       "createSuccess": "Reservation created!",
       "createFailed": "Failed to create reservation.",
+      "updateSuccess": "Reservation updated!",
+      "updateFailed": "Failed to update reservation.",
       "networkError": "Network error. Please try again.",
       "omr": "OMR"
     },
@@ -2424,6 +2604,114 @@
     },
     "scopedNote": "Locked to the building selected in the header."
   },
+  "returns": {
+    "title": "Returns",
+    "recordsCount": "{count} returns",
+    "footer": {
+      "returned": "Returned",
+      "refunded": "Refunded"
+    },
+    "tabs": {
+      "all": "All",
+      "active": "No refund",
+      "refundPending": "Refund pending",
+      "refunded": "Refunded",
+      "cancelled": "Cancelled"
+    },
+    "search": {
+      "placeholder": "Search return #, tenant, reservation…"
+    },
+    "table": {
+      "returnNumber": "Return #",
+      "status": "Status",
+      "tenant": "Tenant",
+      "reservation": "Reservation",
+      "viewReservation": "View",
+      "invoice": "Invoice",
+      "viewInvoice": "View",
+      "type": "Type",
+      "period": "Period",
+      "amount": "Return",
+      "refund": "Refund",
+      "created": "Created"
+    },
+    "statuses": {
+      "active": "No refund",
+      "refundPending": "Refund pending",
+      "refunded": "Refunded",
+      "cancelled": "Cancelled"
+    },
+    "types": {
+      "daily": "Daily",
+      "monthly": "Monthly"
+    },
+    "rowActions": {
+      "view": "View",
+      "processRefund": "Process refund"
+    },
+    "empty": {
+      "firstTitle": "No returns yet",
+      "firstDesc": "Returns are created from a reservation using the Return Days action.",
+      "goToReservations": "Go to reservations",
+      "noResultsTitle": "No returns match your filters",
+      "noResultsDesc": "Try clearing the search or status filter.",
+      "clearFilters": "Clear filters"
+    },
+    "actions": {
+      "processRefund": "Process refund",
+      "refundTitle": "Process refund",
+      "amountLabel": "Refund amount",
+      "refundDueHint": "Refund due: {amount} OMR",
+      "method": "Method",
+      "reference": "Reference",
+      "optional": "(optional)",
+      "notes": "Notes",
+      "cancel": "Cancel",
+      "confirmRefund": "Confirm refund",
+      "refundSuccess": "Refund processed",
+      "refundFailed": "Could not process refund",
+      "invalidAmount": "Enter a valid amount",
+      "somethingWentWrong": "Something went wrong"
+    },
+    "detail": {
+      "breadcrumb": "Returns",
+      "backToList": "Back to list",
+      "returnDetails": "Return details",
+      "type": "Type",
+      "period": "Period",
+      "quantity": "Quantity",
+      "months": "{n} month(s)",
+      "nights": "{n} night(s)",
+      "created": "Created",
+      "createdBy": "Created by",
+      "reason": "Reason:",
+      "notes": "Notes:",
+      "lineItems": "Line items",
+      "description": "Description",
+      "qty": "Qty",
+      "unitPrice": "Unit price",
+      "lineTotal": "Line total",
+      "noLineItems": "No line items",
+      "returnTotal": "Return total",
+      "refund": "Refund",
+      "noRefund": "Not required",
+      "refunded": "Refunded",
+      "refundDue": "Refund due",
+      "refundInfo": "Refund",
+      "refundStatus": "Status",
+      "refundAmount": "Amount",
+      "refundMethod": "Method",
+      "refundReference": "Reference",
+      "refundDate": "Date",
+      "refundProcessedBy": "Processed by",
+      "tenant": "Tenant",
+      "reservation": "Reservation",
+      "viewReservation": "View reservation",
+      "unitLabel": "Unit",
+      "appliedInvoice": "Applied to invoice",
+      "noInvoice": "No invoice linked"
+    }
+  },
   "invoices": {
     "title": "Invoices",
     "recordsCount": "{count, plural, =0 {No records} one {# record} other {# records}}",
@@ -2493,7 +2781,8 @@
       "balance": "Balance",
       "dueDate": "Due Date",
       "actions": "Actions",
-      "empty": "No invoices found matching your criteria."
+      "empty": "No invoices found matching your criteria.",
+      "viewReservation": "View reservation"
     },
     "rowActions": {
       "pay": "Pay",
@@ -2534,6 +2823,7 @@
       "tax": "Tax",
       "grandTotal": "Total",
       "amountPaid": "Amount Paid",
+      "creditsApplied": "Credits applied (returns)",
       "balanceDue": "Balance Due",
       "paymentDate": "Date",
       "paymentMethod": "Method",
@@ -2541,7 +2831,8 @@
       "paymentAmount": "Amount",
       "refund": "Refund",
       "noPayments": "No payments recorded yet.",
-      "unitLabel": "Unit"
+      "unitLabel": "Unit",
+      "viewReservation": "View reservation"
     },
     "actions": {
       "issuing": "Issuing…",
@@ -2898,7 +3189,17 @@
         "bulkApproveFailed": "Bulk approve failed",
         "deleted": "Expense deleted",
         "deleteFailed": "Delete failed",
-        "deleteConfirm": "Delete this pending expense?"
+        "deleteConfirm": "Delete this pending expense?",
+        "deleteTitle": "Delete expense?",
+        "deleteCta": "Delete",
+        "cancelCta": "Cancel"
+      },
+      "approveConfirm": {
+        "title": "Approve expense?",
+        "body": "Approve {number} for {amount} OMR? This marks it ready for processing.",
+        "bodyGeneric": "Approve this expense? This marks it ready for processing.",
+        "cta": "Approve",
+        "cancel": "Cancel"
       }
     },
     "detail": {
@@ -2941,10 +3242,16 @@
       "deleteBtn": "Delete",
       "noActions": "No actions available",
       "deleteConfirm": "Delete this pending expense? This cannot be undone.",
+      "deleteTitle": "Delete expense?",
+      "deleteCta": "Delete",
+      "cancelCta": "Cancel",
       "deleted": "Expense deleted",
       "deleteFailed": "Failed to delete",
       "approved": "Expense approved",
-      "approveFailed": "Failed to approve"
+      "approveFailed": "Failed to approve",
+      "approveTitle": "Approve expense?",
+      "approveConfirm": "Approve {number} for {amount} OMR? This marks it ready for processing.",
+      "approveCta": "Approve"
     },
     "submit": {
       "title": "Submit Expense",
@@ -3113,7 +3420,11 @@
         "cancelTitle": "Cancel invitation",
         "cancelConfirm": "Cancel?",
         "yes": "Yes",
-        "no": "No"
+        "no": "No",
+        "cancelDialogTitle": "Cancel invitation?",
+        "cancelDialogDescription": "The invitation sent to {email} will be voided. You can invite them again later.",
+        "cancelDialogConfirm": "Cancel invitation",
+        "cancelDialogKeep": "Keep invitation"
       },
       "permissions": {
         "title": "Role Permissions",
@@ -3149,7 +3460,11 @@
         "cancelTitle": "Cancel",
         "removeConfirm": "Remove?",
         "yes": "Yes",
-        "no": "No"
+        "no": "No",
+        "removeDialogTitle": "Remove team member?",
+        "removeDialogDescription": "{name} will lose access to this organization. You can invite them again later.",
+        "removeDialogConfirm": "Remove",
+        "removeDialogCancel": "Keep member"
       },
       "errors": {
         "noPermission": "You do not have permission to invite team members.",
@@ -3257,6 +3572,130 @@
       "saving": "Saving…",
       "revert": "Discard changes",
       "savedToast": "Organization settings saved."
+    },
+    "reservations": {
+      "title": "Reservations",
+      "subtitle": "Configure how reservations, check-in, and turnover behave.",
+      "checkInPolicyLabel": "Check-in policy",
+      "checkInPolicyHint": "Controls whether a unit must be fully vacated before a new guest can be checked in.",
+      "checkInPolicyBackToBackTitle": "Allow back-to-back check-in",
+      "checkInPolicyBackToBackDesc": "A new guest can be checked in on the previous guest's checkout day. Only true date overlaps are blocked.",
+      "checkInPolicyRequireVacantTitle": "Require unit to be vacant",
+      "checkInPolicyRequireVacantDesc": "Block check-in until the previous guest is checked out — even on a same-day turnover.",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "revert": "Discard changes",
+      "savedToast": "Reservation settings saved.",
+      "allowEarlyCheckInLabel": "Allow early check-in",
+      "allowEarlyCheckInHint": "When off, a guest cannot be checked in before their reservation start date.",
+      "autoCheckoutLabel": "Automatic check-out",
+      "autoCheckoutHint": "When on, reservations past their end date are checked out automatically by a daily job. (Note: the scheduled job is not yet active — this preference is saved for when it is enabled.)",
+      "invoiceSettingsLabel": "Invoice settings",
+      "invoiceSettingsHint": "Control when invoices are generated and issued. Invoices generated before check-in are saved as drafts.",
+      "invoiceSettingsNote": "At check-in, draft invoices are issued (draft → pending) according to the auto-issue setting.",
+      "dailyTimingLabel": "Daily invoice generation",
+      "monthlyTimingLabel": "Monthly invoice generation",
+      "timing": {
+        "onCreate": "On reservation creation",
+        "onCheckIn": "On check-in",
+        "manual": "Manual"
+      },
+      "autoIssueLabel": "Auto-issue at check-in",
+      "autoIssue": {
+        "allStarted": "All started cycles",
+        "firstOnly": "First cycle only",
+        "none": "Don't auto-issue"
+      },
+      "requireInvoiceLabel": "Require an invoice before check-in",
+      "require": {
+        "off": "Off",
+        "daily": "Daily reservations",
+        "monthly": "Monthly reservations",
+        "both": "Both"
+      },
+      "numberFormatLabel": "Reservation number format",
+      "numberFormatHint": "How new reservation numbers are generated. Numbering is per-organization and starts at 1.",
+      "prefixLabel": "Prefix",
+      "paddingLabel": "Number length (zero-padded)",
+      "resetYearlyLabel": "Reset numbering each year",
+      "resetYearlyHint": "When on, the year is included and the sequence restarts every year (RES-2026-00001). When off, numbering is continuous (RES-00001).",
+      "previewLabel": "Preview:"
+    },
+    "payments": {
+      "title": "Payment Settings",
+      "subtitle": "Control how payments are recorded.",
+      "save": "Save changes",
+      "revert": "Discard changes",
+      "savedToast": "Payment settings saved.",
+      "overpaymentLabel": "Overpayment (paying more than the balance due)",
+      "overpaymentHint": "What happens when a recorded payment is larger than the outstanding balance.",
+      "overpayment": {
+        "BLOCK": {
+          "title": "Block overpayment",
+          "desc": "Reject any payment larger than the outstanding balance. (Also prevents recording an advance/deposit when no invoice exists yet.)"
+        },
+        "WARN": {
+          "title": "Warn, then allow",
+          "desc": "Ask the receptionist to confirm; the extra is recorded as an unapplied credit."
+        },
+        "ALLOW": {
+          "title": "Allow (record as credit)",
+          "desc": "Accept it silently; the extra becomes an unapplied credit on the account."
+        }
+      }
+    },
+    "returns": {
+      "title": "Return Settings",
+      "subtitle": "Control how early-checkout returns and refunds behave.",
+      "save": "Save changes",
+      "revert": "Discard changes",
+      "savedToast": "Return settings saved.",
+      "draftLabel": "Unissued future cycles (monthly early checkout)",
+      "draftHint": "How to handle not-yet-issued future DRAFT cycles when a guest leaves early.",
+      "draft": {
+        "CANCEL": {
+          "title": "Cancel unissued drafts",
+          "desc": "Cancel future DRAFT cycles outright (never billed). Issued/paid cycles still get a return credit."
+        },
+        "CREDIT": {
+          "title": "Keep draft & credit it",
+          "desc": "Never touch any invoice — keep the DRAFT and apply a full return credit so it nets to zero."
+        }
+      },
+      "balanceLabel": "How returns affect the balance due",
+      "balanceHint": "A return never changes the invoice total or line items. This controls how the credit is shown.",
+      "balance": {
+        "NET": {
+          "title": "Balance reflects the credit",
+          "desc": "The invoice's balance due shows net of return credits (total − paid − credits)."
+        },
+        "GROSS": {
+          "title": "Keep the gross total visible",
+          "desc": "Show the full total with the credit listed as a separate deduction, then the net due."
+        }
+      },
+      "rateLabel": "Rate used for the returned period",
+      "rateHint": "Which rate prices the returned nights/cycles. A manual per-return override is always available.",
+      "rate": {
+        "CHARGED": {
+          "title": "Rate the guest was charged",
+          "desc": "Use the rate stored at booking (handles custom/seasonal rates correctly)."
+        },
+        "PRICE_LIST": {
+          "title": "Current price list",
+          "desc": "Re-price the returned period from the unit's current price tables."
+        }
+      }
+    },
+    "units": {
+      "title": "Units",
+      "subtitle": "Configure how units and their statuses behave.",
+      "showReservedLabel": "Show “Reserved” status for upcoming bookings",
+      "showReservedHint": "When off, a unit with an upcoming (confirmed/pending) reservation shows as Vacant until the guest checks in.",
+      "save": "Save changes",
+      "saving": "Saving…",
+      "revert": "Discard changes",
+      "savedToast": "Unit settings saved."
     }
   },
   "photoUpload": {
@@ -3370,6 +3809,7 @@
       "types": {
         "Invoice": "Invoice",
         "Payment": "Payment",
+        "Return": "Return",
         "Refund": "Refund"
       },
       "month": "Month {n}",
@@ -3425,5 +3865,240 @@
         "recordedBy": "Recorded by: {name}"
       }
     }
+  },
+  "marketing": {
+    "nav": {
+      "features": "Features",
+      "how": "How it works",
+      "pricing": "Pricing",
+      "faq": "FAQ",
+      "login": "Log in",
+      "trial": "Start free trial",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu"
+    },
+    "hero": {
+      "badge": "Property management software · Salalah",
+      "headlinePrefix": "Run your buildings",
+      "headlineHighlight": "like a pro",
+      "headlineSuffix": ", not a spreadsheet.",
+      "lede": "Binaya helps property managers in Salalah handle reservations, payments, and operations across every building — in one place. Free for one building. Ready in 20 minutes.",
+      "ctaTrial": "Start free trial",
+      "ctaDemo": "Watch 2-min demo",
+      "trustNoCard": "No credit card required",
+      "trustFree": "Free for 1 building",
+      "trustSetup": "Set up in 20 minutes",
+      "socialProof": "Trusted by property managers across Salalah, Mirbat & Al Haffa",
+      "floatingConfirmTitle": "Reservation confirmed",
+      "floatingForecastTitle": "Khareef forecast",
+      "floatingForecastMeta": "94% occupancy · 21 Jun"
+    },
+    "trust": {
+      "madeIn": "Made in Salalah"
+    },
+    "problem": {
+      "eyebrow": "The reality",
+      "title": "Sound familiar?",
+      "description": "Most property managers in Salalah run their business on three tools: a spreadsheet, a WhatsApp group, and good memory. It works — until Khareef starts.",
+      "lostTitle": "Lost bookings during Khareef",
+      "lostBody": "Your receptionist does not know which units are available across buildings — and the caller hangs up.",
+      "sheetTitle": "Spreadsheet chaos",
+      "sheetBody": "Reservations in one sheet, payments in another, expenses in a third. Three people, three versions of the truth.",
+      "carTitle": "Manager driving between buildings",
+      "carBody": "Hours wasted approving expenses in person and checking cash boxes that should already be reconciled.",
+      "reconTitle": "End-of-day reconciliation nightmares",
+      "reconBody": "Counting cash that does not match the receipts, every single night, in the back office."
+    },
+    "solution": {
+      "eyebrow": "The Binaya way",
+      "title": "Built for the way you actually work.",
+      "description": "Binaya PMS handles every part of property management — from the first phone call to the monthly P&L — so you can stop firefighting and start running the business.",
+      "calendarTitle": "See every unit at a glance",
+      "calendarBody": "Color-coded availability across all your buildings. Find any vacant night in seconds — even when the phone rings on a Friday afternoon.",
+      "pricingTitle": "Khareef-ready pricing",
+      "pricingBody": "Automatic rate changes for Khareef season. Maximise revenue during your busiest months without spreadsheet juggling.",
+      "deviceTitle": "Manage from anywhere",
+      "deviceBody": "Approve expenses from your phone. Check dashboards from home. Run your business from the gardens of Al Haffa if you want."
+    },
+    "featureReservations": {
+      "eyebrow": "01 · Reservations",
+      "title": "Never miss a booking again.",
+      "description": "Create a reservation in under 30 seconds. Daily or monthly stays, mix multiple units in one booking, automatic pricing with Khareef rates already baked in.",
+      "b1": "Multi-unit reservations across buildings",
+      "b2": "Automatic invoice generation with VAT",
+      "b3": "Online check-in & check-out flow",
+      "b4": "Guest history & repeat-stay tracking",
+      "b5": "Real-time availability — no double bookings, ever",
+      "linkLabel": "See the reservations workflow"
+    },
+    "featureFinance": {
+      "eyebrow": "02 · Financial operations",
+      "title": "Track every riyal — to three decimals.",
+      "description": "Built for Omani Rial from day one. Invoices generate themselves, payments record in cash or card or transfer, and your cashier reconciliation takes two minutes instead of two hours.",
+      "b1": "Multi-method payments — cash, card, bank transfer",
+      "b2": "Auto invoice generation with VAT & Khareef rates",
+      "b3": "Tenant ledger with full payment history",
+      "b4": "Refunds and returns handled correctly",
+      "b5": "Real-time outstanding balance tracking",
+      "linkLabel": "Tour the finance module"
+    },
+    "featureReports": {
+      "eyebrow": "03 · Dashboards & reports",
+      "title": "Know your business at a glance.",
+      "description": "Three dashboards for three perspectives. Your receptionist sees today's tasks. Your accountant sees the books. You see the whole picture — across every building.",
+      "b1": "Today's operations dashboard",
+      "b2": "Receptionist daily view",
+      "b3": "Manager 360° revenue & occupancy",
+      "b4": "Aging A/R and outstanding balances",
+      "b5": "Export to PDF or Excel · Khareef analytics",
+      "linkLabel": "Browse all 14 reports"
+    },
+    "featureExpenses": {
+      "eyebrow": "04 · Expense approvals",
+      "title": "Approve expenses from your phone.",
+      "description": "The receptionist photographs the receipt. You approve with one tap, from the back seat of the car. No more driving to a building just to sign off on cleaning supplies.",
+      "b1": "Submit expenses with a receipt photo",
+      "b2": "Manager mobile approval — one tap",
+      "b3": "Accountant processing workflow",
+      "b4": "Building-level expense tracking",
+      "b5": "Category breakdowns & monthly limits",
+      "linkLabel": "See the approval flow"
+    },
+    "oman": {
+      "eyebrow": "Made in Salalah",
+      "title": "Made in Oman. For Oman.",
+      "description": "Other property software treats Oman as an afterthought — an extra currency setting, a half-baked translation. Binaya was built specifically for how property runs in Salalah.",
+      "arabicTitle": "Full Arabic support",
+      "arabicBody": "Native Arabic interface with proper right-to-left layout. Train your team in their preferred language — receptionist by receptionist.",
+      "omrTitle": "OMR currency, baisa-precise",
+      "omrBody": "Built for Omani Rial with proper 3-decimal precision. No conversion errors, no confusing dollar signs slipping into invoices.",
+      "khareefTitle": "Khareef season tools",
+      "khareefBody": "Seasonal pricing, occupancy forecasting, peak-season dashboards. Built around how Salalah's rental economy actually works."
+    },
+    "how": {
+      "eyebrow": "Ready in 20 minutes",
+      "title": "From signup to first reservation in three steps.",
+      "description": "No implementation consultant. No training week. Most of our customers create their first real booking the same afternoon they sign up.",
+      "step1Title": "Sign up",
+      "step1Body": "Create your account in two minutes. No credit card needed. No sales call required.",
+      "step2Title": "Add your building",
+      "step2Body": "Tell us about your units and pricing. Or upload your existing spreadsheet — we will import it for you.",
+      "step3Title": "Start managing",
+      "step3Body": "Create reservations, generate invoices, and watch the chaos turn into a dashboard.",
+      "cta": "Get started free"
+    },
+    "testimonials": {
+      "eyebrow": "Customer stories",
+      "title": "What property managers are saying.",
+      "description": "Real feedback from operators across Salalah, Mirbat, and Al Haffa — the people Binaya was built with, not just for.",
+      "readMore": "Read full case studies",
+      "t1Quote": "We tracked Khareef bookings on spreadsheets for five years. Binaya replaced everything in a week, and we are already seeing fewer lost bookings during the rush.",
+      "t1Name": "Ahmed Al Balushi",
+      "t1Meta": "Owner · Salalah Plaza · 22 units",
+      "t2Quote": "Finally a system that understands how Omani property managers actually work. The Khareef pricing alone saves me hours every season — and probably catches OMR 800 in revenue I used to lose.",
+      "t2Name": "Reem Al-Hinai",
+      "t2Meta": "Manager · Mirbat Resort · 18 units",
+      "t3Quote": "My receptionists love it. My accountant loves it. I can approve expenses from the car. It just works — and it speaks Arabic, which my team appreciates.",
+      "t3Name": "Salim Al-Khalili",
+      "t3Meta": "Owner · Haffa Residences · 12 units"
+    },
+    "pricing": {
+      "eyebrow": "Simple, honest pricing",
+      "title": "Free to start. Scale as you grow.",
+      "description": "No setup fees. No per-reservation charges. No surprise invoices at the end of the year. Cancel anytime.",
+      "perForever": "forever",
+      "perMonth": "/month",
+      "badgePopular": "Most popular",
+      "featuresHeader": "Everything in {tier}, plus",
+      "freeName": "Free",
+      "freeTagline": "Perfect for single-building operators getting started.",
+      "freeCta": "Start free",
+      "freeF1": "1 building, up to 15 units",
+      "freeF2": "1 user account",
+      "freeF3": "All core reservation features",
+      "freeF4": "Invoicing in OMR with VAT",
+      "freeF5": "Email support",
+      "freeF6": "Free forever — no card on file",
+      "proName": "Professional",
+      "proTagline": "For growing property businesses across 2 buildings.",
+      "proCta": "Start 14-day trial",
+      "proF1": "Up to 2 buildings, 30 units",
+      "proF2": "3 user accounts with roles",
+      "proF3": "Expense approval workflow",
+      "proF4": "Khareef seasonal pricing",
+      "proF5": "Advanced reports & CSV export",
+      "proF6": "Email & WhatsApp support",
+      "bizName": "Business",
+      "bizTagline": "For multi-building operations and growing portfolios.",
+      "bizCta": "Start 14-day trial",
+      "bizF1": "Unlimited buildings & units",
+      "bizF2": "Unlimited user accounts",
+      "bizF3": "Multi-building dashboards",
+      "bizF4": "Custom report builder",
+      "bizF5": "Priority support & dedicated onboarding",
+      "bizF6": "API access & channel manager sync"
+    },
+    "rtl": {
+      "eyebrow": "عربي · Arabic-first",
+      "title": "Same product. Both directions.",
+      "description": "Every screen, every form, every report flips right-to-left without a single missing translation or broken layout. Train your team in their preferred language.",
+      "panelEn": "English · LTR",
+      "panelAr": "عربي · RTL",
+      "footer": "Every number stays LTR · every chevron flips · every date uses the right calendar conventions.",
+      "footerAr": "يدعم العربية بالكامل."
+    },
+    "faq": {
+      "eyebrow": "Common questions",
+      "title": "Everything you might ask.",
+      "description": "The straight answers we wish we had had when we evaluated property software.",
+      "q1": "Is Binaya really free for one building?",
+      "a1": "Yes. The free tier covers a single building of up to 15 units with one user account, forever. No card on file required.",
+      "q2": "How long does setup take?",
+      "a2": "Most customers create their first real reservation within 20 minutes of signing up. If you have an existing spreadsheet, we can import it for you in one go.",
+      "q3": "Does Binaya handle Khareef pricing automatically?",
+      "a3": "Yes. Seasonal rates apply automatically between configurable date ranges, including the Jun 15 – Sep 15 Khareef window.",
+      "q4": "Can my team work in Arabic?",
+      "a4": "Yes. The entire product UI is bilingual English / Arabic with right-to-left layout. Each user picks their own language."
+    },
+    "finalCta": {
+      "badge": "Ready when you are",
+      "headline1": "Stop juggling spreadsheets.",
+      "headline2": "Start running your buildings.",
+      "description": "Free for one building, forever. Set up in 20 minutes. No credit card, no sales call — just a working dashboard by lunch.",
+      "ctaTrial": "Start free trial",
+      "ctaDemo": "Talk to the team",
+      "perk1": "Free for one building",
+      "perk2": "No credit card",
+      "perk3": "20-minute setup",
+      "perk4": "Cancel anytime"
+    },
+    "footer": {
+      "tagline": "Property management software built in Salalah for the way Omani property managers actually work.",
+      "productCol": "Product",
+      "companyCol": "Company",
+      "legalCol": "Legal",
+      "linkFeatures": "Features",
+      "linkPricing": "Pricing",
+      "linkHow": "How it works",
+      "linkFaq": "FAQ",
+      "linkAbout": "About",
+      "linkBlog": "Blog",
+      "linkContact": "Contact",
+      "linkPrivacy": "Privacy",
+      "linkTerms": "Terms",
+      "copyright": "© {year} Binaya PMS. Made in Salalah.",
+      "version": "v0.1 · marketing preview"
+    }
+  },
+  "transactions": {
+    "overview": "Overview",
+    "reservations": "Reservations",
+    "invoices": "Invoices",
+    "payments": "Payments",
+    "viewAll": "View all",
+    "ariaLabel": "Transaction sections",
+    "noReservations": "No reservations yet.",
+    "noInvoices": "No invoices yet.",
+    "noPayments": "No payments yet."
   }
 }

@@ -10,8 +10,17 @@ import {
   ClipboardDocumentCheckIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import RejectExpenseModal from "../modals/RejectExpenseModal";
 import ProcessExpenseModal from "../modals/ProcessExpenseModal";
+import { Button, useConfirmDialog } from "@/components/ui";
+
+const REJECT_REASON_KEYS = [
+  "insufficient_receipt",
+  "amount_too_high",
+  "not_authorized",
+  "wrong_category",
+  "duplicate_expense",
+  "other",
+] as const;
 
 interface Expense {
   id: string;
@@ -33,11 +42,64 @@ export default function ExpenseActionPanel({
 }: Props) {
   const router = useRouter();
   const t = useTranslations("expenses.actionPanel");
-  const [showReject, setShowReject]   = useState(false);
+  const tReject = useTranslations("expenses.rejectModal");
+  const tReason = useTranslations("expenses.rejectModal.reasons");
+  const tErr = useTranslations("expenses.rejectModal.errors");
+  const confirm = useConfirmDialog();
   const [showProcess, setShowProcess] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  async function handleReject() {
+    const nonOther = REJECT_REASON_KEYS.filter((k) => k !== "other") as readonly string[];
+    await confirm({
+      title: tReject("title"),
+      description: `${expense.expenseNumber} · ${expense.amount.toFixed(3)} OMR`,
+      tone: "destructive",
+      reason: {
+        label: tReject("reasonLabel"),
+        placeholder: tReject("reasonPlaceholder"),
+        options: REJECT_REASON_KEYS.map((k) => ({ value: k, label: tReason(k) })),
+        notesFor: [...nonOther],
+        notesRequiredFor: ["other"],
+        notesLabel: tReject("notesLabel"),
+        notesPlaceholder: tReject("notesPlaceholder"),
+      },
+      confirmLabel: tReject("rejectBtn"),
+      cancelLabel: tReject("cancel"),
+      onConfirm: async ({ reason, notes }) => {
+        let res, data;
+        try {
+          res = await fetch(`/api/expenses/${expense.id}/reject`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reason: tReason(reason as string), notes: notes ?? "" }),
+          });
+          data = await res.json();
+        } catch {
+          toast.error(tErr("networkError"));
+          throw new Error("network");
+        }
+        if (!res.ok) {
+          toast.error(data.error ?? tErr("rejectFailed"));
+          throw new Error(data.error ?? "reject failed");
+        }
+        toast.success(tErr("rejected"));
+        router.refresh();
+      },
+    });
+  }
+
   async function handleApprove() {
+    const { confirmed } = await confirm({
+      title: t("approveTitle"),
+      description: t("approveConfirm", {
+        number: expense.expenseNumber,
+        amount: expense.amount.toFixed(3),
+      }),
+      confirmLabel: t("approveCta"),
+      cancelLabel: t("cancelCta"),
+    });
+    if (!confirmed) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/expenses/${expense.id}/approve`, { method: "PATCH" });
@@ -50,7 +112,14 @@ export default function ExpenseActionPanel({
   }
 
   async function handleDelete() {
-    if (!confirm(t("deleteConfirm"))) return;
+    const { confirmed } = await confirm({
+      title: t("deleteTitle"),
+      description: t("deleteConfirm"),
+      tone: "destructive",
+      confirmLabel: t("deleteCta"),
+      cancelLabel: t("cancelCta"),
+    });
+    if (!confirmed) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/expenses/${expense.id}`, { method: "DELETE" });
@@ -80,7 +149,7 @@ export default function ExpenseActionPanel({
                 {t("approveBtn")}
               </button>
               <button
-                onClick={() => setShowReject(true)}
+                onClick={handleReject}
                 disabled={busy}
                 className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-semibold rounded-lg border border-red-200 text-red-700 bg-white hover:bg-red-50 disabled:opacity-50 transition-colors"
               >
@@ -91,14 +160,14 @@ export default function ExpenseActionPanel({
           )}
 
           {canProcess && (
-            <button
+            <Button
               onClick={() => setShowProcess(true)}
               disabled={busy}
-              className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
+              fullWidth
+              leftIcon={<ClipboardDocumentCheckIcon className="h-4 w-4" />}
             >
-              <ClipboardDocumentCheckIcon className="h-4 w-4" />
               {t("processBtn")}
-            </button>
+            </Button>
           )}
 
           {canDelete && (
@@ -118,13 +187,6 @@ export default function ExpenseActionPanel({
         </div>
       </div>
 
-      {showReject && (
-        <RejectExpenseModal
-          expense={expense}
-          onClose={() => setShowReject(false)}
-          onDone={() => { setShowReject(false); router.refresh(); }}
-        />
-      )}
       {showProcess && (
         <ProcessExpenseModal
           expense={expense}

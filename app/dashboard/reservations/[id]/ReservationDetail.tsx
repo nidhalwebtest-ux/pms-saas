@@ -27,15 +27,33 @@ import {
   UserIcon,
   BanknotesIcon,
 } from "@heroicons/react/24/outline";
-import { StarIcon, ShieldExclamationIcon } from "@heroicons/react/24/solid";
+import {
+  Alert,
+  Badge,
+  Button,
+  Modal,
+  ModalBody,
+  ModalHeader,
+  getReservationStatusBadge,
+  getTenantClassBadge,
+  reservationStatusKeyFromDisplayLabel,
+  type TenantClassKey,
+} from "@/components/ui";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
+
+type PriceSeg = {
+  label?: string | null; startDate?: string | null; endDate?: string | null;
+  nights: number; rateAmount: number; rateSource: string;
+  seasonalPriceName: string | null; subtotal: number;
+};
 
 type UnitRow = {
   id: string; name: string; floor: number; unitType: string;
   propertyId: string; propertyName: string;
   rateType: string; rateAmount: string; rateSource: string;
   seasonalPriceName: string | null; nights: number; subtotal: string;
+  pricingSegments?: PriceSeg[] | null;
   isMovedOut?: boolean;
   movedToUnitId?: string | null;
   movedToUnitName?: string | null;
@@ -118,6 +136,8 @@ type ReservationData = {
   cancelledReason: string | null;
   cancelledAt: string | null;
   refundPending: boolean;
+  checkInPolicyOverride: "ALLOW_BACK_TO_BACK" | "REQUIRE_VACANT" | null;
+  orgCheckInPolicy: "ALLOW_BACK_TO_BACK" | "REQUIRE_VACANT";
   totalAmount: string;
   discountAmount: string;
   taxAmount: string;
@@ -129,7 +149,7 @@ type ReservationData = {
     id: string; firstName: string; lastName: string; fullNameArabic: string | null;
     phone: string; whatsappNumber: string | null; email: string | null;
     nationality: string | null; classification: string | null; tenantType: string | null;
-    corporateName: string | null; idType: string | null; idNumber: string | null;
+    corporateName: string | null; corporateContact: string | null; idType: string | null; idNumber: string | null;
     idExpiryDate: string | null; specialRequests: string | null; internalNotes: string | null;
     totalStays: number; totalSpent: string; firstStayDate: string | null;
   };
@@ -226,18 +246,53 @@ function useFmtUnitType() {
 
 function ClassBadge({ c }: { c: string | null }) {
   const t = useTranslations("reservations.detail.guest");
-  if (c === "vip")
-    return <span className="inline-flex items-center gap-0.5 text-xs font-medium text-yellow-700 bg-yellow-100 px-2 py-0.5 rounded-full"><StarIcon className="h-3 w-3" /> {t("vip")}</span>;
-  if (c === "blacklisted")
-    return <span className="inline-flex items-center gap-0.5 text-xs font-medium text-red-700 bg-red-100 px-2 py-0.5 rounded-full"><ShieldExclamationIcon className="h-3 w-3" /> {t("blacklisted")}</span>;
-  return null;
+  const key = (c === "vip" || c === "blacklisted" ? c : "regular") as TenantClassKey;
+  const label =
+    key === "vip"         ? t("vip") :
+    key === "blacklisted" ? t("blacklisted") :
+                            "Regular"; // i18n key not yet in this namespace
+  return (
+    <Badge {...getTenantClassBadge(key)} size="sm">
+      {label}
+    </Badge>
+  );
 }
 
-function StatusBadge({ label, badgeClass, pulse }: { label: string; badgeClass: string; pulse: boolean }) {
+// English display label → reservations.statuses i18n key (QA — Arabic statuses).
+const DISPLAY_STATUS_I18N: Record<string, string> = {
+  "Upcoming": "upcoming",
+  "Arriving Today": "arrivingToday",
+  "Overdue Arrival": "overdueArrival",
+  "In House": "inHouse",
+  "Due Checkout": "dueCheckout",
+  "Overstay": "overstay",
+  "Checked Out": "checkedOut",
+  "Cancelled": "cancelled",
+  "No Show": "noShow",
+  "Pending": "pending",
+};
+
+/** Multi-segment stays (e.g. crossing Khareef) — segments persisted at booking. */
+function unitSegments(u: UnitRow): PriceSeg[] {
+  return Array.isArray(u.pricingSegments) ? (u.pricingSegments as PriceSeg[]) : [];
+}
+/** "3 × 25.000 + 4 × 45.000" when a stay spans >1 price segment, else null. */
+function compactRateBreakdown(u: UnitRow): string | null {
+  const segs = unitSegments(u);
+  if (segs.length <= 1) return null;
+  return segs.map((s) => `${s.nights} × ${Number(s.rateAmount).toFixed(3)}`).join(" + ");
+}
+
+function StatusBadge({ label }: { label: string }) {
+  const tStatus = useTranslations("reservations.statuses");
+  const key = reservationStatusKeyFromDisplayLabel(label);
+  const i18nKey = DISPLAY_STATUS_I18N[label];
+  let text = label;
+  try { if (i18nKey) text = tStatus(i18nKey); } catch { /* fall back to English label */ }
   return (
-    <span className={`inline-flex items-center rounded-md px-2.5 py-1 text-sm font-semibold ${badgeClass} ${pulse ? "animate-pulse" : ""}`}>
-      {label}
-    </span>
+    <Badge {...getReservationStatusBadge(key)} size="md">
+      {text}
+    </Badge>
   );
 }
 
@@ -255,26 +310,6 @@ function Collapsible({ title, defaultOpen = true, children }: {
         {open ? <ChevronUpIcon className="h-4 w-4 text-gray-400" /> : <ChevronDownIcon className="h-4 w-4 text-gray-400" />}
       </button>
       {open && <div className="border-t border-gray-100 px-5 py-4">{children}</div>}
-    </div>
-  );
-}
-
-// ── Modal wrapper ──────────────────────────────────────────────────────────────
-
-function Modal({ title, onClose, children }: {
-  title: string; onClose: () => void; children: React.ReactNode;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 transition-colors">
-            <XMarkIcon className="h-5 w-5 text-gray-400" />
-          </button>
-        </div>
-        <div className="px-6 py-5">{children}</div>
-      </div>
     </div>
   );
 }
@@ -354,7 +389,7 @@ function CheckInModal({ res, onSuccess, onClose }: {
     const data = await r.json();
     setLoading(false);
     if (!r.ok) { toast.error(data.error ?? t("failed")); return; }
-    toast.success(data.message ?? t("successDefault"));
+    toast.success(t("successDefault"));
     onSuccess();
   }
 
@@ -362,7 +397,7 @@ function CheckInModal({ res, onSuccess, onClose }: {
   const whenText = daysUntil === 1 ? t("tomorrow") : t("inDays", { count: daysUntil });
 
   return (
-    <Modal title={t("title", { ref })} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title", { ref })} /><ModalBody>
       <div className="space-y-5">
         {/* Guest */}
         <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl">
@@ -377,10 +412,7 @@ function CheckInModal({ res, onSuccess, onClose }: {
 
         {/* Date info */}
         {daysUntil > 0 && (
-          <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-800">
-            <ExclamationTriangleIcon className="h-4 w-4 shrink-0" />
-            <span>{t("earlyCheckInQuestion", { when: whenText })}</span>
-          </div>
+          <Alert variant="warning" size="sm" description={t("earlyCheckInQuestion", { when: whenText })} />
         )}
 
         {/* Units */}
@@ -388,18 +420,20 @@ function CheckInModal({ res, onSuccess, onClose }: {
           <p className="text-sm font-medium text-gray-600 mb-2">{t("unitsBeingAssigned")}</p>
           <div className="flex flex-wrap gap-2">
             {res.units.map((u) => (
-              <span key={u.id} className="inline-flex items-center px-3 py-1 rounded-lg bg-gray-100 text-sm font-medium text-gray-800">
+              <Badge key={u.id} tone="neutral" appearance="subtle" size="md">
                 {u.name} — {u.propertyName}
-              </span>
+              </Badge>
             ))}
           </div>
         </div>
 
         {res.invoicesGenerated && (
-          <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-            <BanknotesIcon className="h-4 w-4 shrink-0" />
-            <span>{t("invoicesExist", { count: res.invoices.length })}</span>
-          </div>
+          <Alert
+            variant="info"
+            size="sm"
+            icon={<BanknotesIcon className="h-4 w-4 text-info-600 shrink-0" aria-hidden="true" />}
+            description={t("invoicesExist", { count: res.invoices.length })}
+          />
         )}
 
         <button
@@ -410,7 +444,7 @@ function CheckInModal({ res, onSuccess, onClose }: {
           {loading ? t("checking") : t("confirm")}
         </button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -433,7 +467,6 @@ function CheckOutModal({ res, onSuccess, onClose }: {
   const estimatedAdjustment = Math.abs(extraDays) * nightlyRate;
 
   const [adjustToggle, setAdjustToggle] = useState(isOverstay);
-  const [payment, setPayment] = useState({ amount: res.balanceDue, method: "CASH", reference: "" });
   const [condition, setCondition] = useState({ inspected: false, keysReturned: false, noDamage: false });
   const [loading, setLoading] = useState(false);
 
@@ -448,9 +481,6 @@ function CheckOutModal({ res, onSuccess, onClose }: {
       additionalAmount: estimatedAdjustment,
       unitCondition: condition,
     };
-    if (payment.amount && Number(payment.amount) > 0) {
-      body.payment = { amount: Number(payment.amount), method: payment.method, reference: payment.reference || null };
-    }
     const r = await fetch(`/api/reservations/${res.id}/check-out`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -472,7 +502,7 @@ function CheckOutModal({ res, onSuccess, onClose }: {
   ];
 
   return (
-    <Modal title={t("title", { ref })} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title", { ref })} /><ModalBody>
       <div className="space-y-5">
         {/* Stay summary */}
         <div className={`p-4 rounded-xl ${isOverstay ? "bg-red-50 border border-red-200" : isEarly ? "bg-blue-50 border border-blue-200" : "bg-green-50 border border-green-200"}`}>
@@ -499,10 +529,7 @@ function CheckOutModal({ res, onSuccess, onClose }: {
           <div className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl">
             <input
               type="checkbox" id="adjust" checked={adjustToggle}
-              onChange={(e) => {
-                setAdjustToggle(e.target.checked);
-                setPayment((p) => ({ ...p, amount: Math.max(0, Number(res.balanceDue) + (e.target.checked ? adjustmentAmt : 0)).toFixed(3) }));
-              }}
+              onChange={(e) => setAdjustToggle(e.target.checked)}
               className="mt-0.5 h-4 w-4 rounded text-blue-600"
             />
             <label htmlFor="adjust" className="text-sm text-gray-700 cursor-pointer">
@@ -540,12 +567,20 @@ function CheckOutModal({ res, onSuccess, onClose }: {
           </div>
         </div>
 
-        {/* Payment form */}
-        <PaymentForm
-          balanceDue={adjustedBalance}
-          value={payment}
-          onChange={setPayment}
-        />
+        {/* Balance status — payment is collected separately, not at check-out */}
+        {Number(adjustedBalance) > 0 ? (
+          <Alert
+            variant="warning"
+            size="sm"
+            description={t("balanceRemaining", { amount: adjustedBalance })}
+          />
+        ) : (
+          <Alert
+            variant="success"
+            size="sm"
+            description={t("fullyPaid")}
+          />
+        )}
 
         {/* Condition checklist */}
         <div className="space-y-2">
@@ -571,7 +606,7 @@ function CheckOutModal({ res, onSuccess, onClose }: {
           {loading ? t("processing") : t("confirm")}
         </button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -602,18 +637,17 @@ function CancelModal({ res, onSuccess, onClose }: {
   }
 
   return (
-    <Modal title={t("title")} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title")} /><ModalBody>
       <div className="space-y-4">
-        <div className="p-4 bg-red-50 rounded-xl text-sm text-red-700 border border-red-200">
-          {t("warning")}
-        </div>
+        <Alert variant="error" description={t("warning")} />
         {totalPaid > 0 && (
-          <div className="p-4 bg-yellow-50 rounded-xl text-sm text-yellow-800 border border-yellow-200">
-            {t.rich("refundWarning", {
+          <Alert
+            variant="warning"
+            description={t.rich("refundWarning", {
               amount: res.amountPaid,
               b: (chunks) => <strong>{chunks}</strong>,
             })}
-          </div>
+          />
         )}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">{t("reasonLabel")}</label>
@@ -642,28 +676,32 @@ function CancelModal({ res, onSuccess, onClose }: {
             placeholder={t("notesPlaceholder")}
           />
         </div>
-        <button
+        <Button
+          variant="destructive"
+          size="lg"
+          fullWidth
           onClick={handleConfirm}
-          disabled={loading || !reason || (reason === "Other" && !notes.trim())}
-          className="w-full py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
+          loading={loading}
+          disabled={!reason || (reason === "Other" && !notes.trim())}
         >
-          {loading ? t("cancelling") : t("confirm")}
-        </button>
+          {t("confirm")}
+        </Button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
 // ── Payment Modal ──────────────────────────────────────────────────────────────
 
-function PaymentModal({ res, onSuccess, onClose }: {
-  res: ReservationData; onSuccess: () => void; onClose: () => void;
+function PaymentModal({ res, onSuccess, onClose, overpaymentPolicy = "WARN" }: {
+  res: ReservationData; onSuccess: () => void; onClose: () => void; overpaymentPolicy?: string;
 }) {
   const t = useTranslations("reservations.detail.paymentModal");
   const fmtDate = useFmtDate();
-  // Outstanding invoices (not cancelled/paid) sorted by due date
+  // Outstanding, payable invoices for THIS reservation (issued only — drafts
+  // must be issued before they can be paid; QA #48).
   const outstandingInvoices = res.invoices.filter(
-    (inv) => !["CANCELLED", "VOID", "PAID"].includes(inv.status) && Number(inv.balanceDue) > 0,
+    (inv) => !["CANCELLED", "VOID", "PAID", "DRAFT"].includes(inv.status) && Number(inv.balanceDue) > 0,
   );
   const hasInvoices = outstandingInvoices.length > 0;
 
@@ -698,11 +736,21 @@ function PaymentModal({ res, onSuccess, onClose }: {
     if (!amt || amt <= 0) { toast.error(t("invalidAmount")); return; }
 
     if (allocationMode === "manual" && hasInvoices) {
-      if (manualTotal <= 0) { toast.error(t("allocateAtLeastOne")); return; }
-      if (Math.abs(manualTotal - amt) > 0.001) {
-        toast.error(t("mismatch", { allocated: manualTotal.toFixed(3), amount: amt.toFixed(3) }));
+      // Allocations may total LESS than the payment (the rest becomes a credit),
+      // but never MORE than the payment amount.
+      if (manualTotal - amt > 0.001) {
+        toast.error(t("allocExceedsAmount", { allocated: manualTotal.toFixed(3), amount: amt.toFixed(3) }));
         return;
       }
+    }
+
+    // Overpayment policy (QA #46). Server enforces BLOCK as the backstop.
+    const totalOutstanding = outstandingInvoices.reduce((s, inv) => s + Number(inv.balanceDue), 0);
+    const over = amt - totalOutstanding;
+    if (over > 0.001) {
+      const overAmt = over.toFixed(3);
+      if (overpaymentPolicy === "BLOCK") { toast.error(t("overpayBlock", { amount: overAmt })); return; }
+      if (overpaymentPolicy === "WARN" && !window.confirm(t("overpayWarn", { amount: overAmt }))) return;
     }
 
     setLoading(true);
@@ -737,14 +785,22 @@ function PaymentModal({ res, onSuccess, onClose }: {
 
   const fmtInvStatus = (s: string) => {
     if (s === "PARTIALLY_PAID" || s === "PARTIAL") return t("invStatus.partial");
-    if (s === "PENDING" || s === "DRAFT" || s === "DUE" || s === "ISSUED") return t("invStatus.pending");
+    if (s === "DRAFT") return t("invStatus.draft");
+    if (s === "PENDING" || s === "DUE" || s === "ISSUED") return t("invStatus.pending");
     return s;
   };
-  const isOverdue = (inv: InvoiceRow) =>
-    new Date(inv.dueDate) < new Date() && !["PAID", "CANCELLED", "VOID"].includes(inv.status);
+  // Overdue = a billed (non-DRAFT) unpaid invoice past its due date (day-level).
+  const isOverdue = (inv: InvoiceRow) => {
+    if (["PAID", "CANCELLED", "VOID", "DRAFT"].includes(inv.status)) return false;
+    const due = new Date(inv.dueDate);
+    const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
+    const now = new Date();
+    const todayDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return dueDay < todayDay;
+  };
 
   return (
-    <Modal title={t("title")} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title")} /><ModalBody>
       <div className="space-y-4">
         {/* Amount + method */}
         <PaymentForm balanceDue={res.balanceDue} value={form} onChange={setForm} />
@@ -809,9 +865,15 @@ function PaymentModal({ res, onSuccess, onClose }: {
                           min="0"
                           max={Number(inv.balanceDue)}
                           value={manualAmounts[inv.id] ?? ""}
-                          onChange={(e) =>
-                            setManualAmounts((m) => ({ ...m, [inv.id]: e.target.value }))
-                          }
+                          onChange={(e) => {
+                            // Cap to the invoice's remaining balance (QA #50).
+                            const bal = Number(inv.balanceDue);
+                            const raw = parseFloat(e.target.value);
+                            const next = e.target.value === "" || isNaN(raw)
+                              ? e.target.value
+                              : String(Math.min(Math.max(raw, 0), bal));
+                            setManualAmounts((m) => ({ ...m, [inv.id]: next }));
+                          }}
                           placeholder="0.000"
                           className="w-24 text-end rounded-md border border-gray-300 px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 ltr-numbers"
                         />
@@ -822,31 +884,31 @@ function PaymentModal({ res, onSuccess, onClose }: {
               })}
             </div>
 
-            {allocationMode === "manual" && (
-              <div className="flex justify-between items-center px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs">
-                <span className="text-gray-500">{t("totalAllocated")}</span>
-                <span className={`font-semibold ${Math.abs(manualTotal - Number(form.amount)) > 0.001 ? "text-red-600" : "text-green-600"}`}>
-                  <span className="ltr-numbers">{manualTotal.toFixed(3)}</span> OMR
-                  {Math.abs(manualTotal - Number(form.amount)) > 0.001 && (
-                    <span className="text-red-500 ms-1">
-                      {t("mustEqual", { amount: Number(form.amount).toFixed(3) })}
-                    </span>
-                  )}
-                </span>
-              </div>
-            )}
+            {allocationMode === "manual" && (() => {
+              const amt = Number(form.amount) || 0;
+              const over = manualTotal - amt > 0.001;          // allocated more than paid → invalid
+              const unallocated = amt - manualTotal;            // > 0 → recorded as credit
+              return (
+                <div className="flex justify-between items-center px-4 py-2 bg-gray-50 border-t border-gray-200 text-xs">
+                  <span className="text-gray-500">{t("totalAllocated")}</span>
+                  <span className={`font-semibold ${over ? "text-red-600" : "text-green-600"}`}>
+                    <span className="ltr-numbers">{manualTotal.toFixed(3)}</span> OMR
+                    {over && <span className="text-red-500 ms-1">{t("exceedsAmount")}</span>}
+                    {!over && unallocated > 0.001 && (
+                      <span className="text-gray-400 ms-1">{t("unallocatedCredit", { amount: unallocated.toFixed(3) })}</span>
+                    )}
+                  </span>
+                </div>
+              );
+            })()}
           </div>
         )}
 
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
-        >
-          {loading ? t("recording") : t("confirm")}
-        </button>
+        <Button variant="primary" size="lg" fullWidth onClick={handleSubmit} loading={loading}>
+          {t("confirm")}
+        </Button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -877,7 +939,7 @@ function ChargeModal({ res, onSuccess, onClose }: {
   }
 
   return (
-    <Modal title={t("title")} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title")} /><ModalBody>
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">{t("description")}</label>
@@ -923,7 +985,7 @@ function ChargeModal({ res, onSuccess, onClose }: {
           {loading ? t("adding") : t("confirm")}
         </button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -952,7 +1014,7 @@ function NoteModal({ res, onSuccess, onClose }: {
   }
 
   return (
-    <Modal title={t("title")} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title")} /><ModalBody>
       <div className="space-y-4">
         <textarea
           rows={4}
@@ -970,7 +1032,7 @@ function NoteModal({ res, onSuccess, onClose }: {
           {loading ? t("saving") : t("confirm")}
         </button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -999,11 +1061,10 @@ function GenerateInvoicesModal({ res, onSuccess, onClose }: {
   const months = Math.round(res.totalNights / 30);
 
   return (
-    <Modal title={t("title")} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title")} /><ModalBody>
       <div className="space-y-4">
-        <div className="p-4 bg-blue-50 rounded-xl text-sm text-blue-800 border border-blue-200">
-          {t("body")}
-        </div>
+        <Alert variant="info" description={t("body")} />
+
         <div className="bg-gray-50 rounded-xl p-4 space-y-1 text-sm text-gray-700">
           <div className="flex justify-between">
             <span>{t("grandTotal")}</span>
@@ -1022,15 +1083,11 @@ function GenerateInvoicesModal({ res, onSuccess, onClose }: {
             </span>
           </div>
         </div>
-        <button
-          onClick={handleConfirm}
-          disabled={loading}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
-        >
-          {loading ? t("generating") : t("confirm")}
-        </button>
+        <Button variant="primary" size="lg" fullWidth onClick={handleConfirm} loading={loading}>
+          {t("confirm")}
+        </Button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -1086,7 +1143,7 @@ function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
   }
 
   return (
-    <Modal title={t("title", { invoice: invoice.invoiceNumber })} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title", { invoice: invoice.invoiceNumber })} /><ModalBody>
       <div className="space-y-4">
         <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
           <div className="flex items-center justify-between">
@@ -1115,15 +1172,11 @@ function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
 
         <PaymentForm balanceDue={invoice.balanceDue} value={form} onChange={setForm} />
 
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors disabled:opacity-50"
-        >
-          {loading ? t("recording") : t("confirm")}
-        </button>
+        <Button variant="primary" size="lg" fullWidth onClick={handleSubmit} loading={loading}>
+          {t("confirm")}
+        </Button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -1234,7 +1287,7 @@ function ReturnModal({ res, onSuccess, onClose }: {
   const title = isMonthly ? t("titleMonthly", { ref }) : t("titleDaily", { ref });
 
   return (
-    <Modal title={title} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={title} /><ModalBody>
       <div className="space-y-5">
         {/* Current stay summary */}
         <div className="bg-gray-50 rounded-xl p-4 text-sm space-y-1">
@@ -1304,9 +1357,7 @@ function ReturnModal({ res, onSuccess, onClose }: {
           <div className="text-sm text-gray-400 text-center py-2">{t("calculating")}</div>
         )}
         {previewError && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-            {previewError}
-          </div>
+          <Alert variant="error" size="sm" description={previewError} />
         )}
         {preview && !previewError && (
           <div className="space-y-3">
@@ -1364,20 +1415,16 @@ function ReturnModal({ res, onSuccess, onClose }: {
 
             {/* Refund notice */}
             {preview.refundRequired ? (
-              <div className="flex items-start gap-2 p-3 bg-orange-50 border border-orange-200 rounded-xl text-sm text-orange-800">
-                <ExclamationTriangleIcon className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>
-                  {t.rich("refundRequiredMsg", {
-                    amount: preview.refundAmount,
-                    b: (chunks) => <strong>{chunks}</strong>,
-                  })}
-                </span>
-              </div>
+              <Alert
+                variant="warning"
+                size="sm"
+                description={t.rich("refundRequiredMsg", {
+                  amount: preview.refundAmount,
+                  b: (chunks) => <strong>{chunks}</strong>,
+                })}
+              />
             ) : (
-              <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800">
-                <CheckIcon className="h-4 w-4 shrink-0" />
-                <span>{t("noRefundMsg")}</span>
-              </div>
+              <Alert variant="success" size="sm" description={t("noRefundMsg")} />
             )}
           </div>
         )}
@@ -1411,10 +1458,6 @@ function ReturnModal({ res, onSuccess, onClose }: {
           />
         </div>
 
-        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
-          {t("warning")}
-        </div>
-
         <button
           onClick={handleConfirm}
           disabled={loading || !preview || !!previewError || !reason}
@@ -1423,7 +1466,7 @@ function ReturnModal({ res, onSuccess, onClose }: {
           {loading ? t("processing") : t("confirm")}
         </button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
@@ -1469,7 +1512,7 @@ function ProcessRefundModal({ ret, onSuccess, onClose }: {
   }
 
   return (
-    <Modal title={t("title", { ref: ret.returnNumber })} onClose={onClose}>
+    <Modal open onClose={onClose} size="md"><ModalHeader title={t("title", { ref: ret.returnNumber })} /><ModalBody>
       <div className="space-y-4">
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 text-sm space-y-1">
           <div className="flex justify-between">
@@ -1556,31 +1599,43 @@ function ProcessRefundModal({ ret, onSuccess, onClose }: {
           {loading ? t("processing") : t("confirm")}
         </button>
       </div>
-    </Modal>
+    </ModalBody></Modal>
   );
 }
 
 // ── Action Buttons ─────────────────────────────────────────────────────────────
 
-function ActionButtons({ ds, onAction, reservationId, rateType }: {
+function ActionButtons({ ds, onAction, reservationId, rateType, allowEarlyCheckIn = false, canEdit = false }: {
   ds: string;
   onAction: (a: ModalType) => void;
   reservationId: string;
   rateType: string;
+  allowEarlyCheckIn?: boolean;
+  canEdit?: boolean;
 }) {
   const t = useTranslations("reservations.detail.actions");
   const openPrint = () => window.open(`/api/reservations/${reservationId}/pdf`, "_blank");
+  // Edit available before check-in and before invoices exist (QA #30).
+  const editLink = canEdit ? (
+    <Link href={`/dashboard/reservations/${reservationId}/edit`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+      <PencilSquareIcon className="h-4 w-4" /> {t("edit")}
+    </Link>
+  ) : null;
 
   switch (ds) {
     case "Upcoming":
       return (
         <>
-          <Link href={`/dashboard/reservations/${reservationId}/edit`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PencilSquareIcon className="h-4 w-4" /> {t("edit")}
-          </Link>
-          <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> {t("print")}
-          </button>
+          {/* Early check-in — only when the org allows it (QA issue #20). */}
+          {allowEarlyCheckIn && (
+            <button onClick={() => onAction("check-in")} className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold transition-colors shadow-sm">
+              <CheckIcon className="h-4 w-4" /> {t("checkIn")}
+            </button>
+          )}
+          {editLink}
+          <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
+            {t("print")}
+          </Button>
           <button onClick={() => onAction("cancel")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-300 bg-white text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
             <XMarkIcon className="h-4 w-4" /> {t("cancel")}
           </button>
@@ -1598,12 +1653,10 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
               {t("noShow")}
             </button>
           )}
-          <Link href={`/dashboard/reservations/${reservationId}/edit`} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PencilSquareIcon className="h-4 w-4" /> {t("edit")}
-          </Link>
-          <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> {t("print")}
-          </button>
+          {editLink}
+          <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
+            {t("print")}
+          </Button>
           <button onClick={() => onAction("cancel")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-300 bg-white text-sm font-medium text-red-600 hover:bg-red-50">
             <XMarkIcon className="h-4 w-4" /> {t("cancel")}
           </button>
@@ -1627,12 +1680,12 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
           <button onClick={() => onAction("extend-stay")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-blue-300 bg-white text-sm font-medium text-blue-600 hover:bg-blue-50 transition-colors">
             {t("extendStay")}
           </button>
-          <button onClick={() => onAction("move-unit")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+          <Button variant="secondary" onClick={() => onAction("move-unit")}>
             {t("moveUnit")}
-          </button>
-          <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> {t("print")}
-          </button>
+          </Button>
+          <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
+            {t("print")}
+          </Button>
         </>
       );
     case "Overstay":
@@ -1644,24 +1697,24 @@ function ActionButtons({ ds, onAction, reservationId, rateType }: {
           >
             {t("checkOut")}
           </button>
-          <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> {t("print")}
-          </button>
+          <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
+            {t("print")}
+          </Button>
         </>
       );
     case "Checked Out":
       return (
         <>
-          <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-            <PrinterIcon className="h-4 w-4" /> {t("print")}
-          </button>
+          <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
+            {t("print")}
+          </Button>
         </>
       );
     default:
       return (
-        <button onClick={openPrint} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-          <PrinterIcon className="h-4 w-4" /> {t("print")}
-        </button>
+        <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
+          {t("print")}
+        </Button>
       );
   }
 }
@@ -1689,7 +1742,7 @@ function ActivityIcon({ action }: { action: string }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-export default function ReservationDetail({ id }: { id: string }) {
+export default function ReservationDetail({ id, allowEarlyCheckIn = false, overpaymentPolicy = "WARN" }: { id: string; allowEarlyCheckIn?: boolean; overpaymentPolicy?: string }) {
   const t           = useTranslations("reservations.detail");
   const tGuest      = useTranslations("reservations.detail.guest");
   const tStay       = useTranslations("reservations.detail.stay");
@@ -1751,6 +1804,24 @@ export default function ReservationDetail({ id }: { id: string }) {
     );
   }
 
+  // For corporate/government tenants the company is the primary identity; the
+  // person is the secondary "contact" line (QA #25). Individuals stay person-first.
+  const personName    = `${res.tenant.firstName} ${res.tenant.lastName}`;
+  const isCorporate   = (res.tenant.tenantType === "corporate" || res.tenant.tenantType === "government")
+    && !!res.tenant.corporateName;
+  const primaryName   = isCorporate ? res.tenant.corporateName! : personName;
+  const contactName   = res.tenant.corporateContact || personName;
+  const avatarInitials = isCorporate
+    ? res.tenant.corporateName!.trim().slice(0, 2).toUpperCase()
+    : `${res.tenant.firstName[0]}${res.tenant.lastName[0]}`;
+
+  // Editable only before check-in and before invoices exist (QA #30). The PUT
+  // API enforces the same rule as the source of truth.
+  const canEdit =
+    !res.invoicesGenerated &&
+    ["Upcoming", "Arriving Today", "Overdue Arrival"].includes(res.displayStatus);
+
+
   // Use invoice balances as the source of truth when invoices exist
   const invoiceBalanceDue = res.invoices.length > 0
     ? res.invoices
@@ -1763,7 +1834,7 @@ export default function ReservationDetail({ id }: { id: string }) {
   const today = new Date().toISOString();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       {/* ── TOP BAR ── */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1778,11 +1849,7 @@ export default function ReservationDetail({ id }: { id: string }) {
                   <h1 className={`text-xl font-bold font-mono ${res.status === "CANCELLED" ? "line-through text-gray-400" : "text-gray-900"}`}>
                     {res.reservationNumber ?? res.id.slice(0, 8).toUpperCase()}
                   </h1>
-                  <StatusBadge
-                    label={res.displayStatus}
-                    badgeClass={res.displayStatusBadgeClass}
-                    pulse={res.displayStatusPulse}
-                  />
+                  <StatusBadge label={res.displayStatus} />
                 </div>
                 <p className="text-xs text-gray-400 mt-0.5">
                   {res.createdByName
@@ -1794,7 +1861,7 @@ export default function ReservationDetail({ id }: { id: string }) {
 
             {/* Right: action buttons */}
             <div className="flex items-center gap-2 flex-wrap">
-              <ActionButtons ds={res.displayStatus} onAction={setActiveModal} reservationId={res.id} rateType={res.rateType} />
+              <ActionButtons ds={res.displayStatus} onAction={setActiveModal} reservationId={res.id} rateType={res.rateType} allowEarlyCheckIn={allowEarlyCheckIn} canEdit={canEdit} />
             </div>
           </div>
         </div>
@@ -1842,15 +1909,20 @@ export default function ReservationDetail({ id }: { id: string }) {
                     res.tenant.classification === "vip" ? "bg-yellow-500" :
                     res.tenant.classification === "blacklisted" ? "bg-red-500" : "bg-blue-600"
                   }`}>
-                    {res.tenant.firstName[0]}{res.tenant.lastName[0]}
+                    {avatarInitials}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="text-lg font-bold text-gray-900">
-                        {res.tenant.firstName} {res.tenant.lastName}
+                        {primaryName}
                       </h2>
                       <ClassBadge c={res.tenant.classification} />
                     </div>
+                    {isCorporate && (
+                      <p className="text-sm text-gray-600">
+                        {tGuest("contactPerson")}: {contactName}
+                      </p>
+                    )}
                     {res.tenant.fullNameArabic && (
                       <p className="text-sm text-gray-500 font-arabic" dir="rtl">{res.tenant.fullNameArabic}</p>
                     )}
@@ -1903,7 +1975,8 @@ export default function ReservationDetail({ id }: { id: string }) {
                 {res.tenant.firstStayDate && (
                   <span>{tGuest("firstVisit", { date: fmtDate(res.tenant.firstStayDate, { month: "short", year: "numeric" }) })}</span>
                 )}
-                {res.tenant.corporateName && (
+                {/* Only when not already the heading (i.e. an individual with an associated company). */}
+                {!isCorporate && res.tenant.corporateName && (
                   <span className="font-medium text-gray-700">🏢 {res.tenant.corporateName}</span>
                 )}
               </div>
@@ -1956,17 +2029,17 @@ export default function ReservationDetail({ id }: { id: string }) {
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2 pt-1">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700 ltr-numbers">
+                    <Badge tone="neutral" appearance="subtle" size="md" className="ltr-numbers">
                       {res.rateType === "monthly"
                         ? t("generateInvoicesModal.durationMonths", { count: Math.round(res.totalNights / 30) })
                         : t("generateInvoicesModal.durationNights", { count: res.totalNights })}
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                    </Badge>
+                    <Badge tone="info" appearance="subtle" size="md">
                       {res.rateType === "monthly" ? tStay("monthlyRate") : tStay("dailyRate")}
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                    </Badge>
+                    <Badge tone="accent" appearance="subtle" size="md">
                       {fmtSource(res.source)}
-                    </span>
+                    </Badge>
                   </div>
                 </div>
 
@@ -1986,11 +2059,14 @@ export default function ReservationDetail({ id }: { id: string }) {
                         <div className="flex items-start justify-between">
                           <div>
                             <p className={`font-semibold text-sm ${u.isMovedOut ? "text-amber-800" : "text-gray-900"}`}>
-                              {u.name}
+                              {/* Unit name links to the unit page (QA issue #19). */}
+                              <Link href={`/dashboard/units/${u.id}`} className="hover:text-brand-600 hover:underline transition-colors">
+                                {u.name}
+                              </Link>
                               {u.isMovedOut && (
-                                <span className="ms-2 inline-flex items-center gap-1 rounded-full bg-amber-200/60 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">
+                                <Badge tone="warning" appearance="subtle" size="sm" className="ms-2">
                                   {tStay("movedOutBadge")}
-                                </span>
+                                </Badge>
                               )}
                             </p>
                             <p className="text-xs text-gray-500">
@@ -2012,8 +2088,12 @@ export default function ReservationDetail({ id }: { id: string }) {
                           </p>
                         </div>
                         <p className="text-xs text-gray-400 mt-1">
-                          <span className="ltr-numbers">{Number(u.rateAmount).toFixed(3)} OMR</span>/{u.rateType === "monthly" ? tStay("perMonth") : tStay("perNight")}
-                          {u.seasonalPriceName && <span className="text-orange-600 ms-1">({u.seasonalPriceName})</span>}
+                          {compactRateBreakdown(u)
+                            ? <span className="ltr-numbers">{compactRateBreakdown(u)} OMR</span>
+                            : <>
+                                <span className="ltr-numbers">{Number(u.rateAmount).toFixed(3)} OMR</span>/{u.rateType === "monthly" ? tStay("perMonth") : tStay("perNight")}
+                              </>}
+                          {!compactRateBreakdown(u) && u.seasonalPriceName && <span className="text-orange-600 ms-1">({u.seasonalPriceName})</span>}
                           {u.rateSource === "manual_override" && <span className="text-purple-600 ms-1">({tStay("manualRate")})</span>}
                         </p>
                       </div>
@@ -2062,13 +2142,14 @@ export default function ReservationDetail({ id }: { id: string }) {
               ) : res.invoices.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-2">{tInvoices("noneFound")}</p>
               ) : (
-                <div>
-                  <table className="w-full text-sm">
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[560px] text-sm">
                     <thead>
                       <tr className="text-xs text-gray-400 border-b border-gray-100">
                         <th className="text-start pb-2 font-medium">{tInvoices("table.invoice")}</th>
                         <th className="text-start pb-2 font-medium">{tInvoices("table.period")}</th>
                         <th className="text-end pb-2 font-medium">{tInvoices("table.total")}</th>
+                        <th className="text-end pb-2 font-medium">{tInvoices("table.balance")}</th>
                         <th className="text-end pb-2 font-medium">{tInvoices("table.due")}</th>
                         <th className="text-center pb-2 font-medium">{tInvoices("table.status")}</th>
                         <th className="pb-2"></th>
@@ -2079,13 +2160,20 @@ export default function ReservationDetail({ id }: { id: string }) {
                         const isCancelled = inv.status === "CANCELLED" || inv.status === "VOID";
                         const isPaid      = inv.status === "PAID";
                         const isPartial   = inv.status === "PARTIALLY_PAID" || inv.status === "PARTIAL";
-                        const isOverdue   = !isPaid && !isCancelled && new Date(inv.dueDate) < new Date();
+                        const isDraft     = inv.status === "DRAFT";
+                        const _due        = new Date(inv.dueDate);
+                        const _dueDay     = new Date(_due.getFullYear(), _due.getMonth(), _due.getDate());
+                        const _now        = new Date();
+                        const _todayDay   = new Date(_now.getFullYear(), _now.getMonth(), _now.getDate());
+                        const isOverdue   = !isPaid && !isCancelled && !isDraft && _dueDay < _todayDay;
                         const statusClass = isPaid
                           ? "bg-green-100 text-green-700"
                           : isPartial
                           ? "bg-yellow-100 text-yellow-700"
                           : isCancelled
                           ? "bg-gray-100 text-gray-400"
+                          : isDraft
+                          ? "bg-gray-100 text-gray-600"
                           : isOverdue
                           ? "bg-red-100 text-red-700"
                           : "bg-orange-100 text-orange-700";
@@ -2095,6 +2183,8 @@ export default function ReservationDetail({ id }: { id: string }) {
                           ? tInvoices("statuses.partial")
                           : isCancelled
                           ? tInvoices("statuses.cancelled")
+                          : isDraft
+                          ? tInvoices("statuses.draft")
                           : isOverdue
                           ? tInvoices("statuses.overdue")
                           : tInvoices("statuses.pending");
@@ -2113,6 +2203,9 @@ export default function ReservationDetail({ id }: { id: string }) {
                             </td>
                             <td className="py-2 text-end font-medium text-gray-800 pe-2 ltr-numbers">
                               {Number(inv.totalAmount).toFixed(3)}
+                            </td>
+                            <td className={`py-2 text-end pe-2 ltr-numbers ${Number(inv.balanceDue) > 0 && !isCancelled ? "font-medium text-orange-700" : "text-gray-400"}`}>
+                              {Number(inv.balanceDue).toFixed(3)}
                             </td>
                             <td className={`py-2 text-end text-xs pe-2 ltr-numbers ${isOverdue && !isCancelled ? "text-red-600 font-medium" : "text-gray-400"}`}>
                               {fmtDate(inv.dueDate, { day: "numeric", month: "short" })}
@@ -2159,19 +2252,37 @@ export default function ReservationDetail({ id }: { id: string }) {
                   {res.units.map((u) => (
                     <div key={u.id}>
                       <p className="font-medium text-sm text-gray-800 mb-2">{u.name} — {u.propertyName}</p>
-                      <div className="flex justify-between text-sm text-gray-700 ps-4">
-                        <span>
-                          <span className="ltr-numbers">
-                            {u.rateType === "monthly"
-                              ? t("generateInvoicesModal.durationMonths", { count: u.nights })
-                              : t("generateInvoicesModal.durationNights", { count: u.nights })}
-                            {" × "}
-                            {Number(u.rateAmount).toFixed(3)} OMR
+                      {unitSegments(u).length > 1 ? (
+                        <div className="space-y-1">
+                          {unitSegments(u).map((s, i) => (
+                            <div key={i} className="flex justify-between text-sm text-gray-700 ps-4">
+                              <span className="ltr-numbers">
+                                {s.nights} × {Number(s.rateAmount).toFixed(3)} OMR
+                                {s.seasonalPriceName && <span className="text-orange-600 ms-1">({s.seasonalPriceName})</span>}
+                              </span>
+                              <span className="ltr-numbers">{Number(s.subtotal).toFixed(3)} OMR</span>
+                            </div>
+                          ))}
+                          <div className="flex justify-between text-sm text-gray-800 ps-4 pt-1 border-t border-gray-100">
+                            <span className="font-medium">{u.name}</span>
+                            <span className="font-medium ltr-numbers">{Number(u.subtotal).toFixed(3)} OMR</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-between text-sm text-gray-700 ps-4">
+                          <span>
+                            <span className="ltr-numbers">
+                              {u.rateType === "monthly"
+                                ? t("generateInvoicesModal.durationMonths", { count: u.nights })
+                                : t("generateInvoicesModal.durationNights", { count: u.nights })}
+                              {" × "}
+                              {Number(u.rateAmount).toFixed(3)} OMR
+                            </span>
+                            {u.seasonalPriceName && <span className="text-orange-600 ms-1">({u.seasonalPriceName})</span>}
                           </span>
-                          {u.seasonalPriceName && <span className="text-orange-600 ms-1">({u.seasonalPriceName})</span>}
-                        </span>
-                        <span className="font-medium ltr-numbers">{Number(u.subtotal).toFixed(3)} OMR</span>
-                      </div>
+                          <span className="font-medium ltr-numbers">{Number(u.subtotal).toFixed(3)} OMR</span>
+                        </div>
+                      )}
                     </div>
                   ))}
                   {res.charges.length > 0 && (
@@ -2214,7 +2325,7 @@ export default function ReservationDetail({ id }: { id: string }) {
                 {res.units.map((u) => (
                   <div key={u.id} className="flex justify-between text-sm text-gray-700">
                     <span className="text-gray-500">
-                      {u.name}: <span className="ltr-numbers">{u.nights} × {Number(u.rateAmount).toFixed(3)}</span>
+                      {u.name}: <span className="ltr-numbers">{compactRateBreakdown(u) ?? `${u.nights} × ${Number(u.rateAmount).toFixed(3)}`}</span>
                     </span>
                     <span className="ltr-numbers">{Number(u.subtotal).toFixed(3)}</span>
                   </div>
@@ -2299,7 +2410,12 @@ export default function ReservationDetail({ id }: { id: string }) {
                       {/* Header row */}
                       <div className="flex items-start justify-between gap-2 flex-wrap">
                         <div>
-                          <span className="font-mono font-bold text-purple-800 text-sm ltr-numbers">{ret.returnNumber}</span>
+                          <Link
+                            href={`/dashboard/returns/${ret.id}`}
+                            className="font-mono font-bold text-purple-800 text-sm ltr-numbers hover:underline"
+                          >
+                            {ret.returnNumber}
+                          </Link>
                           <span className="ms-2 text-sm text-gray-600 ltr-numbers">
                             {fmtDate(ret.returnFrom)} → {fmtDate(ret.returnTo)}
                             {" "}({ret.returnDays} {ret.returnType === "MONTHLY" ? t("returnModal.monthsLabel") : t("returnModal.nightsLabel")})
@@ -2396,7 +2512,7 @@ export default function ReservationDetail({ id }: { id: string }) {
       {activeModal === "check-in"  && <CheckInModal  res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "check-out" && <CheckOutModal res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "cancel"    && <CancelModal   res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
-      {activeModal === "payment"   && <PaymentModal  res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
+      {activeModal === "payment"   && <PaymentModal  res={res} overpaymentPolicy={overpaymentPolicy} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "charge"    && <ChargeModal   res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "note"      && <NoteModal     res={res} onSuccess={afterAction} onClose={() => setActiveModal(null)} />}
       {activeModal === "extend-stay" && (

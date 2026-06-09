@@ -3,9 +3,10 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { PencilSquareIcon, TrashIcon, CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { ROLE_BADGE, type Role } from "@/lib/permissions";
+import { type Role } from "@/lib/permissions";
 import { updateMemberRole, removeTeamMember } from "./actions";
 import type { UserRole } from "@prisma/client";
+import { Badge, Button, getUserRoleBadge, useConfirmDialog } from "@/components/ui";
 
 const ASSIGNABLE_ROLES: UserRole[] = ["MANAGER", "STAFF", "ACCOUNTANT"];
 
@@ -28,10 +29,10 @@ export default function MemberRow({
 }) {
   const t      = useTranslations("settings.team.staff");
   const tRoles = useTranslations("settings.roles");
+  const confirm = useConfirmDialog();
 
   const [editing, setEditing]     = useState(false);
   const [selected, setSelected]   = useState<UserRole>(member.role);
-  const [confirming, setConfirming] = useState(false);
   const [error, setError]         = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -55,14 +56,21 @@ export default function MemberRow({
     });
   }
 
-  function handleRemove() {
+  async function handleRemove() {
+    const { confirmed } = await confirm({
+      title: t("removeDialogTitle"),
+      description: t("removeDialogDescription", { name: displayName }),
+      tone: "destructive",
+      confirmLabel: t("removeDialogConfirm"),
+      cancelLabel: t("removeDialogCancel"),
+    });
+    if (!confirmed) return;
     setError(null);
     startTransition(async () => {
       try {
         await removeTeamMember(member.id);
       } catch (e: any) {
         setError(e.message);
-        setConfirming(false);
       }
     });
   }
@@ -78,7 +86,7 @@ export default function MemberRow({
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-medium text-gray-900 truncate">{displayName}</p>
             {isCurrentUser && (
-              <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600">{t("you")}</span>
+              <Badge tone="info" appearance="subtle" size="sm">{t("you")}</Badge>
             )}
           </div>
           <p className="text-xs text-gray-500 truncate">{member.email}</p>
@@ -118,9 +126,9 @@ export default function MemberRow({
             </button>
           </div>
         ) : (
-          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${ROLE_BADGE[member.role]}`}>
+          <Badge {...getUserRoleBadge(member.role)} size="sm">
             {tRoles(member.role)}
-          </span>
+          </Badge>
         )}
 
         {/* Edit role button */}
@@ -134,35 +142,16 @@ export default function MemberRow({
           </button>
         )}
 
-        {/* Remove button / confirm */}
-        {canDelete && !editing && !confirming && (
+        {/* Remove button */}
+        {canDelete && !editing && (
           <button
-            onClick={() => setConfirming(true)}
-            className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+            onClick={handleRemove}
+            disabled={isPending}
+            className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
             title={t("removeTitle")}
           >
             <TrashIcon className="h-4 w-4" />
           </button>
-        )}
-
-        {confirming && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs text-red-600 font-medium">{t("removeConfirm")}</span>
-            <button
-              onClick={handleRemove}
-              disabled={isPending}
-              className="rounded bg-red-600 px-2 py-1 text-xs text-white hover:bg-red-500 disabled:opacity-50"
-            >
-              {t("yes")}
-            </button>
-            <button
-              onClick={() => setConfirming(false)}
-              disabled={isPending}
-              className="rounded bg-gray-200 px-2 py-1 text-xs text-gray-700 hover:bg-gray-300 disabled:opacity-50"
-            >
-              {t("no")}
-            </button>
-          </div>
         )}
       </div>
 

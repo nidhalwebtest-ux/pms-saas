@@ -91,6 +91,7 @@ export function AvailabilityCalendar({
   const router = useRouter();
   const locale = useLocale();
   const dateFnsLocale: Locale = locale === "ar" ? arLocale : enLocale;
+  const isRtl = locale === "ar";
 
   const tWidget   = useTranslations("reservations.availabilityCalendar.widget");
   const tModal    = useTranslations("reservations.availabilityCalendar.modal");
@@ -111,8 +112,11 @@ export function AvailabilityCalendar({
 
   // Widget state (controls that persist even when modal is closed)
   const todayStr = format(new Date(), "yyyy-MM-dd");
+  // Under "All Properties" the header passes an empty string — fall back to the
+  // first property so the picker has a selection and "Show" is enabled (QA #21).
+  // (`||` not `??`, so the empty string falls through, unlike a null/undefined.)
   const [propertyId, setPropertyId] = useState(
-    defaultPropertyId ?? properties[0]?.id ?? "",
+    defaultPropertyId || properties[0]?.id || "",
   );
   const [startDate, setStartDate] = useState(todayStr);
   const [endDate, setEndDate]     = useState(
@@ -528,7 +532,9 @@ export function AvailabilityCalendar({
                                 height: 40,
                                 background: cell.solid
                                   ? cell.leftColor
-                                  : `linear-gradient(135deg, ${cell.leftColor} 50%, ${cell.rightColor} 50%)`,
+                                  // Mirror the diagonal under RTL (225deg) so the
+                                  // earlier-half color stays on the correct side (QA #22).
+                                  : `linear-gradient(${isRtl ? 225 : 135}deg, ${cell.leftColor} 50%, ${cell.rightColor} 50%)`,
                                 outline: todayFlag
                                   ? "2px solid #2563EB"
                                   : cell.isGap

@@ -8,14 +8,11 @@ import {
 } from "@/lib/reservation-status";
 import {
   calculateNights,
-  countCalendarMonths,
-  buildCalendarMonthBreakdown,
-  collapseToSegments,
   calculateGrandTotal,
-  roundOMR,
-  sumSubtotals,
 } from "@/lib/reservation-engine";
-import { getUnitPriceForRange } from "@/lib/pricing";
+import { getUnitConflict, type ConflictDetail } from "@/lib/reservation-conflict";
+import { computeUnitPricings, findMonthlyBlock } from "@/lib/reservation-pricing";
+import { generateInvoicesForReservation } from "@/lib/invoice-engine";
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
 
@@ -32,91 +29,54 @@ async function getActor() {
 
 // ── Reservation number generator ──────────────────────────────────────────────
 
-async function generateReservationNumber(): Promise<string> {
-  const year  = new Date().getFullYear();
-  const count = await prisma.reservation.count();
-  return `RES-${year}-${String(count + 1).padStart(5, "0")}`;
-}
-
-// ── Availability check (re-used inside transaction) ───────────────────────────
-
-type ConflictDetail = {
-  unitId: string;
-  unitName: string;
-  reservationNumber: string | null;
-  guestName: string;
-  startDate: string;
-  endDate: string;
-} | null;
-
-async function getUnitConflict(
-  tx:        Prisma.TransactionClient,
-  unitId:    string,
-  unitName:  string,
-  startDate: Date,
-  endDate:   Date,
-  excludeReservationId?: string,
-): Promise<ConflictDetail> {
-  // Check old-style reservations (Reservation.unitId)
-  const conflictOld = await tx.reservation.findFirst({
-    where: {
-      unitId,
-      status: { notIn: ["CANCELLED", "NO_SHOW", "COMPLETED"] },
-      ...(excludeReservationId ? { NOT: { id: excludeReservationId } } : {}),
-      startDate: { lt: endDate },
-      endDate:   { gt: startDate },
-    },
+/**
+ * Generate the next per-organization sequential reservation number using the
+ * org's configurable format (Settings → Reservations — QA issue #29):
+ *   - prefix   (e.g. "RES")
+ *   - padding  (zero-pad width, e.g. 5 → "00001")
+ *   - resetYearly: when true the number is `${prefix}-${year}-${seq}` and the
+ *     sequence restarts each year; when false it's `${prefix}-${seq}` continuous.
+ * Scoped to the org so a fresh org starts at 1 and cross-company volume never
+ * leaks (QA #18).
+ *
+ * MUST be called inside a Prisma $transaction (Serializable) so concurrent
+ * creates can't read the same "last" number — the @@unique([organizationId,
+ * reservationNumber]) constraint is the final backstop. Mirrors nextInvoiceNumber.
+ */
+async function generateReservationNumber(
+  orgId: string,
+  tx: Prisma.TransactionClient,
+): Promise<string> {
+  const org = await tx.organization.findUnique({
+    where:  { id: orgId },
     select: {
-      reservationNumber: true,
-      startDate: true,
-      endDate: true,
-      tenant: { select: { firstName: true, lastName: true } },
+      reservationNumberPrefix:      true,
+      reservationNumberPadding:     true,
+      reservationNumberResetYearly: true,
     },
   });
-  if (conflictOld) {
-    return {
-      unitId,
-      unitName,
-      reservationNumber: conflictOld.reservationNumber,
-      guestName: `${conflictOld.tenant.firstName} ${conflictOld.tenant.lastName}`,
-      startDate: conflictOld.startDate.toISOString(),
-      endDate:   conflictOld.endDate.toISOString(),
-    };
+
+  const base    = (org?.reservationNumberPrefix ?? "RES").trim() || "RES";
+  const padding = Math.min(Math.max(org?.reservationNumberPadding ?? 5, 1), 10);
+  const reset   = org?.reservationNumberResetYearly ?? true;
+  const prefix  = reset ? `${base}-${new Date().getFullYear()}-` : `${base}-`;
+
+  const last = await tx.reservation.findFirst({
+    where: {
+      organizationId:    orgId,
+      reservationNumber: { startsWith: prefix },
+    },
+    orderBy: { reservationNumber: "desc" },
+    select:  { reservationNumber: true },
+  });
+
+  let seq = 1;
+  if (last?.reservationNumber) {
+    const parts = last.reservationNumber.split("-");
+    seq = parseInt(parts[parts.length - 1], 10) + 1;
   }
 
-  // Check new-style reservations (ReservationUnit)
-  const conflictNew = await tx.reservationUnit.findFirst({
-    where: {
-      unitId,
-      reservation: {
-        status: { notIn: ["CANCELLED", "NO_SHOW", "COMPLETED"] },
-        ...(excludeReservationId ? { NOT: { id: excludeReservationId } } : {}),
-        startDate: { lt: endDate },
-        endDate:   { gt: startDate },
-      },
-    },
-    select: {
-      reservation: {
-        select: {
-          reservationNumber: true,
-          startDate: true,
-          endDate: true,
-          tenant: { select: { firstName: true, lastName: true } },
-        },
-      },
-    },
-  });
-  if (conflictNew) {
-    return {
-      unitId,
-      unitName,
-      reservationNumber: conflictNew.reservation.reservationNumber,
-      guestName: `${conflictNew.reservation.tenant.firstName} ${conflictNew.reservation.tenant.lastName}`,
-      startDate: conflictNew.reservation.startDate.toISOString(),
-      endDate:   conflictNew.reservation.endDate.toISOString(),
-    };
-  }
-  return null;
+  return `${prefix}${String(seq).padStart(padding, "0")}`;
 }
 
 // ── GET /api/reservations ─────────────────────────────────────────────────────
@@ -164,6 +124,7 @@ export async function GET(req: NextRequest) {
         select: {
           id: true, firstName: true, lastName: true,
           phone: true, nationality: true, classification: true,
+          tenantType: true, corporateName: true,
         },
       },
       unit: {
@@ -299,86 +260,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized access to unit." }, { status: 403 });
   }
 
-  // Compute pricing per unit (outside transaction — read-only, safe to do first)
-  type UnitPricing = {
-    unitId:            string;
-    rateType:          string;
-    rateAmount:        number;
-    rateSource:        string;
-    seasonalPriceName: string | null;
-    nights:            number;
-    subtotal:          number;
-  };
-
-  const totalNightsVal = calculateNights(startDate, endDate);
-  const calMonths      = countCalendarMonths(startDate, endDate);
-  const unitPricings: UnitPricing[] = [];
-
-  for (const unitId of unitIds) {
-    // Check for manual override from the booking UI
-    const override = (unitOverrides as { unitId: string; rateAmount: number }[])
-      .find((o) => o.unitId === unitId);
-
-    if (rt === "daily") {
-      if (override && override.rateAmount > 0) {
-        // Custom daily rate
-        unitPricings.push({
-          unitId,
-          rateType:          "daily",
-          rateAmount:        override.rateAmount,
-          rateSource:        "manual_override",
-          seasonalPriceName: null,
-          nights:            totalNightsVal,
-          subtotal:          roundOMR(override.rateAmount * totalNightsVal),
-        });
-      } else {
-        const priceResult = await getUnitPriceForRange(unitId, startDate, endDate);
-        const segments    = collapseToSegments(priceResult.dailyBreakdown);
-        const subtotal    = sumSubtotals(segments.map((s) => s.subtotal));
-        const firstSeg    = segments[0];
-        unitPricings.push({
-          unitId,
-          rateType:          "daily",
-          rateAmount:        firstSeg?.ratePerNight ?? 0,
-          rateSource:        firstSeg?.priceType === "SEASONAL" ? "seasonal_price" : "default_price",
-          seasonalPriceName: firstSeg?.priceName ?? null,
-          nights:            totalNightsVal,
-          subtotal,
-        });
-      }
-    } else {
-      // Monthly — calendar month standard
-      if (override && override.rateAmount > 0) {
-        // Custom monthly rate
-        unitPricings.push({
-          unitId,
-          rateType:          "monthly",
-          rateAmount:        override.rateAmount,
-          rateSource:        "manual_override",
-          seasonalPriceName: null,
-          nights:            totalNightsVal,
-          subtotal:          roundOMR(override.rateAmount * calMonths),
-        });
-      } else {
-        const prices       = await prisma.unitPrice.findMany({ where: { unitId, isActive: true } });
-        const defaultPrice = prices.find((p) => p.priceType === "DEFAULT");
-        const monthlyRate  = defaultPrice ? Number(defaultPrice.monthlyRate) : 0;
-        const segments     = buildCalendarMonthBreakdown(
-          startDate, calMonths, monthlyRate, defaultPrice?.name ?? null, "DEFAULT",
-        );
-        unitPricings.push({
-          unitId,
-          rateType:          "monthly",
-          rateAmount:        monthlyRate,
-          rateSource:        "default_price",
-          seasonalPriceName: null,
-          nights:            totalNightsVal,
-          subtotal:          sumSubtotals(segments.map((s) => s.subtotal)),
-        });
-      }
+  // Block monthly reservations during seasons flagged disallowMonthly (QA #27).
+  if (rt === "monthly") {
+    const block = await findMonthlyBlock(unitIds, startDate, endDate);
+    if (block) {
+      const unitName = unitRecords.find((u) => u.id === block.unitId)?.name ?? "this unit";
+      return NextResponse.json(
+        { error: `Monthly bookings aren't allowed for ${unitName} during ${block.name ?? "this season"}.`, code: "monthly_blocked" },
+        { status: 409 },
+      );
     }
   }
 
+  // Compute pricing + persisted segments per unit (shared with the edit PUT).
+  const unitPricings = await computeUnitPricings(unitIds, rt, startDate, endDate, unitOverrides);
+
+  const totalNightsVal = calculateNights(startDate, endDate);
   const discount    = Math.max(0, Number(discountRaw) || 0);
   const grandResult = calculateGrandTotal(
     unitPricings.map((u) => u.subtotal),
@@ -386,6 +283,17 @@ export async function POST(req: NextRequest) {
   );
 
   const totalNights = totalNightsVal;
+
+  // Invoice generation timing per rate type (QA #43). ON_CREATE generates the
+  // invoice(s) now (DRAFT — the reservation isn't checked in yet).
+  const orgInvoiceSettings = await prisma.organization.findUnique({
+    where:  { id: actor.organizationId! },
+    select: { dailyInvoiceTiming: true, monthlyInvoiceTiming: true },
+  });
+  const invoiceTiming = rt === "monthly"
+    ? orgInvoiceSettings?.monthlyInvoiceTiming
+    : orgInvoiceSettings?.dailyInvoiceTiming;
+  const generateOnCreate = invoiceTiming === "ON_CREATE";
 
   // ── Serializable transaction (double-booking prevention) ──────────────────
 
@@ -401,11 +309,12 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        const resNumber = await generateReservationNumber();
+        const resNumber = await generateReservationNumber(actor.organizationId!, tx);
 
         const res = await tx.reservation.create({
           data: {
             reservationNumber: resNumber,
+            organizationId: actor.organizationId!,
             startDate,
             endDate,
             status:         "PENDING",
@@ -439,6 +348,7 @@ export async function POST(req: NextRequest) {
             seasonalPriceName: up.seasonalPriceName,
             nights:            up.nights,
             subtotal:          up.subtotal,
+            pricingSegments:   up.pricingSegments as unknown as Prisma.InputJsonValue,
           })),
         });
 
@@ -446,6 +356,22 @@ export async function POST(req: NextRequest) {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+
+    // Auto-generate invoice(s) once the reservation is committed (QA #34). The
+    // invoice engine runs its own transaction; failure here shouldn't fail the
+    // booking, so it's best-effort and logged.
+    if (generateOnCreate) {
+      try {
+        await generateInvoicesForReservation(reservation.id, actor.organizationId!, actor.id);
+        // Keep the flag in sync (drives the edit guard + detail UI).
+        await prisma.reservation.update({
+          where: { id: reservation.id },
+          data:  { invoicesGenerated: true, invoicesGeneratedAt: new Date(), invoicesGeneratedById: actor.id },
+        });
+      } catch (e) {
+        console.error("[POST /api/reservations] generate-on-create failed:", e);
+      }
+    }
 
     return NextResponse.json({ reservation }, { status: 201 });
   } catch (err: unknown) {

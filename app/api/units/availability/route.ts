@@ -36,6 +36,9 @@ export async function GET(req: NextRequest) {
   const startStr   = searchParams.get("startDate");
   const endStr     = searchParams.get("endDate");
   const rateType   = (searchParams.get("rateType") ?? "daily") as "daily" | "monthly";
+  // When editing a reservation, exclude it so its own units aren't shown as
+  // occupied-by-themselves (QA #30).
+  const excludeReservationId = searchParams.get("excludeReservationId");
 
   if (!propertyId || !startStr || !endStr)
     return NextResponse.json({ error: "propertyId, startDate, and endDate are required." }, { status: 400 });
@@ -72,6 +75,7 @@ export async function GET(req: NextRequest) {
       status:    { notIn: ["CANCELLED", "NO_SHOW", "COMPLETED"] },
       startDate: { lt: endDate },
       endDate:   { gt: startDate },
+      ...(excludeReservationId ? { NOT: { id: excludeReservationId } } : {}),
     },
     select: {
       unitId: true,
@@ -89,6 +93,7 @@ export async function GET(req: NextRequest) {
         status:    { notIn: ["CANCELLED", "NO_SHOW", "COMPLETED"] },
         startDate: { lt: endDate },
         endDate:   { gt: startDate },
+        ...(excludeReservationId ? { id: { not: excludeReservationId } } : {}),
       },
     },
     select: {

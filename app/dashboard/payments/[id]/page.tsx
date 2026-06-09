@@ -13,6 +13,13 @@ import {
   BanknotesIcon,
   CalendarDaysIcon,
 } from "@heroicons/react/24/outline";
+import {
+  Alert,
+  Badge,
+  getPaymentMethodBadge,
+  resolveInvoiceBadge,
+  type PaymentMethodKey,
+} from "@/components/ui";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -25,32 +32,6 @@ const tryT = (fn: Trans, key: string, fallback?: string) => {
     return fallback ?? key;
   }
 };
-
-function methodBadgeClass(m: string) {
-  const map: Record<string, string> = {
-    CASH: "bg-green-100 text-green-800",
-    CARD: "bg-blue-100 text-blue-800",
-    BANK_TRANSFER: "bg-purple-100 text-purple-800",
-    CHEQUE: "bg-orange-100 text-orange-800",
-    ONLINE: "bg-cyan-100 text-cyan-800",
-    OTHER: "bg-gray-100 text-gray-600",
-  };
-  return map[m] ?? "bg-gray-100 text-gray-600";
-}
-
-function invoiceStatusBadge(status: string) {
-  const map: Record<string, string> = {
-    PAID:           "bg-green-100 text-green-800",
-    PARTIALLY_PAID: "bg-orange-100 text-orange-800",
-    PENDING:        "bg-yellow-100 text-yellow-800",
-    CANCELLED:      "bg-gray-100 text-gray-500",
-    RETURNED:       "bg-red-100 text-red-700",
-    PARTIAL:        "bg-orange-100 text-orange-800",
-    ISSUED:         "bg-yellow-100 text-yellow-800",
-    DUE:            "bg-yellow-100 text-yellow-800",
-  };
-  return map[status] ?? "bg-gray-100 text-gray-600";
-}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -192,9 +173,12 @@ export default async function PaymentDetailPage({
           <div className="text-end">
             <p className="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-1">{tDet("amountLabel")}</p>
             <p className="text-3xl font-bold ltr-numbers">{amount.toFixed(3)} <span className="text-xl font-normal text-blue-200">OMR</span></p>
-            <span className={`mt-2 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${methodBadgeClass(payment.method)} bg-opacity-90`}>
+            <Badge
+              {...getPaymentMethodBadge(payment.method as PaymentMethodKey)}
+              className="mt-2"
+            >
               {methodLabelText}
-            </span>
+            </Badge>
           </div>
         </div>
       </div>
@@ -220,9 +204,12 @@ export default async function PaymentDetailPage({
             <div className="flex justify-between py-2.5">
               <dt className="text-gray-500">{tDet("paymentMethod")}</dt>
               <dd>
-                <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${methodBadgeClass(payment.method)}`}>
+                <Badge
+                  {...getPaymentMethodBadge(payment.method as PaymentMethodKey)}
+                  size="sm"
+                >
                   {methodLabelText}
-                </span>
+                </Badge>
               </dd>
             </div>
             {payment.reference && (
@@ -337,9 +324,9 @@ export default async function PaymentDetailPage({
                       {Number(alloc.amount).toFixed(3)} OMR
                     </td>
                     <td className="px-3 py-3 text-sm text-center">
-                      <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold ${invoiceStatusBadge(inv.status)}`}>
+                      <Badge {...resolveInvoiceBadge(inv.status, null).props} size="sm">
                         {invoiceStatusLabel(inv.status)}
-                      </span>
+                      </Badge>
                     </td>
                   </tr>
                 );
@@ -360,9 +347,7 @@ export default async function PaymentDetailPage({
 
       {/* Unapplied credit note */}
       {payment.allocations.length === 0 && (
-        <div className="mt-6 bg-amber-50 rounded-lg border border-amber-200 px-4 py-4 text-sm text-amber-800">
-          {tDet("unappliedNotice")}
-        </div>
+        <Alert variant="warning" className="mt-6" description={tDet("unappliedNotice")} />
       )}
     </div>
   );

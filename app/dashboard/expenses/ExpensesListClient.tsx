@@ -1,50 +1,47 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useTranslations, useLocale } from "next-intl";
-import { format } from "date-fns";
-import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
+import { useTranslations } from "next-intl";
 import {
-  MagnifyingGlassIcon,
   CheckIcon,
   XMarkIcon,
   EyeIcon,
-  PencilIcon,
   TrashIcon,
-  PhotoIcon,
   ArrowPathIcon,
   ClipboardDocumentCheckIcon,
 } from "@heroicons/react/24/outline";
-import RejectExpenseModal from "./modals/RejectExpenseModal";
+import type { SortingState } from "@tanstack/react-table";
 import ProcessExpenseModal from "./modals/ProcessExpenseModal";
 import ReceiptLightbox from "./modals/ReceiptLightbox";
+import {
+  buildExpenseColumns,
+  expenseRowVariant,
+  type ExpenseRow as Expense,
+} from "./columns";
 import { useFormatAmount, useOrgCurrency } from "@/lib/org-context";
+import {
+  DataTable,
+  EmptyState,
+  FilterBar,
+  NoExpensesForFilters,
+  NoExpensesPending,
+  useConfirmDialog,
+  type QuickFilter,
+} from "@/components/ui";
+import { ReceiptIllustration } from "@/components/ui/empty-state/illustrations";
 
-type Status = "PENDING" | "APPROVED" | "REJECTED" | "PROCESSED";
+const REJECT_REASON_KEYS = [
+  "insufficient_receipt",
+  "amount_too_high",
+  "not_authorized",
+  "wrong_category",
+  "duplicate_expense",
+  "other",
+] as const;
 
-interface Expense {
-  id: string;
-  expenseNumber: string;
-  description: string;
-  amount: number;
-  status: Status;
-  receiptImage: string;
-  receiptImage2: string | null;
-  notes: string | null;
-  rejectionReason: string | null;
-  paymentMethod: string | null;
-  bankReference: string | null;
-  submittedAt: string;
-  reviewedAt: string | null;
-  processedAt: string | null;
-  category: { id: string; name: string; icon: string | null; nameAr: string | null };
-  property: { id: string; name: string };
-  submittedBy: { id: string; firstName: string | null; lastName: string | null };
-  reviewedBy: { id: string; firstName: string | null; lastName: string | null } | null;
-  processedBy: { id: string; firstName: string | null; lastName: string | null } | null;
-}
+export type { Expense };
 
 interface Props {
   role: string;
@@ -56,12 +53,6 @@ interface Props {
   categories: { id: string; name: string; icon: string | null; isActive: boolean }[];
 }
 
-const STATUS_STYLE = {
-  PENDING:   { bg: "bg-amber-100",    text: "text-amber-800",   dot: "bg-amber-500" },
-  APPROVED:  { bg: "bg-blue-100",     text: "text-blue-800",    dot: "bg-blue-500"  },
-  REJECTED:  { bg: "bg-red-100",      text: "text-red-800",     dot: "bg-red-500"   },
-  PROCESSED: { bg: "bg-emerald-100",  text: "text-emerald-800", dot: "bg-emerald-500" },
-} as const;
 
 export default function ExpensesListClient({
   role, userId, initialStatus, initialPropertyId, initialCategoryId, properties, categories,
@@ -69,20 +60,13 @@ export default function ExpensesListClient({
   const tList = useTranslations("expenses.list");
   const tStatus = useTranslations("expenses.statuses");
   const tTabs = useTranslations("expenses.tabs");
-  const locale = useLocale();
-  const dfLoc = locale === "ar" ? arLocale : enLocale;
+  const tReject = useTranslations("expenses.rejectModal");
+  const tReason = useTranslations("expenses.rejectModal.reasons");
+  const tRejectErr = useTranslations("expenses.rejectModal.errors");
+  const confirm = useConfirmDialog();
+  const router = useRouter();
   const fmtAmount = useFormatAmount();
   const currency  = useOrgCurrency();
-
-  const fmtDate = (d: string | null) => {
-    if (!d) return "—";
-    return format(new Date(d), "dd MMM yyyy", { locale: dfLoc });
-  };
-
-  const fullName = (u: { firstName: string | null; lastName: string | null } | null) => {
-    if (!u) return "—";
-    return [u.firstName, u.lastName].filter(Boolean).join(" ") || "—";
-  };
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [statusCounts, setStatusCounts] = useState<Record<string, { count: number; total: number }>>({});
@@ -98,8 +82,12 @@ export default function ExpensesListClient({
   // Selection (bulk approve)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
+  // Sort
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "submittedAt", desc: true },
+  ]);
+
   // Modals
-  const [rejectExpense, setRejectExpense]   = useState<Expense | null>(null);
   const [processExpense, setProcessExpense] = useState<Expense | null>(null);
   const [lightboxImages, setLightboxImages] = useState<string[] | null>(null);
 
@@ -138,14 +126,18 @@ export default function ExpensesListClient({
 
   useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
 
-  // ── Footer totals ─────────────────────────────────────────────────────
-  const footer = useMemo(() => {
-    const total = expenses.reduce((s, e) => s + e.amount, 0);
-    return { total, count: expenses.length };
-  }, [expenses]);
-
   // ── Actions ───────────────────────────────────────────────────────────
   async function handleApprove(id: string) {
+    const exp = expenses.find((e) => e.id === id);
+    const { confirmed } = await confirm({
+      title: tList("approveConfirm.title"),
+      description: exp
+        ? tList("approveConfirm.body", { number: exp.expenseNumber, amount: exp.amount.toFixed(3) })
+        : tList("approveConfirm.bodyGeneric"),
+      confirmLabel: tList("approveConfirm.cta"),
+      cancelLabel: tList("approveConfirm.cancel"),
+    });
+    if (!confirmed) return;
     try {
       const res = await fetch(`/api/expenses/${id}/approve`, { method: "PATCH" });
       const d = await res.json();
@@ -155,23 +147,31 @@ export default function ExpensesListClient({
     } catch { toast.error(tList("toasts.approveFailed")); }
   }
 
-  async function handleBulkApprove() {
-    if (selectedIds.size === 0) return;
+  async function handleBulkApprove(ids: string[]) {
+    if (ids.length === 0) return;
     try {
       const res = await fetch("/api/expenses/bulk-approve", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expenseIds: Array.from(selectedIds) }),
+        body: JSON.stringify({ expenseIds: ids }),
       });
       const d = await res.json();
       if (!res.ok) { toast.error(d.error); return; }
       toast.success(tList("toasts.bulkApproved", { count: d.approvedCount }));
+      setSelectedIds(new Set());
       fetchExpenses();
     } catch { toast.error(tList("toasts.bulkApproveFailed")); }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm(tList("toasts.deleteConfirm"))) return;
+    const { confirmed } = await confirm({
+      title: tList("toasts.deleteTitle"),
+      description: tList("toasts.deleteConfirm"),
+      tone: "destructive",
+      confirmLabel: tList("toasts.deleteCta"),
+      cancelLabel: tList("toasts.cancelCta"),
+    });
+    if (!confirmed) return;
     try {
       const res = await fetch(`/api/expenses/${id}`, { method: "DELETE" });
       const d = await res.json();
@@ -181,340 +181,267 @@ export default function ExpensesListClient({
     } catch { toast.error(tList("toasts.deleteFailed")); }
   }
 
-  // ── Selection ─────────────────────────────────────────────────────────
-  function toggleSelect(id: string) {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
+  async function handleReject(e: Expense) {
+    const nonOther = REJECT_REASON_KEYS.filter((k) => k !== "other") as readonly string[];
+    await confirm({
+      title: tReject("title"),
+      description: `${e.expenseNumber} · ${e.amount.toFixed(3)} OMR`,
+      tone: "destructive",
+      reason: {
+        label: tReject("reasonLabel"),
+        placeholder: tReject("reasonPlaceholder"),
+        options: REJECT_REASON_KEYS.map((k) => ({ value: k, label: tReason(k) })),
+        notesFor: [...nonOther],
+        notesRequiredFor: ["other"],
+        notesLabel: tReject("notesLabel"),
+        notesPlaceholder: tReject("notesPlaceholder"),
+      },
+      confirmLabel: tReject("rejectBtn"),
+      cancelLabel: tReject("cancel"),
+      onConfirm: async ({ reason, notes }) => {
+        let res, data;
+        try {
+          res = await fetch(`/api/expenses/${e.id}/reject`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reason: tReason(reason as string), notes: notes ?? "" }),
+          });
+          data = await res.json();
+        } catch {
+          toast.error(tRejectErr("networkError"));
+          throw new Error("network");
+        }
+        if (!res.ok) {
+          toast.error(data.error ?? tRejectErr("rejectFailed"));
+          throw new Error(data.error ?? "reject failed");
+        }
+        toast.success(tRejectErr("rejected"));
+        fetchExpenses();
+      },
     });
-  }
-  function toggleSelectAll() {
-    const pending = expenses.filter((e) => e.status === "PENDING");
-    if (selectedIds.size === pending.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(pending.map((e) => e.id)));
   }
 
   // ── Tabs ──────────────────────────────────────────────────────────────
-  const tabs: { key: string }[] = [
-    { key: "ALL" },
-    { key: "PENDING" },
-    { key: "APPROVED" },
-    { key: "REJECTED" },
-    { key: "PROCESSED" },
-  ];
+  const tabKeys = ["ALL", "PENDING", "APPROVED", "REJECTED", "PROCESSED"] as const;
+  const quickFilters: QuickFilter[] = tabKeys.map((k) => ({
+    id:      k,
+    label:   tTabs(k),
+    count:   statusCounts[k]?.count ?? 0,
+    variant: k === "REJECTED" ? "destructive" : k === "APPROVED" || k === "PROCESSED" ? "success" : k === "PENDING" ? "warning" : undefined,
+  }));
 
   const showCheckboxes = canApprove && statusFilter === "PENDING";
-  const pendingCount = expenses.filter((e) => e.status === "PENDING").length;
+
+  // ── Columns + row actions ─────────────────────────────────────────────
+  const columns = useMemo(
+    () =>
+      buildExpenseColumns({
+        tList,
+        tStatus,
+        fmtAmount,
+        currency,
+        onOpenReceipt: setLightboxImages,
+      }),
+    [tList, tStatus, fmtAmount, currency],
+  );
+
+  const rowActions = useCallback(
+    (e: Expense) => {
+      const isOwn = e.submittedBy.id === userId;
+      const canDelete = e.status === "PENDING" && (isOwn || role === "OWNER");
+      return [
+        {
+          id: "approve",
+          label: tList("rowActions.approve"),
+          icon: <CheckIcon className="h-4 w-4" />,
+          visible: e.status === "PENDING" && canApprove,
+          onClick: () => handleApprove(e.id),
+        },
+        {
+          id: "reject",
+          label: tList("rowActions.reject"),
+          icon: <XMarkIcon className="h-4 w-4" />,
+          variant: "destructive" as const,
+          visible: e.status === "PENDING" && canApprove,
+          onClick: () => handleReject(e),
+        },
+        {
+          id: "process",
+          label: tList("rowActions.process"),
+          icon: <ClipboardDocumentCheckIcon className="h-4 w-4" />,
+          visible: e.status === "APPROVED" && canProcess,
+          onClick: () => setProcessExpense(e),
+        },
+        {
+          id: "delete",
+          label: tList("rowActions.delete"),
+          icon: <TrashIcon className="h-4 w-4" />,
+          variant: "destructive" as const,
+          visible: canDelete,
+          onClick: () => handleDelete(e.id),
+        },
+        {
+          id: "view",
+          label: tList("rowActions.view"),
+          icon: <EyeIcon className="h-4 w-4" />,
+          onClick: () => router.push(`/dashboard/expenses/${e.id}`),
+        },
+      ];
+    },
+    // handleApprove / handleReject / handleDelete are defined in the same
+    // component and read from the latest state and translators.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tList, canApprove, canProcess, role, userId, router],
+  );
+
+  const bulkActions = useMemo(
+    () => [
+      {
+        id: "approve",
+        label: tList("approveSelected"),
+        icon: <CheckIcon className="h-4 w-4" />,
+        onClick: (ids: string[]) => handleBulkApprove(ids),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tList],
+  );
+
+  // Footer totals — kept from the original page footer.
+  const footer = useMemo(() => {
+    const total = expenses.reduce((s, e) => s + e.amount, 0);
+    return { total, count: expenses.length };
+  }, [expenses]);
 
   return (
     <div className="space-y-5">
-      {/* ── Status tabs ──────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-sm ring-1 ring-gray-200 px-4 py-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {tabs.map((tb) => {
-            const active = statusFilter === tb.key;
-            const count = statusCounts[tb.key]?.count ?? 0;
-            const total = statusCounts[tb.key]?.total ?? 0;
-            return (
-              <button
-                key={tb.key}
-                onClick={() => setStatusFilter(tb.key)}
-                className={`inline-flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-full transition-all ${
-                  active
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                {tTabs(tb.key)}
-                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ltr-numbers ${
-                  active ? "bg-blue-500/40 text-white" : "bg-white text-gray-500"
-                }`}>
-                  {count}
-                </span>
-                {active && total > 0 && (
-                  <span className="text-[10px] font-medium opacity-80 ltr-numbers">
-                    · {fmtAmount(total)}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-          <button
-            onClick={fetchExpenses}
-            disabled={loading}
-            className="ms-auto p-1.5 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors disabled:opacity-40"
-            title={tList("refresh")}
-          >
-            <ArrowPathIcon className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          </button>
-        </div>
-      </div>
-
-      {/* ── Filters bar ──────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-sm ring-1 ring-gray-200 px-4 py-3 grid grid-cols-1 sm:grid-cols-4 gap-3">
-        <div className="relative sm:col-span-2">
-          <MagnifyingGlassIcon className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={tList("searchPlaceholder")}
-            className="w-full rounded-lg border-0 bg-white py-2 ps-9 pe-3 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600"
-          />
-        </div>
-        <select
-          value={propertyId}
-          onChange={(e) => setPropertyId(e.target.value)}
-          className="w-full rounded-lg border-0 bg-white py-2 px-3 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600"
-        >
-          <option value="">{tList("allBuildings")}</option>
-          {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-        </select>
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className="w-full rounded-lg border-0 bg-white py-2 px-3 text-sm text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600"
-        >
-          <option value="">{tList("allCategories")}</option>
-          {categories.filter(c => c.isActive).map((c) => (
-            <option key={c.id} value={c.id}>{c.icon ?? ""} {c.name}</option>
-          ))}
-        </select>
-      </div>
+      <FilterBar
+        search={{
+          value: search,
+          onChange: setSearch,
+          placeholder: tList("searchPlaceholder"),
+          debounceMs: 0, // local state already debounces via debouncedSearch
+        }}
+        quickFilters={quickFilters}
+        activeQuickFilter={statusFilter}
+        onQuickFilterChange={setStatusFilter}
+        filters={[
+          {
+            id:       "property",
+            type:     "select",
+            label:    tList("allBuildings"),
+            value:    propertyId,
+            allValue: "",
+            onChange: setPropertyId,
+            options:  [
+              { value: "", label: tList("allBuildings") },
+              ...properties.map((p) => ({ value: p.id, label: p.name })),
+            ],
+          },
+          {
+            id:       "category",
+            type:     "select",
+            label:    tList("allCategories"),
+            value:    categoryId,
+            allValue: "",
+            onChange: setCategoryId,
+            options:  [
+              { value: "", label: tList("allCategories") },
+              ...categories.filter((c) => c.isActive).map((c) => ({
+                value: c.id,
+                label: `${c.icon ?? ""} ${c.name}`.trim(),
+              })),
+            ],
+          },
+        ]}
+        actions={[
+          {
+            label:    tList("refresh"),
+            onClick:  fetchExpenses,
+            variant:  "ghost",
+            icon:     <ArrowPathIcon className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />,
+            disabled: loading,
+            iconOnlyMobile: true,
+          },
+        ]}
+        activeFiltersDisplay="chips"
+        onClearAll={() => {
+          setPropertyId("");
+          setCategoryId("");
+        }}
+      />
 
       {/* ── Bulk action bar ──────────────────────────────────────────── */}
-      {showCheckboxes && selectedIds.size > 0 && (
-        <div className="bg-blue-50 ring-1 ring-blue-200 rounded-xl px-4 py-3 flex items-center justify-between">
-          <p className="text-sm font-semibold text-blue-700">
-            {tList("selected", { count: selectedIds.size })}
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSelectedIds(new Set())}
-              className="text-xs text-gray-500 hover:text-gray-700"
-            >
-              {tList("clearSelection")}
-            </button>
-            <button
-              onClick={handleBulkApprove}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-500 transition-colors"
-            >
-              <CheckIcon className="h-3.5 w-3.5" />
-              {tList("approveSelected")}
-            </button>
-          </div>
+      {/* ── Table ────────────────────────────────────────────────────── */}
+      <DataTable<Expense>
+        data={expenses}
+        columns={columns}
+        mode="client"
+        sorting={{ state: sorting, onChange: setSorting }}
+        selection={
+          showCheckboxes
+            ? {
+                enabled: true,
+                selected: selectedIds,
+                onSelectionChange: setSelectedIds,
+                selectionLabel: (count) => tList("selected", { count }),
+                isRowSelectable: (e) => e.status === "PENDING",
+              }
+            : undefined
+        }
+        bulkActions={showCheckboxes ? bulkActions : undefined}
+        rowActions={rowActions}
+        rowVariant={expenseRowVariant}
+        loading={loading}
+        hasActiveFilters={
+          !!search || statusFilter !== "ALL" || !!propertyId || !!categoryId
+        }
+        emptyState={
+          <EmptyState
+            illustration={<ReceiptIllustration />}
+            title={tList("empty")}
+            description={tList("emptyHint")}
+          />
+        }
+        noResultsState={
+          statusFilter === "PENDING" &&
+          canApprove &&
+          !search &&
+          !propertyId &&
+          !categoryId ? (
+            <NoExpensesPending
+              onViewApproved={() => setStatusFilter("APPROVED")}
+            />
+          ) : (
+            <NoExpensesForFilters
+              onClearFilters={() => {
+                setStatusFilter("ALL");
+                setPropertyId("");
+                setCategoryId("");
+                setSearch("");
+              }}
+            />
+          )
+        }
+        aria-label={tList("table.expenseNumber")}
+      />
+
+      {/* Footer totals */}
+      {expenses.length > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 text-xs text-fg-tertiary">
+          <span className="font-medium text-fg">
+            {tList("footerCount", { count: footer.count })}
+          </span>
+          <span>
+            <span className="text-sm font-bold text-error-600 tabular-nums ltr-numbers">
+              {fmtAmount(footer.total)}
+            </span>
+            <span className="text-xs text-fg-tertiary ms-1">{currency}</span>
+          </span>
         </div>
       )}
 
-      {/* ── Table ────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl shadow-sm ring-1 ring-gray-200 overflow-hidden">
-        {loading ? (
-          <div className="py-16 text-center">
-            <ArrowPathIcon className="mx-auto h-6 w-6 text-gray-300 animate-spin mb-2" />
-            <p className="text-sm text-gray-400">{tList("loading")}</p>
-          </div>
-        ) : expenses.length === 0 ? (
-          <div className="py-20 text-center">
-            <div className="mx-auto h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-              <ClipboardDocumentCheckIcon className="h-6 w-6 text-gray-300" />
-            </div>
-            <p className="text-sm font-medium text-gray-400">{tList("empty")}</p>
-            <p className="text-xs text-gray-300 mt-1">{tList("emptyHint")}</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-100">
-              <thead className="bg-gray-50">
-                <tr>
-                  {showCheckboxes && (
-                    <th className="py-3 ps-5 pe-2 w-8">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.size > 0 && selectedIds.size === pendingCount}
-                        onChange={toggleSelectAll}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                      />
-                    </th>
-                  )}
-                  <th className="py-3 px-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{tList("table.expenseNumber")}</th>
-                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{tList("table.date")}</th>
-                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{tList("table.category")}</th>
-                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide">{tList("table.description")}</th>
-                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{tList("table.building")}</th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">{tList("table.receipt")}</th>
-                  <th className="px-3 py-3 text-start text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{tList("table.submittedBy")}</th>
-                  <th className="px-3 py-3 text-end text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{tList("table.amount")}</th>
-                  <th className="px-3 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">{tList("table.status")}</th>
-                  <th className="px-3 py-3 pe-5 text-end text-xs font-semibold text-gray-500 uppercase tracking-wide">{tList("table.actions")}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {expenses.map((e, idx) => {
-                  const cfg = STATUS_STYLE[e.status];
-                  const isOwn = e.submittedBy.id === userId;
-                  const canEdit   = e.status === "PENDING" && isOwn;
-                  const canDelete = e.status === "PENDING" && (isOwn || role === "OWNER");
-
-                  return (
-                    <tr
-                      key={e.id}
-                      className={`transition-colors hover:bg-gray-50/70 ${idx % 2 === 0 ? "" : "bg-gray-50/30"}`}
-                    >
-                      {showCheckboxes && (
-                        <td className="py-3 ps-5 pe-2">
-                          {e.status === "PENDING" && (
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.has(e.id)}
-                              onChange={() => toggleSelect(e.id)}
-                              className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-                            />
-                          )}
-                        </td>
-                      )}
-                      <td className="whitespace-nowrap py-3 px-3 text-sm">
-                        <Link href={`/dashboard/expenses/${e.id}`} className="font-mono text-xs font-semibold text-blue-600 hover:underline ltr-numbers">
-                          {e.expenseNumber}
-                        </Link>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-600 ltr-numbers">
-                        {fmtDate(e.submittedAt)}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-700">
-                        <span className="inline-flex items-center gap-1.5 font-medium">
-                          <span className="text-base">{e.category.icon ?? "📋"}</span>
-                          {e.category.name}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-xs text-gray-700 max-w-[280px]">
-                        <span className="block truncate" title={e.description}>{e.description}</span>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-600">
-                        {e.property.name}
-                      </td>
-                      <td className="px-3 py-3 text-center">
-                        <button
-                          onClick={() => setLightboxImages([e.receiptImage, ...(e.receiptImage2 ? [e.receiptImage2] : [])])}
-                          className="inline-flex items-center justify-center h-9 w-9 rounded-lg overflow-hidden ring-1 ring-gray-200 hover:ring-blue-400 transition-all bg-gray-50"
-                          title={tList("rowActions.viewReceipt")}
-                        >
-                          {e.receiptImage ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={e.receiptImage} alt={tList("table.receipt")} className="object-cover w-full h-full" />
-                          ) : (
-                            <PhotoIcon className="h-4 w-4 text-gray-300" />
-                          )}
-                        </button>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-xs text-gray-600">
-                        {fullName(e.submittedBy)}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-end">
-                        <span className="text-sm font-bold text-red-600 tabular-nums ltr-numbers">
-                          {fmtAmount(e.amount)}
-                        </span>
-                        <span className="text-[10px] text-gray-400 ms-1">{currency}</span>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-center">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ${cfg.bg} ${cfg.text}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot} ${e.status === "PENDING" ? "animate-pulse" : ""}`} />
-                          {tStatus(e.status)}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 pe-5 text-end">
-                        <div className="inline-flex items-center gap-1">
-                          {/* Pending + Manager: Approve / Reject inline */}
-                          {e.status === "PENDING" && canApprove && (
-                            <>
-                              <button
-                                onClick={() => handleApprove(e.id)}
-                                className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded text-white bg-emerald-600 hover:bg-emerald-500"
-                                title={tList("rowActions.approve")}
-                              >
-                                <CheckIcon className="h-3 w-3" />
-                                {tList("rowActions.approve")}
-                              </button>
-                              <button
-                                onClick={() => setRejectExpense(e)}
-                                className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded text-red-700 bg-white border border-red-200 hover:bg-red-50"
-                                title={tList("rowActions.reject")}
-                              >
-                                <XMarkIcon className="h-3 w-3" />
-                                {tList("rowActions.reject")}
-                              </button>
-                            </>
-                          )}
-                          {/* Approved + Accountant: Process */}
-                          {e.status === "APPROVED" && canProcess && (
-                            <button
-                              onClick={() => setProcessExpense(e)}
-                              className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-semibold rounded text-white bg-blue-600 hover:bg-blue-500"
-                            >
-                              <ClipboardDocumentCheckIcon className="h-3 w-3" />
-                              {tList("rowActions.process")}
-                            </button>
-                          )}
-                          {/* Edit pending (own) */}
-                          {canEdit && (
-                            <Link
-                              href={`/dashboard/expenses/${e.id}`}
-                              className="p-1.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                              title={tList("rowActions.edit")}
-                            >
-                              <PencilIcon className="h-3.5 w-3.5" />
-                            </Link>
-                          )}
-                          {/* Delete pending (own) */}
-                          {canDelete && (
-                            <button
-                              onClick={() => handleDelete(e.id)}
-                              className="p-1.5 rounded text-gray-400 hover:text-red-600 hover:bg-red-50"
-                              title={tList("rowActions.delete")}
-                            >
-                              <TrashIcon className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                          {/* View always */}
-                          <Link
-                            href={`/dashboard/expenses/${e.id}`}
-                            className="p-1.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                            title={tList("rowActions.view")}
-                          >
-                            <EyeIcon className="h-3.5 w-3.5" />
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-gray-200 bg-gray-50">
-                  <td colSpan={showCheckboxes ? 8 : 7} className="px-5 py-3 text-sm font-semibold text-gray-700">
-                    {tList("footerCount", { count: footer.count })}
-                  </td>
-                  <td className="px-3 py-3 text-end">
-                    <span className="text-sm font-bold text-red-600 tabular-nums ltr-numbers">
-                      {fmtAmount(footer.total)}
-                    </span>
-                    <span className="text-xs text-gray-400 ms-1">{currency}</span>
-                  </td>
-                  <td colSpan={2} />
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        )}
-      </div>
-
       {/* ── Modals ──────────────────────────────────────────────────── */}
-      {rejectExpense && (
-        <RejectExpenseModal
-          expense={rejectExpense}
-          onClose={() => setRejectExpense(null)}
-          onDone={() => { setRejectExpense(null); fetchExpenses(); }}
-        />
-      )}
       {processExpense && (
         <ProcessExpenseModal
           expense={processExpense}

@@ -11,13 +11,6 @@ export const ROLE_LABELS: Record<Role, string> = {
   ACCOUNTANT:  "Accountant",
 };
 
-export const ROLE_BADGE: Record<Role, string> = {
-  OWNER:       "bg-purple-100 text-purple-700 ring-purple-700/20",
-  MANAGER:     "bg-blue-100 text-blue-700 ring-blue-700/20",
-  STAFF:       "bg-green-100 text-green-700 ring-green-700/20",
-  ACCOUNTANT:  "bg-amber-100 text-amber-700 ring-amber-700/20",
-};
-
 // ── Navigation access ─────────────────────────────────────────────────────────
 // Key must match the `key` field in navigationConfig (Navigation.tsx)
 

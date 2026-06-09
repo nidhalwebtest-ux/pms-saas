@@ -3,6 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getUnitPriceForRange } from "@/lib/pricing";
 import { roundOMR, calculateNights, countCalendarMonths } from "@/lib/reservation-engine";
+import { nextInvoiceNumber } from "@/lib/invoice-engine";
 
 async function getActor() {
   const supabase = await createClient();
@@ -51,7 +52,7 @@ export async function POST(
       tenant: { select: { organizationId: true, firstName: true, lastName: true } },
       reservationUnits: {
         where: { isMovedOut: { not: true } },
-        include: { unit: { select: { id: true, name: true } } },
+        include: { unit: { select: { id: true, name: true, propertyId: true } } },
       },
     },
   });
@@ -76,7 +77,14 @@ export async function POST(
   for (const ue of unitExtensions) extensionMap.set(ue.unitId, ue.extend);
 
   // Verify availability + compute pricing outside the transaction
-  const extendedUnitPricings = new Map<string, { additionalNights: number; additionalSubtotal: number }>();
+  const extendedUnitPricings = new Map<string, {
+    additionalNights:   number;
+    additionalSubtotal: number;
+    quantity:           number;
+    unitPrice:          number;
+    unitName:           string;
+    isMonthly:          boolean;
+  }>();
 
   for (const ru of r.reservationUnits) {
     const shouldExtend = extensionMap.get(ru.unitId) ?? false;
@@ -124,6 +132,8 @@ export async function POST(
 
     let additionalSubtotal: number;
     let additionalNights:   number;
+    let quantity:           number;  // months (monthly) or nights (daily) — for the invoice line
+    let unitPrice:          number;  // per-month or per-night rate — for the invoice line
 
     if (isMonthly) {
       const months = countCalendarMonths(extensionStart, newCheckOut);
@@ -132,6 +142,8 @@ export async function POST(
         ? customRate
         : roundOMR(Number(ru.rateAmount));
       additionalSubtotal = roundOMR(monthlyRate * months);
+      quantity  = months;
+      unitPrice = monthlyRate;
     } else {
       const extensionNights = calculateNights(extensionStart, newCheckOut);
       additionalNights = extensionNights;
@@ -147,9 +159,14 @@ export async function POST(
           additionalSubtotal = roundOMR(fallbackRate * extensionNights);
         }
       }
+      quantity  = extensionNights;
+      unitPrice = extensionNights > 0 ? roundOMR(additionalSubtotal / extensionNights) : additionalSubtotal;
     }
 
-    extendedUnitPricings.set(ru.unitId, { additionalNights, additionalSubtotal });
+    extendedUnitPricings.set(ru.unitId, {
+      additionalNights, additionalSubtotal, quantity, unitPrice,
+      unitName: ru.unit.name, isMonthly,
+    });
   }
 
   let newGrandTotal = 0;
@@ -195,15 +212,19 @@ export async function POST(
       newGrandTotal         = newGrand;
 
       let newAmountPaid = roundOMR(Number(r.amountPaid));
+      let extensionPaymentId: string | null = null;
+      let extensionPayAmt = 0;
       if (payment && Number(payment.amount) > 0) {
         const payAmt = roundOMR(Number(payment.amount));
-        await tx.payment.create({
+        const createdPayment = await tx.payment.create({
           data: {
             amount: payAmt, method: payment.method as any,
             reference: payment.reference ?? null,
             tenantId: r.tenantId, reservationId: id,
           },
         });
+        extensionPaymentId = createdPayment.id;
+        extensionPayAmt = payAmt;
         newAmountPaid = roundOMR(newAmountPaid + payAmt);
         await tx.reservationActivity.create({
           data: {
@@ -223,6 +244,78 @@ export async function POST(
           grandTotal: newGrand, amountPaid: newAmountPaid, totalNights,
         },
       });
+
+      // Bill the extension. The base invoice generation is idempotent and won't
+      // pick up the extra nights/months, so when this reservation already has
+      // issued invoices we create a dedicated ADDITIONAL invoice for the
+      // extension period. (If no invoice exists yet, the normal "Generate
+      // Invoices" later covers the full extended stay.)
+      const existingInvoiceCount = await tx.invoice.count({
+        where: { reservationId: id, status: { notIn: ["CANCELLED", "VOID"] } },
+      });
+      if (existingInvoiceCount > 0 && additionalCharges > 0) {
+        const extInvoiceNumber = await nextInvoiceNumber(actor.organizationId!, tx);
+        const lineItemsData: any[] = [];
+        let extSubtotal = 0;
+        let sortOrder = 0;
+        for (const ru of r.reservationUnits) {
+          const ext = extendedUnitPricings.get(ru.unitId);
+          if (!ext) continue;
+          extSubtotal = roundOMR(extSubtotal + ext.additionalSubtotal);
+          lineItemsData.push({
+            organizationId: actor.organizationId!,
+            description: `${ext.unitName} — extension (${originalEndDate.toISOString().slice(0, 10)} – ${newCheckOut.toISOString().slice(0, 10)})`,
+            category: "ROOM_CHARGE",
+            unitId: ru.unitId,
+            quantity: ext.quantity,
+            unitPrice: ext.unitPrice,
+            lineTotal: ext.additionalSubtotal,
+            rateType: ext.isMonthly ? "MONTHLY" : "DAILY",
+            sortOrder: sortOrder++,
+          });
+        }
+
+        // Apply any payment collected at extension to this invoice (capped at total).
+        const allocate = extensionPaymentId ? Math.min(extensionPayAmt, extSubtotal) : 0;
+        const extStatus = allocate <= 0
+          ? "PENDING"
+          : roundOMR(extSubtotal - allocate) <= 0 ? "PAID" : "PARTIALLY_PAID";
+
+        const extInvoice = await tx.invoice.create({
+          data: {
+            organizationId: actor.organizationId!,
+            invoiceNumber:  extInvoiceNumber,
+            reservationId:  id,
+            tenantId:       r.tenantId,
+            propertyId:     r.reservationUnits[0]?.unit.propertyId ?? null,
+            periodStart:    originalEndDate,
+            periodEnd:      newCheckOut,
+            invoiceType:    "ADDITIONAL",
+            subtotal:       extSubtotal,
+            discountAmount: 0,
+            taxAmount:      0,
+            totalAmount:    extSubtotal,
+            amountPaid:     allocate,
+            balanceDue:     roundOMR(extSubtotal - allocate),
+            status:         extStatus,
+            issueDate:      new Date(),
+            dueDate:        originalEndDate,
+            createdById:    actor.id,
+            lineItems:      { createMany: { data: lineItemsData } },
+          },
+        });
+
+        if (extensionPaymentId && allocate > 0) {
+          await tx.paymentAllocation.create({
+            data: {
+              paymentId:      extensionPaymentId,
+              invoiceId:      extInvoice.id,
+              organizationId: actor.organizationId!,
+              amount:         allocate,
+            },
+          });
+        }
+      }
 
       await tx.reservationActivity.create({
         data: {

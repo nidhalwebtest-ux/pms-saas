@@ -141,7 +141,8 @@ export async function POST(req: NextRequest) {
   if (!description?.trim()) return NextResponse.json({ error: "Description is required" }, { status: 400 });
   if (!amount || Number(amount) <= 0) return NextResponse.json({ error: "Amount must be positive" }, { status: 400 });
   if (!propertyId) return NextResponse.json({ error: "Building is required" }, { status: 400 });
-  if (!receiptImage) return NextResponse.json({ error: "Receipt image is required" }, { status: 400 });
+  // Receipt image is optional (the upload flow is being reworked — see
+  // docs/operations/supabase-storage-rls.md). Accept submissions without one.
 
   // Verify property belongs to org
   const prop = await prisma.property.findUnique({ where: { id: propertyId }, select: { organizationId: true } });
@@ -166,7 +167,7 @@ export async function POST(req: NextRequest) {
         description: description.trim(),
         amount: roundOMR(Number(amount)),
         propertyId,
-        receiptImage,
+        receiptImage: receiptImage || null,
         receiptImage2: receiptImage2 || null,
         notes: notes?.trim() || null,
         submittedById: orgUser.userId,

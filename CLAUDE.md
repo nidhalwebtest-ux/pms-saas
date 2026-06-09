@@ -63,7 +63,11 @@ June-September) and long-term monthly rentals.
 - Auto-allocation: oldest invoice first
 - Manual allocation: receptionist chooses which invoices to pay
 - Payment methods: Cash, Card, Bank Transfer, Cheque
-- Reservation cannot be cancelled if it has generated invoices (must cancel invoices first)
+- Reservation cancellation & invoices:
+  - Block cancel if ANY invoice has recorded payments (PAID / PARTIALLY_PAID) — those must be
+    cancelled/refunded manually first
+  - Otherwise auto-cancel all unpaid invoices (DRAFT / PENDING / DUE / ISSUED) as part of the
+    cancellation, free the units, and flag refundPending if a payment existed
 
 ### Expenses
 - Receptionist submits expense with receipt photo

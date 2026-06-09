@@ -54,6 +54,7 @@ enum ReservationActivityAction {
   NOTE_ADDED
   RETURN_PROCESSED
   REFUND_PROCESSED
+  CONTRACT_SIGNED
 }
 
 enum ReturnType {
@@ -156,6 +157,52 @@ model Organization {
   timezone           String   @default("Asia/Muscat")
   currency           String   @default("OMR")
 
+  /// Org-wide default check-in policy; reservations may override per-booking.
+  checkInPolicy      CheckInPolicy @default(ALLOW_BACK_TO_BACK)
+  /// When false, units with only upcoming (CONFIRMED/PENDING) reservations show
+  /// as "Vacant" instead of "Reserved". Toggled in Settings → Units.
+  showReservedStatus Boolean  @default(false)
+  /// When false, a guest cannot be checked in before their reservation start date.
+  allowEarlyCheckIn  Boolean  @default(true)
+  /// When true, reservations past their end date are checked out automatically
+  /// (by a scheduled job). When false, staff check out manually.
+  autoCheckout       Boolean  @default(false)
+
+  /// Reservation-number format (Settings → Reservations). Number =
+  /// `${prefix}-${year}-${seq}` when reservationNumberResetYearly is true (seq
+  /// restarts each year), else `${prefix}-${seq}` continuous. `seq` is zero-padded
+  /// to reservationNumberPadding. See generateReservationNumber in the API route.
+  reservationNumberPrefix      String  @default("RES")
+  reservationNumberPadding     Int     @default(5)
+  reservationNumberResetYearly Boolean @default(true)
+
+  /// Invoice Settings (Settings → Reservations — QA #43). In this product the
+  /// "contract" IS the invoice. Per-rate-type generation timing and an auto-issue
+  /// policy drive when invoices are created and posted:
+  ///   *InvoiceTiming:    ON_CREATE | ON_CHECK_IN | MANUAL
+  ///   autoIssueOnCheckIn: ALL_STARTED | FIRST_ONLY | NONE
+  ///   requireInvoiceForCheckIn: OFF | DAILY | MONTHLY | BOTH
+  /// Invoices generated while the reservation is NOT checked in are DRAFT
+  /// (provisional); check-in issues them per autoIssueOnCheckIn.
+  dailyInvoiceTiming       String @default("MANUAL")
+  monthlyInvoiceTiming     String @default("MANUAL")
+  autoIssueOnCheckIn       String @default("ALL_STARTED")
+  requireInvoiceForCheckIn String @default("OFF")
+
+  /// Payment Settings (Settings → Payments — QA #46). How a payment exceeding the
+  /// outstanding balance is handled: BLOCK (reject), WARN (confirm then allow as
+  /// credit), ALLOW (silent credit).
+  overpaymentPolicy        String @default("WARN")
+
+  /// Return Settings (Settings → Returns). Returns are credit-note transactions that
+  /// never change an invoice's total/line items.
+  ///   returnDraftPolicy:   CANCEL (cancel unissued future DRAFT cycles) | CREDIT (keep + credit)
+  ///   returnBalancePolicy: NET (headline balance shows net of credits) | GROSS (show gross total + credit line)
+  ///   returnRateBasis:     CHARGED (rate the guest was charged, from pricingSegments) | PRICE_LIST (current price list)
+  returnDraftPolicy        String @default("CANCEL")
+  returnBalancePolicy      String @default("NET")
+  returnRateBasis          String @default("CHARGED")
+
   plan               String   @default("FREE")
   maxProperties      Int      @default(1)
   subscriptionStatus String   @default("ACTIVE")
@@ -169,12 +216,26 @@ model Organization {
   invoices           Invoice[]
   expenseCategories  ExpenseCat[]
   expenses           Expense[]
+  reservations       Reservation[]
 }
 
 // 4. Users
 enum Language {
   en
   ar
+}
+
+/// Controls whether a unit must be fully vacated before a new guest can be
+/// checked in, or whether same-day (back-to-back) turnover is allowed.
+enum CheckInPolicy {
+  /// Allow back-to-back check-in: only true DATE overlaps block a check-in.
+  /// A new guest may be checked in on the prior guest's checkout day even if
+  /// the prior reservation has not yet been checked out. (default)
+  ALLOW_BACK_TO_BACK
+  /// Require the unit to be vacant: block check-in if any other reservation on
+  /// the unit is still CHECKED_IN (not yet checked out), in addition to any
+  /// date overlap. Forces a clean turnover.
+  REQUIRE_VACANT
 }
 
 model User {
@@ -294,6 +355,10 @@ model UnitPrice {
   priority    Int      @default(10)
   isActive    Boolean  @default(true)
 
+  /// SEASONAL only — when true, monthly-rate reservations whose dates overlap
+  /// this season are blocked (e.g. maximize short-term Khareef bookings). QA #27.
+  disallowMonthly Boolean @default(false)
+
   unitId      String
   unit        Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
 
@@ -380,7 +445,12 @@ model Tenant {
 
 model Reservation {
   id                String   @id @default(uuid())
-  reservationNumber String?  @unique
+  reservationNumber String?
+
+  // Denormalized org id (mirrors Tenant.organizationId) so reservation numbers
+  // can be sequenced and uniquely constrained per organization. See @@unique below.
+  organizationId    String
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
   startDate         DateTime
   endDate           DateTime
@@ -405,6 +475,10 @@ model Reservation {
   cancelledReason   String?
   cancelledAt       DateTime?
   refundPending     Boolean  @default(false)
+
+  // Per-reservation check-in policy override. NULL = inherit the organization's
+  // default (Organization.checkInPolicy).
+  checkInPolicyOverride CheckInPolicy?
 
   // Expected total number of monthly invoices (set at creation for monthly stays)
   expectedInvoiceCount Int?
@@ -433,6 +507,12 @@ model Reservation {
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  // Per-org sequential reservation numbers (e.g. RES-2026-00001). NULLs allowed
+  // (legacy/unsaved); Postgres treats NULLs as distinct so the constraint only
+  // bites real numbers within an org.
+  @@unique([organizationId, reservationNumber])
+  @@index([organizationId, createdAt])
 }
 
 model ReservationUnit {
@@ -448,6 +528,12 @@ model ReservationUnit {
   rateAmount          Decimal  @db.Decimal(10, 3)
   rateSource          String   @default("default_price")
   seasonalPriceName   String?
+
+  // Snapshot of the per-night/per-month price breakdown computed at booking time.
+  // Shape: [{ startDate, endDate, nights, rateAmount, rateSource, priceName }].
+  // rateAmount above stays the FIRST segment's rate for back-compat; this column
+  // is the source of truth for stays that span >1 price segment (e.g. Khareef).
+  pricingSegments     Json?
 
   nights              Int      @default(0)
   subtotal            Decimal  @db.Decimal(10, 3)
@@ -523,6 +609,9 @@ model Invoice {
   taxAmount       Decimal       @default(0) @db.Decimal(10, 3)
   totalAmount     Decimal       @db.Decimal(10, 3)
   amountPaid      Decimal       @default(0) @db.Decimal(10, 3)
+  // Running sum of return credits applied to this invoice (credit-note model).
+  // totalAmount + line items are frozen; balanceDue = totalAmount - amountPaid - creditedAmount.
+  creditedAmount  Decimal       @default(0) @db.Decimal(10, 3)
   balanceDue      Decimal       @db.Decimal(10, 3)
 
   status          InvoiceStatus @default(DRAFT)
@@ -753,7 +842,7 @@ model Expense {
   property       Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
 
   // --- Receipt ---
-  receiptImage   String          // file URL
+  receiptImage   String?         // file URL — optional for now (storage RLS rollout)
   receiptImage2  String?         // second receipt image
 
   // --- Workflow ---

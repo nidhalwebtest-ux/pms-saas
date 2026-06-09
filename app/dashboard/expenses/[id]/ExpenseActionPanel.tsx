@@ -90,6 +90,16 @@ export default function ExpenseActionPanel({
   }
 
   async function handleApprove() {
+    const { confirmed } = await confirm({
+      title: t("approveTitle"),
+      description: t("approveConfirm", {
+        number: expense.expenseNumber,
+        amount: expense.amount.toFixed(3),
+      }),
+      confirmLabel: t("approveCta"),
+      cancelLabel: t("cancelCta"),
+    });
+    if (!confirmed) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/expenses/${expense.id}/approve`, { method: "PATCH" });

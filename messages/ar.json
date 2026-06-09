@@ -3193,6 +3193,13 @@
         "deleteTitle": "حذف المصروف؟",
         "deleteCta": "حذف",
         "cancelCta": "إلغاء"
+      },
+      "approveConfirm": {
+        "title": "اعتماد المصروف؟",
+        "body": "اعتماد {number} بمبلغ {amount} ر.ع؟ سيصبح جاهزًا للمعالجة.",
+        "bodyGeneric": "اعتماد هذا المصروف؟ سيصبح جاهزًا للمعالجة.",
+        "cta": "اعتماد",
+        "cancel": "إلغاء"
       }
     },
     "detail": {
@@ -3241,7 +3248,10 @@
       "deleted": "تم حذف المصروف",
       "deleteFailed": "تعذر الحذف",
       "approved": "تم اعتماد المصروف",
-      "approveFailed": "تعذر الاعتماد"
+      "approveFailed": "تعذر الاعتماد",
+      "approveTitle": "اعتماد المصروف؟",
+      "approveConfirm": "اعتماد {number} بمبلغ {amount} ر.ع؟ سيصبح جاهزًا للمعالجة.",
+      "approveCta": "اعتماد"
     },
     "submit": {
       "title": "تقديم مصروف",

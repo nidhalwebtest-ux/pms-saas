@@ -3193,6 +3193,13 @@
         "deleteTitle": "Delete expense?",
         "deleteCta": "Delete",
         "cancelCta": "Cancel"
+      },
+      "approveConfirm": {
+        "title": "Approve expense?",
+        "body": "Approve {number} for {amount} OMR? This marks it ready for processing.",
+        "bodyGeneric": "Approve this expense? This marks it ready for processing.",
+        "cta": "Approve",
+        "cancel": "Cancel"
       }
     },
     "detail": {
@@ -3241,7 +3248,10 @@
       "deleted": "Expense deleted",
       "deleteFailed": "Failed to delete",
       "approved": "Expense approved",
-      "approveFailed": "Failed to approve"
+      "approveFailed": "Failed to approve",
+      "approveTitle": "Approve expense?",
+      "approveConfirm": "Approve {number} for {amount} OMR? This marks it ready for processing.",
+      "approveCta": "Approve"
     },
     "submit": {
       "title": "Submit Expense",

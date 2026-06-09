@@ -128,6 +128,16 @@ export default function ExpensesListClient({
 
   // ── Actions ───────────────────────────────────────────────────────────
   async function handleApprove(id: string) {
+    const exp = expenses.find((e) => e.id === id);
+    const { confirmed } = await confirm({
+      title: tList("approveConfirm.title"),
+      description: exp
+        ? tList("approveConfirm.body", { number: exp.expenseNumber, amount: exp.amount.toFixed(3) })
+        : tList("approveConfirm.bodyGeneric"),
+      confirmLabel: tList("approveConfirm.cta"),
+      cancelLabel: tList("approveConfirm.cancel"),
+    });
+    if (!confirmed) return;
     try {
       const res = await fetch(`/api/expenses/${id}/approve`, { method: "PATCH" });
       const d = await res.json();

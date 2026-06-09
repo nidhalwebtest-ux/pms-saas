@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { DATE_PRESETS } from "../reports-config";
 import type { RevReport, RevBuilding, RevUnit } from "@/lib/reports/revenue-by-building";
 
@@ -10,7 +11,6 @@ interface Props {
   properties: { id: string; name: string }[];
   preset: string;
   rangeText: string;
-  compareText: string;
   selectedPropertyId: string;
 }
 
@@ -76,18 +76,22 @@ function FilterControl({
   );
 }
 
-export default function RevenueByBuilding({ data, properties, preset, rangeText, compareText, selectedPropertyId }: Props) {
+export default function RevenueByBuilding({ data, properties, preset, rangeText, selectedPropertyId }: Props) {
   const router = useRouter();
+  const t = useTranslations("reports");
+  const tf = useTranslations("reports.filters");
+  const tr = useTranslations("reports.revenue");
   const [pending, startTransition] = useTransition();
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [level, setLevel] = useState<"collapse" | "l2" | "l3" | "expand">("l2");
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(data.buildings.map((b) => b.id)));
   // Cosmetic-only filters (not yet wired to data)
-  const [granularity, setGranularity] = useState("Monthly");
-  const [unitType, setUnitType] = useState("All types");
-  const [status, setStatus] = useState("Confirmed + checked-in");
+  const [granularity, setGranularity] = useState(tf("monthly"));
+  const [unitType, setUnitType] = useState(tf("typeAll"));
+  const [status, setStatus] = useState(tf("statusConfirmed"));
 
-  const selectedBuilding = properties.find((p) => p.id === selectedPropertyId)?.name ?? "All buildings";
+  const allBuildings = tf("allBuildings");
+  const selectedBuilding = properties.find((p) => p.id === selectedPropertyId)?.name ?? allBuildings;
 
   function navigate(next: { preset?: string; propertyId?: string | null }) {
     const sp = new URLSearchParams();
@@ -110,59 +114,62 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
   }
 
   const k = data.kpis;
-  const presetToLabel = (key: string) => DATE_PRESETS.find((p) => p.key === key)?.label ?? "Custom…";
-  const buildingOptions = ["All buildings", ...properties.map((p) => p.name)];
+  const presetItems = DATE_PRESETS.map((p) => ({ key: p.key, label: t(`presets.${p.key}`) }));
+  const presetLabel = t(`presets.${preset === "custom" ? "custom" : preset}` as never);
+  const compareText = tr("comparePrior", { period: presetLabel });
+  const buildingOptions = [allBuildings, ...properties.map((p) => p.name)];
+  const totalUnits = data.buildings.reduce((s, b) => s + b.unitCount, 0);
 
   return (
     <main className="rpage" style={pending ? { opacity: 0.6, transition: "opacity 120ms" } : undefined}>
       <div className="crumbs">
-        <span>Reports</span><svg className="ic-xs sep"><use href="#i-chev-right" /></svg>
-        <span>Revenue</span><svg className="ic-xs sep"><use href="#i-chev-right" /></svg>
-        <span className="current">Revenue by Building</span>
+        <span>{t("breadcrumbRoot")}</span><svg className="ic-xs sep"><use href="#i-chev-right" /></svg>
+        <span>{t("groups.revenue")}</span><svg className="ic-xs sep"><use href="#i-chev-right" /></svg>
+        <span className="current">{t("items.revenue-by-building")}</span>
       </div>
 
       <div className="rhead">
         <div className="title-block">
-          <h1>Revenue by Building</h1>
-          <p className="sub">Gross revenue across all properties for the selected period.<span className="tag">{rangeText}</span></p>
+          <h1>{t("items.revenue-by-building")}</h1>
+          <p className="sub">{tr("subtitle")}<span className="tag">{rangeText}</span></p>
         </div>
         <div className="rhead-actions">
-          <button className="btn btn-ghost btn-sm"><svg className="ic-sm"><use href="#i-schedule" /></svg>Schedule</button>
-          <button className="btn btn-secondary btn-sm"><svg className="ic-sm"><use href="#i-save" /></svg>Save view</button>
-          <button className="btn btn-primary btn-sm"><svg className="ic-sm"><use href="#i-download" /></svg>Export<svg className="ic-xs chev"><use href="#i-chev-down" /></svg></button>
+          <button className="btn btn-ghost btn-sm"><svg className="ic-sm"><use href="#i-schedule" /></svg>{t("actions.schedule")}</button>
+          <button className="btn btn-secondary btn-sm"><svg className="ic-sm"><use href="#i-save" /></svg>{t("actions.saveView")}</button>
+          <button className="btn btn-primary btn-sm"><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}<svg className="ic-xs chev"><use href="#i-chev-down" /></svg></button>
         </div>
       </div>
 
       <section className={`fpanel${filtersOpen ? "" : " is-collapsed"}`}>
         <div className="fpanel-head">
           <button className="title" onClick={() => setFiltersOpen((v) => !v)} style={{ background: "none", border: 0, cursor: "pointer", padding: 0 }}>
-            <svg className="ic-sm chev"><use href="#i-chev-down" /></svg>Filters
+            <svg className="ic-sm chev"><use href="#i-chev-down" /></svg>{tf("title")}
           </button>
-          <span className="pill-summary"><strong>{(selectedPropertyId ? 1 : 0) + 1}</strong> active</span>
+          <span className="pill-summary">{tf("active", { count: (selectedPropertyId ? 1 : 0) + 1 })}</span>
           <div className="actions">
-            <button className="link muted" onClick={() => navigate({ preset: "month", propertyId: null })}>Reset</button>
-            <button className="link">Save current</button>
+            <button className="link muted" onClick={() => navigate({ preset: "month", propertyId: null })}>{tf("reset")}</button>
+            <button className="link">{tf("saveCurrent")}</button>
           </div>
         </div>
         <div className="date-presets">
-          {DATE_PRESETS.map((p) => (
+          {presetItems.map((p) => (
             <button key={p.key} className={`preset${preset === p.key ? " is-active" : ""}${p.key === "khareef" ? " is-khareef" : ""}`} onClick={() => navigate({ preset: p.key })}>{p.label}</button>
           ))}
         </div>
         <div className="fpanel-body">
           <div className="fpanel-grid">
-            <FilterControl label="Date range" span2 active icon={<svg className="ic-sm ic-cal"><use href="#i-cal" /></svg>}
-              value={presetToLabel(preset)} display={rangeText}
-              options={DATE_PRESETS.map((p) => p.label)}
-              onChange={(lbl) => { const p = DATE_PRESETS.find((x) => x.label === lbl); navigate({ preset: p?.key ?? "month" }); }} />
-            <FilterControl label="Granularity" value={granularity} options={["Daily", "Weekly", "Monthly", "Quarterly"]} onChange={setGranularity} />
-            <FilterControl label="Currency" value="OMR — 3 decimals" options={["OMR — 3 decimals", "OMR — 0 decimals"]} onChange={() => {}} />
-            <FilterControl label="Building" span2 active={!!selectedPropertyId} icon={<svg className="ic-sm" style={{ color: "var(--brand-500)" }}><use href="#i-building" /></svg>}
+            <FilterControl label={tf("dateRange")} span2 active icon={<svg className="ic-sm ic-cal"><use href="#i-cal" /></svg>}
+              value={presetLabel} display={rangeText}
+              options={presetItems.map((p) => p.label)}
+              onChange={(lbl) => { const p = presetItems.find((x) => x.label === lbl); navigate({ preset: p?.key ?? "month" }); }} />
+            <FilterControl label={tf("granularity")} value={granularity} options={[tf("daily"), tf("weekly"), tf("monthly"), tf("quarterly")]} onChange={setGranularity} />
+            <FilterControl label={tf("currency")} value={tf("currency3")} options={[tf("currency3"), tf("currency0")]} onChange={() => {}} />
+            <FilterControl label={tf("building")} span2 active={!!selectedPropertyId} icon={<svg className="ic-sm" style={{ color: "var(--brand-500)" }}><use href="#i-building" /></svg>}
               value={selectedBuilding}
               options={buildingOptions}
               onChange={(name) => { const prop = properties.find((p) => p.name === name); navigate({ propertyId: prop ? prop.id : null }); }} />
-            <FilterControl label="Unit type" value={unitType} options={["All types", "Studio", "1BR", "2BR", "3BR", "Suite"]} onChange={setUnitType} />
-            <FilterControl label="Status" value={status} active options={["Confirmed + checked-in", "All statuses", "Checked-in only", "Completed"]} onChange={setStatus} />
+            <FilterControl label={tf("unitType")} value={unitType} options={[tf("typeAll"), tf("typeStudio"), tf("type1br"), tf("type2br"), tf("type3br"), tf("typeSuite")]} onChange={setUnitType} />
+            <FilterControl label={tf("status")} value={status} active options={[tf("statusConfirmed"), tf("statusAll"), tf("statusCheckedIn"), tf("statusCompleted")]} onChange={setStatus} />
           </div>
         </div>
       </section>
@@ -170,24 +177,24 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
       {/* KPI cards */}
       <div className="kpi-row cols-4">
         <div className="kpi-card is-primary">
-          <div className="kpi-label"><span className="pulse" />Total revenue</div>
-          <div className="kpi-value">{fmt0(k.totalRevenue)}<span className="unit">OMR</span></div>
-          <div className="kpi-trend"><Delta v={k.delta} /><span className="vs">vs {compareText}</span></div>
+          <div className="kpi-label"><span className="pulse" />{tr("kpiTotal")}</div>
+          <div className="kpi-value">{fmt0(k.totalRevenue)}<span className="unit">{tr("omr")}</span></div>
+          <div className="kpi-trend"><Delta v={k.delta} /><span className="vs">{compareText}</span></div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-label">Buildings</div>
-          <div className="kpi-value">{k.buildingCount}<span className="unit">active</span></div>
-          <div className="kpi-sub">{data.buildings.reduce((s, b) => s + b.unitCount, 0)} units total</div>
+          <div className="kpi-label">{tr("kpiBuildings")}</div>
+          <div className="kpi-value">{k.buildingCount}<span className="unit">{tr("kpiActive")}</span></div>
+          <div className="kpi-sub">{tr("kpiUnitsTotal", { count: totalUnits })}</div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-label">Top performer</div>
+          <div className="kpi-label">{tr("kpiTop")}</div>
           <div className="kpi-value small">{k.topPerformer ?? "—"}</div>
-          <div className="kpi-trend"><span className="mono" style={{ color: "var(--gray-900)", fontWeight: 600 }}>{fmt0(k.topPerformerRevenue)} OMR</span><span className="vs">{k.topPerformerPct.toFixed(1)}% of total</span></div>
+          <div className="kpi-trend"><span className="mono" style={{ color: "var(--gray-900)", fontWeight: 600 }}>{fmt0(k.topPerformerRevenue)} {tr("omr")}</span><span className="vs">{tr("kpiPctOfTotal", { pct: k.topPerformerPct.toFixed(1) })}</span></div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-label">ADR · all units</div>
-          <div className="kpi-value">{k.adr != null ? k.adr.toFixed(2) : "—"}<span className="unit">OMR</span></div>
-          <div className="kpi-sub">Avg / building <strong>{fmt0(k.avgPerBuilding)}</strong></div>
+          <div className="kpi-label">{tr("kpiAdr")}</div>
+          <div className="kpi-value">{k.adr != null ? k.adr.toFixed(2) : "—"}<span className="unit">{tr("omr")}</span></div>
+          <div className="kpi-sub">{tr("kpiAvgPerBuilding")} <strong>{fmt0(k.avgPerBuilding)}</strong></div>
         </div>
       </div>
 
@@ -195,15 +202,15 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
       <section className="rtable-wrap">
         <div className="rtable-toolbar">
           <div className="left">
-            <span className="title">Revenue breakdown</span>
-            <span className="meta">{k.buildingCount} building(s) · drill into units &amp; reservations</span>
+            <span className="title">{tr("tableTitle")}</span>
+            <span className="meta">{tr("tableMeta", { count: k.buildingCount })}</span>
           </div>
           <div className="left" style={{ gap: 8 }}>
             <div className="seg">
-              <button className={level === "collapse" ? "active" : ""} onClick={() => applyLevel("collapse")}>Collapse all</button>
-              <button className={level === "l2" ? "active" : ""} onClick={() => applyLevel("l2")}>Level 2</button>
-              <button className={level === "l3" ? "active" : ""} onClick={() => applyLevel("l3")}>Level 3</button>
-              <button className={level === "expand" ? "active" : ""} onClick={() => applyLevel("expand")}>Expand all</button>
+              <button className={level === "collapse" ? "active" : ""} onClick={() => applyLevel("collapse")}>{tr("collapseAll")}</button>
+              <button className={level === "l2" ? "active" : ""} onClick={() => applyLevel("l2")}>{tr("level", { n: 2 })}</button>
+              <button className={level === "l3" ? "active" : ""} onClick={() => applyLevel("l3")}>{tr("level", { n: 3 })}</button>
+              <button className={level === "expand" ? "active" : ""} onClick={() => applyLevel("expand")}>{tr("expandAll")}</button>
             </div>
           </div>
         </div>
@@ -212,24 +219,24 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
           <table className="rtable">
             <thead>
               <tr>
-                <th style={{ width: "32%" }}>Building / Unit / Reservation</th>
-                <th className="num sorted-desc">Revenue<span className="col-group">{rangeText}</span></th>
-                <th className="num">Revenue YTD</th>
-                <th className="num">Occupancy</th>
-                <th className="num">Avg rate<span className="col-group">OMR / night</span></th>
-                <th className="num">vs prior</th>
+                <th style={{ width: "32%" }}>{tr("colName")}</th>
+                <th className="num sorted-desc">{tr("colRevenue")}<span className="col-group">{rangeText}</span></th>
+                <th className="num">{tr("colYtd")}</th>
+                <th className="num">{tr("colOccupancy")}</th>
+                <th className="num">{tr("colRate")}<span className="col-group">{tr("perNight")}</span></th>
+                <th className="num">{tr("colVs")}</th>
               </tr>
             </thead>
             <tbody>
               {data.buildings.length === 0 && (
-                <tr><td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "var(--gray-500)" }}>No revenue in this period.</td></tr>
+                <tr><td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "var(--gray-500)" }}>{tr("empty")}</td></tr>
               )}
               {data.buildings.map((b) => (
-                <BuildingRows key={b.id} b={b} open={expanded.has(b.id)} expanded={expanded} toggle={toggle} />
+                <BuildingRows key={b.id} b={b} open={expanded.has(b.id)} expanded={expanded} toggle={toggle} unitsLabel={(n) => tr("unitsCount", { count: n })} subtotalLabel={(name) => tr("subtotal", { name })} />
               ))}
               {data.buildings.length > 0 && (
                 <tr className="is-grand">
-                  <td>Grand total · {k.buildingCount} building(s)</td>
+                  <td>{tr("grandTotal", { count: k.buildingCount })}</td>
                   <td className="num">{fmt3(k.totalRevenue)}</td>
                   <td className="num">{fmt3(data.buildings.reduce((s, b) => s + b.revenueYtd, 0))}</td>
                   <td className="num">—</td>
@@ -241,21 +248,22 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
           </table>
         </div>
         <div className="rtable-footer">
-          <span>Live data · revenue recognised on invoice issue date</span>
-          <div className="right"><span>Source: PMS</span></div>
+          <span>{tr("footer")}</span>
+          <div className="right"><span>{tr("source")}</span></div>
         </div>
       </section>
     </main>
   );
 }
 
-function BuildingRows({ b, open, expanded, toggle }: { b: RevBuilding; open: boolean; expanded: Set<string>; toggle: (id: string) => void }) {
+function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel }: { b: RevBuilding; open: boolean; expanded: Set<string>; toggle: (id: string) => void; unitsLabel: (n: number) => string; subtotalLabel: (name: string) => string }) {
+  const tr = useTranslations("reports.revenue");
   return (
     <>
       <tr className="lvl-1">
         <td>
           <Chevron open={open} onClick={() => toggle(b.id)} />
-          {b.name} <span className="mono" style={{ color: "var(--gray-500)", fontWeight: 400, marginInlineStart: 6, fontSize: 11 }}>{b.unitCount} units</span>
+          {b.name} <span className="mono" style={{ color: "var(--gray-500)", fontWeight: 400, marginInlineStart: 6, fontSize: 11 }}>{unitsLabel(b.unitCount)}</span>
         </td>
         <td className="num">{fmt3(b.revenue)}</td>
         <td className="num">{fmt3(b.revenueYtd)}</td>
@@ -264,11 +272,11 @@ function BuildingRows({ b, open, expanded, toggle }: { b: RevBuilding; open: boo
         <td className="num"><Delta v={b.delta} /></td>
       </tr>
       {open && b.units.map((u) => (
-        <UnitRows key={u.id} u={u} open={expanded.has(u.id)} toggle={toggle} />
+        <UnitRows key={u.id} u={u} open={expanded.has(u.id)} toggle={toggle} nightsLabel={(n) => tr("nights", { count: n })} />
       ))}
       {open && (
         <tr className="is-total">
-          <td>{b.name} · subtotal</td>
+          <td>{subtotalLabel(b.name)}</td>
           <td className="num">{fmt3(b.revenue)}</td>
           <td className="num">{fmt3(b.revenueYtd)}</td>
           <td className="num">{pct(b.occupancy)}</td>
@@ -280,7 +288,7 @@ function BuildingRows({ b, open, expanded, toggle }: { b: RevBuilding; open: boo
   );
 }
 
-function UnitRows({ u, open, toggle }: { u: RevUnit; open: boolean; toggle: (id: string) => void }) {
+function UnitRows({ u, open, toggle, nightsLabel }: { u: RevUnit; open: boolean; toggle: (id: string) => void; nightsLabel: (n: number) => string }) {
   const hasKids = u.reservations.length > 0;
   return (
     <>
@@ -301,7 +309,7 @@ function UnitRows({ u, open, toggle }: { u: RevUnit; open: boolean; toggle: (id:
             <span className="row-leaf" />
             {r.ref ? <a className="r-link" href={`/dashboard/reservations/${r.id}`}>{r.ref}</a> : <span className="mono" style={{ color: "var(--gray-500)" }}>—</span>}
             {" · "}{r.guest}
-            <span className="mono" style={{ color: "var(--gray-500)", fontSize: "10.5px", marginInlineStart: 6 }}>{r.nights} nights</span>
+            <span className="mono" style={{ color: "var(--gray-500)", fontSize: "10.5px", marginInlineStart: 6 }}>{nightsLabel(r.nights)}</span>
           </td>
           <td className="num">{fmt3(r.revenue)}</td>
           <td className="num dim">—</td>

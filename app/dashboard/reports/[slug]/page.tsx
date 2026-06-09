@@ -18,7 +18,7 @@ export default async function ReportPage({
   if (!report) notFound();
 
   if (slug !== "revenue-by-building") {
-    return <ComingSoon title={report.label} />;
+    return <ComingSoon slug={slug} />;
   }
 
   let orgUser: Awaited<ReturnType<typeof requireOrgUser>>;
@@ -52,7 +52,6 @@ export default async function ReportPage({
       properties={properties}
       preset={range.preset}
       rangeText={range.rangeText}
-      compareText={`prior ${range.label.toLowerCase()}`}
       selectedPropertyId={propertyId ?? ""}
     />
   );

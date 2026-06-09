@@ -80,3 +80,51 @@ export const ALL_REPORTS: ReportItem[] = REPORT_GROUPS.flatMap((g) => g.items);
 export function findReport(slug: string): ReportItem | undefined {
   return ALL_REPORTS.find((r) => r.slug === slug);
 }
+
+// ── Date-range presets (shared by the report pages) ─────────────────────────
+export const DATE_PRESETS = [
+  { key: "today", label: "Today" },
+  { key: "week", label: "This week" },
+  { key: "month", label: "This month" },
+  { key: "quarter", label: "This quarter" },
+  { key: "year", label: "This year" },
+  { key: "lastmonth", label: "Last month" },
+  { key: "khareef", label: "Khareef season" },
+] as const;
+
+export type PresetKey = (typeof DATE_PRESETS)[number]["key"] | "custom";
+
+const ymd = (d: Date) => d.toISOString().slice(0, 10);
+const fmtRange = (a: Date, b: Date) => {
+  const o: Intl.DateTimeFormatOptions = { day: "numeric", month: "short", year: "numeric" };
+  return `${a.toLocaleDateString("en-GB", { day: "numeric", month: "short" })} — ${b.toLocaleDateString("en-GB", o)}`;
+};
+
+/** Resolve a preset to a concrete [from,to] range (UTC dates) + display text. */
+export function resolvePreset(
+  preset: string,
+  now: Date,
+  customFrom?: string,
+  customTo?: string,
+): { preset: PresetKey; from: string; to: string; label: string; rangeText: string } {
+  const y = now.getUTCFullYear(), m = now.getUTCMonth(), d = now.getUTCDate();
+  let from: Date, to: Date;
+  let key = preset as PresetKey;
+
+  switch (preset) {
+    case "today": from = new Date(Date.UTC(y, m, d)); to = from; break;
+    case "week": { const dow = new Date(Date.UTC(y, m, d)).getUTCDay(); from = new Date(Date.UTC(y, m, d - dow)); to = new Date(Date.UTC(y, m, d - dow + 6)); break; }
+    case "year": from = new Date(Date.UTC(y, 0, 1)); to = new Date(Date.UTC(y, 11, 31)); break;
+    case "lastmonth": from = new Date(Date.UTC(y, m - 1, 1)); to = new Date(Date.UTC(y, m, 0)); break;
+    case "quarter": { const q = Math.floor(m / 3); from = new Date(Date.UTC(y, q * 3, 1)); to = new Date(Date.UTC(y, q * 3 + 3, 0)); break; }
+    case "khareef": from = new Date(Date.UTC(y, 5, 21)); to = new Date(Date.UTC(y, 8, 21)); break;
+    case "custom":
+      if (customFrom && customTo) { from = new Date(customFrom); to = new Date(customTo); break; }
+      from = new Date(Date.UTC(y, m, 1)); to = new Date(Date.UTC(y, m + 1, 0)); key = "month"; break;
+    case "month":
+    default: from = new Date(Date.UTC(y, m, 1)); to = new Date(Date.UTC(y, m + 1, 0)); key = "month"; break;
+  }
+
+  const label = DATE_PRESETS.find((p) => p.key === key)?.label ?? "Custom";
+  return { preset: key, from: ymd(from), to: ymd(to), label, rangeText: fmtRange(from, to) };
+}

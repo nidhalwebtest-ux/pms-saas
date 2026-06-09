@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
-import { createClient } from "@/utils/supabase/client";
+import { uploadReceipt, deleteReceipt } from "./actions";
 import {
   CameraIcon,
   ArrowUpTrayIcon,
@@ -36,7 +36,6 @@ export default function SubmitExpenseForm({ properties, defaultPropertyId }: Pro
   const router = useRouter();
   const t = useTranslations("expenses.submit");
   const tErr = useTranslations("expenses.submit.errors");
-  const supabase = createClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
@@ -96,17 +95,16 @@ export default function SubmitExpenseForm({ properties, defaultPropertyId }: Pro
           toast.error(tErr("fileTooLarge", { name: file.name }));
           continue;
         }
-        const ext = file.name.split(".").pop() ?? "jpg";
-        const path = `expenses/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error } = await supabase.storage
-          .from("pms-media")
-          .upload(path, file, { cacheControl: "3600", upsert: false });
-        if (error) {
-          toast.error(tErr("uploadFailed", { message: error.message }));
+        // Upload server-side (service-role) — client uploads to the expenses/
+        // prefix are blocked by storage RLS.
+        const fd = new FormData();
+        fd.append("file", file);
+        const res = await uploadReceipt(fd);
+        if (!res.ok) {
+          toast.error(tErr("uploadFailed", { message: res.error }));
           continue;
         }
-        const { data } = supabase.storage.from("pms-media").getPublicUrl(path);
-        setReceipts((prev) => [...prev, data.publicUrl]);
+        setReceipts((prev) => [...prev, res.url]);
       }
     } finally {
       setUploading(false);
@@ -114,8 +112,7 @@ export default function SubmitExpenseForm({ properties, defaultPropertyId }: Pro
   }
 
   function removeReceipt(url: string) {
-    const path = url.split("/pms-media/")[1];
-    if (path) supabase.storage.from("pms-media").remove([path]);
+    void deleteReceipt(url); // best-effort server-side cleanup
     setReceipts((prev) => prev.filter((u) => u !== url));
   }
 

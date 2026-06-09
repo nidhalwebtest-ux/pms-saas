@@ -66,6 +66,10 @@
 | 52 | Returns silently mutated the invoice + wrong rate → redesign as credit-note transactions | 22 | **P1** | ✅ Fixed |
 | 53 | Return credit notes missing from tenant ledger → wrong balance + refund mislabeled | 23 | **P1** | ✅ Fixed |
 | 54 | Extend Stay didn't bill the extra nights (no invoice for extension) | 24 | **P1** | ✅ Fixed |
+| 55 | Top-nav dropdowns hover-only → unreachable on touch (mobile) | Resp | **P1** | ✅ Fixed |
+| 56 | Reservation-detail invoices table clipped on mobile (no scroll) | Resp | P2 | ✅ Fixed |
+| 57 | Expense receipt upload blocked by storage RLS | E (25) | **P1** | ✅ Fixed |
+| 58 | No confirmation before approving an expense | E (26) | P2 | ✅ Fixed |
 
 ---
 

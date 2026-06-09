@@ -61,6 +61,10 @@
 - **Detail + modals** — ✅ audited. Fixed: reservation-detail invoices table (7 cols) now scrolls on mobile (#56). Detail pages use grid-cols-1 lg:grid-cols-3 (stack); all action modals use shared <Modal> → full-width bottom-sheet < sm.
 - **Forms** — ✅ audited; already responsive. Standardized FormComponents (grid-cols-1 → sm:grid-cols-6), settings single-column, booking engine grids collapse + scrollable step nav. No changes.
 
+## Category E — Expenses
+- Scenarios 25–30 ✅ (submit, approve, process incl. bank-ref guard, reject, bulk approve, summary). Workflow PENDING→APPROVED/REJECTED→PROCESSED with role gates verified.
+- Fixed #57 (receipt upload blocked by storage RLS → now server-side via admin client) and #58 (confirmation dialog before approve).
+
 ## Progress
 
 - **Scenarios completed:** Categories A & B (10/10) · **Category C 9/10** (only #18 receipt PDF deferred to the PDF pass)

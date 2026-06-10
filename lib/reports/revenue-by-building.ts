@@ -6,16 +6,26 @@ import { prisma } from "@/lib/prisma";
  * Revenue counts only POSTING transactions:
  *   + issued invoices (status not DRAFT/CANCELLED/VOID), by invoice issueDate
  *   − active returns (credit notes), by return createdAt
- * Net revenue is grouped Building → Unit → Reservation. Building = the unit's
- * property, Unit = line-item unit, Reservation = the invoice/return reservation.
+ * Net revenue is grouped Building → Unit → Transaction (each invoice/return is
+ * its own leaf row). Building = the unit's property, Unit = line-item unit.
  */
 
 const DAY = 86_400_000;
 const r3 = (n: number) => Math.round(n * 1000) / 1000;
 const toDay = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 
-export interface RevReservation { id: string; ref: string | null; guest: string; nights: number; revenue: number; }
-export interface RevUnit { id: string; name: string; revenue: number; reservations: RevReservation[]; }
+export interface RevTxn {
+  id: string;                       // unique row key (kind:refId:unit)
+  kind: "invoice" | "return";
+  refId: string;                    // invoice or return id (for the link)
+  number: string;                   // INV-… / RET-…
+  date: string;                     // ISO
+  reservationId: string | null;
+  reservationRef: string | null;
+  guest: string;
+  amount: number;                   // signed: invoices +, returns −
+}
+export interface RevUnit { id: string; name: string; revenue: number; transactions: RevTxn[]; }
 export interface RevBuilding { id: string; name: string; unitCount: number; revenue: number; units: RevUnit[]; }
 export interface RevReport {
   kpis: { totalRevenue: number; buildingCount: number; topPerformer: string | null; topPerformerRevenue: number; topPerformerPct: number; avgPerBuilding: number; };
@@ -28,12 +38,11 @@ export async function getRevenueByBuilding(params: {
 }): Promise<RevReport> {
   const { orgId, from, to, propertyId } = params;
   const fromMs = toDay(from);
-  const toExclusiveMs = toDay(to) + DAY;            // make `to` an inclusive day
+  const toExclusiveMs = toDay(to) + DAY;
   const rangeDays = Math.max(1, Math.round((toExclusiveMs - fromMs) / DAY));
   const rangeFrom = new Date(fromMs);
   const rangeToExclusive = new Date(toExclusiveMs);
 
-  // Units (names + property + count). Property-scoped when a building is selected.
   const units = await prisma.unit.findMany({
     where: { property: { organizationId: orgId }, ...(propertyId ? { propertyId } : {}) },
     select: { id: true, name: true, propertyId: true, property: { select: { name: true } } },
@@ -42,7 +51,6 @@ export async function getRevenueByBuilding(params: {
   const unitsPerProp = new Map<string, number>();
   for (const u of units) unitsPerProp.set(u.propertyId, (unitsPerProp.get(u.propertyId) ?? 0) + 1);
 
-  // Issued invoices in range
   const invoices = await prisma.invoice.findMany({
     where: {
       organizationId: orgId,
@@ -51,25 +59,24 @@ export async function getRevenueByBuilding(params: {
       ...(propertyId ? { propertyId } : {}),
     },
     select: {
-      propertyId: true, reservationId: true,
+      id: true, invoiceNumber: true, issueDate: true, propertyId: true, reservationId: true,
       property: { select: { name: true } },
-      reservation: { select: { reservationNumber: true, startDate: true, endDate: true, tenant: { select: { firstName: true, lastName: true } } } },
+      reservation: { select: { reservationNumber: true, tenant: { select: { firstName: true, lastName: true } } } },
       lineItems: { select: { unitId: true, lineTotal: true, unit: { select: { name: true } } } },
     },
   });
 
-  // Active returns in range (credit notes that reduce revenue)
   const returns = await prisma.return.findMany({
     where: { organizationId: orgId, status: "active", createdAt: { gte: rangeFrom, lt: rangeToExclusive } },
     select: {
-      reservationId: true,
+      id: true, returnNumber: true, createdAt: true, reservationId: true,
       invoice: { select: { propertyId: true } },
+      reservation: { select: { reservationNumber: true, tenant: { select: { firstName: true, lastName: true } } } },
       lineItems: { select: { unitId: true, lineTotal: true } },
     },
   });
 
-  type RAcc = { id: string; ref: string | null; guest: string; rev: number; nights: number };
-  type UAcc = { id: string; name: string; rev: number; res: Map<string, RAcc> };
+  type UAcc = { id: string; name: string; rev: number; tx: Map<string, RevTxn> };
   type BAcc = { id: string; name: string; rev: number; units: Map<string, UAcc> };
   const buildings = new Map<string, BAcc>();
   const ensureB = (pid: string, name: string): BAcc => {
@@ -79,46 +86,45 @@ export async function getRevenueByBuilding(params: {
   };
   const ensureU = (b: BAcc, uid: string, name: string): UAcc => {
     let u = b.units.get(uid);
-    if (!u) { u = { id: uid, name, rev: 0, res: new Map() }; b.units.set(uid, u); }
+    if (!u) { u = { id: uid, name, rev: 0, tx: new Map() }; b.units.set(uid, u); }
     return u;
   };
 
-  // + invoices
+  // + invoices (one transaction row per invoice per unit)
   for (const inv of invoices) {
     const pid = inv.propertyId;
     if (!pid) continue;
     const b = ensureB(pid, inv.property?.name ?? "—");
-    const nights = inv.reservation ? Math.max(1, Math.round((toDay(inv.reservation.endDate) - toDay(inv.reservation.startDate)) / DAY)) : 0;
     const guest = inv.reservation?.tenant ? `${inv.reservation.tenant.firstName ?? ""} ${inv.reservation.tenant.lastName ?? ""}`.trim() : "—";
     for (const li of inv.lineItems) {
       const uid = li.unitId ?? "—";
       const amt = Number(li.lineTotal);
       const u = ensureU(b, uid, li.unit?.name ?? unitInfo.get(uid)?.name ?? "—");
       u.rev = r3(u.rev + amt); b.rev = r3(b.rev + amt);
-      if (inv.reservationId) {
-        let rr = u.res.get(inv.reservationId);
-        if (!rr) { rr = { id: inv.reservationId, ref: inv.reservation?.reservationNumber ?? null, guest, rev: 0, nights }; u.res.set(inv.reservationId, rr); }
-        rr.rev = r3(rr.rev + amt);
-      }
+      const key = `inv:${inv.id}`;
+      const ex = u.tx.get(key);
+      if (ex) ex.amount = r3(ex.amount + amt);
+      else u.tx.set(key, { id: `${key}:${uid}`, kind: "invoice", refId: inv.id, number: inv.invoiceNumber, date: inv.issueDate.toISOString(), reservationId: inv.reservationId, reservationRef: inv.reservation?.reservationNumber ?? null, guest, amount: amt });
     }
   }
 
-  // − returns (attributed to the line-item unit's property)
+  // − returns (one transaction row per return per unit; amount negative)
   for (const ret of returns) {
+    const guest = ret.reservation?.tenant ? `${ret.reservation.tenant.firstName ?? ""} ${ret.reservation.tenant.lastName ?? ""}`.trim() : "—";
     for (const li of ret.lineItems) {
       const uid = li.unitId ?? undefined;
       const info = uid ? unitInfo.get(uid) : undefined;
       const pid = info?.propertyId ?? ret.invoice?.propertyId;
       if (!pid) continue;
-      if (propertyId && pid !== propertyId) continue;       // scope when a building is selected
+      if (propertyId && pid !== propertyId) continue;
       const amt = Number(li.lineTotal);
       const b = ensureB(pid, info?.propertyName ?? "—");
       const u = ensureU(b, uid ?? "—", info?.name ?? "—");
       u.rev = r3(u.rev - amt); b.rev = r3(b.rev - amt);
-      if (ret.reservationId) {
-        const rr = u.res.get(ret.reservationId);
-        if (rr) rr.rev = r3(rr.rev - amt);
-      }
+      const key = `ret:${ret.id}`;
+      const ex = u.tx.get(key);
+      if (ex) ex.amount = r3(ex.amount - amt);
+      else u.tx.set(key, { id: `${key}:${uid ?? "x"}`, kind: "return", refId: ret.id, number: ret.returnNumber, date: ret.createdAt.toISOString(), reservationId: ret.reservationId, reservationRef: ret.reservation?.reservationNumber ?? null, guest, amount: -amt });
     }
   }
 
@@ -126,7 +132,7 @@ export async function getRevenueByBuilding(params: {
     id: b.id, name: b.name, unitCount: unitsPerProp.get(b.id) ?? b.units.size, revenue: b.rev,
     units: [...b.units.values()].map((u) => ({
       id: u.id, name: u.name, revenue: u.rev,
-      reservations: [...u.res.values()].sort((a, c) => c.rev - a.rev).map((rr) => ({ id: rr.id, ref: rr.ref, guest: rr.guest, nights: rr.nights, revenue: rr.rev })),
+      transactions: [...u.tx.values()].sort((a, c) => a.date.localeCompare(c.date)),
     })).sort((a, c) => c.revenue - a.revenue),
   })).sort((a, c) => c.revenue - a.revenue);
 

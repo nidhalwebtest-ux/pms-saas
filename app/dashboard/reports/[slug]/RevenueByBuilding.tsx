@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { DATE_PRESETS } from "../reports-config";
 import type { RevReport, RevBuilding, RevUnit } from "@/lib/reports/revenue-by-building";
 
@@ -233,7 +233,7 @@ function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel }: 
         <td className="num">{fmt3(b.revenue)}</td>
       </tr>
       {open && b.units.map((u) => (
-        <UnitRows key={u.id} u={u} open={expanded.has(u.id)} toggle={toggle} nightsLabel={(n) => tr("nights", { count: n })} />
+        <UnitRows key={u.id} u={u} open={expanded.has(u.id)} toggle={toggle} />
       ))}
       {open && (
         <tr className="is-total">
@@ -245,8 +245,11 @@ function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel }: 
   );
 }
 
-function UnitRows({ u, open, toggle, nightsLabel }: { u: RevUnit; open: boolean; toggle: (id: string) => void; nightsLabel: (n: number) => string }) {
-  const hasKids = u.reservations.length > 0;
+function UnitRows({ u, open, toggle }: { u: RevUnit; open: boolean; toggle: (id: string) => void }) {
+  const tr = useTranslations("reports.revenue");
+  const locale = useLocale();
+  const hasKids = u.transactions.length > 0;
+  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(locale === "ar" ? "ar" : "en-GB", { day: "numeric", month: "short", year: "numeric" });
   return (
     <>
       <tr className="lvl-2">
@@ -256,17 +259,24 @@ function UnitRows({ u, open, toggle, nightsLabel }: { u: RevUnit; open: boolean;
         </td>
         <td className="num">{fmt3(u.revenue)}</td>
       </tr>
-      {open && hasKids && u.reservations.map((r) => (
-        <tr className="lvl-3" key={r.id}>
-          <td>
-            <span className="row-leaf" />
-            {r.ref ? <a className="r-link" href={`/dashboard/reservations/${r.id}`}>{r.ref}</a> : <span className="mono" style={{ color: "var(--gray-500)" }}>—</span>}
-            {" · "}{r.guest}
-            <span className="mono" style={{ color: "var(--gray-500)", fontSize: "10.5px", marginInlineStart: 6 }}>{nightsLabel(r.nights)}</span>
-          </td>
-          <td className="num">{fmt3(r.revenue)}</td>
-        </tr>
-      ))}
+      {open && hasKids && u.transactions.map((tx) => {
+        const isReturn = tx.kind === "return";
+        const href = isReturn ? `/dashboard/returns/${tx.refId}` : `/dashboard/invoices/${tx.refId}`;
+        return (
+          <tr className="lvl-3" key={tx.id}>
+            <td>
+              <span className="row-leaf" />
+              <span className={`badge ${isReturn ? "b-due" : "b-paid"}`} style={{ marginInlineEnd: 8 }}>
+                <span className="dot" />{isReturn ? tr("txReturn") : tr("txInvoice")}
+              </span>
+              <a className="r-link" href={href}>{tx.number}</a>
+              {tx.guest && tx.guest !== "—" ? <> · {tx.guest}</> : null}
+              <span className="mono" style={{ color: "var(--gray-500)", fontSize: "10.5px", marginInlineStart: 6 }}>{fmtDate(tx.date)}</span>
+            </td>
+            <td className="num" style={isReturn ? { color: "var(--error-600)" } : undefined}>{fmt3(tx.amount)}</td>
+          </tr>
+        );
+      })}
     </>
   );
 }

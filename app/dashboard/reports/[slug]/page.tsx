@@ -6,9 +6,11 @@ import { getRevenueByBuilding } from "@/lib/reports/revenue-by-building";
 import { getRevenueByTenant } from "@/lib/reports/revenue-by-tenant";
 import { getOccupancyByBuilding } from "@/lib/reports/occupancy-by-building";
 import { getOccupancyTrend } from "@/lib/reports/occupancy-trend";
+import { getVacancyAnalysis } from "@/lib/reports/vacancy-analysis";
 import RevenueByBuilding, { type ReportVariant } from "./RevenueByBuilding";
 import OccupancyByBuilding from "./OccupancyByBuilding";
 import OccupancyTrend from "./OccupancyTrend";
+import VacancyAnalysis from "./VacancyAnalysis";
 import ComingSoon from "./ComingSoon";
 
 const VARIANTS: Record<string, ReportVariant> = {
@@ -16,7 +18,7 @@ const VARIANTS: Record<string, ReportVariant> = {
   "revenue-by-tenant": { slug: "revenue-by-tenant", colNameKey: "colNameTenant", countKey: "tenantsCount", midHrefBase: "/dashboard/tenants/" },
 };
 
-const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend"]);
+const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis"]);
 
 function ErrorCard({ title, message }: { title: string; message: string }) {
   return (
@@ -98,6 +100,30 @@ export default async function ReportPage({
       ]);
       return (
         <OccupancyTrend
+          data={data}
+          properties={properties}
+          preset={range.preset}
+          rangeText={range.rangeText}
+          fromDate={range.from}
+          toDate={range.to}
+          selectedPropertyId={propertyId ?? ""}
+        />
+      );
+    } catch (err) {
+      console.error(`[reports/${slug}] aggregation failed:`, err);
+      return <ErrorCard title={report.label} message={err instanceof Error ? err.message : "Unknown error"} />;
+    }
+  }
+
+  // ── Vacancy Analysis ───────────────────────────────────────────────────
+  if (slug === "vacancy-analysis") {
+    try {
+      const [data, properties] = await Promise.all([
+        getVacancyAnalysis({ orgId: orgUser.organizationId, from, to, propertyId }),
+        propertiesPromise,
+      ]);
+      return (
+        <VacancyAnalysis
           data={data}
           properties={properties}
           preset={range.preset}

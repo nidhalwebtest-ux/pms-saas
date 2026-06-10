@@ -11,12 +11,14 @@ import { getOccupancyTrend } from "@/lib/reports/occupancy-trend";
 import { getVacancyAnalysis } from "@/lib/reports/vacancy-analysis";
 import { getRevenueTrend } from "@/lib/reports/revenue-trend";
 import { getAvgLengthOfStay } from "@/lib/reports/avg-length-of-stay";
+import { getKhareefPerformance } from "@/lib/reports/khareef-performance";
 import RevenueByBuilding, { type ReportVariant } from "./RevenueByBuilding";
 import OccupancyByBuilding from "./OccupancyByBuilding";
 import OccupancyTrend from "./OccupancyTrend";
 import VacancyAnalysis from "./VacancyAnalysis";
 import RevenueTrend from "./RevenueTrend";
 import AvgLengthOfStay from "./AvgLengthOfStay";
+import KhareefPerformance from "./KhareefPerformance";
 import ComingSoon from "./ComingSoon";
 
 const VARIANTS: Record<string, ReportVariant> = {
@@ -33,7 +35,7 @@ const AGGREGATORS: Record<string, (a: { orgId: string; from: Date; to: Date; pro
   "revenue-by-source": getRevenueBySource,
 };
 
-const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis", "revenue-trend", "avg-length-of-stay"]);
+const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis", "revenue-trend", "avg-length-of-stay", "khareef-performance"]);
 
 function ErrorCard({ title, message }: { title: string; message: string }) {
   return (
@@ -71,7 +73,8 @@ export default async function ReportPage({
   }
 
   const sp = await searchParams;
-  const range = resolvePreset(sp.preset ?? "month", new Date(), sp.from, sp.to);
+  const defaultPreset = slug === "khareef-performance" ? "khareef" : "month";
+  const range = resolvePreset(sp.preset ?? defaultPreset, new Date(), sp.from, sp.to);
   const propertyId = sp.propertyId || undefined;
   const from = new Date(range.from);
   const to = new Date(range.to);
@@ -139,6 +142,30 @@ export default async function ReportPage({
       ]);
       return (
         <RevenueTrend
+          data={data}
+          properties={properties}
+          preset={range.preset}
+          rangeText={range.rangeText}
+          fromDate={range.from}
+          toDate={range.to}
+          selectedPropertyId={propertyId ?? ""}
+        />
+      );
+    } catch (err) {
+      console.error(`[reports/${slug}] aggregation failed:`, err);
+      return <ErrorCard title={report.label} message={err instanceof Error ? err.message : "Unknown error"} />;
+    }
+  }
+
+  // ── Khareef Performance ────────────────────────────────────────────────
+  if (slug === "khareef-performance") {
+    try {
+      const [data, properties] = await Promise.all([
+        getKhareefPerformance({ orgId: orgUser.organizationId, from, to, propertyId }),
+        propertiesPromise,
+      ]);
+      return (
+        <KhareefPerformance
           data={data}
           properties={properties}
           preset={range.preset}

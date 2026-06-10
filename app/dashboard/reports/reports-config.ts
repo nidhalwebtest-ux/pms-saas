@@ -38,7 +38,7 @@ export const REPORT_GROUPS: ReportGroup[] = [
       { slug: "occupancy-trend", label: "Occupancy Trend", implemented: true },
       { slug: "vacancy-analysis", label: "Vacancy Analysis", implemented: true },
       { slug: "avg-length-of-stay", label: "Avg. Length of Stay", implemented: true },
-      { slug: "khareef-performance", label: "Khareef Performance" },
+      { slug: "khareef-performance", label: "Khareef Performance", implemented: true },
     ],
   },
   {

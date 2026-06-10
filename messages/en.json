@@ -2850,6 +2850,28 @@
       "empty": "No stays started in this period.",
       "footer": "Live data · arrivals in range, excludes cancelled/no-show",
       "source": "Source: PMS"
+    },
+    "khareef": {
+      "subtitle": "Monsoon-season performance by building · ",
+      "kpiRevenue": "Khareef revenue",
+      "kpiOccupancy": "Avg occupancy",
+      "occupiedNights": "{count} occupied nights",
+      "kpiAdr": "ADR",
+      "perNight": "per occupied night",
+      "kpiStays": "Stays",
+      "arrivals": "arrivals in season",
+      "tableTitle": "Performance by building",
+      "tableMeta": "{count} buildings",
+      "colName": "Building",
+      "colOccupancy": "Occupancy",
+      "colRevenue": "Revenue",
+      "colAdr": "ADR",
+      "colStays": "Stays",
+      "unitsCount": "{count} units",
+      "grandTotal": "All buildings ({count})",
+      "empty": "No activity in the Khareef window.",
+      "footer": "Live data · ADR = net revenue ÷ occupied nights",
+      "source": "Source: PMS"
     }
   },
   "returns": {

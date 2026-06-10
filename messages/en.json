@@ -2872,6 +2872,25 @@
       "empty": "No activity in the Khareef window.",
       "footer": "Live data · ADR = net revenue ÷ occupied nights",
       "source": "Source: PMS"
+    },
+    "cmp": {
+      "subtitle": "This period vs the previous one · ",
+      "vs": "vs",
+      "new": "new",
+      "kpiCurrent": "Current",
+      "kpiPrior": "Prior",
+      "kpiDelta": "Change",
+      "kpiChange": "Change %",
+      "tableTitle": "Comparison by building",
+      "tableMeta": "{count} buildings",
+      "colName": "Building",
+      "colPrior": "Prior",
+      "colCurrent": "Current",
+      "colDelta": "Change",
+      "grandTotal": "All buildings ({count})",
+      "empty": "No revenue in either period.",
+      "footer": "Live data · prior = equal-length period immediately before",
+      "source": "Source: PMS"
     }
   },
   "returns": {

@@ -12,6 +12,7 @@ import { getVacancyAnalysis } from "@/lib/reports/vacancy-analysis";
 import { getRevenueTrend } from "@/lib/reports/revenue-trend";
 import { getAvgLengthOfStay } from "@/lib/reports/avg-length-of-stay";
 import { getKhareefPerformance } from "@/lib/reports/khareef-performance";
+import { getRevenueComparison } from "@/lib/reports/revenue-comparison";
 import RevenueByBuilding, { type ReportVariant } from "./RevenueByBuilding";
 import OccupancyByBuilding from "./OccupancyByBuilding";
 import OccupancyTrend from "./OccupancyTrend";
@@ -19,6 +20,7 @@ import VacancyAnalysis from "./VacancyAnalysis";
 import RevenueTrend from "./RevenueTrend";
 import AvgLengthOfStay from "./AvgLengthOfStay";
 import KhareefPerformance from "./KhareefPerformance";
+import RevenueComparison from "./RevenueComparison";
 import ComingSoon from "./ComingSoon";
 
 const VARIANTS: Record<string, ReportVariant> = {
@@ -35,7 +37,7 @@ const AGGREGATORS: Record<string, (a: { orgId: string; from: Date; to: Date; pro
   "revenue-by-source": getRevenueBySource,
 };
 
-const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis", "revenue-trend", "avg-length-of-stay", "khareef-performance"]);
+const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis", "revenue-trend", "avg-length-of-stay", "khareef-performance", "revenue-comparison"]);
 
 function ErrorCard({ title, message }: { title: string; message: string }) {
   return (
@@ -142,6 +144,30 @@ export default async function ReportPage({
       ]);
       return (
         <RevenueTrend
+          data={data}
+          properties={properties}
+          preset={range.preset}
+          rangeText={range.rangeText}
+          fromDate={range.from}
+          toDate={range.to}
+          selectedPropertyId={propertyId ?? ""}
+        />
+      );
+    } catch (err) {
+      console.error(`[reports/${slug}] aggregation failed:`, err);
+      return <ErrorCard title={report.label} message={err instanceof Error ? err.message : "Unknown error"} />;
+    }
+  }
+
+  // ── Revenue Comparison ─────────────────────────────────────────────────
+  if (slug === "revenue-comparison") {
+    try {
+      const [data, properties] = await Promise.all([
+        getRevenueComparison({ orgId: orgUser.organizationId, from, to, propertyId }),
+        propertiesPromise,
+      ]);
+      return (
+        <RevenueComparison
           data={data}
           properties={properties}
           preset={range.preset}

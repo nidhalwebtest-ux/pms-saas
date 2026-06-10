@@ -27,7 +27,7 @@ export const REPORT_GROUPS: ReportGroup[] = [
       { slug: "revenue-by-unit-type", label: "Revenue by Unit Type", implemented: true },
       { slug: "revenue-by-source", label: "Revenue by Source", implemented: true },
       { slug: "revenue-trend", label: "Revenue Trend", implemented: true },
-      { slug: "revenue-comparison", label: "Revenue Comparison" },
+      { slug: "revenue-comparison", label: "Revenue Comparison", implemented: true },
     ],
   },
   {

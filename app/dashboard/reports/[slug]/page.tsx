@@ -9,7 +9,7 @@ import ComingSoon from "./ComingSoon";
 
 const VARIANTS: Record<string, ReportVariant> = {
   "revenue-by-building": { slug: "revenue-by-building", colNameKey: "colName", countKey: "unitsCount" },
-  "revenue-by-tenant": { slug: "revenue-by-tenant", colNameKey: "colNameTenant", countKey: "tenantsCount", midHref: (id) => `/dashboard/tenants/${id}` },
+  "revenue-by-tenant": { slug: "revenue-by-tenant", colNameKey: "colNameTenant", countKey: "tenantsCount", midHrefBase: "/dashboard/tenants/" },
 };
 
 export default async function ReportPage({

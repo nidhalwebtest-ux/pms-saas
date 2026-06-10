@@ -10,7 +10,7 @@ export interface ReportVariant {
   slug: string;            // route segment, e.g. "revenue-by-building"
   colNameKey: string;      // revenue.* key for the first column header
   countKey: string;        // revenue.* key for the building-row count ("X units"/"X tenants")
-  midHref?: (id: string) => string | null;  // optional link for the mid-level row
+  midHrefBase?: string;    // optional link base for the mid-level row; final href = `${midHrefBase}${id}`. Must be serializable (no functions cross the server→client boundary).
 }
 const BUILDING_VARIANT: ReportVariant = { slug: "revenue-by-building", colNameKey: "colName", countKey: "unitsCount" };
 
@@ -254,7 +254,7 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
               ) : (
                 <>
                   {sortedBuildings.map((b) => (
-                    <BuildingRows key={b.id} b={b} open={expanded.has(b.id)} expanded={expanded} toggle={toggle} unitsLabel={(n) => tr(variant.countKey, { count: n })} subtotalLabel={(name) => tr("subtotal", { name })} barPct={barPct} pctLabel={(p) => tr("ofTotal", { pct: p })} locale={locale} midHref={variant.midHref} />
+                    <BuildingRows key={b.id} b={b} open={expanded.has(b.id)} expanded={expanded} toggle={toggle} unitsLabel={(n) => tr(variant.countKey, { count: n })} subtotalLabel={(name) => tr("subtotal", { name })} barPct={barPct} pctLabel={(p) => tr("ofTotal", { pct: p })} locale={locale} midHrefBase={variant.midHrefBase} />
                   ))}
                   <tr className="is-grand">
                     <td>{tr("grandTotal", { count: k.buildingCount })}</td>
@@ -274,11 +274,11 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
   );
 }
 
-function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel, barPct, pctLabel, locale, midHref }: {
+function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel, barPct, pctLabel, locale, midHrefBase }: {
   b: RevBuilding; open: boolean; expanded: Set<string>; toggle: (id: string) => void;
   unitsLabel: (n: number) => string; subtotalLabel: (name: string) => string;
   barPct: (v: number) => number; pctLabel: (p: string) => string; locale: string;
-  midHref?: (id: string) => string | null;
+  midHrefBase?: string;
 }) {
   const pct = barPct(b.revenue);
   return (
@@ -293,7 +293,7 @@ function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel, ba
         </td>
       </tr>
       {open && b.units.map((u) => (
-        <UnitRows key={u.id} u={u} open={expanded.has(u.id)} toggle={toggle} locale={locale} midHref={midHref} />
+        <UnitRows key={u.id} u={u} open={expanded.has(u.id)} toggle={toggle} locale={locale} midHrefBase={midHrefBase} />
       ))}
       {open && (
         <tr className="is-total">
@@ -305,11 +305,11 @@ function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel, ba
   );
 }
 
-function UnitRows({ u, open, toggle, locale, midHref }: { u: RevUnit; open: boolean; toggle: (id: string) => void; locale: string; midHref?: (id: string) => string | null }) {
+function UnitRows({ u, open, toggle, locale, midHrefBase }: { u: RevUnit; open: boolean; toggle: (id: string) => void; locale: string; midHrefBase?: string }) {
   const tr = useTranslations("reports.revenue");
   const hasKids = u.transactions.length > 0;
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(locale === "ar" ? "ar" : "en-GB", { day: "numeric", month: "short", year: "numeric" });
-  const href = midHref?.(u.id) ?? null;
+  const href = midHrefBase ? `${midHrefBase}${u.id}` : null;
   return (
     <>
       <tr className="lvl-2">

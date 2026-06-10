@@ -257,6 +257,24 @@
 .muted { color: var(--gray-500); }
 .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
+/* Skeleton shimmer (loading state) */
+@keyframes rp-shimmer { 0% { background-position: -200px 0; } 100% { background-position: 200px 0; } }
+.skel {
+  background: linear-gradient(90deg, var(--gray-100) 0%, var(--gray-200) 50%, var(--gray-100) 100%);
+  background-size: 400px 100%; border-radius: 4px;
+  animation: rp-shimmer 1.3s infinite linear; display: inline-block;
+}
+
+/* Inline % -of-total mini bar (building rows) */
+.bar-cell { display: inline-flex; align-items: center; gap: 8px; justify-content: flex-end; }
+.bar-cell .bar { width: 64px; height: 6px; background: var(--gray-100); border-radius: 999px; overflow: hidden; flex-shrink: 0; }
+.bar-cell .bar > i { display: block; height: 100%; background: var(--brand-400); border-radius: inherit; }
+[dir="rtl"] .bar-cell { justify-content: flex-start; }
+
+/* Sortable header affordance */
+.rtable thead th.sortable { cursor: pointer; user-select: none; }
+.rtable thead th.sortable:hover { color: var(--gray-900); }
+
 /* ── Filter / control dropdown popover ── */
 .rdrop { position: relative; }
 .rdrop-menu {

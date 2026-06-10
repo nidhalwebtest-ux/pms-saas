@@ -52,6 +52,8 @@ export default async function ReportPage({
       properties={properties}
       preset={range.preset}
       rangeText={range.rangeText}
+      fromDate={range.from}
+      toDate={range.to}
       selectedPropertyId={propertyId ?? ""}
     />
   );

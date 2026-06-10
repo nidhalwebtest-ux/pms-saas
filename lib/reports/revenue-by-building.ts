@@ -28,7 +28,7 @@ export interface RevTxn {
 export interface RevUnit { id: string; name: string; revenue: number; transactions: RevTxn[]; }
 export interface RevBuilding { id: string; name: string; unitCount: number; revenue: number; units: RevUnit[]; }
 export interface RevReport {
-  kpis: { totalRevenue: number; buildingCount: number; topPerformer: string | null; topPerformerRevenue: number; topPerformerPct: number; avgPerBuilding: number; };
+  kpis: { totalRevenue: number; invoiced: number; returned: number; txCount: number; buildingCount: number; topPerformer: string | null; topPerformerRevenue: number; topPerformerPct: number; avgPerBuilding: number; };
   buildings: RevBuilding[];
   rangeDays: number;
 }
@@ -137,10 +137,19 @@ export async function getRevenueByBuilding(params: {
   })).sort((a, c) => c.revenue - a.revenue);
 
   const totalRevenue = r3(buildingsOut.reduce((s, b) => s + b.revenue, 0));
+  let invoiced = 0, returned = 0, txCount = 0;
+  for (const b of buildingsOut) for (const u of b.units) for (const tx of u.transactions) {
+    txCount++;
+    if (tx.amount >= 0) invoiced = r3(invoiced + tx.amount);
+    else returned = r3(returned - tx.amount);
+  }
   const top = buildingsOut[0];
   return {
     kpis: {
       totalRevenue,
+      invoiced,
+      returned,
+      txCount,
       buildingCount: buildingsOut.length,
       topPerformer: top?.name ?? null,
       topPerformerRevenue: top?.revenue ?? 0,

@@ -2622,6 +2622,7 @@
     },
     "items": {
       "revenue-by-building": "الإيرادات حسب المبنى",
+      "revenue-by-tenant": "الإيرادات حسب المستأجر",
       "revenue-by-unit-type": "الإيرادات حسب نوع الوحدة",
       "revenue-by-source": "الإيرادات حسب المصدر",
       "revenue-trend": "اتجاه الإيرادات",
@@ -2711,6 +2712,8 @@
       "expandAll": "توسيع الكل",
       "level": "المستوى {n}",
       "colName": "المبنى / الوحدة / المعاملة",
+      "colNameTenant": "المبنى / المستأجر / المعاملة",
+      "tenantsCount": "{count} مستأجر",
       "colRevenue": "الإيرادات",
       "txInvoice": "فاتورة",
       "txReturn": "مرتجع",

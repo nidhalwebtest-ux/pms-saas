@@ -6,6 +6,14 @@ import { useTranslations, useLocale } from "next-intl";
 import { DATE_PRESETS } from "../reports-config";
 import type { RevReport, RevBuilding, RevUnit } from "@/lib/reports/revenue-by-building";
 
+export interface ReportVariant {
+  slug: string;            // route segment, e.g. "revenue-by-building"
+  colNameKey: string;      // revenue.* key for the first column header
+  countKey: string;        // revenue.* key for the building-row count ("X units"/"X tenants")
+  midHref?: (id: string) => string | null;  // optional link for the mid-level row
+}
+const BUILDING_VARIANT: ReportVariant = { slug: "revenue-by-building", colNameKey: "colName", countKey: "unitsCount" };
+
 interface Props {
   data: RevReport;
   properties: { id: string; name: string }[];
@@ -14,6 +22,7 @@ interface Props {
   fromDate: string;
   toDate: string;
   selectedPropertyId: string;
+  variant?: ReportVariant;
 }
 
 const fmt3 = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
@@ -63,7 +72,7 @@ function FilterControl({
   );
 }
 
-export default function RevenueByBuilding({ data, properties, preset, rangeText, fromDate, toDate, selectedPropertyId }: Props) {
+export default function RevenueByBuilding({ data, properties, preset, rangeText, fromDate, toDate, selectedPropertyId, variant = BUILDING_VARIANT }: Props) {
   const router = useRouter();
   const t = useTranslations("reports");
   const tf = useTranslations("reports.filters");
@@ -96,7 +105,7 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
     const pid = next.propertyId === undefined ? selectedPropertyId : next.propertyId;
     if (pid) sp.set("propertyId", pid);
     const qs = sp.toString();
-    startTransition(() => router.push(`/dashboard/reports/revenue-by-building${qs ? `?${qs}` : ""}`));
+    startTransition(() => router.push(`/dashboard/reports/${variant.slug}${qs ? `?${qs}` : ""}`));
   }
 
   function applyLevel(l: typeof level) {
@@ -121,7 +130,7 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url; a.download = `revenue-by-building-${fromDate}_${toDate}.csv`;
+    a.href = url; a.download = `${variant.slug}-${fromDate}_${toDate}.csv`;
     a.click(); URL.revokeObjectURL(url);
   }
 
@@ -136,12 +145,12 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
       <div className="crumbs">
         <span>{t("breadcrumbRoot")}</span><svg className="ic-xs sep"><use href="#i-chev-right" /></svg>
         <span>{t("groups.revenue")}</span><svg className="ic-xs sep"><use href="#i-chev-right" /></svg>
-        <span className="current">{t("items.revenue-by-building")}</span>
+        <span className="current">{t(`items.${variant.slug}` as never)}</span>
       </div>
 
       <div className="rhead">
         <div className="title-block">
-          <h1>{t("items.revenue-by-building")}</h1>
+          <h1>{t(`items.${variant.slug}` as never)}</h1>
           <p className="sub">{tr("subtitle")}<span className="tag">{rangeText}</span></p>
         </div>
         <div className="rhead-actions">
@@ -228,7 +237,7 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
           <table className="rtable">
             <thead>
               <tr>
-                <th>{tr("colName")}</th>
+                <th>{tr(variant.colNameKey)}</th>
                 <th className={`num sortable ${sortDir === "desc" ? "sorted-desc" : "sorted-asc"}`} onClick={() => setSortDir((d) => (d === "desc" ? "asc" : "desc"))}>
                   {tr("colRevenue")}<span className="col-group">{rangeText}</span>
                   <span className="sort"><svg className="ic-xs up"><use href="#i-chev-up" /></svg><svg className="ic-xs down"><use href="#i-chev-down" /></svg></span>
@@ -245,7 +254,7 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
               ) : (
                 <>
                   {sortedBuildings.map((b) => (
-                    <BuildingRows key={b.id} b={b} open={expanded.has(b.id)} expanded={expanded} toggle={toggle} unitsLabel={(n) => tr("unitsCount", { count: n })} subtotalLabel={(name) => tr("subtotal", { name })} barPct={barPct} pctLabel={(p) => tr("ofTotal", { pct: p })} locale={locale} />
+                    <BuildingRows key={b.id} b={b} open={expanded.has(b.id)} expanded={expanded} toggle={toggle} unitsLabel={(n) => tr(variant.countKey, { count: n })} subtotalLabel={(name) => tr("subtotal", { name })} barPct={barPct} pctLabel={(p) => tr("ofTotal", { pct: p })} locale={locale} midHref={variant.midHref} />
                   ))}
                   <tr className="is-grand">
                     <td>{tr("grandTotal", { count: k.buildingCount })}</td>
@@ -265,10 +274,11 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
   );
 }
 
-function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel, barPct, pctLabel, locale }: {
+function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel, barPct, pctLabel, locale, midHref }: {
   b: RevBuilding; open: boolean; expanded: Set<string>; toggle: (id: string) => void;
   unitsLabel: (n: number) => string; subtotalLabel: (name: string) => string;
   barPct: (v: number) => number; pctLabel: (p: string) => string; locale: string;
+  midHref?: (id: string) => string | null;
 }) {
   const pct = barPct(b.revenue);
   return (
@@ -283,7 +293,7 @@ function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel, ba
         </td>
       </tr>
       {open && b.units.map((u) => (
-        <UnitRows key={u.id} u={u} open={expanded.has(u.id)} toggle={toggle} locale={locale} />
+        <UnitRows key={u.id} u={u} open={expanded.has(u.id)} toggle={toggle} locale={locale} midHref={midHref} />
       ))}
       {open && (
         <tr className="is-total">
@@ -295,16 +305,17 @@ function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel, ba
   );
 }
 
-function UnitRows({ u, open, toggle, locale }: { u: RevUnit; open: boolean; toggle: (id: string) => void; locale: string }) {
+function UnitRows({ u, open, toggle, locale, midHref }: { u: RevUnit; open: boolean; toggle: (id: string) => void; locale: string; midHref?: (id: string) => string | null }) {
   const tr = useTranslations("reports.revenue");
   const hasKids = u.transactions.length > 0;
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(locale === "ar" ? "ar" : "en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const href = midHref?.(u.id) ?? null;
   return (
     <>
       <tr className="lvl-2">
         <td>
           {hasKids ? <Chevron open={open} onClick={() => toggle(u.id)} /> : <span className="row-leaf" />}
-          {u.name}
+          {href ? <a className="r-link" href={href} style={{ fontFamily: "inherit", fontSize: "inherit" }}>{u.name}</a> : u.name}
         </td>
         <td className="num">{fmt3(u.revenue)}</td>
       </tr>

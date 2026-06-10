@@ -3,8 +3,14 @@ import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { findReport, resolvePreset } from "../reports-config";
 import { getRevenueByBuilding } from "@/lib/reports/revenue-by-building";
-import RevenueByBuilding from "./RevenueByBuilding";
+import { getRevenueByTenant } from "@/lib/reports/revenue-by-tenant";
+import RevenueByBuilding, { type ReportVariant } from "./RevenueByBuilding";
 import ComingSoon from "./ComingSoon";
+
+const VARIANTS: Record<string, ReportVariant> = {
+  "revenue-by-building": { slug: "revenue-by-building", colNameKey: "colName", countKey: "unitsCount" },
+  "revenue-by-tenant": { slug: "revenue-by-tenant", colNameKey: "colNameTenant", countKey: "tenantsCount", midHref: (id) => `/dashboard/tenants/${id}` },
+};
 
 export default async function ReportPage({
   params,
@@ -17,7 +23,8 @@ export default async function ReportPage({
   const report = findReport(slug);
   if (!report) notFound();
 
-  if (slug !== "revenue-by-building") {
+  const variant = VARIANTS[slug];
+  if (!variant) {
     return <ComingSoon slug={slug} />;
   }
 
@@ -31,9 +38,10 @@ export default async function ReportPage({
   const sp = await searchParams;
   const range = resolvePreset(sp.preset ?? "month", new Date(), sp.from, sp.to);
   const propertyId = sp.propertyId || undefined;
+  const aggregate = slug === "revenue-by-tenant" ? getRevenueByTenant : getRevenueByBuilding;
 
   const [data, properties] = await Promise.all([
-    getRevenueByBuilding({
+    aggregate({
       orgId: orgUser.organizationId,
       from: new Date(range.from),
       to: new Date(range.to),
@@ -55,6 +63,7 @@ export default async function ReportPage({
       fromDate={range.from}
       toDate={range.to}
       selectedPropertyId={propertyId ?? ""}
+      variant={variant}
     />
   );
 }

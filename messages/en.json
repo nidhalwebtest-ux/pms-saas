@@ -2622,6 +2622,7 @@
     },
     "items": {
       "revenue-by-building": "Revenue by Building",
+      "revenue-by-tenant": "Revenue by Tenant",
       "revenue-by-unit-type": "Revenue by Unit Type",
       "revenue-by-source": "Revenue by Source",
       "revenue-trend": "Revenue Trend",
@@ -2711,6 +2712,8 @@
       "expandAll": "Expand all",
       "level": "Level {n}",
       "colName": "Building / Unit / Transaction",
+      "colNameTenant": "Building / Tenant / Transaction",
+      "tenantsCount": "{count} tenants",
       "colRevenue": "Revenue",
       "txInvoice": "Invoice",
       "txReturn": "Return",

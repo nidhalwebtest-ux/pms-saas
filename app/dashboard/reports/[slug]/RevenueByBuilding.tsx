@@ -16,24 +16,7 @@ interface Props {
 
 const fmt3 = (n: number) => n.toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 const fmt0 = (n: number) => Math.round(n).toLocaleString("en-US");
-const pct = (n: number | null) => (n == null ? "—" : `${(n * 100).toFixed(1)}%`);
 
-function Delta({ v, light }: { v: number | null; light?: boolean }) {
-  if (v == null) return <span className="dim">—</span>;
-  if (v === 0) return <span className="delta-cell flat">±0%</span>;
-  const up = v > 0;
-  return (
-    <span className={`delta-cell ${up ? "up" : "down"}`} style={light ? { color: "oklch(0.91 0.06 155)" } : undefined}>
-      <svg className="ic-xs"><use href={up ? "#i-arrow-up" : "#i-arrow-down"} /></svg>{Math.abs(v).toFixed(1)}%
-    </span>
-  );
-}
-function Heat({ occ, tone }: { occ: number | null; tone: "success" | "warning" }) {
-  if (occ == null) return <span className="dim">—</span>;
-  const bg = tone === "success" ? "oklch(0.560 0.140 155 / 0.18)" : "oklch(0.745 0.150 75 / 0.20)";
-  const color = tone === "success" ? "var(--success-700)" : "var(--warning-700)";
-  return <span className="heat" style={{ background: bg, color }}>{pct(occ)}</span>;
-}
 function Chevron({ open, onClick }: { open: boolean; onClick: () => void }) {
   return (
     <span className={`row-chev${open ? " is-open" : ""}`} role="button" onClick={onClick}>
@@ -85,14 +68,6 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [level, setLevel] = useState<"collapse" | "l2" | "l3" | "expand">("l2");
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(data.buildings.map((b) => b.id)));
-  // Cosmetic-only filters (not yet wired to data) — store canonical KEYS and
-  // translate at render so switching language re-localizes the displayed value.
-  const [granularity, setGranularity] = useState("monthly");
-  const [unitType, setUnitType] = useState("typeAll");
-  const [status, setStatus] = useState("statusConfirmed");
-  const granKeys = ["daily", "weekly", "monthly", "quarterly"];
-  const typeKeys = ["typeAll", "typeStudio", "type1br", "type2br", "type3br", "typeSuite"];
-  const statusKeys = ["statusConfirmed", "statusAll", "statusCheckedIn", "statusCompleted"];
 
   const allBuildings = tf("allBuildings");
   const selectedBuilding = properties.find((p) => p.id === selectedPropertyId)?.name ?? allBuildings;
@@ -120,7 +95,6 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
   const k = data.kpis;
   const presetItems = DATE_PRESETS.map((p) => ({ key: p.key, label: t(`presets.${p.key}`) }));
   const presetLabel = t(`presets.${preset === "custom" ? "custom" : preset}` as never);
-  const compareText = tr("comparePrior", { period: presetLabel });
   const buildingOptions = [allBuildings, ...properties.map((p) => p.name)];
   const totalUnits = data.buildings.reduce((s, b) => s + b.unitCount, 0);
 
@@ -161,19 +135,15 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
           ))}
         </div>
         <div className="fpanel-body">
-          <div className="fpanel-grid">
+          <div className="fpanel-grid cols-4">
             <FilterControl label={tf("dateRange")} span2 active icon={<svg className="ic-sm ic-cal"><use href="#i-cal" /></svg>}
               value={presetLabel} display={rangeText}
               options={presetItems.map((p) => p.label)}
               onChange={(lbl) => { const p = presetItems.find((x) => x.label === lbl); navigate({ preset: p?.key ?? "month" }); }} />
-            <FilterControl label={tf("granularity")} value={tf(granularity)} options={granKeys.map((kk) => tf(kk))} onChange={(lbl) => setGranularity(granKeys.find((kk) => tf(kk) === lbl) ?? "monthly")} />
-            <FilterControl label={tf("currency")} value={tf("currency3")} options={[tf("currency3"), tf("currency0")]} onChange={() => {}} />
             <FilterControl label={tf("building")} span2 active={!!selectedPropertyId} icon={<svg className="ic-sm" style={{ color: "var(--brand-500)" }}><use href="#i-building" /></svg>}
               value={selectedBuilding}
               options={buildingOptions}
               onChange={(name) => { const prop = properties.find((p) => p.name === name); navigate({ propertyId: prop ? prop.id : null }); }} />
-            <FilterControl label={tf("unitType")} value={tf(unitType)} options={typeKeys.map((kk) => tf(kk))} onChange={(lbl) => setUnitType(typeKeys.find((kk) => tf(kk) === lbl) ?? "typeAll")} />
-            <FilterControl label={tf("status")} value={tf(status)} active options={statusKeys.map((kk) => tf(kk))} onChange={(lbl) => setStatus(statusKeys.find((kk) => tf(kk) === lbl) ?? "statusConfirmed")} />
           </div>
         </div>
       </section>
@@ -183,7 +153,7 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
         <div className="kpi-card is-primary">
           <div className="kpi-label"><span className="pulse" />{tr("kpiTotal")}</div>
           <div className="kpi-value">{fmt0(k.totalRevenue)}<span className="unit">{tr("omr")}</span></div>
-          <div className="kpi-trend"><Delta v={k.delta} /><span className="vs">{compareText}</span></div>
+          <div className="kpi-sub">{rangeText}</div>
         </div>
         <div className="kpi-card">
           <div className="kpi-label">{tr("kpiBuildings")}</div>
@@ -196,9 +166,8 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
           <div className="kpi-trend"><span className="mono" style={{ color: "var(--gray-900)", fontWeight: 600 }}>{fmt0(k.topPerformerRevenue)} {tr("omr")}</span><span className="vs">{tr("kpiPctOfTotal", { pct: k.topPerformerPct.toFixed(1) })}</span></div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-label">{tr("kpiAdr")}</div>
-          <div className="kpi-value">{k.adr != null ? k.adr.toFixed(2) : "—"}<span className="unit">{tr("omr")}</span></div>
-          <div className="kpi-sub">{tr("kpiAvgPerBuilding")} <strong>{fmt0(k.avgPerBuilding)}</strong></div>
+          <div className="kpi-label">{tr("kpiAvgPerBuilding")}</div>
+          <div className="kpi-value">{fmt0(k.avgPerBuilding)}<span className="unit">{tr("omr")}</span></div>
         </div>
       </div>
 
@@ -223,17 +192,13 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
           <table className="rtable">
             <thead>
               <tr>
-                <th style={{ width: "32%" }}>{tr("colName")}</th>
+                <th>{tr("colName")}</th>
                 <th className="num sorted-desc">{tr("colRevenue")}<span className="col-group">{rangeText}</span></th>
-                <th className="num">{tr("colYtd")}</th>
-                <th className="num">{tr("colOccupancy")}</th>
-                <th className="num">{tr("colRate")}<span className="col-group">{tr("perNight")}</span></th>
-                <th className="num">{tr("colVs")}</th>
               </tr>
             </thead>
             <tbody>
               {data.buildings.length === 0 && (
-                <tr><td colSpan={6} style={{ padding: "40px", textAlign: "center", color: "var(--gray-500)" }}>{tr("empty")}</td></tr>
+                <tr><td colSpan={2} style={{ padding: "40px", textAlign: "center", color: "var(--gray-500)" }}>{tr("empty")}</td></tr>
               )}
               {data.buildings.map((b) => (
                 <BuildingRows key={b.id} b={b} open={expanded.has(b.id)} expanded={expanded} toggle={toggle} unitsLabel={(n) => tr("unitsCount", { count: n })} subtotalLabel={(name) => tr("subtotal", { name })} />
@@ -242,10 +207,6 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
                 <tr className="is-grand">
                   <td>{tr("grandTotal", { count: k.buildingCount })}</td>
                   <td className="num">{fmt3(k.totalRevenue)}</td>
-                  <td className="num">{fmt3(data.buildings.reduce((s, b) => s + b.revenueYtd, 0))}</td>
-                  <td className="num">—</td>
-                  <td className="num">{k.adr != null ? k.adr.toFixed(2) : "—"}</td>
-                  <td className="num"><Delta v={k.delta} light /></td>
                 </tr>
               )}
             </tbody>
@@ -270,10 +231,6 @@ function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel }: 
           {b.name} <span className="mono" style={{ color: "var(--gray-500)", fontWeight: 400, marginInlineStart: 6, fontSize: 11 }}>{unitsLabel(b.unitCount)}</span>
         </td>
         <td className="num">{fmt3(b.revenue)}</td>
-        <td className="num">{fmt3(b.revenueYtd)}</td>
-        <td className="num"><Heat occ={b.occupancy} tone={b.tone} /></td>
-        <td className="num">{b.rate != null ? b.rate.toFixed(2) : "—"}</td>
-        <td className="num"><Delta v={b.delta} /></td>
       </tr>
       {open && b.units.map((u) => (
         <UnitRows key={u.id} u={u} open={expanded.has(u.id)} toggle={toggle} nightsLabel={(n) => tr("nights", { count: n })} />
@@ -282,10 +239,6 @@ function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel }: 
         <tr className="is-total">
           <td>{subtotalLabel(b.name)}</td>
           <td className="num">{fmt3(b.revenue)}</td>
-          <td className="num">{fmt3(b.revenueYtd)}</td>
-          <td className="num">{pct(b.occupancy)}</td>
-          <td className="num">{b.rate != null ? b.rate.toFixed(2) : "—"}</td>
-          <td className="num"><Delta v={b.delta} /></td>
         </tr>
       )}
     </>
@@ -302,10 +255,6 @@ function UnitRows({ u, open, toggle, nightsLabel }: { u: RevUnit; open: boolean;
           {u.name}
         </td>
         <td className="num">{fmt3(u.revenue)}</td>
-        <td className="num">{fmt3(u.revenueYtd)}</td>
-        <td className="num"><Heat occ={u.occupancy} tone={u.tone} /></td>
-        <td className="num">{u.rate != null ? u.rate.toFixed(2) : "—"}</td>
-        <td className="num"><span className="dim">—</span></td>
       </tr>
       {open && hasKids && u.reservations.map((r) => (
         <tr className="lvl-3" key={r.id}>
@@ -316,10 +265,6 @@ function UnitRows({ u, open, toggle, nightsLabel }: { u: RevUnit; open: boolean;
             <span className="mono" style={{ color: "var(--gray-500)", fontSize: "10.5px", marginInlineStart: 6 }}>{nightsLabel(r.nights)}</span>
           </td>
           <td className="num">{fmt3(r.revenue)}</td>
-          <td className="num dim">—</td>
-          <td className="num dim">—</td>
-          <td className="num dim">—</td>
-          <td className="num dim">—</td>
         </tr>
       ))}
     </>

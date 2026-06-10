@@ -85,10 +85,14 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [level, setLevel] = useState<"collapse" | "l2" | "l3" | "expand">("l2");
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(data.buildings.map((b) => b.id)));
-  // Cosmetic-only filters (not yet wired to data)
-  const [granularity, setGranularity] = useState(tf("monthly"));
-  const [unitType, setUnitType] = useState(tf("typeAll"));
-  const [status, setStatus] = useState(tf("statusConfirmed"));
+  // Cosmetic-only filters (not yet wired to data) — store canonical KEYS and
+  // translate at render so switching language re-localizes the displayed value.
+  const [granularity, setGranularity] = useState("monthly");
+  const [unitType, setUnitType] = useState("typeAll");
+  const [status, setStatus] = useState("statusConfirmed");
+  const granKeys = ["daily", "weekly", "monthly", "quarterly"];
+  const typeKeys = ["typeAll", "typeStudio", "type1br", "type2br", "type3br", "typeSuite"];
+  const statusKeys = ["statusConfirmed", "statusAll", "statusCheckedIn", "statusCompleted"];
 
   const allBuildings = tf("allBuildings");
   const selectedBuilding = properties.find((p) => p.id === selectedPropertyId)?.name ?? allBuildings;
@@ -162,14 +166,14 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
               value={presetLabel} display={rangeText}
               options={presetItems.map((p) => p.label)}
               onChange={(lbl) => { const p = presetItems.find((x) => x.label === lbl); navigate({ preset: p?.key ?? "month" }); }} />
-            <FilterControl label={tf("granularity")} value={granularity} options={[tf("daily"), tf("weekly"), tf("monthly"), tf("quarterly")]} onChange={setGranularity} />
+            <FilterControl label={tf("granularity")} value={tf(granularity)} options={granKeys.map((kk) => tf(kk))} onChange={(lbl) => setGranularity(granKeys.find((kk) => tf(kk) === lbl) ?? "monthly")} />
             <FilterControl label={tf("currency")} value={tf("currency3")} options={[tf("currency3"), tf("currency0")]} onChange={() => {}} />
             <FilterControl label={tf("building")} span2 active={!!selectedPropertyId} icon={<svg className="ic-sm" style={{ color: "var(--brand-500)" }}><use href="#i-building" /></svg>}
               value={selectedBuilding}
               options={buildingOptions}
               onChange={(name) => { const prop = properties.find((p) => p.name === name); navigate({ propertyId: prop ? prop.id : null }); }} />
-            <FilterControl label={tf("unitType")} value={unitType} options={[tf("typeAll"), tf("typeStudio"), tf("type1br"), tf("type2br"), tf("type3br"), tf("typeSuite")]} onChange={setUnitType} />
-            <FilterControl label={tf("status")} value={status} active options={[tf("statusConfirmed"), tf("statusAll"), tf("statusCheckedIn"), tf("statusCompleted")]} onChange={setStatus} />
+            <FilterControl label={tf("unitType")} value={tf(unitType)} options={typeKeys.map((kk) => tf(kk))} onChange={(lbl) => setUnitType(typeKeys.find((kk) => tf(kk) === lbl) ?? "typeAll")} />
+            <FilterControl label={tf("status")} value={tf(status)} active options={statusKeys.map((kk) => tf(kk))} onChange={(lbl) => setStatus(statusKeys.find((kk) => tf(kk) === lbl) ?? "statusConfirmed")} />
           </div>
         </div>
       </section>

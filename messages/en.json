@@ -2828,6 +2828,28 @@
       "empty": "No revenue in this period.",
       "footer": "Live data · revenue recognised on invoice issue date, returns on creation",
       "source": "Source: PMS"
+    },
+    "los": {
+      "subtitle": "Average nights per stay · ",
+      "kpiAvg": "Avg length of stay",
+      "nightsUnit": "nights",
+      "kpiStays": "Stays",
+      "totalNights": "{count} total nights",
+      "kpiLongest": "Longest stay",
+      "kpiShortest": "Shortest stay",
+      "tableTitle": "Avg stay by building",
+      "tableMeta": "{count} buildings",
+      "collapseAll": "Collapse",
+      "expandAll": "Expand all",
+      "colName": "Building / Stay",
+      "colNights": "Avg nights",
+      "stayCount": "{count} stays",
+      "nightsN": "{count}n",
+      "grandTotal": "All buildings ({count})",
+      "noRef": "Reservation",
+      "empty": "No stays started in this period.",
+      "footer": "Live data · arrivals in range, excludes cancelled/no-show",
+      "source": "Source: PMS"
     }
   },
   "returns": {

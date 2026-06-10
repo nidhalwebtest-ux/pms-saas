@@ -40,19 +40,35 @@ export default async function ReportPage({
   const propertyId = sp.propertyId || undefined;
   const aggregate = slug === "revenue-by-tenant" ? getRevenueByTenant : getRevenueByBuilding;
 
-  const [data, properties] = await Promise.all([
-    aggregate({
-      orgId: orgUser.organizationId,
-      from: new Date(range.from),
-      to: new Date(range.to),
-      propertyId,
-    }),
-    prisma.property.findMany({
-      where: { organizationId: orgUser.organizationId, isArchived: false },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-  ]);
+  let data, properties;
+  try {
+    [data, properties] = await Promise.all([
+      aggregate({
+        orgId: orgUser.organizationId,
+        from: new Date(range.from),
+        to: new Date(range.to),
+        propertyId,
+      }),
+      prisma.property.findMany({
+        where: { organizationId: orgUser.organizationId, isArchived: false },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+    ]);
+  } catch (err) {
+    console.error(`[reports/${slug}] aggregation failed:`, err);
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return (
+      <main className="rpage">
+        <div className="rhead"><div className="title-block"><h1>{report.label}</h1></div></div>
+        <div className="state-card is-error">
+          <div className="glyph"><svg width="28" height="28"><use href="#i-info" /></svg></div>
+          <h3>Could not load this report</h3>
+          <p style={{ fontFamily: "var(--font-mono)", fontSize: 12, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{message}</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <RevenueByBuilding

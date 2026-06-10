@@ -2166,7 +2166,8 @@
         "FOUR_BR": "أربع غرف نوم",
         "SUITE": "جناح",
         "PENTHOUSE": "بنتهاوس",
-        "VILLA": "فيلا"
+        "VILLA": "فيلا",
+        "OTHER": "أخرى"
       },
       "paymentMethods": {
         "CASH": "نقداً",
@@ -2713,7 +2714,10 @@
       "level": "المستوى {n}",
       "colName": "المبنى / الوحدة / المعاملة",
       "colNameTenant": "المبنى / المستأجر / المعاملة",
+      "colNameUnitType": "نوع الوحدة / الوحدة / المعاملة",
+      "colNameSource": "المصدر / المبنى / المعاملة",
       "tenantsCount": "{count} مستأجر",
+      "buildingsCount": "{count} مبنى",
       "colRevenue": "الإيرادات",
       "txInvoice": "فاتورة",
       "txReturn": "مرتجع",

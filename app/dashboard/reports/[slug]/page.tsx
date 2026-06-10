@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { findReport, resolvePreset } from "../reports-config";
 import { getRevenueByBuilding } from "@/lib/reports/revenue-by-building";
 import { getRevenueByTenant } from "@/lib/reports/revenue-by-tenant";
+import { getRevenueByUnitType } from "@/lib/reports/revenue-by-unit-type";
+import { getRevenueBySource } from "@/lib/reports/revenue-by-source";
 import { getOccupancyByBuilding } from "@/lib/reports/occupancy-by-building";
 import { getOccupancyTrend } from "@/lib/reports/occupancy-trend";
 import { getVacancyAnalysis } from "@/lib/reports/vacancy-analysis";
@@ -16,6 +18,15 @@ import ComingSoon from "./ComingSoon";
 const VARIANTS: Record<string, ReportVariant> = {
   "revenue-by-building": { slug: "revenue-by-building", colNameKey: "colName", countKey: "unitsCount" },
   "revenue-by-tenant": { slug: "revenue-by-tenant", colNameKey: "colNameTenant", countKey: "tenantsCount", midHrefBase: "/dashboard/tenants/" },
+  "revenue-by-unit-type": { slug: "revenue-by-unit-type", colNameKey: "colNameUnitType", countKey: "unitsCount", midHrefBase: "/dashboard/units/", groupLabelNs: "reservations.detail.unitTypes" },
+  "revenue-by-source": { slug: "revenue-by-source", colNameKey: "colNameSource", countKey: "buildingsCount", groupLabelNs: "tenants.sources" },
+};
+
+const AGGREGATORS: Record<string, (a: { orgId: string; from: Date; to: Date; propertyId?: string }) => Promise<import("@/lib/reports/revenue-by-building").RevReport>> = {
+  "revenue-by-building": getRevenueByBuilding,
+  "revenue-by-tenant": getRevenueByTenant,
+  "revenue-by-unit-type": getRevenueByUnitType,
+  "revenue-by-source": getRevenueBySource,
 };
 
 const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis"]);
@@ -139,9 +150,9 @@ export default async function ReportPage({
     }
   }
 
-  // ── Revenue (by building / by tenant) ──────────────────────────────────
+  // ── Revenue (by building / tenant / unit type / source) ────────────────
   const variant = VARIANTS[slug];
-  const aggregate = slug === "revenue-by-tenant" ? getRevenueByTenant : getRevenueByBuilding;
+  const aggregate = AGGREGATORS[slug];
 
   try {
     const [data, properties] = await Promise.all([

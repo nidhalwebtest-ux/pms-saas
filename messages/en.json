@@ -2166,7 +2166,8 @@
         "FOUR_BR": "4 BR",
         "SUITE": "Suite",
         "PENTHOUSE": "Penthouse",
-        "VILLA": "Villa"
+        "VILLA": "Villa",
+        "OTHER": "Other"
       },
       "paymentMethods": {
         "CASH": "Cash",
@@ -2713,7 +2714,10 @@
       "level": "Level {n}",
       "colName": "Building / Unit / Transaction",
       "colNameTenant": "Building / Tenant / Transaction",
+      "colNameUnitType": "Unit Type / Unit / Transaction",
+      "colNameSource": "Source / Building / Transaction",
       "tenantsCount": "{count} tenants",
+      "buildingsCount": "{count} buildings",
       "colRevenue": "Revenue",
       "txInvoice": "Invoice",
       "txReturn": "Return",

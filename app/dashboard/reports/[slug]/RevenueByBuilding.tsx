@@ -11,6 +11,7 @@ export interface ReportVariant {
   colNameKey: string;      // revenue.* key for the first column header
   countKey: string;        // revenue.* key for the building-row count ("X units"/"X tenants")
   midHrefBase?: string;    // optional link base for the mid-level row; final href = `${midHrefBase}${id}`. Must be serializable (no functions cross the server→client boundary).
+  groupLabelNs?: string;   // optional i18n namespace to translate the top-group name (a data code, e.g. "ONE_BR" via reservations.detail.unitTypes); falls back to a humanized code.
 }
 const BUILDING_VARIANT: ReportVariant = { slug: "revenue-by-building", colNameKey: "colName", countKey: "unitsCount" };
 
@@ -77,7 +78,16 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
   const t = useTranslations("reports");
   const tf = useTranslations("reports.filters");
   const tr = useTranslations("reports.revenue");
+  const tRoot = useTranslations();
   const locale = useLocale();
+
+  const humanize = (s: string) => s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const groupName = (raw: string) => {
+    if (!variant.groupLabelNs) return raw;
+    const key = `${variant.groupLabelNs}.${raw}`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return (tRoot as any).has(key) ? (tRoot as any)(key) : humanize(raw);
+  };
   const [pending, startTransition] = useTransition();
   const [filtersOpen, setFiltersOpen] = useState(true);
   const [level, setLevel] = useState<"collapse" | "l2" | "l3" | "expand">("l2");
@@ -254,7 +264,7 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
               ) : (
                 <>
                   {sortedBuildings.map((b) => (
-                    <BuildingRows key={b.id} b={b} open={expanded.has(b.id)} expanded={expanded} toggle={toggle} unitsLabel={(n) => tr(variant.countKey, { count: n })} subtotalLabel={(name) => tr("subtotal", { name })} barPct={barPct} pctLabel={(p) => tr("ofTotal", { pct: p })} locale={locale} midHrefBase={variant.midHrefBase} />
+                    <BuildingRows key={b.id} b={b} displayName={groupName(b.name)} open={expanded.has(b.id)} expanded={expanded} toggle={toggle} unitsLabel={(n) => tr(variant.countKey, { count: n })} subtotalLabel={(name) => tr("subtotal", { name })} barPct={barPct} pctLabel={(p) => tr("ofTotal", { pct: p })} locale={locale} midHrefBase={variant.midHrefBase} />
                   ))}
                   <tr className="is-grand">
                     <td>{tr("grandTotal", { count: k.buildingCount })}</td>
@@ -274,8 +284,8 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
   );
 }
 
-function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel, barPct, pctLabel, locale, midHrefBase }: {
-  b: RevBuilding; open: boolean; expanded: Set<string>; toggle: (id: string) => void;
+function BuildingRows({ b, displayName, open, expanded, toggle, unitsLabel, subtotalLabel, barPct, pctLabel, locale, midHrefBase }: {
+  b: RevBuilding; displayName: string; open: boolean; expanded: Set<string>; toggle: (id: string) => void;
   unitsLabel: (n: number) => string; subtotalLabel: (name: string) => string;
   barPct: (v: number) => number; pctLabel: (p: string) => string; locale: string;
   midHrefBase?: string;
@@ -286,7 +296,7 @@ function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel, ba
       <tr className="lvl-1">
         <td>
           <Chevron open={open} onClick={() => toggle(b.id)} />
-          {b.name} <span className="mono" style={{ color: "var(--gray-500)", fontWeight: 400, marginInlineStart: 6, fontSize: 11 }}>{unitsLabel(b.unitCount)} · {pctLabel((pct * 100).toFixed(0))}</span>
+          {displayName} <span className="mono" style={{ color: "var(--gray-500)", fontWeight: 400, marginInlineStart: 6, fontSize: 11 }}>{unitsLabel(b.unitCount)} · {pctLabel((pct * 100).toFixed(0))}</span>
         </td>
         <td className="num">
           <span className="bar-cell"><span className="bar"><i style={{ width: `${pct * 100}%` }} /></span><span>{fmt3(b.revenue)}</span></span>
@@ -297,7 +307,7 @@ function BuildingRows({ b, open, expanded, toggle, unitsLabel, subtotalLabel, ba
       ))}
       {open && (
         <tr className="is-total">
-          <td>{subtotalLabel(b.name)}</td>
+          <td>{subtotalLabel(displayName)}</td>
           <td className="num">{fmt3(b.revenue)}</td>
         </tr>
       )}

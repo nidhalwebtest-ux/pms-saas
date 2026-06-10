@@ -5,8 +5,10 @@ import { findReport, resolvePreset } from "../reports-config";
 import { getRevenueByBuilding } from "@/lib/reports/revenue-by-building";
 import { getRevenueByTenant } from "@/lib/reports/revenue-by-tenant";
 import { getOccupancyByBuilding } from "@/lib/reports/occupancy-by-building";
+import { getOccupancyTrend } from "@/lib/reports/occupancy-trend";
 import RevenueByBuilding, { type ReportVariant } from "./RevenueByBuilding";
 import OccupancyByBuilding from "./OccupancyByBuilding";
+import OccupancyTrend from "./OccupancyTrend";
 import ComingSoon from "./ComingSoon";
 
 const VARIANTS: Record<string, ReportVariant> = {
@@ -14,7 +16,7 @@ const VARIANTS: Record<string, ReportVariant> = {
   "revenue-by-tenant": { slug: "revenue-by-tenant", colNameKey: "colNameTenant", countKey: "tenantsCount", midHrefBase: "/dashboard/tenants/" },
 };
 
-const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building"]);
+const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend"]);
 
 function ErrorCard({ title, message }: { title: string; message: string }) {
   return (
@@ -72,6 +74,30 @@ export default async function ReportPage({
       ]);
       return (
         <OccupancyByBuilding
+          data={data}
+          properties={properties}
+          preset={range.preset}
+          rangeText={range.rangeText}
+          fromDate={range.from}
+          toDate={range.to}
+          selectedPropertyId={propertyId ?? ""}
+        />
+      );
+    } catch (err) {
+      console.error(`[reports/${slug}] aggregation failed:`, err);
+      return <ErrorCard title={report.label} message={err instanceof Error ? err.message : "Unknown error"} />;
+    }
+  }
+
+  // ── Occupancy Trend ────────────────────────────────────────────────────
+  if (slug === "occupancy-trend") {
+    try {
+      const [data, properties] = await Promise.all([
+        getOccupancyTrend({ orgId: orgUser.organizationId, from, to, propertyId, bucket: sp.bucket }),
+        propertiesPromise,
+      ]);
+      return (
+        <OccupancyTrend
           data={data}
           properties={properties}
           preset={range.preset}

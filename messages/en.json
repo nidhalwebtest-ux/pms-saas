@@ -2761,6 +2761,26 @@
         "COMPLETED": "Completed",
         "PENDING": "Pending"
       }
+    },
+    "trend": {
+      "subtitle": "Occupancy over time · ",
+      "kpiAvg": "Avg occupancy",
+      "kpiPeak": "Peak",
+      "kpiLow": "Lowest",
+      "kpiChange": "Change",
+      "pts": "pts",
+      "firstToLast": "first → last period",
+      "chartTitle": "Occupancy % over time",
+      "gran": { "day": "Day", "week": "Week", "month": "Month" },
+      "empty": "No occupancy in this period.",
+      "tableTitle": "Period breakdown",
+      "tableMeta": "{count} periods",
+      "colPeriod": "Period",
+      "colOccupancy": "Occupancy",
+      "colNights": "Occupied / Available",
+      "average": "Average",
+      "footer": "Live data · half-open nights, checkout day excluded",
+      "source": "Source: PMS"
     }
   },
   "returns": {

@@ -271,6 +271,19 @@
 .bar-cell .bar > i { display: block; height: 100%; background: var(--brand-400); border-radius: inherit; }
 [dir="rtl"] .bar-cell { justify-content: flex-start; }
 
+/* ─── Occupancy Trend chart ─── */
+.occ-chart { background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+.occ-chart .chart-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.occ-chart .chart-head .title { font-size: 13px; font-weight: 600; color: var(--gray-900); }
+.occ-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.occ-chart .grid line { stroke: var(--border-subtle); stroke-width: 1; }
+.occ-chart .grid text { fill: var(--gray-400); font-size: 11px; font-family: var(--font-mono); }
+.occ-chart .axis text { fill: var(--gray-500); font-size: 11px; }
+.occ-chart .area { stroke: none; }
+.occ-chart .line { fill: none; stroke: var(--brand-500); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.occ-chart .dot { fill: var(--bg-surface); stroke: var(--brand-500); stroke-width: 2; cursor: default; }
+.occ-chart .dot.is-peak { fill: var(--brand-500); }
+
 /* Sortable header affordance */
 .rtable thead th.sortable { cursor: pointer; user-select: none; }
 .rtable thead th.sortable:hover { color: var(--gray-900); }

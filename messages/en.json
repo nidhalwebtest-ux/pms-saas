@@ -2815,6 +2815,19 @@
       "empty": "No units in this period.",
       "footer": "Live data · gaps = empty nights between bookings · lost revenue estimated at base daily rate",
       "source": "Source: PMS"
+    },
+    "revTrend": {
+      "subtitle": "Net revenue over time · ",
+      "kpiPeak": "Peak period",
+      "chartTitle": "Net revenue over time",
+      "tableTitle": "Period breakdown",
+      "tableMeta": "{count} periods",
+      "colPeriod": "Period",
+      "colNet": "Net revenue",
+      "total": "Total",
+      "empty": "No revenue in this period.",
+      "footer": "Live data · revenue recognised on invoice issue date, returns on creation",
+      "source": "Source: PMS"
     }
   },
   "returns": {

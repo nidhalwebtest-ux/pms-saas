@@ -34,7 +34,7 @@ export const REPORT_GROUPS: ReportGroup[] = [
     key: "occupancy",
     label: "Occupancy",
     items: [
-      { slug: "occupancy-by-building", label: "Occupancy by Building" },
+      { slug: "occupancy-by-building", label: "Occupancy by Building", implemented: true },
       { slug: "occupancy-trend", label: "Occupancy Trend" },
       { slug: "vacancy-analysis", label: "Vacancy Analysis" },
       { slug: "avg-length-of-stay", label: "Avg. Length of Stay" },

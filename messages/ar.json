@@ -2729,6 +2729,38 @@
       "empty": "لا توجد إيرادات في هذه الفترة.",
       "footer": "بيانات حية · يُعترف بالإيراد عند تاريخ إصدار الفاتورة",
       "source": "المصدر: نظام إدارة العقارات"
+    },
+    "occupancy": {
+      "subtitle": "إشغال ليالي الوحدات · ",
+      "kpiOccupancy": "الإشغال",
+      "kpiOccupied": "ليالٍ مشغولة",
+      "nightsUnit": "ليلة",
+      "ofAvailable": "من {count} متاحة",
+      "kpiVacant": "ليالٍ شاغرة",
+      "kpiUnits": "الوحدات",
+      "acrossBuildings": "عبر {count} مبنى",
+      "tableTitle": "الإشغال حسب المبنى",
+      "tableMeta": "{count} مبنى",
+      "collapseAll": "طي",
+      "expandAll": "توسيع الكل",
+      "level": "م{n}",
+      "colName": "المبنى / الوحدة",
+      "colOccupancy": "الإشغال",
+      "unitsCount": "{count} وحدة",
+      "nightsOf": "{occupied}/{available} ليلة",
+      "nightsN": "{count} ل",
+      "noRef": "حجز",
+      "subtotal": "إجمالي {name}",
+      "grandTotal": "كل المباني ({count})",
+      "empty": "لا يوجد إشغال في هذه الفترة.",
+      "footer": "بيانات حية · ليالٍ نصف مفتوحة، يوم المغادرة غير محسوب",
+      "source": "المصدر: نظام إدارة العقارات",
+      "status": {
+        "CONFIRMED": "قادم",
+        "CHECKED_IN": "نزيل حالي",
+        "COMPLETED": "مكتمل",
+        "PENDING": "معلّق"
+      }
     }
   },
   "returns": {

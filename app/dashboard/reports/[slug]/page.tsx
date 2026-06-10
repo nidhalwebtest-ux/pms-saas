@@ -4,13 +4,30 @@ import { prisma } from "@/lib/prisma";
 import { findReport, resolvePreset } from "../reports-config";
 import { getRevenueByBuilding } from "@/lib/reports/revenue-by-building";
 import { getRevenueByTenant } from "@/lib/reports/revenue-by-tenant";
+import { getOccupancyByBuilding } from "@/lib/reports/occupancy-by-building";
 import RevenueByBuilding, { type ReportVariant } from "./RevenueByBuilding";
+import OccupancyByBuilding from "./OccupancyByBuilding";
 import ComingSoon from "./ComingSoon";
 
 const VARIANTS: Record<string, ReportVariant> = {
   "revenue-by-building": { slug: "revenue-by-building", colNameKey: "colName", countKey: "unitsCount" },
   "revenue-by-tenant": { slug: "revenue-by-tenant", colNameKey: "colNameTenant", countKey: "tenantsCount", midHrefBase: "/dashboard/tenants/" },
 };
+
+const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building"]);
+
+function ErrorCard({ title, message }: { title: string; message: string }) {
+  return (
+    <main className="rpage">
+      <div className="rhead"><div className="title-block"><h1>{title}</h1></div></div>
+      <div className="state-card is-error">
+        <div className="glyph"><svg width="28" height="28"><use href="#i-info" /></svg></div>
+        <h3>Could not load this report</h3>
+        <p style={{ fontFamily: "var(--font-mono)", fontSize: 12, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{message}</p>
+      </div>
+    </main>
+  );
+}
 
 export default async function ReportPage({
   params,
@@ -23,8 +40,7 @@ export default async function ReportPage({
   const report = findReport(slug);
   if (!report) notFound();
 
-  const variant = VARIANTS[slug];
-  if (!variant) {
+  if (!IMPLEMENTED.has(slug)) {
     return <ComingSoon slug={slug} />;
   }
 
@@ -38,48 +54,62 @@ export default async function ReportPage({
   const sp = await searchParams;
   const range = resolvePreset(sp.preset ?? "month", new Date(), sp.from, sp.to);
   const propertyId = sp.propertyId || undefined;
-  const aggregate = slug === "revenue-by-tenant" ? getRevenueByTenant : getRevenueByBuilding;
+  const from = new Date(range.from);
+  const to = new Date(range.to);
 
-  let data, properties;
-  try {
-    [data, properties] = await Promise.all([
-      aggregate({
-        orgId: orgUser.organizationId,
-        from: new Date(range.from),
-        to: new Date(range.to),
-        propertyId,
-      }),
-      prisma.property.findMany({
-        where: { organizationId: orgUser.organizationId, isArchived: false },
-        select: { id: true, name: true },
-        orderBy: { name: "asc" },
-      }),
-    ]);
-  } catch (err) {
-    console.error(`[reports/${slug}] aggregation failed:`, err);
-    const message = err instanceof Error ? err.message : "Unknown error";
-    return (
-      <main className="rpage">
-        <div className="rhead"><div className="title-block"><h1>{report.label}</h1></div></div>
-        <div className="state-card is-error">
-          <div className="glyph"><svg width="28" height="28"><use href="#i-info" /></svg></div>
-          <h3>Could not load this report</h3>
-          <p style={{ fontFamily: "var(--font-mono)", fontSize: 12, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>{message}</p>
-        </div>
-      </main>
-    );
+  const propertiesPromise = prisma.property.findMany({
+    where: { organizationId: orgUser.organizationId, isArchived: false },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+
+  // ── Occupancy ──────────────────────────────────────────────────────────
+  if (slug === "occupancy-by-building") {
+    try {
+      const [data, properties] = await Promise.all([
+        getOccupancyByBuilding({ orgId: orgUser.organizationId, from, to, propertyId }),
+        propertiesPromise,
+      ]);
+      return (
+        <OccupancyByBuilding
+          data={data}
+          properties={properties}
+          preset={range.preset}
+          rangeText={range.rangeText}
+          fromDate={range.from}
+          toDate={range.to}
+          selectedPropertyId={propertyId ?? ""}
+        />
+      );
+    } catch (err) {
+      console.error(`[reports/${slug}] aggregation failed:`, err);
+      return <ErrorCard title={report.label} message={err instanceof Error ? err.message : "Unknown error"} />;
+    }
   }
 
-  return (
-    <RevenueByBuilding
-      data={data}
-      properties={properties}
-      preset={range.preset}
-      rangeText={range.rangeText}
-      fromDate={range.from}
-      toDate={range.to}
-      selectedPropertyId={propertyId ?? ""}
-      variant={variant}
-    />
-  );
+  // ── Revenue (by building / by tenant) ──────────────────────────────────
+  const variant = VARIANTS[slug];
+  const aggregate = slug === "revenue-by-tenant" ? getRevenueByTenant : getRevenueByBuilding;
+
+  try {
+    const [data, properties] = await Promise.all([
+      aggregate({ orgId: orgUser.organizationId, from, to, propertyId }),
+      propertiesPromise,
+    ]);
+    return (
+      <RevenueByBuilding
+        data={data}
+        properties={properties}
+        preset={range.preset}
+        rangeText={range.rangeText}
+        fromDate={range.from}
+        toDate={range.to}
+        selectedPropertyId={propertyId ?? ""}
+        variant={variant}
+      />
+    );
+  } catch (err) {
+    console.error(`[reports/${slug}] aggregation failed:`, err);
+    return <ErrorCard title={report.label} message={err instanceof Error ? err.message : "Unknown error"} />;
+  }
 }

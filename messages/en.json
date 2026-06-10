@@ -2729,6 +2729,38 @@
       "empty": "No revenue in this period.",
       "footer": "Live data · revenue recognised on invoice issue date",
       "source": "Source: PMS"
+    },
+    "occupancy": {
+      "subtitle": "Unit-night utilization · ",
+      "kpiOccupancy": "Occupancy",
+      "kpiOccupied": "Occupied nights",
+      "nightsUnit": "nights",
+      "ofAvailable": "of {count} available",
+      "kpiVacant": "Vacant nights",
+      "kpiUnits": "Units",
+      "acrossBuildings": "across {count} buildings",
+      "tableTitle": "Occupancy by building",
+      "tableMeta": "{count} buildings",
+      "collapseAll": "Collapse",
+      "expandAll": "Expand all",
+      "level": "L{n}",
+      "colName": "Building / Unit",
+      "colOccupancy": "Occupancy",
+      "unitsCount": "{count} units",
+      "nightsOf": "{occupied}/{available} nights",
+      "nightsN": "{count}n",
+      "noRef": "Reservation",
+      "subtotal": "{name} subtotal",
+      "grandTotal": "All buildings ({count})",
+      "empty": "No occupancy in this period.",
+      "footer": "Live data · half-open nights, checkout day excluded",
+      "source": "Source: PMS",
+      "status": {
+        "CONFIRMED": "Upcoming",
+        "CHECKED_IN": "In house",
+        "COMPLETED": "Completed",
+        "PENDING": "Pending"
+      }
     }
   },
   "returns": {

@@ -25,6 +25,7 @@ import { getCancellationAnalysis } from "@/lib/reports/cancellation-analysis";
 import { getMaintenance } from "@/lib/reports/maintenance";
 import { getVatSummary } from "@/lib/reports/vat-summary";
 import { getRevenueByMonth } from "@/lib/reports/revenue-by-month";
+import { getAnnualSummary } from "@/lib/reports/annual-summary";
 import RevenueByBuilding, { type ReportVariant } from "./RevenueByBuilding";
 import OccupancyByBuilding from "./OccupancyByBuilding";
 import OccupancyTrend from "./OccupancyTrend";
@@ -45,6 +46,7 @@ import CancellationAnalysis from "./CancellationAnalysis";
 import Maintenance from "./Maintenance";
 import VatSummary from "./VatSummary";
 import RevenueByMonth from "./RevenueByMonth";
+import AnnualSummary from "./AnnualSummary";
 import ComingSoon from "./ComingSoon";
 
 const VARIANTS: Record<string, ReportVariant> = {
@@ -61,7 +63,7 @@ const AGGREGATORS: Record<string, (a: { orgId: string; from: Date; to: Date; pro
   "revenue-by-source": getRevenueBySource,
 };
 
-const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis", "revenue-trend", "avg-length-of-stay", "khareef-performance", "revenue-comparison", "aging-receivables", "outstanding-balances", "cash-flow", "pnl-by-building", "expense-breakdown", "receptionist-performance", "tenant-reports", "booking-sources", "cancellation-analysis", "maintenance", "vat-summary", "revenue-by-month"]);
+const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis", "revenue-trend", "avg-length-of-stay", "khareef-performance", "revenue-comparison", "aging-receivables", "outstanding-balances", "cash-flow", "pnl-by-building", "expense-breakdown", "receptionist-performance", "tenant-reports", "booking-sources", "cancellation-analysis", "maintenance", "vat-summary", "revenue-by-month", "annual-summary"]);
 
 function ErrorCard({ title, message }: { title: string; message: string }) {
   return (
@@ -99,7 +101,7 @@ export default async function ReportPage({
   }
 
   const sp = await searchParams;
-  const defaultPreset = slug === "khareef-performance" ? "khareef" : (slug === "aging-receivables" || slug === "outstanding-balances") ? "today" : (slug === "vat-summary" || slug === "revenue-by-month") ? "year" : "month";
+  const defaultPreset = slug === "khareef-performance" ? "khareef" : (slug === "aging-receivables" || slug === "outstanding-balances") ? "today" : (slug === "vat-summary" || slug === "revenue-by-month" || slug === "annual-summary") ? "year" : "month";
   const range = resolvePreset(sp.preset ?? defaultPreset, new Date(), sp.from, sp.to);
   const propertyId = sp.propertyId || undefined;
   const from = new Date(range.from);
@@ -168,6 +170,30 @@ export default async function ReportPage({
       ]);
       return (
         <RevenueTrend
+          data={data}
+          properties={properties}
+          preset={range.preset}
+          rangeText={range.rangeText}
+          fromDate={range.from}
+          toDate={range.to}
+          selectedPropertyId={propertyId ?? ""}
+        />
+      );
+    } catch (err) {
+      console.error(`[reports/${slug}] aggregation failed:`, err);
+      return <ErrorCard title={report.label} message={err instanceof Error ? err.message : "Unknown error"} />;
+    }
+  }
+
+  // ── Annual Summary ─────────────────────────────────────────────────────
+  if (slug === "annual-summary") {
+    try {
+      const [data, properties] = await Promise.all([
+        getAnnualSummary({ orgId: orgUser.organizationId, from, to, propertyId }),
+        propertiesPromise,
+      ]);
+      return (
+        <AnnualSummary
           data={data}
           properties={properties}
           preset={range.preset}

@@ -69,7 +69,7 @@ export const REPORT_GROUPS: ReportGroup[] = [
     items: [
       { slug: "vat-summary", label: "VAT Summary", implemented: true },
       { slug: "revenue-by-month", label: "Revenue by Month", implemented: true },
-      { slug: "annual-summary", label: "Annual Summary" },
+      { slug: "annual-summary", label: "Annual Summary", implemented: true },
     ],
   },
 ];

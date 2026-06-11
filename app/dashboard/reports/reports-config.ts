@@ -46,7 +46,7 @@ export const REPORT_GROUPS: ReportGroup[] = [
     label: "Financial",
     items: [
       { slug: "aging-receivables", label: "Aging Receivables", implemented: true },
-      { slug: "outstanding-balances", label: "Outstanding Balances" },
+      { slug: "outstanding-balances", label: "Outstanding Balances", implemented: true },
       { slug: "cash-flow", label: "Cash Flow" },
       { slug: "pnl-by-building", label: "P&L by Building" },
       { slug: "expense-breakdown", label: "Expense Breakdown" },

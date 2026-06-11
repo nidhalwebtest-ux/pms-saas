@@ -3137,6 +3137,32 @@
       "empty": "No cancellations in this period.",
       "footer": "Live data · cohort of reservations booked in range · value = booking total",
       "source": "Source: PMS"
+    },
+    "maint": {
+      "subtitle": "Upkeep activity by building · ",
+      "kpiSpend": "Maintenance spend",
+      "omr": "OMR",
+      "jobsCount": "{count} jobs",
+      "kpiPending": "Pending approval",
+      "kpiUnitsDown": "Units down",
+      "currently": "currently",
+      "kpiBuildings": "Buildings",
+      "tableTitle": "Maintenance by building",
+      "tableMeta": "{count} buildings",
+      "collapseAll": "Collapse",
+      "expandAll": "Expand all",
+      "colName": "Building / Job",
+      "colJobs": "Jobs",
+      "colSpend": "Spend",
+      "unitsDownBadge": "{count} units down",
+      "pendingMeta": "{amount} pending",
+      "grandTotal": "All buildings ({count})",
+      "status_PENDING": "Pending",
+      "status_APPROVED": "Approved",
+      "status_PROCESSED": "Done",
+      "empty": "No maintenance activity in this period.",
+      "footer": "Live data · maintenance-category expenses (excl. rejected) + units flagged for maintenance",
+      "source": "Source: PMS"
     }
   },
   "returns": {

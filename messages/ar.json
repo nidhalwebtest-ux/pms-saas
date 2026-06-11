@@ -3137,6 +3137,32 @@
       "empty": "لا توجد إلغاءات في هذه الفترة.",
       "footer": "بيانات حية · مجموعة الحجوزات في الفترة · القيمة = إجمالي الحجز",
       "source": "المصدر: نظام إدارة العقارات"
+    },
+    "maint": {
+      "subtitle": "أعمال الصيانة حسب المبنى · ",
+      "kpiSpend": "إنفاق الصيانة",
+      "omr": "ر.ع",
+      "jobsCount": "{count} مهمة",
+      "kpiPending": "بانتظار الاعتماد",
+      "kpiUnitsDown": "وحدات متوقفة",
+      "currently": "حالياً",
+      "kpiBuildings": "المباني",
+      "tableTitle": "الصيانة حسب المبنى",
+      "tableMeta": "{count} مبنى",
+      "collapseAll": "طي",
+      "expandAll": "توسيع الكل",
+      "colName": "المبنى / المهمة",
+      "colJobs": "المهام",
+      "colSpend": "الإنفاق",
+      "unitsDownBadge": "{count} وحدة متوقفة",
+      "pendingMeta": "{amount} معلّق",
+      "grandTotal": "كل المباني ({count})",
+      "status_PENDING": "معلّقة",
+      "status_APPROVED": "معتمدة",
+      "status_PROCESSED": "منجزة",
+      "empty": "لا توجد أعمال صيانة في هذه الفترة.",
+      "footer": "بيانات حية · مصروفات فئة الصيانة (باستثناء المرفوضة) + الوحدات المعلّمة للصيانة",
+      "source": "المصدر: نظام إدارة العقارات"
     }
   },
   "returns": {

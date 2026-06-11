@@ -21,6 +21,7 @@ import { getExpenseBreakdown } from "@/lib/reports/expense-breakdown";
 import { getReceptionistPerformance } from "@/lib/reports/receptionist-performance";
 import { getTenantReports } from "@/lib/reports/tenant-reports";
 import { getBookingSources } from "@/lib/reports/booking-sources";
+import { getCancellationAnalysis } from "@/lib/reports/cancellation-analysis";
 import RevenueByBuilding, { type ReportVariant } from "./RevenueByBuilding";
 import OccupancyByBuilding from "./OccupancyByBuilding";
 import OccupancyTrend from "./OccupancyTrend";
@@ -37,6 +38,7 @@ import ExpenseBreakdown from "./ExpenseBreakdown";
 import ReceptionistPerformance from "./ReceptionistPerformance";
 import TenantReports from "./TenantReports";
 import BookingSources from "./BookingSources";
+import CancellationAnalysis from "./CancellationAnalysis";
 import ComingSoon from "./ComingSoon";
 
 const VARIANTS: Record<string, ReportVariant> = {
@@ -53,7 +55,7 @@ const AGGREGATORS: Record<string, (a: { orgId: string; from: Date; to: Date; pro
   "revenue-by-source": getRevenueBySource,
 };
 
-const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis", "revenue-trend", "avg-length-of-stay", "khareef-performance", "revenue-comparison", "aging-receivables", "outstanding-balances", "cash-flow", "pnl-by-building", "expense-breakdown", "receptionist-performance", "tenant-reports", "booking-sources"]);
+const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis", "revenue-trend", "avg-length-of-stay", "khareef-performance", "revenue-comparison", "aging-receivables", "outstanding-balances", "cash-flow", "pnl-by-building", "expense-breakdown", "receptionist-performance", "tenant-reports", "booking-sources", "cancellation-analysis"]);
 
 function ErrorCard({ title, message }: { title: string; message: string }) {
   return (
@@ -160,6 +162,30 @@ export default async function ReportPage({
       ]);
       return (
         <RevenueTrend
+          data={data}
+          properties={properties}
+          preset={range.preset}
+          rangeText={range.rangeText}
+          fromDate={range.from}
+          toDate={range.to}
+          selectedPropertyId={propertyId ?? ""}
+        />
+      );
+    } catch (err) {
+      console.error(`[reports/${slug}] aggregation failed:`, err);
+      return <ErrorCard title={report.label} message={err instanceof Error ? err.message : "Unknown error"} />;
+    }
+  }
+
+  // ── Cancellation Analysis ──────────────────────────────────────────────
+  if (slug === "cancellation-analysis") {
+    try {
+      const [data, properties] = await Promise.all([
+        getCancellationAnalysis({ orgId: orgUser.organizationId, from, to, propertyId }),
+        propertiesPromise,
+      ]);
+      return (
+        <CancellationAnalysis
           data={data}
           properties={properties}
           preset={range.preset}

@@ -3111,6 +3111,32 @@
       "empty": "No bookings in this period.",
       "footer": "Live data · reservations booked in range (excl. cancelled/no-show) · value = booking total",
       "source": "Source: PMS"
+    },
+    "cancel": {
+      "subtitle": "Cancelled & no-show bookings · ",
+      "kpiCancellations": "Cancellations",
+      "ofBookings": "of {count} bookings",
+      "kpiRate": "Cancellation rate",
+      "kpiLost": "Lost value",
+      "omr": "OMR",
+      "kpiNoShows": "No-shows",
+      "ofCancellations": "of {count} cancellations",
+      "tableTitle": "Cancellations by source",
+      "tableMeta": "{count} sources",
+      "collapseAll": "Collapse",
+      "expandAll": "Expand all",
+      "colName": "Source / Reservation",
+      "colCancellations": "Cancelled",
+      "colRate": "Rate",
+      "colLost": "Lost value",
+      "ofTotal": "{cancelled} of {total} booked",
+      "grandTotal": "All sources ({count})",
+      "cancelled": "Cancelled",
+      "noShow": "No-show",
+      "noRef": "Reservation",
+      "empty": "No cancellations in this period.",
+      "footer": "Live data · cohort of reservations booked in range · value = booking total",
+      "source": "Source: PMS"
     }
   },
   "returns": {

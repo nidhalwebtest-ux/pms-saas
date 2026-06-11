@@ -67,7 +67,7 @@ export const REPORT_GROUPS: ReportGroup[] = [
     key: "tax",
     label: "Tax & Compliance",
     items: [
-      { slug: "vat-summary", label: "VAT Summary" },
+      { slug: "vat-summary", label: "VAT Summary", implemented: true },
       { slug: "revenue-by-month", label: "Revenue by Month" },
       { slug: "annual-summary", label: "Annual Summary" },
     ],

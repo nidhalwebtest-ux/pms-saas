@@ -3163,6 +3163,28 @@
       "empty": "No maintenance activity in this period.",
       "footer": "Live data · maintenance-category expenses (excl. rejected) + units flagged for maintenance",
       "source": "Source: PMS"
+    },
+    "vat": {
+      "subtitle": "Output VAT on sales · ",
+      "kpiVat": "Output VAT",
+      "omr": "OMR",
+      "outputVat": "on sales",
+      "kpiTaxable": "Taxable sales",
+      "kpiGross": "Gross sales",
+      "invoicesCount": "{count} invoices",
+      "kpiRate": "Effective rate",
+      "effective": "VAT / taxable",
+      "tableTitle": "VAT register",
+      "tableMeta": "{count} periods",
+      "colPeriod": "Tax period",
+      "colInvoices": "Invoices",
+      "colTaxable": "Taxable sales",
+      "colVat": "Output VAT",
+      "colGross": "Gross",
+      "grandTotal": "Total",
+      "empty": "No issued invoices in this period.",
+      "footer": "Live data · issued invoices by issue date · credit notes not tax-adjusted (no tax field)",
+      "source": "Source: PMS"
     }
   },
   "returns": {

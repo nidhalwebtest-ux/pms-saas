@@ -3088,6 +3088,29 @@
       "empty": "No tenant activity in this period.",
       "footer": "Live data · stays & revenue for the period · balance is current outstanding",
       "source": "Source: PMS"
+    },
+    "bookingSrc": {
+      "subtitle": "Bookings by acquisition channel · ",
+      "kpiBookings": "Bookings",
+      "viaSources": "via {count} sources",
+      "kpiValue": "Booked value",
+      "omr": "OMR",
+      "kpiAvg": "Avg booking",
+      "perBooking": "per booking",
+      "kpiTop": "Top channel",
+      "bookingsN": "{count} bookings",
+      "distribution": "Channel mix",
+      "tableTitle": "Bookings by source",
+      "tableMeta": "{count} sources",
+      "colName": "Source",
+      "colBookings": "Bookings",
+      "colNights": "Nights",
+      "colValue": "Booked value",
+      "colAvg": "Avg value",
+      "grandTotal": "All sources ({count})",
+      "empty": "No bookings in this period.",
+      "footer": "Live data · reservations booked in range (excl. cancelled/no-show) · value = booking total",
+      "source": "Source: PMS"
     }
   },
   "returns": {

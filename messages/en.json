@@ -3063,6 +3063,31 @@
       "empty": "No staff activity in this period.",
       "footer": "Live data · reservation activity log + payments received",
       "source": "Source: PMS"
+    },
+    "tenantRpt": {
+      "subtitle": "Top tenants by value · ",
+      "kpiRevenue": "Revenue",
+      "omr": "OMR",
+      "byTenants": "from {count} tenants",
+      "kpiTenants": "Active tenants",
+      "newSub": "{count} new",
+      "kpiNights": "Nights",
+      "nightsUnit": "nights",
+      "kpiBalance": "Outstanding",
+      "tableTitle": "Tenant leaderboard",
+      "tableMeta": "{count} tenants",
+      "colName": "Tenant",
+      "colStays": "Stays",
+      "colNights": "Nights",
+      "colRevenue": "Revenue",
+      "colBalance": "Balance",
+      "grandTotal": "All tenants ({count})",
+      "vip": "VIP",
+      "newBadge": "New",
+      "lastStay": "last {date}",
+      "empty": "No tenant activity in this period.",
+      "footer": "Live data · stays & revenue for the period · balance is current outstanding",
+      "source": "Source: PMS"
     }
   },
   "returns": {

@@ -57,7 +57,7 @@ export const REPORT_GROUPS: ReportGroup[] = [
     label: "Operational",
     items: [
       { slug: "receptionist-performance", label: "Receptionist Performance", implemented: true },
-      { slug: "tenant-reports", label: "Tenant Reports" },
+      { slug: "tenant-reports", label: "Tenant Reports", implemented: true },
       { slug: "maintenance", label: "Maintenance" },
       { slug: "booking-sources", label: "Booking Sources" },
       { slug: "cancellation-analysis", label: "Cancellation Analysis" },

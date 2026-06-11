@@ -2963,6 +2963,30 @@
       "empty": "No outstanding balances.",
       "footer": "Live data · balance = invoiced − paid − credited",
       "source": "Source: PMS"
+    },
+    "cashflow": {
+      "subtitle": "Money in vs money out · ",
+      "kpiNet": "Net cash flow",
+      "kpiIn": "Cash in",
+      "kpiOut": "Cash out",
+      "outSplit": "{expenses} expenses · {refunds} refunds",
+      "kpiPeak": "Best period",
+      "omr": "OMR",
+      "chartTitle": "Cash in vs out over time",
+      "legendIn": "Cash in",
+      "legendOut": "Cash out",
+      "empty": "No cash movement in this period.",
+      "tableTitle": "Period breakdown",
+      "tableMeta": "{count} periods",
+      "colPeriod": "Period",
+      "colIn": "Cash in",
+      "colExpenses": "Expenses",
+      "colRefunds": "Refunds",
+      "colNet": "Net",
+      "colRunning": "Cumulative",
+      "total": "Total",
+      "footer": "Live data · cash basis · payments received, expenses approved/processed, refunds paid",
+      "source": "Source: PMS"
     }
   },
   "returns": {

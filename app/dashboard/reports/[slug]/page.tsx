@@ -15,6 +15,7 @@ import { getKhareefPerformance } from "@/lib/reports/khareef-performance";
 import { getRevenueComparison } from "@/lib/reports/revenue-comparison";
 import { getAgingReceivables } from "@/lib/reports/aging-receivables";
 import { getOutstandingBalances } from "@/lib/reports/outstanding-balances";
+import { getCashFlow } from "@/lib/reports/cash-flow";
 import RevenueByBuilding, { type ReportVariant } from "./RevenueByBuilding";
 import OccupancyByBuilding from "./OccupancyByBuilding";
 import OccupancyTrend from "./OccupancyTrend";
@@ -25,6 +26,7 @@ import KhareefPerformance from "./KhareefPerformance";
 import RevenueComparison from "./RevenueComparison";
 import AgingReceivables from "./AgingReceivables";
 import OutstandingBalances from "./OutstandingBalances";
+import CashFlow from "./CashFlow";
 import ComingSoon from "./ComingSoon";
 
 const VARIANTS: Record<string, ReportVariant> = {
@@ -41,7 +43,7 @@ const AGGREGATORS: Record<string, (a: { orgId: string; from: Date; to: Date; pro
   "revenue-by-source": getRevenueBySource,
 };
 
-const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis", "revenue-trend", "avg-length-of-stay", "khareef-performance", "revenue-comparison", "aging-receivables", "outstanding-balances"]);
+const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis", "revenue-trend", "avg-length-of-stay", "khareef-performance", "revenue-comparison", "aging-receivables", "outstanding-balances", "cash-flow"]);
 
 function ErrorCard({ title, message }: { title: string; message: string }) {
   return (
@@ -148,6 +150,30 @@ export default async function ReportPage({
       ]);
       return (
         <RevenueTrend
+          data={data}
+          properties={properties}
+          preset={range.preset}
+          rangeText={range.rangeText}
+          fromDate={range.from}
+          toDate={range.to}
+          selectedPropertyId={propertyId ?? ""}
+        />
+      );
+    } catch (err) {
+      console.error(`[reports/${slug}] aggregation failed:`, err);
+      return <ErrorCard title={report.label} message={err instanceof Error ? err.message : "Unknown error"} />;
+    }
+  }
+
+  // ── Cash Flow ──────────────────────────────────────────────────────────
+  if (slug === "cash-flow") {
+    try {
+      const [data, properties] = await Promise.all([
+        getCashFlow({ orgId: orgUser.organizationId, from, to, propertyId, bucket: sp.bucket }),
+        propertiesPromise,
+      ]);
+      return (
+        <CashFlow
           data={data}
           properties={properties}
           preset={range.preset}

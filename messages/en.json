@@ -2987,6 +2987,30 @@
       "total": "Total",
       "footer": "Live data · cash basis · payments received, expenses approved/processed, refunds paid",
       "source": "Source: PMS"
+    },
+    "pnl": {
+      "subtitle": "Net profit by building · ",
+      "kpiNet": "Net profit",
+      "omr": "OMR",
+      "profitable": "{count}/{total} profitable",
+      "kpiRevenue": "Revenue",
+      "kpiExpenses": "Expenses",
+      "kpiMargin": "Margin",
+      "tableTitle": "P&L by building",
+      "tableMeta": "{count} buildings",
+      "collapseAll": "Collapse",
+      "expandAll": "Expand all",
+      "colName": "Building / Line",
+      "colRevenue": "Revenue",
+      "colExpenses": "Expenses",
+      "colNet": "Net profit",
+      "colMargin": "Margin",
+      "revenueLine": "Revenue",
+      "subtotal": "{name} net",
+      "grandTotal": "All buildings ({count})",
+      "empty": "No revenue or expenses in this period.",
+      "footer": "Live data · revenue net of returns − approved/processed expenses",
+      "source": "Source: PMS"
     }
   },
   "returns": {

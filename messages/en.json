@@ -3011,6 +3011,31 @@
       "empty": "No revenue or expenses in this period.",
       "footer": "Live data · revenue net of returns − approved/processed expenses",
       "source": "Source: PMS"
+    },
+    "expenses": {
+      "subtitle": "Spending by category · ",
+      "kpiTotal": "Total expenses",
+      "omr": "OMR",
+      "expenseCount": "{count} expenses",
+      "kpiTop": "Top category",
+      "kpiAvg": "Avg expense",
+      "perExpense": "per expense",
+      "kpiPending": "Awaiting approval",
+      "awaiting": "{count} pending",
+      "distribution": "Category split",
+      "tableTitle": "Expenses by category",
+      "tableMeta": "{count} categories",
+      "collapseAll": "Collapse",
+      "expandAll": "Expand all",
+      "colName": "Category / Expense",
+      "colAmount": "Amount",
+      "subtotal": "{name} subtotal",
+      "grandTotal": "All categories ({count})",
+      "status_APPROVED": "Approved",
+      "status_PROCESSED": "Processed",
+      "empty": "No approved expenses in this period.",
+      "footer": "Live data · approved/processed expenses by effective date",
+      "source": "Source: PMS"
     }
   },
   "returns": {

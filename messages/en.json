@@ -3185,6 +3185,21 @@
       "empty": "No issued invoices in this period.",
       "footer": "Live data · issued invoices by issue date · credit notes not tax-adjusted (no tax field)",
       "source": "Source: PMS"
+    },
+    "revMonth": {
+      "subtitle": "Monthly net revenue register · ",
+      "kpiAvg": "Avg / month",
+      "perMonth": "per month",
+      "tableTitle": "Monthly register",
+      "tableMeta": "{count} months",
+      "colMonth": "Month",
+      "colInvoices": "Invoices",
+      "colNet": "Net revenue",
+      "colCumulative": "Cumulative",
+      "grandTotal": "Total",
+      "empty": "No revenue in this period.",
+      "footer": "Live data · net = issued invoices − active returns, by month",
+      "source": "Source: PMS"
     }
   },
   "returns": {

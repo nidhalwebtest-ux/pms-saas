@@ -3036,6 +3036,33 @@
       "empty": "لا توجد مصروفات معتمدة في هذه الفترة.",
       "footer": "بيانات حية · المصروفات المعتمدة/المنفذة حسب التاريخ الفعلي",
       "source": "المصدر: نظام إدارة العقارات"
+    },
+    "staff": {
+      "subtitle": "النشاط حسب الموظف · ",
+      "kpiCollected": "المُحصّل",
+      "omr": "ر.ع",
+      "byStaff": "بواسطة {count} موظف",
+      "kpiReservations": "الحجوزات",
+      "kpiCheckIns": "تسجيل الدخول / الخروج",
+      "inOut": "دخول / خروج",
+      "kpiTop": "الأفضل أداءً",
+      "tableTitle": "ترتيب الموظفين",
+      "tableMeta": "{count} موظف",
+      "colName": "الموظف",
+      "colReservations": "الحجوزات",
+      "colCheckIns": "تسجيل الدخول",
+      "colCheckOuts": "تسجيل الخروج",
+      "colPayments": "المدفوعات",
+      "colCollected": "المُحصّل",
+      "actions": "{count} إجراء",
+      "grandTotal": "كل الموظفين ({count})",
+      "role_OWNER": "المالك",
+      "role_MANAGER": "مدير",
+      "role_STAFF": "موظف استقبال",
+      "role_ACCOUNTANT": "محاسب",
+      "empty": "لا يوجد نشاط للموظفين في هذه الفترة.",
+      "footer": "بيانات حية · سجل نشاط الحجوزات + المدفوعات المستلمة",
+      "source": "المصدر: نظام إدارة العقارات"
     }
   },
   "returns": {

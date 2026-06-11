@@ -3036,6 +3036,33 @@
       "empty": "No approved expenses in this period.",
       "footer": "Live data · approved/processed expenses by effective date",
       "source": "Source: PMS"
+    },
+    "staff": {
+      "subtitle": "Activity by staff member · ",
+      "kpiCollected": "Collected",
+      "omr": "OMR",
+      "byStaff": "by {count} staff",
+      "kpiReservations": "Reservations",
+      "kpiCheckIns": "Check-ins / outs",
+      "inOut": "in / out",
+      "kpiTop": "Top performer",
+      "tableTitle": "Staff leaderboard",
+      "tableMeta": "{count} staff",
+      "colName": "Staff member",
+      "colReservations": "Bookings",
+      "colCheckIns": "Check-ins",
+      "colCheckOuts": "Check-outs",
+      "colPayments": "Payments",
+      "colCollected": "Collected",
+      "actions": "{count} actions",
+      "grandTotal": "All staff ({count})",
+      "role_OWNER": "Owner",
+      "role_MANAGER": "Manager",
+      "role_STAFF": "Receptionist",
+      "role_ACCOUNTANT": "Accountant",
+      "empty": "No staff activity in this period.",
+      "footer": "Live data · reservation activity log + payments received",
+      "source": "Source: PMS"
     }
   },
   "returns": {

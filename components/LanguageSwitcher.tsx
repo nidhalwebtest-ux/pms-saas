@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { LanguageIcon } from "@heroicons/react/24/outline";
+import { ChevronDownIcon } from "@heroicons/react/20/solid";
 import { locales, type Locale } from "@/i18n/config";
 
 type Variant = "toggle" | "dropdown";
@@ -15,7 +16,7 @@ interface Props {
 
 const LABELS: Record<Locale, { short: string; long: string }> = {
   en: { short: "EN", long: "English" },
-  ar: { short: "عر", long: "العربية" },
+  ar: { short: "AR", long: "العربية" },
 };
 
 export default function LanguageSwitcher({ variant = "dropdown", className = "" }: Props) {
@@ -68,17 +69,22 @@ export default function LanguageSwitcher({ variant = "dropdown", className = "" 
   }
 
   // dropdown variant
-  // On mobile (sub-sm), hide the icon and use the short locale code so the
-  // header end-group can fit. The native select still renders its full
-  // option list when opened.
+  // The visible label is a short 2-letter code on mobile and the full name on
+  // desktop. A transparent native <select> overlays the whole control so the
+  // OS-native option list (full names) still opens on tap/click.
   return (
-    <div className={`inline-flex items-center gap-1.5 flex-shrink-0 ${className}`}>
-      <LanguageIcon className="h-4 w-4 text-gray-400 hidden sm:block" />
+    <div className={`relative inline-flex items-center gap-1 flex-shrink-0 ${className}`}>
+      <LanguageIcon className="h-4 w-4 text-gray-400 hidden sm:block" aria-hidden="true" />
+      <span className="text-xs font-medium text-gray-700 pointer-events-none">
+        <span className="sm:hidden">{LABELS[locale].short}</span>
+        <span className="hidden sm:inline">{LABELS[locale].long}</span>
+      </span>
+      <ChevronDownIcon className="h-3.5 w-3.5 text-gray-400 pointer-events-none" aria-hidden="true" />
       <select
         value={locale}
         disabled={pending}
         onChange={(e) => setLocale(e.target.value as Locale)}
-        className="bg-transparent border-0 text-xs font-medium text-gray-700 focus:ring-0 focus:outline-none cursor-pointer max-w-[40px] sm:max-w-none truncate"
+        className="absolute inset-0 w-full cursor-pointer opacity-0"
         aria-label="Language"
       >
         {locales.map((l) => (

@@ -270,7 +270,7 @@ export default function Navigation({ role }: { role: Role }) {
           Positioned absolutely relative to <nav> using panelLeft.           */}
       {openKey && activeItem?.children && (
         <div
-          className="absolute top-full z-50 mt-px min-w-[200px] overflow-hidden rounded-b-xl bg-white shadow-xl ring-1 ring-black/10"
+          className="absolute top-full z-50 mt-px min-w-[200px] rounded-b-xl bg-white shadow-xl ring-1 ring-black/10"
           style={isRTL ? { right: `${panelStart}px` } : { left: `${panelStart}px` }}
         >
           {activeItem.children.map((child) => {
@@ -281,7 +281,7 @@ export default function Navigation({ role }: { role: Role }) {
             return (
               <div
                 key={child.href}
-                className="relative"
+                className="relative last:[&>a]:rounded-b-xl"
                 onMouseEnter={() => setOpenSub(child.children ? child.labelKey : null)}
               >
                 <Link

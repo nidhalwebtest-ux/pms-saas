@@ -1,5 +1,17 @@
-import chromium from "@sparticuz/chromium";
+import chromium from "@sparticuz/chromium-min";
 import puppeteer, { type Browser } from "puppeteer-core";
+
+/**
+ * Remote Chromium binary pack (brotli tar) fetched to /tmp on cold start and
+ * reused across warm invocations. Using chromium-min + a remote pack avoids the
+ * bundler relocating the ~50MB binary (Turbopack does not reliably keep the
+ * package's bin/ in the function), which is the canonical Vercel setup.
+ * Override CHROMIUM_PACK_URL to self-host the pack (Supabase/Blob) if desired.
+ * The version MUST match the installed @sparticuz/chromium-min version.
+ */
+const CHROMIUM_PACK_URL =
+  process.env.CHROMIUM_PACK_URL ??
+  "https://github.com/Sparticuz/chromium/releases/download/v149.0.0/chromium-v149.0.0-pack.x64.tar";
 
 /**
  * HTML/CSS → PDF via headless Chromium.
@@ -48,7 +60,7 @@ async function launch(): Promise<Browser> {
   if (isServerless) {
     return puppeteer.launch({
       args: chromium.args,
-      executablePath: await chromium.executablePath(),
+      executablePath: await chromium.executablePath(CHROMIUM_PACK_URL),
       headless: true,
     });
   }

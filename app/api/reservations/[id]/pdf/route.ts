@@ -4,6 +4,12 @@ import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getDisplayStatus, type StoredStatus } from "@/lib/reservation-status";
 import { DISPLAY_STATUS_KEY, getPdfLocaleContext } from "@/lib/pdf-i18n";
+import { htmlToPdf } from "@/lib/pdf/render";
+import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
+
+// Headless Chromium needs the Node runtime (not edge); allow time for cold-start launch.
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 async function getActor() {
   const supabase = await createClient();
@@ -168,8 +174,9 @@ export async function GET(
   <meta name="viewport" content="width=device-width"/>
   <title>${t("title")} ${r.reservationNumber ?? r.id.slice(0, 8)} — ${org?.name ?? ""}</title>
   <style>
+    ${pdfFontFaceCss()}
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size:12px; color:#1a1a1a; background:#fff; }
+    body { font-family: ${PDF_FONT_STACK}; font-size:12px; color:#1a1a1a; background:#fff; }
     .page { max-width:800px; margin:0 auto; padding:40px; }
 
     /* Header */
@@ -179,7 +186,7 @@ export async function GET(
     .org-sub  { font-size:11px; color:#6b7280; margin-top:6px; line-height:1.8; }
     .res-info-area { text-align:${isRtl ? "left" : "right"}; }
     .doc-title-primary  { font-size:16px; font-weight:700; color:#1d4ed8; }
-    .doc-title-secondary  { font-size:13px; color:#6b7280; margin-top:2px; font-family: 'Segoe UI', Tahoma, sans-serif; direction:${secondaryDir}; }
+    .doc-title-secondary  { font-size:13px; color:#6b7280; margin-top:2px; font-family: ${PDF_FONT_STACK}; direction:${secondaryDir}; }
     .res-number    { font-size:20px; font-weight:800; font-family:monospace; color:#111827; margin-top:10px; direction:ltr; }
     .print-date    { font-size:11px; color:#9ca3af; margin-top:3px; }
     .status-pill   { display:inline-block; margin-top:8px; padding:4px 14px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:0.04em; background:${statusColor}1a; color:${statusColor}; border:1px solid ${statusColor}4d; }
@@ -217,7 +224,7 @@ export async function GET(
     /* Footer */
     .footer { margin-top:28px; padding-top:18px; border-top:2px solid #e5e7eb; text-align:center; }
     .footer-primary { font-size:13px; font-weight:600; color:#374151; }
-    .footer-secondary { font-size:12px; color:#6b7280; margin-top:4px; direction:${secondaryDir}; font-family: 'Segoe UI', Tahoma, sans-serif; }
+    .footer-secondary { font-size:12px; color:#6b7280; margin-top:4px; direction:${secondaryDir}; font-family: ${PDF_FONT_STACK}; }
 
     /* Numeric isolation in RTL */
     .ltr-num { direction:ltr; unicode-bidi:embed; display:inline-block; }
@@ -375,13 +382,17 @@ export async function GET(
   </div>
 
 </div>
-<script>window.onload = function() { window.print(); };</script>
 </body>
 </html>`;
 
-  return new Response(html, {
+  const pdf = await htmlToPdf(html, { preferCSSPageSize: true });
+  const fileName = `reservation-${r.reservationNumber ?? r.id.slice(0, 8)}.pdf`;
+
+  return new Response(Buffer.from(pdf), {
     headers: {
-      "Content-Type": "text/html; charset=utf-8",
+      "Content-Type": "application/pdf",
+      // inline → opens in the browser's PDF viewer (the UI opens it in a new tab)
+      "Content-Disposition": `inline; filename="${fileName}"`,
       "Cache-Control": "no-store",
     },
   });

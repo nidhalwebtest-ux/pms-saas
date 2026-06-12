@@ -3,6 +3,12 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getPdfLocaleContext } from "@/lib/pdf-i18n";
+import { htmlToPdf } from "@/lib/pdf/render";
+import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
+
+// Headless Chromium needs the Node runtime (not edge); allow time for cold-start launch.
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
 
@@ -254,8 +260,9 @@ export async function GET(
   <meta name="viewport" content="width=device-width"/>
   <title>${t("title")} ${receiptNumber}</title>
   <style>
+    ${pdfFontFaceCss()}
     * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: 'Segoe UI', Arial, Helvetica, sans-serif; font-size:13px; color:#1a1a1a; background:#fff; }
+    body { font-family: ${PDF_FONT_STACK}; font-size:13px; color:#1a1a1a; background:#fff; }
     .page { max-width:600px; margin:0 auto; padding:32px; }
 
     .header { display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:20px; border-bottom:3px solid #1d4ed8; margin-bottom:24px; }
@@ -413,13 +420,15 @@ export async function GET(
   </div>
 
 </div>
-<script>window.onload = function() { window.print(); };</script>
 </body>
 </html>`;
 
-  return new Response(html, {
+  const pdf = await htmlToPdf(html, { preferCSSPageSize: true });
+
+  return new Response(Buffer.from(pdf), {
     headers: {
-      "Content-Type": "text/html; charset=utf-8",
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename="receipt-${receiptNumber}.pdf"`,
       "Cache-Control": "no-store",
     },
   });

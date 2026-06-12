@@ -3,6 +3,12 @@ import { getTranslations } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { getPdfLocaleContext } from "@/lib/pdf-i18n";
+import { htmlToPdf } from "@/lib/pdf/render";
+import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
+
+// Headless Chromium needs the Node runtime (not edge); allow time for cold-start launch.
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 function roundOMR(n: number): number {
   return Math.round(n * 1000) / 1000;
@@ -201,6 +207,7 @@ export async function GET(
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${t("title")} — ${tenantName}</title>
 <style>
+  ${pdfFontFaceCss()}
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   @page {
@@ -209,7 +216,7 @@ export async function GET(
   }
 
   body {
-    font-family: -apple-system, 'Segoe UI', Arial, sans-serif;
+    font-family: ${PDF_FONT_STACK};
     font-size: 9pt;
     color: #1a1a2e;
     background: #fff;
@@ -411,12 +418,6 @@ export async function GET(
 </head>
 <body>
 
-<!-- Print button (hidden on print) -->
-<div class="no-print" style="position:fixed;top:12px;${isRtl ? "left" : "right"}:16px;z-index:99;display:flex;gap:8px;">
-  <button onclick="window.print()" style="background:#2563eb;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 2px 6px rgba(37,99,235,.35);">${t("buttons.printSavePdf")}</button>
-  <button onclick="window.close()" style="background:#f3f4f6;color:#374151;border:1px solid #d1d5db;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;">${t("buttons.close")}</button>
-</div>
-
 <!-- Header -->
 <div class="header">
   <div class="header-left">
@@ -519,9 +520,12 @@ export async function GET(
 </body>
 </html>`;
 
-  return new Response(html, {
+  const pdf = await htmlToPdf(html, { preferCSSPageSize: true });
+
+  return new Response(Buffer.from(pdf), {
     headers: {
-      "Content-Type": "text/html; charset=utf-8",
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `inline; filename="ledger-${tenantName.replace(/\s+/g, "-")}.pdf"`,
       "Cache-Control": "no-store",
     },
   });

@@ -6,14 +6,19 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
 import { NAV_ACCESS, type Role } from "@/lib/permissions";
+import { REPORT_GROUPS } from "@/app/dashboard/reports/reports-config";
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 
-type SubItem = { labelKey: string; href: string };
+/** Translation namespace for a label key. Defaults to "nav". */
+type Ns = "nav" | "reports";
+
+type SubItem = { labelKey: string; href: string; ns?: Ns };
 
 type DropdownItem = {
   labelKey: string;
   href: string;
+  ns?: Ns;
   children?: SubItem[];
 };
 
@@ -80,7 +85,21 @@ const navigationConfig: NavItem[] = [
       { labelKey: "manageCategories", href: "/dashboard/settings/expense-categories" },
     ],
   },
-  { key: "reports", labelKey: "reports", href: "/dashboard/reports" },
+  {
+    key:      "reports",
+    labelKey: "reports",
+    href:     "/dashboard/reports",
+    children: REPORT_GROUPS.map((g) => ({
+      labelKey: `groups.${g.key}`,
+      ns:       "reports" as const,
+      href:     `/dashboard/reports/${g.items[0].slug}`,
+      children: g.items.map((it) => ({
+        labelKey: `items.${it.slug}`,
+        ns:       "reports" as const,
+        href:     `/dashboard/reports/${it.slug}`,
+      })),
+    })),
+  },
   {
     key:      "settings",
     labelKey: "settings",
@@ -113,6 +132,9 @@ export default function Navigation({ role }: { role: Role }) {
   const pathname = usePathname();
   const navRef   = useRef<HTMLElement>(null);
   const t        = useTranslations("nav");
+  const tReports = useTranslations("reports");
+  // Resolve a label from the right namespace (report groups/items live in "reports").
+  const label = (key: string, ns?: Ns) => (ns === "reports" ? tReports(key) : t(key));
 
   // Track which top-level dropdown and which sub-dropdown is open
   const [openKey, setOpenKey]   = useState<string | null>(null);
@@ -272,7 +294,7 @@ export default function Navigation({ role }: { role: Role }) {
                       : "text-gray-700 hover:bg-gray-50 hover:text-blue-600",
                   )}
                 >
-                  {t(child.labelKey)}
+                  {label(child.labelKey, child.ns)}
                   {child.children && (
                     <ChevronRightIcon className="h-3.5 w-3.5 flex-shrink-0 text-gray-400" />
                   )}
@@ -293,7 +315,7 @@ export default function Navigation({ role }: { role: Role }) {
                             : "text-gray-700 hover:bg-gray-50 hover:text-blue-600",
                         )}
                       >
-                        {t(sub.labelKey)}
+                        {label(sub.labelKey, sub.ns)}
                       </Link>
                     ))}
                   </div>

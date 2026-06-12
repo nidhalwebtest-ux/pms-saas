@@ -24,8 +24,8 @@ export default async function Header({ userEmail, userName, role, properties, se
 
       {/* ── Start: Logo + Property selector ───────────────────────── */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-initial">
-        <div className="h-8 w-8 rounded-md bg-blue-600 flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-lg">P</span>
+        <div className="h-7 w-7 rounded-md bg-blue-600 flex items-center justify-center flex-shrink-0">
+          <span className="text-white font-bold text-sm">P</span>
         </div>
         <span className="text-lg font-semibold tracking-tight text-gray-900 hidden md:block">
           {t("appName")} <span className="text-xs text-gray-400 font-normal ltr-numbers">{t("version")}</span>
@@ -59,16 +59,18 @@ export default async function Header({ userEmail, userName, role, properties, se
 
         <div className="hidden lg:block h-5 w-px bg-gray-200" aria-hidden="true" />
 
-        {/* Avatar + info */}
+        {/* User: name always; avatar + role on desktop only */}
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white flex-shrink-0">
+          <div className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white flex-shrink-0">
             {displayName[0].toUpperCase()}
           </div>
-          <div className="hidden sm:block text-end min-w-0">
-            <p className="text-sm font-semibold text-gray-900 leading-tight truncate max-w-[160px]">{displayName}</p>
-            <Badge {...getUserRoleBadge(role)} size="sm">
-              {tRoles(role)}
-            </Badge>
+          <div className="text-end min-w-0">
+            <p className="text-sm font-semibold text-gray-900 leading-tight truncate max-w-[110px] sm:max-w-[160px]">{displayName}</p>
+            <div className="hidden sm:block">
+              <Badge {...getUserRoleBadge(role)} size="sm">
+                {tRoles(role)}
+              </Badge>
+            </div>
           </div>
         </div>
 

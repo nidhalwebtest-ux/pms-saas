@@ -117,7 +117,7 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
         )}
         {!isCancelled && (
           <a
-            href={`/dashboard/invoices/${invoiceId}/print`}
+            href={`/api/invoices/${invoiceId}/pdf`}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"

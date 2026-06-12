@@ -102,7 +102,7 @@ export default function InvoicesTable({
             label: tRow("print"),
             icon: <PrinterIcon className="h-4 w-4" />,
             visible: !isDraft && !isCancelled,
-            onClick: () => router.push(`/dashboard/invoices/${r.id}/print`),
+            onClick: () => window.open(`/api/invoices/${r.id}/pdf`, "_blank"),
           },
           {
             id: "view",

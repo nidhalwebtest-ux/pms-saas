@@ -3233,6 +3233,18 @@
   },
   "returns": {
     "title": "Returns",
+    "print": {
+      "title": "Credit Note — {number}",
+      "heading": "CREDIT NOTE",
+      "creditNoteNo": "Credit Note No",
+      "issueDate": "Issue Date",
+      "status": "Status",
+      "billTo": "Issued To",
+      "appliedInvoice": "Applied to Invoice",
+      "thankYou": "This credit note has been applied to your account.",
+      "computerGenerated": "Computer-generated credit note",
+      "downloadPdf": "Credit Note PDF"
+    },
     "recordsCount": "{count} returns",
     "footer": {
       "returned": "Returned",

@@ -10,6 +10,7 @@ import {
   ArrowLeftIcon,
   ListBulletIcon,
   BanknotesIcon,
+  PrinterIcon,
 } from "@heroicons/react/24/outline";
 import { getTranslations, getLocale } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
@@ -58,6 +59,7 @@ export default async function ReturnDetailPage({
   const locale  = await getLocale();
   const dfLoc   = locale === "ar" ? arLocale : enLocale;
   const t       = await getTranslations("returns");
+  const tPrint  = await getTranslations("returns.print");
   const tDet    = await getTranslations("returns.detail");
   const tStatus = await getTranslations("returns.statuses");
   const tType   = await getTranslations("returns.types");
@@ -99,13 +101,24 @@ export default async function ReturnDetailPage({
             </p>
           </div>
         </div>
-        <Link
-          href="/dashboard/returns"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
-        >
-          <ListBulletIcon className="h-4 w-4" />
-          {tDet("backToList")}
-        </Link>
+        <div className="flex items-center gap-2">
+          <a
+            href={`/api/returns/${ret.id}/pdf`}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+          >
+            <PrinterIcon className="h-4 w-4" />
+            {tPrint("downloadPdf")}
+          </a>
+          <Link
+            href="/dashboard/returns"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+          >
+            <ListBulletIcon className="h-4 w-4" />
+            {tDet("backToList")}
+          </Link>
+        </div>
       </div>
 
       {/* Refund action */}

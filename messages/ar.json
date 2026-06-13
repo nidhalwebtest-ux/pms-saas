@@ -3233,6 +3233,18 @@
   },
   "returns": {
     "title": "المرتجعات",
+    "print": {
+      "title": "إشعار دائن — {number}",
+      "heading": "إشعار دائن",
+      "creditNoteNo": "رقم الإشعار الدائن",
+      "issueDate": "تاريخ الإصدار",
+      "status": "الحالة",
+      "billTo": "صادر إلى",
+      "appliedInvoice": "مطبَّق على الفاتورة",
+      "thankYou": "تم تطبيق هذا الإشعار الدائن على حسابكم.",
+      "computerGenerated": "إشعار دائن صادر آلياً",
+      "downloadPdf": "ملف الإشعار الدائن"
+    },
     "recordsCount": "{count} مرتجع",
     "footer": {
       "returned": "المرتجع",

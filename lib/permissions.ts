@@ -24,6 +24,7 @@ export const NAV_ACCESS: Record<string, Role[]> = {
   payments:     ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],
   expenses:     ["OWNER", "MANAGER", "STAFF", "ACCOUNTANT"],  // All roles — receptionist submits, manager approves, accountant processes
   reports:      ["OWNER", "MANAGER"],
+  salesTargets: ["OWNER", "MANAGER"],
   settings:     ["OWNER", "MANAGER"],
 };
 
@@ -42,6 +43,7 @@ export const ACTION_ACCESS: Record<string, Role[]> = {
   approveExpense:     ["OWNER", "MANAGER"],            // Manager/Owner can approve or reject
   processExpense:     ["OWNER", "ACCOUNTANT"],         // Accountant/Owner can process
   manageExpenseCategories: ["OWNER", "MANAGER"],       // Admin-level
+  manageSalesTargets: ["OWNER", "MANAGER"],            // Manager/Owner set sales targets
 };
 
 // ── Helper ────────────────────────────────────────────────────────────────────

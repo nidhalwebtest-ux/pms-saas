@@ -100,6 +100,7 @@ const navigationConfig: NavItem[] = [
       })),
     })),
   },
+  { key: "salesTargets", labelKey: "salesTargets", href: "/dashboard/sales-targets" },
   {
     key:      "settings",
     labelKey: "settings",

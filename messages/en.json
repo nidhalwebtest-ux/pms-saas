@@ -379,6 +379,7 @@
     "submitExpense": "Submit Expense",
     "manageCategories": "Manage Categories",
     "reports": "Reports",
+    "salesTargets": "Sales Targets",
     "settings": "Settings",
     "teamManagement": "Team Management",
     "staffAccounts": "Staff Accounts",
@@ -3230,6 +3231,24 @@
       "footer": "Live data · revenue net of returns − approved/processed expenses · occupancy & bookings for the period",
       "source": "Source: PMS"
     }
+  },
+  "salesTargets": {
+    "title": "Sales Targets",
+    "subtitle": "Set sales targets per salesrep, building or unit for each week or month.",
+    "scope": "Set targets by",
+    "scopes": { "RECEPTIONIST": "Salesrep", "BUILDING": "Building", "UNIT": "Unit" },
+    "periodType": "Period",
+    "periodTypes": { "MONTHLY": "Monthly", "WEEKLY": "Weekly" },
+    "period": "Select period",
+    "entity": "Name",
+    "target": "Target (OMR)",
+    "total": "Total",
+    "omr": "OMR",
+    "empty": "Nothing to set targets for yet.",
+    "save": "Save targets",
+    "saving": "Saving…",
+    "saved": "Targets saved",
+    "errors": { "forbidden": "You don't have permission to set targets.", "generic": "Could not save targets. Please try again." }
   },
   "returns": {
     "title": "Returns",

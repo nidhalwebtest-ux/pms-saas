@@ -909,3 +909,29 @@ model Invitation {
   @@index([token])
   @@index([email, organizationId])
 }
+
+/// Manager-set sales targets, compared against actual sales in the Sales
+/// Forecast (target-vs-actual) report. Polymorphic by `scope`: refId points to
+/// a User (receptionist), Property (building) or Unit. One target per
+/// (org, scope, refId, periodType, periodStart). periodStart is normalized UTC:
+/// the 1st of the month (MONTHLY) or the Monday of the week (WEEKLY).
+model SalesTarget {
+  id             String   @id @default(uuid())
+  organizationId String
+
+  scope          String   // RECEPTIONIST | BUILDING | UNIT
+  refId          String   // userId | propertyId | unitId (per scope)
+
+  periodType     String   // WEEKLY | MONTHLY
+  periodStart    DateTime
+
+  amount         Decimal  @db.Decimal(10, 3)
+
+  createdById    String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, scope, refId, periodType, periodStart])
+  @@index([organizationId, scope, periodType, periodStart])
+}

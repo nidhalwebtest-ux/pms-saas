@@ -3739,6 +3739,17 @@
   },
   "expenses": {
     "title": "المصروفات",
+    "print": {
+      "title": "سند صرف — {number}",
+      "heading": "سند صرف",
+      "voucherNo": "رقم السند",
+      "issueDate": "التاريخ",
+      "status": "الحالة",
+      "processingHeading": "المعالجة",
+      "rejectionHeading": "الرفض",
+      "computerGenerated": "سند صرف صادر آلياً",
+      "downloadPdf": "ملف سند الصرف"
+    },
     "subtitle": "تتبع المصروفات التشغيلية واعتمادها ومعالجتها",
     "categoriesBtn": "التصنيفات",
     "submitExpense": "تقديم مصروف",

@@ -18,6 +18,7 @@ import {
   CheckCircleIcon,
   ClockIcon,
   XCircleIcon,
+  PrinterIcon,
 } from "@heroicons/react/24/outline";
 import ExpenseActionPanel from "./ExpenseActionPanel";
 import { Badge, getExpenseStatusBadge, type ExpenseStatusKey } from "@/components/ui";
@@ -65,6 +66,7 @@ export default async function ExpenseDetailsPage({
   }
 
   const tDet = await getTranslations("expenses.detail");
+  const tPrint = await getTranslations("expenses.print");
   const tStatusFull = await getTranslations("expenses.statusFull");
   const tTimeline = await getTranslations("expenses.detail.timeline");
   const tPm = await getTranslations("expenses.detail.paymentMethods");
@@ -107,6 +109,15 @@ export default async function ExpenseDetailsPage({
             {tDet("submittedOn", { date: fmtDateTime(expense.submittedAt) ?? "—" })}
           </p>
         </div>
+        <a
+          href={`/api/expenses/${expense.id}/pdf`}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+        >
+          <PrinterIcon className="h-4 w-4" />
+          {tPrint("downloadPdf")}
+        </a>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

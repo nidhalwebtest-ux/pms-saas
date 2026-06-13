@@ -3739,6 +3739,17 @@
   },
   "expenses": {
     "title": "Expenses",
+    "print": {
+      "title": "Expense Voucher — {number}",
+      "heading": "EXPENSE VOUCHER",
+      "voucherNo": "Voucher No",
+      "issueDate": "Date",
+      "status": "Status",
+      "processingHeading": "Processing",
+      "rejectionHeading": "Rejection",
+      "computerGenerated": "Computer-generated voucher",
+      "downloadPdf": "Voucher PDF"
+    },
     "subtitle": "Track, approve and process operational expenses",
     "categoriesBtn": "Categories",
     "submitExpense": "Submit Expense",

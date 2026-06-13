@@ -28,6 +28,14 @@ export default async function OrganizationSettingsPage() {
       logo: true,
       timezone: true,
       currency: true,
+      pdfBrandColor: true,
+      pdfFooterText: true,
+      pdfFooterTextAr: true,
+      pdfPaperSize: true,
+      pdfShowLogo: true,
+      pdfShowSignature: true,
+      pdfShowPaymentHistory: true,
+      pdfShowNotes: true,
     },
   });
   if (!org) redirect("/onboarding");
@@ -56,6 +64,14 @@ export default async function OrganizationSettingsPage() {
           logo:     org.logo,
           timezone: org.timezone,
           currency: org.currency,
+          pdfBrandColor:         org.pdfBrandColor,
+          pdfFooterText:         org.pdfFooterText ?? "",
+          pdfFooterTextAr:       org.pdfFooterTextAr ?? "",
+          pdfPaperSize:          org.pdfPaperSize,
+          pdfShowLogo:           org.pdfShowLogo,
+          pdfShowSignature:      org.pdfShowSignature,
+          pdfShowPaymentHistory: org.pdfShowPaymentHistory,
+          pdfShowNotes:          org.pdfShowNotes,
         }}
       />
     </div>

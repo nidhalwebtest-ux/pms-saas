@@ -39,6 +39,17 @@ export async function updateOrganization(
   const logoFile = formData.get("logo") as File | null;
   const removeLogo = formData.get("removeLogo") === "1";
 
+  // ── PDF / document customization ─────────────────────────────────────────────
+  const rawBrand = (formData.get("pdfBrandColor") as string)?.trim() || "#1d4ed8";
+  const pdfBrandColor = /^#[0-9a-fA-F]{6}$/.test(rawBrand) ? rawBrand : "#1d4ed8";
+  const pdfFooterText   = (formData.get("pdfFooterText")   as string)?.trim() || null;
+  const pdfFooterTextAr = (formData.get("pdfFooterTextAr") as string)?.trim() || null;
+  const pdfPaperSize = (formData.get("pdfPaperSize") as string) === "Letter" ? "Letter" : "A4";
+  const pdfShowLogo           = formData.get("pdfShowLogo") === "1";
+  const pdfShowSignature      = formData.get("pdfShowSignature") === "1";
+  const pdfShowPaymentHistory = formData.get("pdfShowPaymentHistory") === "1";
+  const pdfShowNotes          = formData.get("pdfShowNotes") === "1";
+
   // ── Validation ─────────────────────────────────────────────────────────────
   if (!name) {
     return { ok: false, error: "name_required", field: "name" };
@@ -98,6 +109,14 @@ export async function updateOrganization(
         timezone,
         currency,
         ...(logoUrl !== undefined ? { logo: logoUrl } : {}),
+        pdfBrandColor,
+        pdfFooterText,
+        pdfFooterTextAr,
+        pdfPaperSize,
+        pdfShowLogo,
+        pdfShowSignature,
+        pdfShowPaymentHistory,
+        pdfShowNotes,
       },
     });
   } catch (err) {

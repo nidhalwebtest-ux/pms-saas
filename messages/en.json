@@ -4233,7 +4233,21 @@
       "save": "Save changes",
       "saving": "Saving…",
       "revert": "Discard changes",
-      "savedToast": "Organization settings saved."
+      "savedToast": "Organization settings saved.",
+      "pdf": {
+        "heading": "Document branding",
+        "subtitle": "Applied to all PDFs — reservations, invoices, receipts, credit notes, vouchers and statements.",
+        "brandColor": "Brand color",
+        "paperSize": "Paper size",
+        "footerText": "Footer text (English)",
+        "footerTextAr": "Footer text (Arabic)",
+        "footerPlaceholder": "e.g. Thank you for your business",
+        "footerPlaceholderAr": "مثال: شكراً لتعاملكم معنا",
+        "showLogo": "Show logo on documents",
+        "showSignature": "Show signature block (reservation)",
+        "showPaymentHistory": "Show payment history (invoice & receipt)",
+        "showNotes": "Show notes section"
+      }
     },
     "reservations": {
       "title": "Reservations",

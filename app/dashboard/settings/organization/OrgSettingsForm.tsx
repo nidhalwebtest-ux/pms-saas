@@ -46,6 +46,14 @@ type FormState = {
   logo: string | null;
   timezone: string;
   currency: string;
+  pdfBrandColor: string;
+  pdfFooterText: string;
+  pdfFooterTextAr: string;
+  pdfPaperSize: string;
+  pdfShowLogo: boolean;
+  pdfShowSignature: boolean;
+  pdfShowPaymentHistory: boolean;
+  pdfShowNotes: boolean;
 };
 
 export default function OrgSettingsForm({ org }: { org: FormState }) {
@@ -68,6 +76,14 @@ export default function OrgSettingsForm({ org }: { org: FormState }) {
     form.area     !== org.area     ||
     form.timezone !== org.timezone ||
     form.currency !== org.currency ||
+    form.pdfBrandColor         !== org.pdfBrandColor         ||
+    form.pdfFooterText         !== org.pdfFooterText         ||
+    form.pdfFooterTextAr       !== org.pdfFooterTextAr       ||
+    form.pdfPaperSize          !== org.pdfPaperSize          ||
+    form.pdfShowLogo           !== org.pdfShowLogo           ||
+    form.pdfShowSignature      !== org.pdfShowSignature      ||
+    form.pdfShowPaymentHistory !== org.pdfShowPaymentHistory ||
+    form.pdfShowNotes          !== org.pdfShowNotes          ||
     logoFile      !== null         ||
     removeLogo;
 
@@ -96,6 +112,14 @@ export default function OrgSettingsForm({ org }: { org: FormState }) {
       fd.append("area",     form.area.trim());
       fd.append("timezone", form.timezone);
       fd.append("currency", form.currency);
+      fd.append("pdfBrandColor",   form.pdfBrandColor);
+      fd.append("pdfFooterText",   form.pdfFooterText.trim());
+      fd.append("pdfFooterTextAr", form.pdfFooterTextAr.trim());
+      fd.append("pdfPaperSize",    form.pdfPaperSize);
+      if (form.pdfShowLogo)           fd.append("pdfShowLogo", "1");
+      if (form.pdfShowSignature)      fd.append("pdfShowSignature", "1");
+      if (form.pdfShowPaymentHistory) fd.append("pdfShowPaymentHistory", "1");
+      if (form.pdfShowNotes)          fd.append("pdfShowNotes", "1");
       if (logoFile) fd.append("logo", logoFile);
       if (removeLogo) fd.append("removeLogo", "1");
 
@@ -303,6 +327,89 @@ export default function OrgSettingsForm({ org }: { org: FormState }) {
             setRemoveLogo(false);
           }}
         />
+      </div>
+
+      {/* ── Document / PDF customization ───────────────────────────────── */}
+      <div className="pt-4 border-t border-gray-100">
+        <h3 className="text-sm font-semibold text-gray-900">{t("pdf.heading")}</h3>
+        <p className="text-xs text-gray-500 mt-0.5 mb-4">{t("pdf.subtitle")}</p>
+
+        {/* Brand color + paper size */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t("pdf.brandColor")}</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={form.pdfBrandColor}
+                onChange={(e) => set("pdfBrandColor", e.target.value)}
+                className="h-9 w-12 cursor-pointer rounded border border-gray-300 bg-white p-0.5"
+              />
+              <input
+                type="text"
+                value={form.pdfBrandColor}
+                onChange={(e) => set("pdfBrandColor", e.target.value)}
+                className="w-28 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm ltr-numbers focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t("pdf.paperSize")}</label>
+            <select
+              value={form.pdfPaperSize}
+              onChange={(e) => set("pdfPaperSize", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            >
+              <option value="A4">A4</option>
+              <option value="Letter">Letter</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Footer text EN + AR */}
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t("pdf.footerText")}</label>
+            <input
+              type="text"
+              value={form.pdfFooterText}
+              onChange={(e) => set("pdfFooterText", e.target.value)}
+              placeholder={t("pdf.footerPlaceholder")}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">{t("pdf.footerTextAr")}</label>
+            <input
+              type="text"
+              dir="rtl"
+              value={form.pdfFooterTextAr}
+              onChange={(e) => set("pdfFooterTextAr", e.target.value)}
+              placeholder={t("pdf.footerPlaceholderAr")}
+              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+            />
+          </div>
+        </div>
+
+        {/* Section toggles */}
+        <div className="mt-4 space-y-2.5">
+          {([
+            ["pdfShowLogo", "showLogo"],
+            ["pdfShowSignature", "showSignature"],
+            ["pdfShowPaymentHistory", "showPaymentHistory"],
+            ["pdfShowNotes", "showNotes"],
+          ] as const).map(([key, labelKey]) => (
+            <label key={key} className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form[key]}
+                onChange={(e) => set(key, e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">{t(`pdf.${labelKey}`)}</span>
+            </label>
+          ))}
+        </div>
       </div>
 
       {/* Save */}

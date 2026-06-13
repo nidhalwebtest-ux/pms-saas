@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getPdfLocaleContext } from "@/lib/pdf-i18n";
 import { htmlToPdf } from "@/lib/pdf/render";
 import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
+import { getPdfBranding, brandRootCss, logoHtml } from "@/lib/pdf/branding";
 
 // Headless Chromium needs the Node runtime (not edge); allow time for cold-start launch.
 export const runtime = "nodejs";
@@ -204,6 +205,7 @@ export async function GET(
     return new Response("Unauthorized", { status: 403 });
   }
   const amount = Number(payment.amount);
+  const brand = await getPdfBranding(payment.tenant.organizationId);
 
   // ── i18n ──────────────────────────────────────────────────────────────────
   const { locale, otherLocale, dir, fmtLong, fmtShort } = await getPdfLocaleContext();
@@ -261,15 +263,17 @@ export async function GET(
   <title>${t("title")} ${receiptNumber}</title>
   <style>
     ${pdfFontFaceCss()}
+    ${brandRootCss(brand)}
+    .brand-logo { margin-bottom:8px; }
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: ${PDF_FONT_STACK}; font-size:13px; color:#1a1a1a; background:#fff; }
     .page { max-width:600px; margin:0 auto; padding:32px; }
 
-    .header { display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:20px; border-bottom:3px solid #1d4ed8; margin-bottom:24px; }
-    .org-name { font-size:20px; font-weight:800; color:#1d4ed8; }
+    .header { display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:20px; border-bottom:3px solid var(--brand); margin-bottom:24px; }
+    .org-name { font-size:20px; font-weight:800; color:var(--brand); }
     .org-sub  { font-size:11px; color:#6b7280; margin-top:5px; line-height:1.7; }
     .doc-area { text-align:${isRtl ? "left" : "right"}; }
-    .doc-title-primary   { font-size:15px; font-weight:700; color:#1d4ed8; letter-spacing:0.03em; }
+    .doc-title-primary   { font-size:15px; font-weight:700; color:var(--brand); letter-spacing:0.03em; }
     .doc-title-secondary { font-size:13px; color:#6b7280; margin-top:2px; direction:${secondaryDir}; }
     .receipt-num { font-size:17px; font-weight:800; font-family:monospace; color:#111827; margin-top:8px; direction:ltr; }
 
@@ -324,6 +328,7 @@ export async function GET(
   <!-- HEADER -->
   <div class="header">
     <div>
+      ${logoHtml(brand) ? `<div class="brand-logo">${logoHtml(brand)}</div>` : ""}
       <div class="org-name">${orgName}</div>
       <div class="org-sub">
         ${org?.address ? `<div>${org.address}${org?.city ? `, ${org.city}` : ""}</div>` : ""}
@@ -392,7 +397,7 @@ export async function GET(
   </div>
 
   <!-- APPLIED TO -->
-  ${payment.allocations.length > 0 ? `
+  ${brand.showPaymentHistory && payment.allocations.length > 0 ? `
   <div class="section">
     ${sectionHeader("sections.appliedTo")}
     <table>
@@ -413,8 +418,10 @@ export async function GET(
 
   <!-- FOOTER -->
   <div class="footer">
-    <div class="footer-thank-primary">${t("footer.thankYou")}</div>
-    <div class="footer-thank-secondary">${tOther("footer.thankYou")}</div>
+    ${(isRtl ? (brand.footerTextAr || brand.footerText) : brand.footerText)?.trim()
+      ? `<div class="footer-thank-primary">${(isRtl ? (brand.footerTextAr || brand.footerText) : brand.footerText)!.trim()}</div>`
+      : `<div class="footer-thank-primary">${t("footer.thankYou")}</div>
+         <div class="footer-thank-secondary">${tOther("footer.thankYou")}</div>`}
     <div class="footer-note">${t("footer.computerGenerated")} | <span style="direction:${secondaryDir}">${tOther("footer.computerGenerated")}</span></div>
     ${payment.receivedBy ? `<div class="footer-note">${t("footer.recordedBy", { name: `${payment.receivedBy.firstName ?? ""} ${payment.receivedBy.lastName ?? ""}`.trim() })}</div>` : ""}
   </div>

@@ -4233,7 +4233,21 @@
       "save": "حفظ التغييرات",
       "saving": "جاري الحفظ…",
       "revert": "تجاهل التغييرات",
-      "savedToast": "تم حفظ إعدادات المؤسسة."
+      "savedToast": "تم حفظ إعدادات المؤسسة.",
+      "pdf": {
+        "heading": "هوية المستندات",
+        "subtitle": "تُطبَّق على جميع ملفات PDF — الحجوزات والفواتير والإيصالات والإشعارات الدائنة وسندات الصرف وكشوف الحساب.",
+        "brandColor": "لون العلامة",
+        "paperSize": "حجم الورق",
+        "footerText": "نص التذييل (إنجليزي)",
+        "footerTextAr": "نص التذييل (عربي)",
+        "footerPlaceholder": "e.g. Thank you for your business",
+        "footerPlaceholderAr": "مثال: شكراً لتعاملكم معنا",
+        "showLogo": "إظهار الشعار على المستندات",
+        "showSignature": "إظهار خانة التوقيع (الحجز)",
+        "showPaymentHistory": "إظهار سجل الدفعات (الفاتورة والإيصال)",
+        "showNotes": "إظهار قسم الملاحظات"
+      }
     },
     "reservations": {
       "title": "الحجوزات",

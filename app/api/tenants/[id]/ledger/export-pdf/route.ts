@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getPdfLocaleContext } from "@/lib/pdf-i18n";
 import { htmlToPdf } from "@/lib/pdf/render";
 import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
+import { getPdfBranding, brandRootCss, logoHtml } from "@/lib/pdf/branding";
 
 // Headless Chromium needs the Node runtime (not edge); allow time for cold-start launch.
 export const runtime = "nodejs";
@@ -41,6 +42,7 @@ export async function GET(
     where:  { id: orgUser.organizationId },
     select: { name: true, phone: true, city: true },
   });
+  const brand = await getPdfBranding(orgUser.organizationId);
 
   // Date filters
   const dateGte = dateFrom ? new Date(dateFrom) : undefined;
@@ -208,10 +210,12 @@ export async function GET(
 <title>${t("title")} — ${tenantName}</title>
 <style>
   ${pdfFontFaceCss()}
+  ${brandRootCss(brand)}
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  .brand-logo { margin-bottom:6px; }
 
   @page {
-    size: A4 landscape;
+    size: ${brand.paperSize} landscape;
     margin: 12mm 14mm;
   }
 
@@ -228,14 +232,14 @@ export async function GET(
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    border-bottom: 2px solid #2563eb;
+    border-bottom: 2px solid var(--brand);
     padding-bottom: 10px;
     margin-bottom: 14px;
   }
   .header-left h1 {
     font-size: 18pt;
     font-weight: 700;
-    color: #2563eb;
+    color: var(--brand);
     letter-spacing: -0.3px;
   }
   .header-left .subtitle {
@@ -425,6 +429,7 @@ export async function GET(
     <div class="subtitle">${tOther("title")}</div>
   </div>
   <div class="header-right">
+    ${logoHtml(brand) ? `<div class="brand-logo">${logoHtml(brand)}</div>` : ""}
     <div class="org-name">${orgName}</div>
     <div class="org-sub">${orgCity}, ${tCommon("country")}${org?.phone ? ` · <span style="direction:ltr">${org.phone}</span>` : ""}</div>
     <div class="org-sub" style="margin-top:4px;">${t("printedOn", { date: printDate })}</div>

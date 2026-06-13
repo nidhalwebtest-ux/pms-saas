@@ -6,6 +6,7 @@ import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { htmlToPdf } from "@/lib/pdf/render";
 import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
+import { getPdfBranding, brandRootCss, logoHtml, footerLine } from "@/lib/pdf/branding";
 
 // Headless Chromium needs the Node runtime (not edge); allow time for cold-start launch.
 export const runtime = "nodejs";
@@ -55,6 +56,8 @@ export async function GET(
   if (!invoice || invoice.organizationId !== orgUser.organizationId) {
     return new Response("Invoice not found", { status: 404 });
   }
+
+  const brand = await getPdfBranding(invoice.organizationId);
 
   // ── i18n ──────────────────────────────────────────────────────────────────
   const locale  = await getLocale();
@@ -143,12 +146,14 @@ export async function GET(
 <title>${esc(tPrint("title", { number: invoice.invoiceNumber }))}</title>
 <style>
   ${pdfFontFaceCss()}
+  ${brandRootCss(brand)}
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: ${PDF_FONT_STACK}; font-size: 13px; color: #1f2937; background: #fff; direction: ${dir}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .ltr-numbers { direction: ltr; unicode-bidi: embed; display: inline-block; }
   .page { max-width: 100%; background: #fff; }
 
-  .header { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #fff; padding: 32px 40px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .header { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%); color: #fff; padding: 32px 40px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .brand-logo { background:#fff; padding:6px 10px; border-radius:8px; margin-bottom:12px; display:inline-block; }
   .header h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
   .org-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
   .org-detail { font-size: 12px; opacity: 0.82; line-height: 1.6; }
@@ -208,7 +213,7 @@ export async function GET(
   .footer { text-align: center; padding: 20px 40px 28px; border-top: 1px solid #f3f4f6; color: #9ca3af; font-size: 12px; }
   .footer .thank-you { font-size: 14px; font-weight: 600; color: #6b7280; margin-bottom: 4px; }
 
-  @page { size: A4; margin: 0; }
+  @page { size: ${brand.paperSize}; margin: 0; }
 </style>
 </head>
 <body>
@@ -216,6 +221,7 @@ export async function GET(
 
   <div class="header">
     <div>
+      ${logoHtml(brand) ? `<div class="brand-logo">${logoHtml(brand)}</div>` : ""}
       <div class="org-name">${esc(org.name)}</div>
       ${org.address ? `<div class="org-detail">${esc(org.address)}</div>` : ""}
       ${org.city ? `<div class="org-detail">${esc(org.city)}${org.area ? `, ${esc(org.area)}` : ""}</div>` : ""}
@@ -283,7 +289,7 @@ export async function GET(
       </div>
     </div>
 
-    ${invoice.allocations.length > 0 ? `
+    ${brand.showPaymentHistory && invoice.allocations.length > 0 ? `
     <div class="payments-section">
       <div class="section-label">${esc(tPrint("paymentHistory"))}</div>
       <table class="payments">
@@ -297,11 +303,11 @@ export async function GET(
       </table>
     </div>` : ""}
 
-    ${invoice.notes ? `<div class="notes-section"><strong>${esc(tPrint("notesLabel"))}:</strong> ${esc(invoice.notes)}</div>` : ""}
+    ${brand.showNotes && invoice.notes ? `<div class="notes-section"><strong>${esc(tPrint("notesLabel"))}:</strong> ${esc(invoice.notes)}</div>` : ""}
   </div>
 
   <div class="footer">
-    <div class="thank-you">${esc(tPrint("thankYou"))}</div>
+    <div class="thank-you">${esc(footerLine(brand, isAr, tPrint("thankYou")))}</div>
     <div style="font-size:11px;color:#d1d5db">
       <span>${esc(org.name)}</span>${org.city ? ` · <span>${esc(org.city)}</span>` : ""}${org.phone ? ` · <span class="ltr-numbers">${esc(org.phone)}</span>` : ""}
     </div>

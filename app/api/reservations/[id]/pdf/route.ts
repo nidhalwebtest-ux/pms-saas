@@ -6,6 +6,7 @@ import { getDisplayStatus, type StoredStatus } from "@/lib/reservation-status";
 import { DISPLAY_STATUS_KEY, getPdfLocaleContext } from "@/lib/pdf-i18n";
 import { htmlToPdf } from "@/lib/pdf/render";
 import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
+import { getPdfBranding, brandRootCss, logoHtml } from "@/lib/pdf/branding";
 
 // Headless Chromium needs the Node runtime (not edge); allow time for cold-start launch.
 export const runtime = "nodejs";
@@ -51,6 +52,7 @@ export async function GET(
   }
 
   const org = actor.organization;
+  const brand = await getPdfBranding(actor.organizationId);
   const ds  = getDisplayStatus(r.status as StoredStatus, r.startDate, r.endDate);
 
   // ── i18n ──────────────────────────────────────────────────────────────────
@@ -114,7 +116,7 @@ export async function GET(
 
   const statusColor =
     r.status === "CHECKED_IN" || r.status === "CONFIRMED" ? "#15803d" :
-    r.status === "COMPLETED"  ? "#1d4ed8" :
+    r.status === "COMPLETED"  ? brand.brandColor :
     r.status === "CANCELLED"  ? "#dc2626" : "#374151";
 
   const durationLabel = r.rateType === "monthly"
@@ -175,17 +177,18 @@ export async function GET(
   <title>${t("title")} ${r.reservationNumber ?? r.id.slice(0, 8)} — ${org?.name ?? ""}</title>
   <style>
     ${pdfFontFaceCss()}
+    ${brandRootCss(brand)}
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: ${PDF_FONT_STACK}; font-size:12px; color:#1a1a1a; background:#fff; }
     .page { max-width:800px; margin:0 auto; padding:40px; }
 
     /* Header */
-    .header { display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:24px; border-bottom:3px solid #1d4ed8; margin-bottom:28px; }
+    .header { display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:24px; border-bottom:3px solid var(--brand); margin-bottom:28px; }
     .org-logo-area { flex:1; }
-    .org-name { font-size:22px; font-weight:800; color:#1d4ed8; letter-spacing:-0.3px; }
+    .org-name { font-size:22px; font-weight:800; color:var(--brand); letter-spacing:-0.3px; }
     .org-sub  { font-size:11px; color:#6b7280; margin-top:6px; line-height:1.8; }
     .res-info-area { text-align:${isRtl ? "left" : "right"}; }
-    .doc-title-primary  { font-size:16px; font-weight:700; color:#1d4ed8; }
+    .doc-title-primary  { font-size:16px; font-weight:700; color:var(--brand); }
     .doc-title-secondary  { font-size:13px; color:#6b7280; margin-top:2px; font-family: ${PDF_FONT_STACK}; direction:${secondaryDir}; }
     .res-number    { font-size:20px; font-weight:800; font-family:monospace; color:#111827; margin-top:10px; direction:ltr; }
     .print-date    { font-size:11px; color:#9ca3af; margin-top:3px; }
@@ -230,7 +233,8 @@ export async function GET(
     .ltr-num { direction:ltr; unicode-bidi:embed; display:inline-block; }
 
     /* Print */
-    @page { size:A4; margin:15mm; }
+    @page { size:${brand.paperSize}; margin:15mm; }
+    .brand-logo { margin-bottom:10px; }
     @media print {
       body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
       .page { padding:0; }
@@ -243,6 +247,7 @@ export async function GET(
   <!-- ═══ HEADER ═══ -->
   <div class="header">
     <div class="org-logo-area">
+      ${logoHtml(brand) ? `<div class="brand-logo">${logoHtml(brand)}</div>` : ""}
       <div class="org-name">${orgName}</div>
       <div class="org-sub">
         ${org?.address ? `<div>${org.address}${org?.city ? `, ${org.city}` : ""}</div>` : ""}
@@ -295,7 +300,7 @@ export async function GET(
       <div style="grid-column:span 1">
         <div class="field-label">${t("fields.checkOut")}</div>
         <div class="field-value">${fmtFull(r.endDate)}</div>
-        ${r.actualCheckOut ? `<div class="field-sub" style="color:#1d4ed8">${t("actual", { date: fmtFull(r.actualCheckOut) })}</div>` : ""}
+        ${r.actualCheckOut ? `<div class="field-sub" style="color:var(--brand)">${t("actual", { date: fmtFull(r.actualCheckOut) })}</div>` : ""}
       </div>
       <div>
         <div class="field-label">${t("fields.duration")}</div>
@@ -362,23 +367,26 @@ export async function GET(
     </div>
   </div>
 
-  ${r.notes ? `
+  ${brand.showNotes && r.notes ? `
   <!-- ═══ NOTES ═══ -->
   <div class="section">
     ${sectionHeader("sections.notes")}
     <p style="font-size:12px;color:#374151;line-height:1.6">${r.notes}</p>
   </div>` : ""}
 
+  ${brand.showSignature ? `
   <!-- ═══ SIGNATURES ═══ -->
   <div class="sig-grid">
     <div><div class="sig-line">${t("signatures.authorizedBy")} ________________________</div></div>
     <div><div class="sig-line">${t("signatures.guestSignature")} ________________________</div></div>
-  </div>
+  </div>` : ""}
 
   <!-- ═══ FOOTER ═══ -->
   <div class="footer">
-    <div class="footer-primary">${t("footer.thankYou", { name: org?.name ?? t("defaultPropertyDescription") })}</div>
-    <div class="footer-secondary">${tOther("footer.thankYou", { name: org?.name ?? tOther("defaultPropertyDescription") })}</div>
+    ${(isRtl ? (brand.footerTextAr || brand.footerText) : brand.footerText)?.trim()
+      ? `<div class="footer-primary">${(isRtl ? (brand.footerTextAr || brand.footerText) : brand.footerText)!.trim()}</div>`
+      : `<div class="footer-primary">${t("footer.thankYou", { name: org?.name ?? t("defaultPropertyDescription") })}</div>
+         <div class="footer-secondary">${tOther("footer.thankYou", { name: org?.name ?? tOther("defaultPropertyDescription") })}</div>`}
   </div>
 
 </div>

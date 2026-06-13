@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { returnStatusKey } from "@/components/ui";
 import { htmlToPdf } from "@/lib/pdf/render";
 import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
+import { getPdfBranding, brandRootCss, logoHtml, footerLine } from "@/lib/pdf/branding";
 
 // Headless Chromium needs the Node runtime (not edge); allow time for cold-start launch.
 export const runtime = "nodejs";
@@ -49,6 +50,7 @@ export async function GET(
     where: { id: ret.organizationId },
     select: { name: true, address: true, city: true, area: true, phone: true },
   });
+  const brand = await getPdfBranding(ret.organizationId);
 
   // ── i18n ──────────────────────────────────────────────────────────────────
   const locale  = await getLocale();
@@ -95,12 +97,14 @@ export async function GET(
 <title>${esc(tP("title", { number: ret.returnNumber }))}</title>
 <style>
   ${pdfFontFaceCss()}
+  ${brandRootCss(brand)}
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: ${PDF_FONT_STACK}; font-size: 13px; color: #1f2937; background: #fff; direction: ${dir}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .ltr-numbers { direction: ltr; unicode-bidi: embed; display: inline-block; }
   .page { max-width: 100%; background: #fff; }
 
-  .header { background: linear-gradient(135deg, #be123c 0%, #9f1239 100%); color: #fff; padding: 32px 40px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .header { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%); color: #fff; padding: 32px 40px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .brand-logo { background:#fff; padding:6px 10px; border-radius:8px; margin-bottom:12px; display:inline-block; }
   .header h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
   .org-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
   .org-detail { font-size: 12px; opacity: 0.85; line-height: 1.6; }
@@ -135,7 +139,7 @@ export async function GET(
   .totals { display: flex; justify-content: flex-end; margin-bottom: 24px; }
   .totals-box { min-width: 280px; }
   .totals-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 13px; color: #374151; border-bottom: 1px solid #f3f4f6; }
-  .totals-row.grand { font-size: 15px; font-weight: 800; color: #9f1239; padding: 8px 0 6px; border-top: 2px solid #e5e7eb; border-bottom: none; margin-top: 2px; }
+  .totals-row.grand { font-size: 15px; font-weight: 800; color: var(--brand-dark); padding: 8px 0 6px; border-top: 2px solid #e5e7eb; border-bottom: none; margin-top: 2px; }
   .totals-row.refund { font-weight: 700; padding-top: 6px; border-bottom: none; }
   .totals-row.refund.due { color: #d97706; }
   .totals-row.refund.done { color: #16a34a; }
@@ -149,7 +153,7 @@ export async function GET(
   .footer { text-align: center; padding: 20px 40px 28px; border-top: 1px solid #f3f4f6; color: #9ca3af; font-size: 12px; }
   .footer .thank-you { font-size: 13px; font-weight: 600; color: #6b7280; margin-bottom: 4px; }
 
-  @page { size: A4; margin: 0; }
+  @page { size: ${brand.paperSize}; margin: 0; }
 </style>
 </head>
 <body>
@@ -157,6 +161,7 @@ export async function GET(
 
   <div class="header">
     <div>
+      ${logoHtml(brand) ? `<div class="brand-logo">${logoHtml(brand)}</div>` : ""}
       <div class="org-name">${esc(org?.name)}</div>
       ${org?.address ? `<div class="org-detail">${esc(org?.address)}</div>` : ""}
       ${org?.city ? `<div class="org-detail">${esc(org?.city)}${org?.area ? `, ${esc(org?.area)}` : ""}</div>` : ""}
@@ -233,7 +238,7 @@ export async function GET(
   </div>
 
   <div class="footer">
-    <div class="thank-you">${esc(tP("thankYou"))}</div>
+    <div class="thank-you">${esc(footerLine(brand, isAr, tP("thankYou")))}</div>
     <div style="font-size:11px;color:#d1d5db">${esc(tP("computerGenerated"))} · <span>${esc(org?.name)}</span></div>
   </div>
 </div>

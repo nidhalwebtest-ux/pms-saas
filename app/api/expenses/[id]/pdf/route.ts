@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { htmlToPdf } from "@/lib/pdf/render";
 import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
+import { getPdfBranding, brandRootCss, logoHtml, footerLine } from "@/lib/pdf/branding";
 
 // Headless Chromium needs the Node runtime (not edge); allow time for cold-start launch.
 export const runtime = "nodejs";
@@ -69,6 +70,7 @@ export async function GET(
   };
 
   const org = expense.organization;
+  const brand = await getPdfBranding(expense.organizationId);
   const amount = Number(expense.amount);
   const status = expense.status; // PENDING | APPROVED | REJECTED | PROCESSED
   const statusLabel = tStat(status);
@@ -114,12 +116,14 @@ export async function GET(
 <title>${esc(tP("title", { number: expense.expenseNumber }))}</title>
 <style>
   ${pdfFontFaceCss()}
+  ${brandRootCss(brand)}
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: ${PDF_FONT_STACK}; font-size: 13px; color: #1f2937; background: #fff; direction: ${dir}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .ltr-numbers { direction: ltr; unicode-bidi: embed; display: inline-block; }
   .page { max-width: 100%; }
 
-  .header { background: linear-gradient(135deg, #334155 0%, #1e293b 100%); color: #fff; padding: 32px 40px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .header { background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%); color: #fff; padding: 32px 40px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .brand-logo { background:#fff; padding:6px 10px; border-radius:8px; margin-bottom:12px; display:inline-block; }
   .header h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
   .org-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
   .org-detail { font-size: 12px; opacity: 0.82; line-height: 1.6; }
@@ -170,7 +174,7 @@ export async function GET(
 
   .footer { text-align: center; padding: 18px 40px 26px; border-top: 1px solid #f3f4f6; color: #9ca3af; font-size: 11px; }
 
-  @page { size: A4; margin: 0; }
+  @page { size: ${brand.paperSize}; margin: 0; }
 </style>
 </head>
 <body>
@@ -178,6 +182,7 @@ export async function GET(
 
   <div class="header">
     <div>
+      ${logoHtml(brand) ? `<div class="brand-logo">${logoHtml(brand)}</div>` : ""}
       <div class="org-name">${esc(org?.name)}</div>
       ${org?.address ? `<div class="org-detail">${esc(org.address)}</div>` : ""}
       ${org?.city ? `<div class="org-detail">${esc(org.city)}${org.area ? `, ${esc(org.area)}` : ""}</div>` : ""}
@@ -222,7 +227,7 @@ export async function GET(
       <div class="field"><div class="lbl">${esc(tDet("submittedAtLabel"))}</div><div class="val ltr-numbers">${fmtDate(expense.submittedAt)}</div></div>
     </div>
 
-    ${expense.notes ? `<div class="desc"><div class="section-label">${esc(tDet("notesLabel"))}</div><p>${esc(expense.notes)}</p></div>` : ""}
+    ${brand.showNotes && expense.notes ? `<div class="desc"><div class="section-label">${esc(tDet("notesLabel"))}</div><p>${esc(expense.notes)}</p></div>` : ""}
 
     <div class="steps">
       <div class="section-label">${esc(tDet("workflowHeading"))}</div>
@@ -244,7 +249,10 @@ export async function GET(
     </div>` : ""}
   </div>
 
-  <div class="footer">${esc(tP("computerGenerated"))} · ${esc(org?.name)}</div>
+  <div class="footer">
+    ${footerLine(brand, isAr, "") ? `<div style="font-weight:600;color:#6b7280;margin-bottom:3px">${esc(footerLine(brand, isAr, ""))}</div>` : ""}
+    ${esc(tP("computerGenerated"))} · ${esc(org?.name)}
+  </div>
 </div>
 </body>
 </html>`;

@@ -157,6 +157,19 @@ model Organization {
   timezone           String   @default("Asia/Muscat")
   currency           String   @default("OMR")
 
+  /// PDF/document customization (Settings → Organization). Applied to every
+  /// generated PDF (reservation, invoice, receipt, return, expense, statement).
+  /// pdfBrandColor drives each document's header + primary accent (via --brand);
+  /// status colours stay semantic. Footer text overrides the default footer line.
+  pdfBrandColor         String  @default("#1d4ed8")
+  pdfFooterText         String?
+  pdfFooterTextAr       String?
+  pdfPaperSize          String  @default("A4")   // A4 | Letter
+  pdfShowLogo           Boolean @default(true)
+  pdfShowSignature      Boolean @default(true)   // reservation signature block
+  pdfShowPaymentHistory Boolean @default(true)   // invoice + receipt payment tables
+  pdfShowNotes          Boolean @default(true)   // notes sections
+
   /// Org-wide default check-in policy; reservations may override per-booking.
   checkInPolicy      CheckInPolicy @default(ALLOW_BACK_TO_BACK)
   /// When false, units with only upcoming (CONFIRMED/PENDING) reservations show

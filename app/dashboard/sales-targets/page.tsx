@@ -3,7 +3,7 @@ import { requireOrgUser } from "@/lib/tenant";
 import { can, type Role, ROLE_LABELS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import AccessDenied from "@/components/dashboard/AccessDenied";
-import SalesTargetsGrid from "./SalesTargetsGrid";
+import SalesTargetsView from "./SalesTargetsView";
 import type { Scope, PeriodType } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -60,7 +60,7 @@ export default async function SalesTargetsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-8">
-      <SalesTargetsGrid
+      <SalesTargetsView
         receptionists={receptionists}
         buildings={buildings}
         units={unitList}

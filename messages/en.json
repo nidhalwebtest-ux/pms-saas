@@ -3248,6 +3248,15 @@
     "save": "Save targets",
     "saving": "Saving…",
     "saved": "Targets saved",
+    "tabs": { "set": "Set Targets", "performance": "Target vs Actual" },
+    "report": {
+      "target": "Target",
+      "actual": "Actual",
+      "variance": "Variance",
+      "achievement": "Achievement",
+      "loading": "Loading…",
+      "noData": "No targets or sales for this period."
+    },
     "errors": { "forbidden": "You don't have permission to set targets.", "generic": "Could not save targets. Please try again." }
   },
   "returns": {

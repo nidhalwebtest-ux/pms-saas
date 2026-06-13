@@ -99,12 +99,6 @@ export default function SalesTargetsGrid({ receptionists, buildings, units, init
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
-        <p className="mt-1 text-sm text-gray-500">{t("subtitle")}</p>
-      </div>
-
       {/* Controls */}
       <div className="flex flex-wrap items-end gap-4">
         <div>

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { forbiddenIfNo } from "@/lib/access";
 import { Prisma } from "@prisma/client";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
@@ -21,6 +22,8 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const __denied = await forbiddenIfNo("reservations", "CREATE");
+  if (__denied) return __denied;
   const actor = await getActor();
   if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

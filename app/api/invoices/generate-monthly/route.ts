@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { forbiddenIfNo } from "@/lib/access";
 import { requireOrgUser } from "@/lib/tenant";
 import { generatePendingMonthlyInvoices } from "@/lib/invoice-engine";
 
@@ -15,6 +16,8 @@ function ser(obj: unknown): unknown {
 // ── POST /api/invoices/generate-monthly ──────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  const __denied = await forbiddenIfNo("invoices", "CREATE");
+  if (__denied) return __denied;
   let orgUser;
   try {
     orgUser = await requireOrgUser();

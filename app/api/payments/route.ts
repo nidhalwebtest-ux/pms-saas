@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { forbiddenIfNo } from "@/lib/access";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { recordPayment } from "@/lib/invoice-engine";
@@ -16,6 +17,8 @@ function ser(obj: unknown): unknown {
 // ── POST /api/payments — record payment with auto-allocation ─────────────────
 
 export async function POST(req: NextRequest) {
+  const __denied = await forbiddenIfNo("payments", "CREATE");
+  if (__denied) return __denied;
   let orgUser;
   try {
     orgUser = await requireOrgUser();

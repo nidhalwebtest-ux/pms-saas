@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { forbiddenIfNo } from "@/lib/access";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { generateInvoicesForReservation } from "@/lib/invoice-engine";
@@ -116,6 +117,8 @@ export async function GET(req: NextRequest) {
 // ── POST /api/invoices ────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  const __denied = await forbiddenIfNo("invoices", "CREATE");
+  if (__denied) return __denied;
   let orgUser;
   try {
     orgUser = await requireOrgUser();

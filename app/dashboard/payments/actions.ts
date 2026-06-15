@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { hasAccess } from "@/lib/access";
 import {
   requireOrgUser,
   assertTenantOwnership,
@@ -51,6 +52,7 @@ export async function createCustomerPayment(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
+  if (!(await hasAccess("payments", "CREATE"))) return { error: "forbidden" };
 
   const tenantId = formData.get("tenantId") as string;
   const totalAmount = parseFloat(formData.get("amount") as string);
@@ -153,6 +155,7 @@ export async function updateCustomerPayment(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
+  if (!(await hasAccess("payments", "CREATE"))) return { error: "forbidden" };
 
   const id = formData.get("id") as string;
   const reference = formData.get("reference") as string;

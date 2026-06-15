@@ -9,6 +9,7 @@ import {
 } from "@/lib/tenant";
 
 import { prisma } from "@/lib/prisma";
+import { hasAccess } from "@/lib/access";
 
 export type ActionResponse = {
   error?: string;
@@ -29,6 +30,7 @@ export type ActionResponse = {
 export async function confirmReservation(formData: FormData) {
   let orgUser;
   try { orgUser = await requireOrgUser(); } catch (e: any) { return e; }
+  if (!(await hasAccess("reservations", "CREATE"))) return { error: "forbidden" };
 
   const reservationId = formData.get("reservationId") as string;
 
@@ -81,6 +83,7 @@ export async function updateReservationStatus(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
+  if (!(await hasAccess("reservations", "CREATE"))) return { error: "forbidden" };
 
   const id = formData.get("id") as string;
   const newStatus = formData.get("status") as any; // "CONFIRMED", "CHECKED_IN", "COMPLETED", "CANCELLED"
@@ -124,6 +127,7 @@ export async function createQuickTenant(formData: FormData) {
   } = await supabase.auth.getUser();
 
   if (!user) return { error: "Unauthorized" };
+  if (!(await hasAccess("tenants", "CREATE"))) return { error: "forbidden" };
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },

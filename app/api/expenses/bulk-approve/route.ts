@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { forbiddenIfNo } from "@/lib/access";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 
@@ -6,6 +7,8 @@ import { prisma } from "@/lib/prisma";
  * POST /api/expenses/bulk-approve — approve multiple pending expenses at once.
  */
 export async function POST(req: NextRequest) {
+  const __denied = await forbiddenIfNo("expenses", "EDIT");
+  if (__denied) return __denied;
   let orgUser;
   try { orgUser = await requireOrgUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
 

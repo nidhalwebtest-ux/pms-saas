@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { forbiddenIfNo } from "@/lib/access";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getEffectivePropertyIds } from "@/lib/property-scope";
@@ -206,6 +207,8 @@ export async function GET(req: NextRequest) {
 // ── POST /api/reservations ────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  const __denied = await forbiddenIfNo("reservations", "CREATE");
+  if (__denied) return __denied;
   const actor = await getActor();
   if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

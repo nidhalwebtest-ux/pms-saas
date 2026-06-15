@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { resolvePermissions, atLeast, type PermissionMap, type PermissionLevel } from "@/lib/rbac";
@@ -85,4 +86,18 @@ export async function requireAccess(entity: string, level: PermissionLevel): Pro
 export async function hasAccess(entity: string, level: PermissionLevel): Promise<boolean> {
   const access = await getSessionAccess();
   return !!access && access.can(entity, level);
+}
+
+/**
+ * API-route guard: returns a 403 NextResponse if the user lacks `level` on
+ * `entity`, otherwise null. Usage:
+ *   const denied = await forbiddenIfNo("invoices", "CREATE");
+ *   if (denied) return denied;
+ */
+export async function forbiddenIfNo(entity: string, level: PermissionLevel): Promise<NextResponse | null> {
+  const access = await getSessionAccess();
+  if (!access || !access.can(entity, level)) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+  }
+  return null;
 }

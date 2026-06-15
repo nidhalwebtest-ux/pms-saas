@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { forbiddenIfNo } from "@/lib/access";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { getEffectivePropertyIds } from "@/lib/property-scope";
@@ -128,6 +129,8 @@ export async function GET(req: NextRequest) {
  * POST /api/expenses — submit a new expense.
  */
 export async function POST(req: NextRequest) {
+  const __denied = await forbiddenIfNo("expenses", "CREATE");
+  if (__denied) return __denied;
   let orgUser;
   try { orgUser = await requireOrgUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
 

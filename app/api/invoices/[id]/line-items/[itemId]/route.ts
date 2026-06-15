@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { forbiddenIfNo } from "@/lib/access";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 
@@ -51,6 +52,8 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string; itemId: string }> },
 ) {
+  const __denied = await forbiddenIfNo("invoices", "CREATE");
+  if (__denied) return __denied;
   let orgUser;
   try {
     orgUser = await requireOrgUser();

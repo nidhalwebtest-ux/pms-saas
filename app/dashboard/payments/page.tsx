@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { assertView } from "@/lib/access";
+import { getEffectivePropertyIds } from "@/lib/property-scope";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
@@ -71,7 +72,25 @@ export default async function PaymentsListPage({
   }
 
   // ── Tab counts ────────────────────────────────────────────────────────────
-  const baseWhere = { organizationId: orgId };
+  // Building scope: a payment belongs to a building via its invoice or its
+  // reservation's unit(s). null propIds = unrestricted.
+  const propIds = await getEffectivePropertyIds("");
+  const propScope: Prisma.PaymentWhereInput[] = propIds
+    ? [{
+        OR: [
+          { invoice: { propertyId: { in: propIds } } },
+          { reservation: { OR: [
+            { unit: { propertyId: { in: propIds } } },
+            { reservationUnits: { some: { unit: { propertyId: { in: propIds } } } } },
+          ] } },
+        ],
+      }]
+    : [];
+
+  const baseWhere: Prisma.PaymentWhereInput = {
+    organizationId: orgId,
+    ...(propScope.length ? { AND: propScope } : {}),
+  };
   const [allCount, todayCount, weekCount, monthCount] = await Promise.all([
     prisma.payment.count({ where: baseWhere }),
     prisma.payment.count({ where: { ...baseWhere, date: periodRange("today") } }),
@@ -83,6 +102,7 @@ export default async function PaymentsListPage({
   const dateRange = periodRange(period);
   const where: Prisma.PaymentWhereInput = {
     organizationId: orgId,
+    ...(propScope.length ? { AND: propScope } : {}),
     ...(dateRange.gte || dateRange.lte ? { date: dateRange } : {}),
     ...(method ? { method: method as Prisma.EnumPaymentMethodFilter } : {}),
     ...(q

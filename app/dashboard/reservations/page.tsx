@@ -3,6 +3,7 @@ import { assertView } from "@/lib/access";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPropertyId } from "@/lib/selected-property";
+import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import ReservationsView from "./ReservationsView";
 
 export default async function ReservationsPage() {
@@ -17,9 +18,16 @@ export default async function ReservationsPage() {
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
 
+  // Restrict the building dropdown to the user's accessible buildings.
+  const accessible = await getSessionAccessibleProperties();
+
   const [allProperties, org, selectedPropertyId] = await Promise.all([
     prisma.property.findMany({
-      where:   { organizationId: dbUser.organizationId, isArchived: false },
+      where:   {
+        organizationId: dbUser.organizationId,
+        isArchived: false,
+        ...(accessible ? { id: { in: accessible } } : {}),
+      },
       select:  { id: true, name: true },
       orderBy: { name: "asc" },
     }),

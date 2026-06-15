@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getEffectivePropertyIds } from "@/lib/property-scope";
 import { Prisma } from "@prisma/client";
 import {
   getDisplayStatus,
@@ -93,6 +94,9 @@ export async function GET(req: NextRequest) {
   const rateType   = sp.get("rateType")   ?? "";
   const source     = sp.get("source")     ?? "";
 
+  // Building scope: limit to the user's accessible buildings (null = unrestricted).
+  const propIds = await getEffectivePropertyIds(propertyId);
+
   const where: Prisma.ReservationWhereInput = {
     tenant: { organizationId: actor.organizationId! },
     ...(search ? {
@@ -105,11 +109,13 @@ export async function GET(req: NextRequest) {
         { reservationUnits: { some: { unit: { name: { contains: search, mode: "insensitive" } } } } },
       ],
     } : {}),
-    ...(propertyId ? {
-      OR: [
-        { unit: { propertyId } },
-        { reservationUnits: { some: { unit: { propertyId } } } },
-      ],
+    ...(propIds ? {
+      AND: [{
+        OR: [
+          { unit: { propertyId: { in: propIds } } },
+          { reservationUnits: { some: { unit: { propertyId: { in: propIds } } } } },
+        ],
+      }],
     } : {}),
     ...(dateFrom ? { startDate: { gte: new Date(dateFrom) } } : {}),
     ...(dateTo   ? { startDate: { lte: new Date(dateTo)   } } : {}),

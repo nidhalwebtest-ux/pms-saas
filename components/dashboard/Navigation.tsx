@@ -113,6 +113,7 @@ const navigationConfig: NavItem[] = [
           { labelKey: "staffAccounts", href: "/dashboard/settings/team" },
         ],
       },
+      { labelKey: "rolesPermissions", href: "/dashboard/settings/roles" },
       { labelKey: "myProfile",   href: "/dashboard/settings/profile" },
       { labelKey: "organization", href: "/dashboard/settings/organization" },
       { labelKey: "reservationSettings", href: "/dashboard/settings/reservations" },

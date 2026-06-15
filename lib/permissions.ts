@@ -44,6 +44,7 @@ export const ACTION_ACCESS: Record<string, Role[]> = {
   processExpense:     ["OWNER", "ACCOUNTANT"],         // Accountant/Owner can process
   manageExpenseCategories: ["OWNER", "MANAGER"],       // Admin-level
   manageSalesTargets: ["OWNER", "MANAGER"],            // Manager/Owner set sales targets
+  manageRoles: ["OWNER", "MANAGER"],                   // Manage roles & permissions
 };
 
 // ── Helper ────────────────────────────────────────────────────────────────────

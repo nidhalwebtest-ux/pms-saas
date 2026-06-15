@@ -223,6 +223,7 @@ model Organization {
   createdAt          DateTime @default(now())
 
   users              User[]
+  roles              Role[]
   properties         Property[]
   tenants            Tenant[]
   invitations        Invitation[]
@@ -259,6 +260,11 @@ model User {
   phone          String?
   role           UserRole     @default(OWNER)
   preferredLanguage Language  @default(en)
+
+  // Custom RBAC role (NetSuite-style permission matrix). Nullable during rollout;
+  // when set it governs access, otherwise the legacy `role` enum is the fallback.
+  roleId         String?
+  assignedRole   Role?        @relation("UserAssignedRole", fields: [roleId], references: [id])
 
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
@@ -947,4 +953,33 @@ model SalesTarget {
 
   @@unique([organizationId, scope, refId, periodType, periodStart])
   @@index([organizationId, scope, periodType, periodStart])
+}
+
+/// NetSuite-style RBAC role. `permissions` is a JSON map of entityKey → level
+/// ("NONE"|"VIEW"|"CREATE"|"EDIT"|"FULL"); entity catalog + defaults live in
+/// lib/rbac.ts. System roles (isSystem=true, stable `key` OWNER/MANAGER/STAFF/
+/// ACCOUNTANT) are seeded per org and read-only — duplicate ("Save as") to a
+/// custom role to edit. Users link via User.roleId (legacy User.role enum is the
+/// fallback until enforcement rolls out).
+model Role {
+  id             String       @id @default(uuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name           String
+  key            String?      // OWNER | MANAGER | STAFF | ACCOUNTANT for system roles; null for custom
+  isSystem       Boolean      @default(false)
+  description    String?
+
+  permissions    Json         @default("{}")
+
+  createdById    String?
+
+  users          User[]       @relation("UserAssignedRole")
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, name])
+  @@index([organizationId])
 }

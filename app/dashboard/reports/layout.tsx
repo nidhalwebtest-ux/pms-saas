@@ -1,6 +1,6 @@
 import "@/styles/reports.css";
 import AccessDenied from "@/components/dashboard/AccessDenied";
-import { hasRole } from "@/lib/route-guard";
+import { getSessionAccess } from "@/lib/access";
 import ReportIcons from "./ReportIcons";
 import ReportsSidebar from "./ReportsSidebar";
 
@@ -9,8 +9,8 @@ export default async function ReportsLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const allowed = await hasRole(["OWNER", "MANAGER"]);
-  if (!allowed) return <AccessDenied />;
+  const access = await getSessionAccess();
+  if (!access?.canView("reports")) return <AccessDenied />;
 
   return (
     <div className="reports-root mx-auto max-w-[1400px]">

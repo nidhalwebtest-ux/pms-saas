@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { resolvePermissions, atLeast, type PermissionMap, type PermissionLevel } from "@/lib/rbac";
@@ -54,4 +55,25 @@ export async function getSessionAccess(): Promise<SessionAccess | null> {
     canEdit: (e) => can(e, "EDIT"),
     canDelete: (e) => can(e, "FULL"),
   };
+}
+
+/**
+ * Page guard: require at least VIEW on `entity` or redirect away. Returns the
+ * resolved access so the page can also drive button visibility (canCreate, …).
+ */
+export async function assertView(entity: string): Promise<SessionAccess> {
+  const access = await getSessionAccess();
+  if (!access) redirect("/login");
+  if (!access.canView(entity)) redirect(`/dashboard?denied=${entity}`);
+  return access;
+}
+
+/**
+ * Server-action / API guard: throw unless the user has at least `level` on
+ * `entity`. Throws a plain Error("forbidden") for callers to surface.
+ */
+export async function requireAccess(entity: string, level: PermissionLevel): Promise<SessionAccess> {
+  const access = await getSessionAccess();
+  if (!access || !access.can(entity, level)) throw new Error("forbidden");
+  return access;
 }

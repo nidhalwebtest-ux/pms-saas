@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { assertView } from "@/lib/access";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
@@ -15,6 +16,7 @@ export default async function ExpensesPage({
 }: {
   searchParams: Promise<{ status?: string; propertyId?: string; categoryId?: string }>;
 }) {
+  await assertView("expenses");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { assertView } from "@/lib/access";
 import { createClient } from "@/utils/supabase/server";
 import { Prisma } from "@prisma/client";
 import { UserGroupIcon, PlusIcon } from "@heroicons/react/24/outline";
@@ -37,6 +38,7 @@ export default async function TenantsPage({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
+  await assertView("tenants");
   const params      = await searchParams;
   const q           = params.q          || "";
   const status      = params.status     || "all";   // all | active | inactive

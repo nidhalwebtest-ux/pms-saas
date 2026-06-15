@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { assertView } from "@/lib/access";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { Prisma } from "@prisma/client";
@@ -35,6 +36,7 @@ export default async function UnitsPage({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
+  await assertView("units");
   const params           = await searchParams;
   const q                = params.q        || "";
   const propertyFilter   = params.property || "";

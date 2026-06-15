@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireOrgUser } from "@/lib/tenant";
-import { can, type Role, ROLE_LABELS } from "@/lib/permissions";
+import { type Role, ROLE_LABELS } from "@/lib/permissions";
+import { getSessionAccess } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import AccessDenied from "@/components/dashboard/AccessDenied";
 import SalesTargetsView from "./SalesTargetsView";
@@ -15,7 +16,8 @@ export default async function SalesTargetsPage() {
   } catch {
     redirect("/login");
   }
-  if (!can(actor.role as Role, "manageSalesTargets")) {
+  const access = await getSessionAccess();
+  if (!access?.canView("salesTargets")) {
     return <AccessDenied />;
   }
   const orgId = actor.organizationId;

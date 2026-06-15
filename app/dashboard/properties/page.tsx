@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { assertView } from "@/lib/access";
 import { createClient } from "@/utils/supabase/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -30,6 +31,7 @@ export default async function PropertiesPage({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
+  await assertView("buildings");
   const params = await searchParams;
   const q           = params.q      || "";
   const typeFilter  = params.type   || "";

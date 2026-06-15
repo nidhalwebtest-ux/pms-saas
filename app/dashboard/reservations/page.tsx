@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
+import { assertView } from "@/lib/access";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import ReservationsView from "./ReservationsView";
 
 export default async function ReservationsPage() {
+  await assertView("reservations");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");

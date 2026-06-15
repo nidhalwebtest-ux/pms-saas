@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { assertView } from "@/lib/access";
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { DocumentTextIcon, PlusIcon } from "@heroicons/react/24/outline";
@@ -35,6 +36,7 @@ export default async function InvoicesPage({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
+  await assertView("invoices");
   // Auth
   let orgUser: Awaited<ReturnType<typeof requireOrgUser>>;
   try {

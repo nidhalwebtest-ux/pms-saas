@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { assertView } from "@/lib/access";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
@@ -31,6 +32,7 @@ export default async function PaymentsListPage({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
+  await assertView("payments");
   const params = await searchParams;
   const q        = params.q      ?? "";
   const method   = params.method ?? "";

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { assertView } from "@/lib/access";
 import { Prisma } from "@prisma/client";
 import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 import { getTranslations } from "next-intl/server";
@@ -29,6 +30,7 @@ export default async function ReturnsPage({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
+  await assertView("returns");
   let orgUser: Awaited<ReturnType<typeof requireOrgUser>>;
   try {
     orgUser = await requireOrgUser();

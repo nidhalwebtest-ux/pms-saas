@@ -4215,7 +4215,7 @@
         "toggleFailed": "Failed to toggle"
       }
     },
-    "roles": {
+    "rolePermissions": {
       "title": "Roles & Permissions",
       "subtitle": "Define what each role can view, create, edit and delete across the system.",
       "newRole": "New role",

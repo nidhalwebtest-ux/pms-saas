@@ -119,3 +119,49 @@ export function levelFor(map: PermissionMap, entity: string): PermissionLevel {
 export function atLeast(map: PermissionMap, entity: string, min: PermissionLevel): boolean {
   return RANK[levelFor(map, entity)] >= RANK[min];
 }
+
+// ── Effective-permission resolution (engine) ──────────────────────────────────
+
+export interface ResolvedAccess {
+  perms: PermissionMap;
+  isOwner: boolean;
+  roleKey: string | null;
+}
+
+/**
+ * Resolve a user's effective permission map: their assigned custom/system role's
+ * matrix when set, otherwise the default matrix for their legacy enum role.
+ * OWNER (enum or assigned role key) always has full access.
+ */
+export function resolvePermissions(
+  enumRole: string,
+  assignedRole?: { key: string | null; permissions: unknown } | null,
+): ResolvedAccess {
+  const roleKey = assignedRole?.key ?? null;
+  const isOwner = enumRole === "OWNER" || roleKey === "OWNER";
+  const perms = assignedRole
+    ? normalizeMatrix(assignedRole.permissions)
+    : normalizeMatrix(DEFAULT_MATRICES[(enumRole as SystemRoleKey)] ?? {});
+  return { perms, isOwner, roleKey };
+}
+
+/** Map a permission map → nav-tab visibility. `settings` is governed elsewhere. */
+export const NAV_ENTITY: Record<string, string[]> = {
+  properties:   ["buildings", "units"],
+  tenants:      ["tenants"],
+  reservations: ["reservations"],
+  invoices:     ["invoices"],
+  returns:      ["returns"],
+  payments:     ["payments"],
+  expenses:     ["expenses"],
+  reports:      ["reports"],
+  salesTargets: ["salesTargets"],
+};
+
+export function navAccessFor(access: ResolvedAccess): Record<string, boolean> {
+  const out: Record<string, boolean> = { dashboard: true };
+  for (const [navKey, entities] of Object.entries(NAV_ENTITY)) {
+    out[navKey] = access.isOwner || entities.some((e) => atLeast(access.perms, e, "VIEW"));
+  }
+  return out;
+}

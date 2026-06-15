@@ -7,7 +7,8 @@ import NavigationProgress from "@/components/ui/NavigationProgress";
 import AvailabilityCalendarButton from "@/components/dashboard/AvailabilityCalendarButton";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPropertyId } from "@/lib/selected-property";
-import type { Role } from "@/lib/permissions";
+import { canNav, type Role } from "@/lib/permissions";
+import { resolvePermissions, navAccessFor } from "@/lib/rbac";
 import { OrgProvider } from "@/lib/org-context";
 
 export default async function DashboardLayout({
@@ -27,6 +28,7 @@ export default async function DashboardLayout({
       organizationId: true,
       role: true,
       firstName: true,
+      assignedRole: { select: { key: true, permissions: true } },
       organization: { select: { currency: true } },
     },
   });
@@ -34,6 +36,11 @@ export default async function DashboardLayout({
 
   const role = (dbUser.role ?? "STAFF") as Role;
   const currency = dbUser.organization?.currency ?? "OMR";
+
+  // Effective nav visibility: operational tabs from the permission matrix,
+  // `settings` still gated by the legacy enum role (setup enforcement = Phase 2b).
+  const access = resolvePermissions(role, dbUser.assignedRole);
+  const navAccess = { ...navAccessFor(access), settings: canNav(role, "settings") };
 
   // Fetch non-archived properties for the header scope selector
   const [properties, selectedPropertyId] = await Promise.all([
@@ -66,7 +73,7 @@ export default async function DashboardLayout({
             properties={properties}
             selectedPropertyId={selectedPropertyId}
           />
-          <Navigation role={role} />
+          <Navigation role={role} navAccess={navAccess} />
         </div>
 
         <main className="py-6 sm:py-10">

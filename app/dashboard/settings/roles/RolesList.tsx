@@ -17,7 +17,7 @@ interface RoleItem {
 }
 
 export default function RolesList({ roles }: { roles: RoleItem[] }) {
-  const t = useTranslations("settings.roles");
+  const t = useTranslations("settings.rolePermissions");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [creating, setCreating] = useState(false);

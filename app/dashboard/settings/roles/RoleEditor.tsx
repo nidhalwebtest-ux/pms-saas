@@ -17,7 +17,7 @@ interface RoleData {
 }
 
 export default function RoleEditor({ role, startDuplicate }: { role: RoleData; startDuplicate?: boolean }) {
-  const t = useTranslations("settings.roles");
+  const t = useTranslations("settings.rolePermissions");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 

@@ -130,7 +130,7 @@ function cn(...c: (string | false | undefined)[]) {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function Navigation({ role }: { role: Role }) {
+export default function Navigation({ role, navAccess }: { role: Role; navAccess?: Record<string, boolean> }) {
   const pathname = usePathname();
   const navRef   = useRef<HTMLElement>(null);
   const t        = useTranslations("nav");
@@ -157,8 +157,12 @@ export default function Navigation({ role }: { role: Role }) {
     return () => obs.disconnect();
   }, []);
 
-  const visible = navigationConfig.filter(
-    (item) => (NAV_ACCESS[item.key] ?? []).includes(role),
+  // Prefer the permission-matrix-derived visibility map; fall back to the
+  // legacy role-based NAV_ACCESS for any key it doesn't cover.
+  const visible = navigationConfig.filter((item) =>
+    navAccess && item.key in navAccess
+      ? navAccess[item.key]
+      : (NAV_ACCESS[item.key] ?? []).includes(role),
   );
 
   // Close everything when clicking outside the nav

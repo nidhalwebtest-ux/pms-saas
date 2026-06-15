@@ -4,11 +4,11 @@ import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { PencilSquareIcon, TrashIcon, CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { type Role } from "@/lib/permissions";
-import { updateMemberRole, removeTeamMember } from "./actions";
+import { assignMemberRole, removeTeamMember } from "./actions";
 import type { UserRole } from "@prisma/client";
 import { Badge, Button, getUserRoleBadge, useConfirmDialog } from "@/components/ui";
 
-const ASSIGNABLE_ROLES: UserRole[] = ["MANAGER", "STAFF", "ACCOUNTANT"];
+interface RoleOption { id: string; name: string; key: string | null; isSystem: boolean }
 
 interface Member {
   id:        string;
@@ -16,14 +16,19 @@ interface Member {
   email:     string;
   role:      UserRole;
   createdAt: Date;
+  roleId:    string | null;
+  assignedRoleName: string | null;
+  assignedRoleKey:  string | null;
 }
 
 export default function MemberRow({
   member,
+  roles,
   currentUserId,
   callerRole,
 }: {
   member:        Member;
+  roles:         RoleOption[];
   currentUserId: string;
   callerRole:    Role;
 }) {
@@ -32,7 +37,7 @@ export default function MemberRow({
   const confirm = useConfirmDialog();
 
   const [editing, setEditing]     = useState(false);
-  const [selected, setSelected]   = useState<UserRole>(member.role);
+  const [selected, setSelected]   = useState<string>(member.roleId ?? "");
   const [error, setError]         = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -43,12 +48,21 @@ export default function MemberRow({
 
   const displayName = member.firstName || member.email.split("@")[0];
 
+  // Roles the caller may assign (never OWNER).
+  const options = roles.filter((r) => r.key !== "OWNER");
+  const roleLabel = (r: RoleOption) => (r.isSystem && r.key ? tRoles(r.key) : r.name);
+
+  // Current role display: assigned role's name (system→localized), else enum label.
+  const currentRoleLabel = member.assignedRoleKey
+    ? tRoles(member.assignedRoleKey)
+    : member.assignedRoleName ?? tRoles(member.role);
+
   function saveRole() {
-    if (selected === member.role) { setEditing(false); return; }
+    if (!selected || selected === member.roleId) { setEditing(false); return; }
     setError(null);
     startTransition(async () => {
       try {
-        await updateMemberRole(member.id, selected);
+        await assignMemberRole(member.id, selected);
         setEditing(false);
       } catch (e: any) {
         setError(e.message);
@@ -100,12 +114,12 @@ export default function MemberRow({
           <div className="flex items-center gap-2">
             <select
               value={selected}
-              onChange={(e) => setSelected(e.target.value as UserRole)}
+              onChange={(e) => setSelected(e.target.value)}
               disabled={isPending}
               className="rounded-md border border-gray-300 py-1 ps-2 pe-7 text-xs text-gray-900 focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
             >
-              {ASSIGNABLE_ROLES.map((r) => (
-                <option key={r} value={r}>{tRoles(r)}</option>
+              {options.map((r) => (
+                <option key={r.id} value={r.id}>{roleLabel(r)}</option>
               ))}
             </select>
             <button
@@ -117,7 +131,7 @@ export default function MemberRow({
               <CheckIcon className="h-3.5 w-3.5" />
             </button>
             <button
-              onClick={() => { setEditing(false); setSelected(member.role); setError(null); }}
+              onClick={() => { setEditing(false); setSelected(member.roleId ?? ""); setError(null); }}
               disabled={isPending}
               className="rounded bg-gray-200 p-1 text-gray-700 hover:bg-gray-300 disabled:opacity-50"
               title={t("cancelTitle")}
@@ -127,7 +141,7 @@ export default function MemberRow({
           </div>
         ) : (
           <Badge {...getUserRoleBadge(member.role)} size="sm">
-            {tRoles(member.role)}
+            {currentRoleLabel}
           </Badge>
         )}
 

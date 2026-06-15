@@ -189,6 +189,43 @@ export async function updateMemberRole(memberId: string, newRole: UserRole) {
   revalidatePath("/dashboard/settings/team");
 }
 
+// ── Assign a role (system or custom) to a member ──────────────────────────────
+
+export async function assignMemberRole(memberId: string, roleId: string) {
+  const tErr   = await getTranslations("settings.team.errors");
+  const caller = await getCallerWithOrg();
+
+  if (!can(caller.role, "changeRoles")) throw new Error(tErr("ownerOnlyChangeRoles"));
+  if (memberId === caller.id) throw new Error(tErr("cannotChangeOwnRole"));
+
+  const target = await prisma.user.findUnique({
+    where:  { id: memberId },
+    select: { role: true, organizationId: true },
+  });
+  if (!target || target.organizationId !== caller.organizationId) throw new Error(tErr("memberNotFound"));
+  if (target.role === "OWNER") throw new Error(tErr("ownerCannotChange"));
+
+  const role = await prisma.role.findUnique({
+    where:  { id: roleId },
+    select: { organizationId: true, key: true },
+  });
+  if (!role || role.organizationId !== caller.organizationId) throw new Error(tErr("memberNotFound"));
+  if (role.key === "OWNER") throw new Error(tErr("ownerCannotChange"));
+
+  // Set the assigned role; for system roles keep the legacy enum in sync so the
+  // existing enum-based settings guards stay correct. Custom roles keep the enum
+  // as a baseline (operational access follows the matrix).
+  await prisma.user.update({
+    where: { id: memberId },
+    data: {
+      roleId,
+      ...(role.key ? { role: role.key as UserRole } : {}),
+    },
+  });
+  revalidatePath("/dashboard/settings/team");
+  revalidatePath("/dashboard", "layout");
+}
+
 // ── Remove team member ────────────────────────────────────────────────────────
 
 export async function removeTeamMember(memberId: string) {

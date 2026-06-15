@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { can, type Role } from "@/lib/permissions";
+import { ensureSystemRoles } from "@/lib/rbac-server";
 import { sendInvitation } from "./actions";
 import MemberRow from "./MemberRow";
 import InvitationRow from "./InvitationRow";
@@ -37,13 +38,16 @@ export default async function TeamPage() {
   const callerRole = (dbUser.role ?? "STAFF") as Role;
   if (!can(callerRole, "manageTeam")) redirect("/dashboard?error=unauthorized");
 
+  await ensureSystemRoles(dbUser.organizationId);
+
   const t     = await getTranslations("settings.team");
   const tPerm = await getTranslations("settings.team.permissions");
 
-  const [members, pendingInvitations] = await Promise.all([
+  const [members, pendingInvitations, roles] = await Promise.all([
     prisma.user.findMany({
       where:   { organizationId: dbUser.organizationId },
       orderBy: { createdAt: "asc" },
+      include: { assignedRole: { select: { id: true, name: true, key: true } } },
     }),
     prisma.invitation.findMany({
       where: {
@@ -55,7 +59,17 @@ export default async function TeamPage() {
       include: { invitedBy: { select: { firstName: true, email: true } } },
       orderBy: { createdAt: "desc" },
     }),
+    prisma.role.findMany({
+      where:   { organizationId: dbUser.organizationId },
+      select:  { id: true, name: true, key: true, isSystem: true },
+      orderBy: [{ isSystem: "desc" }, { name: "asc" }],
+    }),
   ]);
+
+  // Map a member's legacy enum role → the seeded system role id (default when a
+  // member has no explicit assignedRole yet).
+  const systemRoleIdByKey = new Map(roles.filter((r) => r.key).map((r) => [r.key as string, r.id]));
+  const assignableRoles = roles.map((r) => ({ id: r.id, name: r.name, key: r.key, isSystem: r.isSystem }));
 
   const counts = {
     total:         members.length,
@@ -174,7 +188,17 @@ export default async function TeamPage() {
           {members.map((member) => (
             <MemberRow
               key={member.id}
-              member={member}
+              member={{
+                id: member.id,
+                firstName: member.firstName,
+                email: member.email,
+                role: member.role,
+                createdAt: member.createdAt,
+                roleId: member.roleId ?? systemRoleIdByKey.get(member.role) ?? null,
+                assignedRoleName: member.assignedRole?.name ?? null,
+                assignedRoleKey: member.assignedRole?.key ?? null,
+              }}
+              roles={assignableRoles}
               currentUserId={user.id}
               callerRole={callerRole}
             />

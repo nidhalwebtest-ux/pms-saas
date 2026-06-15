@@ -77,3 +77,12 @@ export async function requireAccess(entity: string, level: PermissionLevel): Pro
   if (!access || !access.can(entity, level)) throw new Error("forbidden");
   return access;
 }
+
+/**
+ * Non-throwing variant for actions that return a result shape:
+ * `if (!(await hasAccess("tenants","CREATE"))) return { error: "forbidden" };`
+ */
+export async function hasAccess(entity: string, level: PermissionLevel): Promise<boolean> {
+  const access = await getSessionAccess();
+  return !!access && access.can(entity, level);
+}

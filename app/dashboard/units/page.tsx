@@ -36,7 +36,7 @@ export default async function UnitsPage({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
-  await assertView("units");
+  const access = await assertView("units");
   const params           = await searchParams;
   const q                = params.q        || "";
   const propertyFilter   = params.property || "";
@@ -187,22 +187,24 @@ export default async function UnitsPage({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Link
-            href="/dashboard/units/bulk"
-            className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
-          >
-            <Squares2X2Icon className="h-4 w-4" />
-            {t("bulkAdd")}
-          </Link>
-          <Link
-            href="/dashboard/units/new"
-            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
-          >
-            <PlusIcon className="h-4 w-4" />
-            {t("newUnit")}
-          </Link>
-        </div>
+        {access.canCreate("units") && (
+          <div className="flex items-center gap-2">
+            <Link
+              href="/dashboard/units/bulk"
+              className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+            >
+              <Squares2X2Icon className="h-4 w-4" />
+              {t("bulkAdd")}
+            </Link>
+            <Link
+              href="/dashboard/units/new"
+              className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
+            >
+              <PlusIcon className="h-4 w-4" />
+              {t("newUnit")}
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* ── Filters ────────────────────────────────────────────────── */}

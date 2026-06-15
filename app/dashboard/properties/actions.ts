@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
+import { hasAccess } from "@/lib/access";
 
 export type ActionResponse = {
   error?: string;
@@ -44,6 +45,7 @@ export async function createProperty(formData: FormData): Promise<ActionResponse
   const tErr = await getTranslations("buildings.errors");
   const organizationId = await getOrgId();
   if (!organizationId) return { error: tErr("unauthorized") };
+  if (!(await hasAccess("buildings", "CREATE"))) return { error: tErr("unauthorized") };
 
   const name = (formData.get("name") as string)?.trim();
   const type = formData.get("type") as string;
@@ -79,6 +81,7 @@ export async function updateProperty(formData: FormData): Promise<ActionResponse
   const tErr = await getTranslations("buildings.errors");
   const organizationId = await getOrgId();
   if (!organizationId) return { error: tErr("unauthorized") };
+  if (!(await hasAccess("buildings", "EDIT"))) return { error: tErr("unauthorized") };
 
   const id = formData.get("id") as string;
   const name = (formData.get("name") as string)?.trim();
@@ -121,6 +124,7 @@ export async function archiveProperty(propertyId: string): Promise<ActionRespons
   const tErr = await getTranslations("buildings.errors");
   const organizationId = await getOrgId();
   if (!organizationId) return { error: tErr("unauthorized") };
+  if (!(await hasAccess("buildings", "EDIT"))) return { error: tErr("unauthorized") };
 
   const property = await prisma.property.findUnique({
     where: { id: propertyId },
@@ -146,6 +150,7 @@ export async function restoreProperty(propertyId: string): Promise<ActionRespons
   const tErr = await getTranslations("buildings.errors");
   const organizationId = await getOrgId();
   if (!organizationId) return { error: tErr("unauthorized") };
+  if (!(await hasAccess("buildings", "EDIT"))) return { error: tErr("unauthorized") };
 
   const property = await prisma.property.findUnique({
     where: { id: propertyId },
@@ -171,6 +176,7 @@ export async function deleteProperty(propertyId: string): Promise<ActionResponse
   const tErr = await getTranslations("buildings.errors");
   const organizationId = await getOrgId();
   if (!organizationId) return { error: tErr("unauthorized") };
+  if (!(await hasAccess("buildings", "FULL"))) return { error: tErr("unauthorized") };
 
   const property = await prisma.property.findUnique({
     where: { id: propertyId },

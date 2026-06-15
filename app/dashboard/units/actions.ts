@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { hasAccess } from "@/lib/access";
 
 export type ActionResponse = {
   error?: string;
@@ -40,6 +41,7 @@ export async function createUnit(formData: FormData): Promise<ActionResponse> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
+  if (!(await hasAccess("units", "CREATE"))) return { error: "forbidden" };
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
@@ -106,6 +108,7 @@ export async function quickUpdateUnit(formData: FormData): Promise<ActionRespons
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
+  if (!(await hasAccess("units", "EDIT"))) return { error: "forbidden" };
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id }, select: { organizationId: true },
@@ -135,6 +138,7 @@ export async function updateUnit(formData: FormData): Promise<ActionResponse> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Unauthorized" };
+  if (!(await hasAccess("units", "EDIT"))) return { error: "forbidden" };
 
   const dbUser = await prisma.user.findUnique({
     where: { id: user.id },
@@ -219,6 +223,7 @@ export async function bulkCreateUnits(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { created: 0, error: "Unauthorized" };
+  if (!(await hasAccess("units", "CREATE"))) return { created: 0, error: "forbidden" };
 
   const dbUser = await prisma.user.findUnique({
     where:  { id: user.id },

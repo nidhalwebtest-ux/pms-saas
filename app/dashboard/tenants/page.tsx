@@ -38,7 +38,7 @@ export default async function TenantsPage({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
-  await assertView("tenants");
+  const access = await assertView("tenants");
   const params      = await searchParams;
   const q           = params.q          || "";
   const status      = params.status     || "all";   // all | active | inactive
@@ -133,13 +133,15 @@ export default async function TenantsPage({
             <p className="text-sm text-gray-500">{t("recordsCount", { count: tenants.length })}</p>
           </div>
         </div>
-        <Link
-          href="/dashboard/tenants/new"
-          className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
-        >
-          <PlusIcon className="h-4 w-4" />
-          {t("newTenantBtn")}
-        </Link>
+        {access.canCreate("tenants") && (
+          <Link
+            href="/dashboard/tenants/new"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 transition-colors"
+          >
+            <PlusIcon className="h-4 w-4" />
+            {t("newTenantBtn")}
+          </Link>
+        )}
       </div>
 
       {/* Filters */}

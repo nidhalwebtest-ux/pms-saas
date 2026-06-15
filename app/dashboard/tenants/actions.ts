@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { hasAccess } from "@/lib/access";
 
 export type ActionResponse = { error?: string; success?: boolean; id?: string };
 
@@ -70,6 +71,7 @@ function parseTenantFields(fd: FormData) {
 export async function createTenant(fd: FormData): Promise<ActionResponse> {
   const actor = await getActor();
   if (!actor) return { error: "Unauthorized" };
+  if (!(await hasAccess("tenants", "CREATE"))) return { error: "forbidden" };
 
   const fields = parseTenantFields(fd);
   if (!fields.firstName || fields.firstName.length < 2) return { error: "First name must be at least 2 characters." };
@@ -105,6 +107,7 @@ export async function createTenant(fd: FormData): Promise<ActionResponse> {
 export async function updateTenant(fd: FormData): Promise<ActionResponse> {
   const actor = await getActor();
   if (!actor) return { error: "Unauthorized" };
+  if (!(await hasAccess("tenants", "EDIT"))) return { error: "forbidden" };
 
   const id = (fd.get("id") as string)?.trim();
   const existing = await prisma.tenant.findUnique({
@@ -142,6 +145,7 @@ export async function updateTenant(fd: FormData): Promise<ActionResponse> {
 export async function quickUpdateTenant(fd: FormData): Promise<ActionResponse> {
   const actor = await getActor();
   if (!actor) return { error: "Unauthorized" };
+  if (!(await hasAccess("tenants", "EDIT"))) return { error: "forbidden" };
 
   const id = (fd.get("id") as string)?.trim();
   if (!id) return { error: "Missing ID" };

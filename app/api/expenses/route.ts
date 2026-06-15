@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { getEffectivePropertyIds } from "@/lib/property-scope";
 import { Prisma } from "@prisma/client";
 
 function roundOMR(n: number) { return Math.round(n * 1000) / 1000; }
@@ -51,7 +52,9 @@ export async function GET(req: NextRequest) {
   }
 
   if (status) where.status = status as any;
-  if (propertyId) where.propertyId = propertyId;
+  // Building scope: limit to the user's accessible buildings (null = unrestricted).
+  const propIds = await getEffectivePropertyIds(propertyId);
+  if (propIds) where.propertyId = { in: propIds };
   if (categoryId) where.categoryId = categoryId;
   if (search) {
     where.OR = [

@@ -8,6 +8,7 @@ import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { getUnitDisplayStatus, type UnitDisplayStatus } from "@/lib/unit-status";
 import { getSelectedPropertyId } from "@/lib/selected-property";
+import { getEffectivePropertyIds } from "@/lib/property-scope";
 import UnitFilters from "./UnitFilters";
 import UnitsView from "./UnitsView";
 
@@ -76,6 +77,8 @@ export default async function UnitsPage({
 
   // ── WHERE ──────────────────────────────────────────────────────────────────
   const effectivePropertyId = selectedPropertyId || propertyFilter;
+  // Limit to the user's accessible buildings (null = unrestricted).
+  const propIds = await getEffectivePropertyIds(effectivePropertyId);
 
   const statusWhere: Prisma.UnitWhereInput =
     statusFilter === "vacant"
@@ -91,7 +94,7 @@ export default async function UnitsPage({
   const whereClause: Prisma.UnitWhereInput = {
     property: { organizationId: dbUser.organizationId },
     ...(q                   && { name:       { contains: q, mode: "insensitive" } }),
-    ...(effectivePropertyId && { propertyId: effectivePropertyId }),
+    ...(propIds ? { propertyId: { in: propIds } } : {}),
     ...(typeFilter          && { unitType:   typeFilter }),
     ...(floorFilter !== ""  && { floor:      parseInt(floorFilter) }),
     ...statusWhere,
@@ -150,7 +153,7 @@ export default async function UnitsPage({
   // Summary counts — respect the selected property scope
   const countBase: Prisma.UnitWhereInput = {
     property: { organizationId: dbUser.organizationId },
-    ...(effectivePropertyId && { propertyId: effectivePropertyId }),
+    ...(propIds ? { propertyId: { in: propIds } } : {}),
   };
   const [vacantCount, occupiedCount, reservedCount, maintenanceCount, allCount] = await Promise.all([
     prisma.unit.count({ where: { ...countBase, status: "AVAILABLE", reservations: { none:  { status: { in: [...ACTIVE_STATUSES] } } } } }),

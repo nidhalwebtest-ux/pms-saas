@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { assertView } from "@/lib/access";
+import { getEffectivePropertyIds } from "@/lib/property-scope";
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { DocumentTextIcon, PlusIcon } from "@heroicons/react/24/outline";
@@ -63,9 +64,12 @@ export default async function InvoicesPage({
 
   // ── Build where clause ────────────────────────────────────────────────────────
 
+  // Limit to the user's accessible buildings (null = unrestricted).
+  const propIds = await getEffectivePropertyIds(propertyId);
+
   const baseWhere: Prisma.InvoiceWhereInput = {
     organizationId: orgUser.organizationId,
-    ...(propertyId && { propertyId }),
+    ...(propIds ? { propertyId: { in: propIds } } : {}),
     ...(search && {
       OR: [
         { invoiceNumber: { contains: search, mode: "insensitive" } },
@@ -111,7 +115,7 @@ export default async function InvoicesPage({
       by: ["status"],
       where: {
         organizationId: orgUser.organizationId,
-        ...(propertyId && { propertyId }),
+        ...(propIds ? { propertyId: { in: propIds } } : {}),
       },
       _count: { _all: true },
     }),
@@ -126,7 +130,7 @@ export default async function InvoicesPage({
     prisma.invoice.count({
       where: {
         organizationId: orgUser.organizationId,
-        ...(propertyId && { propertyId }),
+        ...(propIds ? { propertyId: { in: propIds } } : {}),
         status: { in: [...OUTSTANDING_STATUSES] },
         dueDate: { lt: today },
       },

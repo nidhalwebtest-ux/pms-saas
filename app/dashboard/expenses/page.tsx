@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { assertView } from "@/lib/access";
+import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
@@ -38,9 +39,16 @@ export default async function ExpensesPage({
     else initialStatus = "ALL";
   }
 
+  // Restrict the building filter to the user's accessible buildings.
+  const accessible = await getSessionAccessibleProperties();
+
   const [properties, categories] = await Promise.all([
     prisma.property.findMany({
-      where: { organizationId: dbUser.organizationId, isArchived: false },
+      where: {
+        organizationId: dbUser.organizationId,
+        isArchived: false,
+        ...(accessible ? { id: { in: accessible } } : {}),
+      },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),

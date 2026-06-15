@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import Link from "next/link";
 import {
   ArrowLeftIcon,
@@ -64,6 +65,10 @@ export default async function ExpenseDetailsPage({
   if (dbUser.role === "STAFF" && expense.submittedById !== user.id) {
     return notFound();
   }
+
+  // Building scope: block expenses outside the user's assigned buildings.
+  const acc = await getSessionAccessibleProperties();
+  if (acc && expense.propertyId && !acc.includes(expense.propertyId)) redirect("/dashboard/no-access");
 
   const tDet = await getTranslations("expenses.detail");
   const tPrint = await getTranslations("expenses.print");

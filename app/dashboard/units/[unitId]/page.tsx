@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import { Prisma } from "@prisma/client";
 import {
   HomeModernIcon,
@@ -113,6 +114,10 @@ export default async function UnitDetailPage({
   ]);
 
   if (!unit || unit.property.organizationId !== dbUser.organizationId) notFound();
+
+  // Building scope: block units outside the user's assigned buildings.
+  const acc = await getSessionAccessibleProperties();
+  if (acc && !acc.includes(unit.propertyId)) redirect("/dashboard/no-access");
 
   const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations, new Date(), { showReserved });
   const cfg           = UNIT_STATUS_CONFIG[displayStatus];

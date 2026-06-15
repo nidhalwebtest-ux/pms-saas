@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
@@ -121,6 +122,10 @@ export default async function InvoiceDetailPage({
   if (!invoice || invoice.organizationId !== orgUser.organizationId) {
     notFound();
   }
+
+  // Building scope: block records outside the user's assigned buildings.
+  const acc = await getSessionAccessibleProperties();
+  if (acc && invoice.propertyId && !acc.includes(invoice.propertyId)) redirect("/dashboard/no-access");
 
   // ── i18n ──────────────────────────────────────────────────────────────────────
   const locale  = await getLocale();

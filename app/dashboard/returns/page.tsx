@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { assertView } from "@/lib/access";
+import { getEffectivePropertyIds } from "@/lib/property-scope";
 import { Prisma } from "@prisma/client";
 import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 import { getTranslations } from "next-intl/server";
@@ -47,13 +48,17 @@ export default async function ReturnsPage({
   const currency = await getCurrentCurrency();
   const t       = await getTranslations("returns");
 
+  // Limit to the user's accessible buildings (null = unrestricted), via the
+  // return's reservation → unit relation.
+  const propIds = await getEffectivePropertyIds(propertyId);
+
   const baseWhere: Prisma.ReturnWhereInput = {
     organizationId: orgUser.organizationId,
-    ...(propertyId && {
+    ...(propIds && {
       reservation: {
         OR: [
-          { unit: { propertyId } },
-          { reservationUnits: { some: { unit: { propertyId } } } },
+          { unit: { propertyId: { in: propIds } } },
+          { reservationUnits: { some: { unit: { propertyId: { in: propIds } } } } },
         ],
       },
     }),

@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
+import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import { getTranslations, getLocale } from "next-intl/server";
 import { format } from "date-fns";
 import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
@@ -58,6 +59,10 @@ export default async function PropertyDetailsPage({
 
   if (!property) notFound();
   if (property.organizationId !== dbUser?.organizationId) redirect("/dashboard");
+
+  // Building scope: block buildings outside the user's assigned set.
+  const acc = await getSessionAccessibleProperties();
+  if (acc && !acc.includes(property.id)) redirect("/dashboard/no-access");
 
   const t      = await getTranslations("buildings.detail");
   const tT     = await getTranslations("buildings.types");

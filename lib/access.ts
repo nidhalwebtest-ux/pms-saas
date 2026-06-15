@@ -64,7 +64,7 @@ export async function getSessionAccess(): Promise<SessionAccess | null> {
 export async function assertView(entity: string): Promise<SessionAccess> {
   const access = await getSessionAccess();
   if (!access) redirect("/login");
-  if (!access.canView(entity)) redirect(`/dashboard?denied=${entity}`);
+  if (!access.canView(entity)) redirect("/dashboard/no-access");
   return access;
 }
 

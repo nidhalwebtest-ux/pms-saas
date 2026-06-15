@@ -5,10 +5,12 @@ import { useTranslations } from "next-intl";
 import { PencilSquareIcon, TrashIcon, CheckIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { type Role } from "@/lib/permissions";
 import { assignMemberRole, removeTeamMember } from "./actions";
+import MemberBuildingsButton from "./MemberBuildingsButton";
 import type { UserRole } from "@prisma/client";
 import { Badge, Button, getUserRoleBadge, useConfirmDialog } from "@/components/ui";
 
 interface RoleOption { id: string; name: string; key: string | null; isSystem: boolean }
+interface Building { id: string; name: string }
 
 interface Member {
   id:        string;
@@ -19,16 +21,21 @@ interface Member {
   roleId:    string | null;
   assignedRoleName: string | null;
   assignedRoleKey:  string | null;
+  assignedPropertyIds: string[];
 }
 
 export default function MemberRow({
   member,
   roles,
+  buildings,
+  canAssignBuildings,
   currentUserId,
   callerRole,
 }: {
   member:        Member;
   roles:         RoleOption[];
+  buildings:     Building[];
+  canAssignBuildings: boolean;
   currentUserId: string;
   callerRole:    Role;
 }) {
@@ -109,6 +116,15 @@ export default function MemberRow({
 
       {/* Right — role + actions */}
       <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Building access (not shown for the owner — always unrestricted) */}
+        {!isOwner && (
+          <MemberBuildingsButton
+            memberId={member.id}
+            buildings={buildings}
+            assignedIds={member.assignedPropertyIds}
+            canAssign={canAssignBuildings}
+          />
+        )}
         {/* Role display / editor */}
         {editing ? (
           <div className="flex items-center gap-2">

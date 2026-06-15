@@ -43,11 +43,14 @@ export default async function TeamPage() {
   const t     = await getTranslations("settings.team");
   const tPerm = await getTranslations("settings.team.permissions");
 
-  const [members, pendingInvitations, roles] = await Promise.all([
+  const [members, pendingInvitations, roles, buildings] = await Promise.all([
     prisma.user.findMany({
       where:   { organizationId: dbUser.organizationId },
       orderBy: { createdAt: "asc" },
-      include: { assignedRole: { select: { id: true, name: true, key: true } } },
+      include: {
+        assignedRole: { select: { id: true, name: true, key: true } },
+        assignedProperties: { select: { propertyId: true } },
+      },
     }),
     prisma.invitation.findMany({
       where: {
@@ -63,6 +66,11 @@ export default async function TeamPage() {
       where:   { organizationId: dbUser.organizationId },
       select:  { id: true, name: true, key: true, isSystem: true },
       orderBy: [{ isSystem: "desc" }, { name: "asc" }],
+    }),
+    prisma.property.findMany({
+      where:   { organizationId: dbUser.organizationId, isArchived: false },
+      select:  { id: true, name: true },
+      orderBy: { name: "asc" },
     }),
   ]);
 
@@ -197,8 +205,11 @@ export default async function TeamPage() {
                 roleId: member.roleId ?? systemRoleIdByKey.get(member.role) ?? null,
                 assignedRoleName: member.assignedRole?.name ?? null,
                 assignedRoleKey: member.assignedRole?.key ?? null,
+                assignedPropertyIds: member.assignedProperties.map((a) => a.propertyId),
               }}
               roles={assignableRoles}
+              buildings={buildings}
+              canAssignBuildings={can(callerRole, "manageTeam")}
               currentUserId={user.id}
               callerRole={callerRole}
             />

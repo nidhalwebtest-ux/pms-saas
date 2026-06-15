@@ -7,6 +7,7 @@ import NavigationProgress from "@/components/ui/NavigationProgress";
 import AvailabilityCalendarButton from "@/components/dashboard/AvailabilityCalendarButton";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPropertyId } from "@/lib/selected-property";
+import { getAccessiblePropertyIds } from "@/lib/property-scope";
 import { canNav, type Role } from "@/lib/permissions";
 import { resolvePermissions, navAccessFor } from "@/lib/rbac";
 import { OrgProvider } from "@/lib/org-context";
@@ -42,15 +43,29 @@ export default async function DashboardLayout({
   const access = resolvePermissions(role, dbUser.assignedRole);
   const navAccess = { ...navAccessFor(access), settings: canNav(role, "settings") };
 
-  // Fetch non-archived properties for the header scope selector
-  const [properties, selectedPropertyId] = await Promise.all([
+  // Per-user building scope: null = unrestricted (all org). Owner is always unrestricted.
+  const accessible = access.isOwner ? null : await getAccessiblePropertyIds(user.id, dbUser.organizationId);
+
+  // Fetch non-archived properties for the header scope selector, limited to the
+  // user's accessible buildings.
+  const [properties, rawSelectedPropertyId] = await Promise.all([
     prisma.property.findMany({
-      where:   { organizationId: dbUser.organizationId, isArchived: false },
+      where:   {
+        organizationId: dbUser.organizationId,
+        isArchived: false,
+        ...(accessible ? { id: { in: accessible } } : {}),
+      },
       select:  { id: true, name: true },
       orderBy: { name: "asc" },
     }),
     getSelectedPropertyId(),
   ]);
+
+  // Ignore a selected building the user can no longer access (falls back to "All").
+  const selectedPropertyId =
+    accessible && rawSelectedPropertyId && !accessible.includes(rawSelectedPropertyId)
+      ? ""
+      : rawSelectedPropertyId;
 
   return (
     <OrgProvider value={{ currency }}>

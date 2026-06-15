@@ -3039,6 +3039,18 @@
       "footer": "Live data · approved/processed expenses by effective date",
       "source": "Source: PMS"
     },
+    "buildings": {
+      "title": "Building access",
+      "allBuildings": "All buildings",
+      "specific": "Specific buildings",
+      "count": "{count, plural, one {# building} other {# buildings}}",
+      "edit": "Edit building access",
+      "noBuildings": "No buildings yet.",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saved": "Building access updated",
+      "error": "Could not update building access."
+    },
     "staff": {
       "subtitle": "Activity by staff member · ",
       "kpiCollected": "Collected",

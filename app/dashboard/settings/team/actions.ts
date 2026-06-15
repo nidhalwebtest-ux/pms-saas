@@ -226,6 +226,48 @@ export async function assignMemberRole(memberId: string, roleId: string) {
   revalidatePath("/dashboard", "layout");
 }
 
+// ── Assign buildings (property scope) to a member ─────────────────────────────
+
+export async function assignMemberProperties(
+  memberId: string,
+  input: { all: boolean; propertyIds: string[] },
+) {
+  const tErr   = await getTranslations("settings.team.errors");
+  const caller = await getCallerWithOrg();
+
+  if (!can(caller.role, "manageTeam")) throw new Error(tErr("ownerOnlyChangeRoles"));
+
+  const target = await prisma.user.findUnique({
+    where:  { id: memberId },
+    select: { role: true, organizationId: true },
+  });
+  if (!target || target.organizationId !== caller.organizationId) throw new Error(tErr("memberNotFound"));
+  // Owner is always unrestricted — no point assigning buildings.
+  if (target.role === "OWNER") throw new Error(tErr("ownerCannotChange"));
+
+  // Validate the chosen properties belong to the org.
+  const valid = input.all
+    ? []
+    : await prisma.property.findMany({
+        where: { organizationId: caller.organizationId, id: { in: input.propertyIds } },
+        select: { id: true },
+      });
+  const validIds = valid.map((p) => p.id);
+
+  await prisma.$transaction([
+    prisma.propertyAssignment.deleteMany({ where: { userId: memberId } }),
+    ...(input.all || validIds.length === 0
+      ? []
+      : [prisma.propertyAssignment.createMany({
+          data: validIds.map((propertyId) => ({ userId: memberId, propertyId })),
+          skipDuplicates: true,
+        })]),
+  ]);
+
+  revalidatePath("/dashboard/settings/team");
+  revalidatePath("/dashboard", "layout");
+}
+
 // ── Remove team member ────────────────────────────────────────────────────────
 
 export async function removeTeamMember(memberId: string) {

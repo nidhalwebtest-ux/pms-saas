@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { downloadXlsx } from "@/lib/reports/export-xlsx";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { DATE_PRESETS } from "../reports-config";
@@ -107,20 +108,14 @@ export default function CancellationAnalysis({ data, properties, preset, rangeTe
   }
   const allOpen = expanded.size >= data.sources.length && data.sources.length > 0;
 
-  function exportCsv() {
-    const esc = (v: string | number) => { const s = String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  function exportXlsx() {
     const rows = [["Source", "Reservation", "Status", "Reason", "Date", "Lost value (OMR)"]];
     for (const s of data.sources) for (const it of s.items) {
       rows.push([srcLabel(s.source), it.number ?? "", it.status, it.reason ?? "", it.date.slice(0, 10), it.value.toFixed(3)]);
     }
     rows.push([]);
     rows.push(["Total", "", "", "", "", k.lostValue.toFixed(3)]);
-    const csv = rows.map((r) => r.map(esc).join(",")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `cancellation-analysis-${fromDate}_${toDate}.csv`;
-    a.click(); URL.revokeObjectURL(url);
+    void downloadXlsx(rows, `cancellation-analysis-${fromDate}_${toDate}`);
   }
 
   const k = data.kpis;
@@ -142,7 +137,7 @@ export default function CancellationAnalysis({ data, properties, preset, rangeTe
           <p className="sub">{tc("subtitle")}<span className="tag">{rangeText}</span></p>
         </div>
         <div className="rhead-actions">
-          <button className="btn btn-primary btn-sm" onClick={exportCsv}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
+          <button className="btn btn-primary btn-sm" onClick={exportXlsx}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
         </div>
       </div>
 

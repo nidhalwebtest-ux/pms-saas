@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { downloadXlsx } from "@/lib/reports/export-xlsx";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { DATE_PRESETS } from "../reports-config";
@@ -94,18 +95,12 @@ export default function KhareefPerformance({ data, properties, preset, rangeText
     setSort((s) => (s.key === key ? { key, dir: s.dir === "desc" ? "asc" : "desc" } : { key, dir: "desc" }));
   }
 
-  function exportCsv() {
-    const esc = (v: string | number) => { const s = String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  function exportXlsx() {
     const rows = [["Building", "Units", "Occupancy %", "Occupied nights", "Revenue (OMR)", "ADR (OMR)", "Stays"]];
     for (const b of sortedBuildings) rows.push([b.name, String(b.unitCount), String(Math.round(b.occupancy * 100)), String(b.occupiedNights), b.revenue.toFixed(3), b.adr.toFixed(3), String(b.stays)]);
     rows.push([]);
     rows.push(["Total", String(k.unitCount), String(Math.round(k.occupancy * 100)), String(k.occupiedNights), k.revenue.toFixed(3), k.adr.toFixed(3), String(k.stays)]);
-    const csv = rows.map((r) => r.map(esc).join(",")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `khareef-performance-${fromDate}_${toDate}.csv`;
-    a.click(); URL.revokeObjectURL(url);
+    void downloadXlsx(rows, `khareef-performance-${fromDate}_${toDate}`);
   }
 
   const k = data.kpis;
@@ -134,7 +129,7 @@ export default function KhareefPerformance({ data, properties, preset, rangeText
           <p className="sub">{tk("subtitle")}<span className="tag is-khareef">{rangeText}</span></p>
         </div>
         <div className="rhead-actions">
-          <button className="btn btn-primary btn-sm" onClick={exportCsv}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
+          <button className="btn btn-primary btn-sm" onClick={exportXlsx}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
         </div>
       </div>
 

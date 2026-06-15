@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { downloadXlsx } from "@/lib/reports/export-xlsx";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { DATE_PRESETS } from "../reports-config";
@@ -93,18 +94,12 @@ export default function AnnualSummary({ data, properties, preset, rangeText, fro
     startTransition(() => router.push(`/dashboard/reports/annual-summary${qs ? `?${qs}` : ""}`));
   }
 
-  function exportCsv() {
-    const esc = (v: string | number) => { const s = String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  function exportXlsx() {
     const rows = [["Month", "Revenue", "Expenses", "Profit", "Cumulative"]];
     for (const m of data.months) rows.push([m.start.slice(0, 7), m.revenue.toFixed(3), m.expenses.toFixed(3), m.profit.toFixed(3), m.cumulative.toFixed(3)]);
     rows.push([]);
     rows.push(["Total", k.revenue.toFixed(3), k.expenses.toFixed(3), k.netProfit.toFixed(3), ""]);
-    const csv = rows.map((r) => r.map(esc).join(",")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `annual-summary-${fromDate}_${toDate}.csv`;
-    a.click(); URL.revokeObjectURL(url);
+    void downloadXlsx(rows, `annual-summary-${fromDate}_${toDate}`);
   }
 
   const k = data.kpis;
@@ -126,7 +121,7 @@ export default function AnnualSummary({ data, properties, preset, rangeText, fro
           <p className="sub">{ta("subtitle")}<span className="tag">{rangeText}</span></p>
         </div>
         <div className="rhead-actions">
-          <button className="btn btn-primary btn-sm" onClick={exportCsv}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
+          <button className="btn btn-primary btn-sm" onClick={exportXlsx}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
         </div>
       </div>
 

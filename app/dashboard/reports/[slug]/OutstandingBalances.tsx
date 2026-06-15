@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { downloadXlsx } from "@/lib/reports/export-xlsx";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { DATE_PRESETS } from "../reports-config";
@@ -123,8 +124,7 @@ export default function OutstandingBalances({ data, properties, preset, rangeTex
     setExpanded((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
 
-  function exportCsv() {
-    const esc = (v: string | number) => { const s = String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  function exportXlsx() {
     const rows = [["Building", "Tenant", "Invoice", "Status", "Due", "Days overdue", "Invoiced", "Paid", "Credited", "Balance"]];
     for (const b of data.buildings) for (const tn of b.tenants) for (const inv of tn.invoices) {
       rows.push([b.name, tn.name, inv.number, inv.status, inv.dueDate.slice(0, 10), String(inv.daysOverdue > 0 ? inv.daysOverdue : 0),
@@ -132,12 +132,7 @@ export default function OutstandingBalances({ data, properties, preset, rangeTex
     }
     rows.push([]);
     rows.push(["Total", "", "", "", "", "", k.invoiced.toFixed(3), k.paid.toFixed(3), k.credited.toFixed(3), k.balance.toFixed(3)]);
-    const csv = rows.map((r) => r.map(esc).join(",")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `outstanding-balances-${data.asOf}.csv`;
-    a.click(); URL.revokeObjectURL(url);
+    void downloadXlsx(rows, `outstanding-balances-${data.asOf}`);
   }
 
   const k = data.kpis;
@@ -159,7 +154,7 @@ export default function OutstandingBalances({ data, properties, preset, rangeTex
           <p className="sub">{to("subtitle")}<span className="tag">{to("asOf", { date: asOfLabel })}</span></p>
         </div>
         <div className="rhead-actions">
-          <button className="btn btn-primary btn-sm" onClick={exportCsv}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
+          <button className="btn btn-primary btn-sm" onClick={exportXlsx}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
         </div>
       </div>
 

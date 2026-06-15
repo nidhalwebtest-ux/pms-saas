@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { downloadXlsx } from "@/lib/reports/export-xlsx";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { DATE_PRESETS } from "../reports-config";
@@ -123,8 +124,7 @@ export default function AgingReceivables({ data, properties, preset, rangeText, 
     setExpanded((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
 
-  function exportCsv() {
-    const esc = (v: string | number) => { const s = String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  function exportXlsx() {
     const rows = [["Building", "Tenant", "Invoice", "Due", "Days overdue", "Current", "1-30", "31-60", "61-90", "90+", "Balance"]];
     for (const b of data.buildings) for (const tn of b.tenants) for (const inv of tn.invoices) {
       const col = (k: AgingBucketKey) => (inv.bucket === k ? inv.balance.toFixed(3) : "");
@@ -134,12 +134,7 @@ export default function AgingReceivables({ data, properties, preset, rangeText, 
     rows.push([]);
     const kb = k.buckets;
     rows.push(["Total", "", "", "", "", kb.current.toFixed(3), kb.d1_30.toFixed(3), kb.d31_60.toFixed(3), kb.d61_90.toFixed(3), kb.d90plus.toFixed(3), k.totalDue.toFixed(3)]);
-    const csv = rows.map((r) => r.map(esc).join(",")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `aging-receivables-${data.asOf}.csv`;
-    a.click(); URL.revokeObjectURL(url);
+    void downloadXlsx(rows, `aging-receivables-${data.asOf}`);
   }
 
   const k = data.kpis;
@@ -162,7 +157,7 @@ export default function AgingReceivables({ data, properties, preset, rangeText, 
           <p className="sub">{ta("subtitle")}<span className="tag">{ta("asOf", { date: asOfLabel })}</span></p>
         </div>
         <div className="rhead-actions">
-          <button className="btn btn-primary btn-sm" onClick={exportCsv}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
+          <button className="btn btn-primary btn-sm" onClick={exportXlsx}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { downloadXlsx } from "@/lib/reports/export-xlsx";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { DATE_PRESETS } from "../reports-config";
@@ -128,20 +129,14 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
     setExpanded((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
 
-  function exportCsv() {
-    const esc = (v: string | number) => { const s = String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  function exportXlsx() {
     const rows = [["Building", "Unit", "Type", "Number", "Date", "Guest", "Reservation", "Amount (OMR)"]];
     for (const b of sortedBuildings) for (const u of b.units) for (const tx of u.transactions) {
       rows.push([b.name, u.name, tx.kind, tx.number, tx.date.slice(0, 10), tx.guest, tx.reservationRef ?? "", tx.amount.toFixed(3)]);
     }
     rows.push([]);
     rows.push(["", "", "", "", "", "", "Net total", k.totalRevenue.toFixed(3)]);
-    const csv = rows.map((r) => r.map(esc).join(",")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `${variant.slug}-${fromDate}_${toDate}.csv`;
-    a.click(); URL.revokeObjectURL(url);
+    void downloadXlsx(rows, `${variant.slug}-${fromDate}_${toDate}`);
   }
 
   const k = data.kpis;
@@ -164,7 +159,7 @@ export default function RevenueByBuilding({ data, properties, preset, rangeText,
           <p className="sub">{tr("subtitle")}<span className="tag">{rangeText}</span></p>
         </div>
         <div className="rhead-actions">
-          <button className="btn btn-primary btn-sm" onClick={exportCsv}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
+          <button className="btn btn-primary btn-sm" onClick={exportXlsx}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
         </div>
       </div>
 

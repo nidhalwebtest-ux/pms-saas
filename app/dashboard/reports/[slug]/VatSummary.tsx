@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import { downloadXlsx } from "@/lib/reports/export-xlsx";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { DATE_PRESETS } from "../reports-config";
@@ -82,18 +83,12 @@ export default function VatSummary({ data, properties, preset, rangeText, fromDa
     startTransition(() => router.push(`/dashboard/reports/vat-summary${qs ? `?${qs}` : ""}`));
   }
 
-  function exportCsv() {
-    const esc = (v: string | number) => { const s = String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  function exportXlsx() {
     const rows = [["Period", "Invoices", "Taxable sales", "Output VAT", "Gross"]];
     for (const b of data.buckets) rows.push([b.start.slice(0, 7), String(b.invoiceCount), b.taxableSales.toFixed(3), b.vat.toFixed(3), b.gross.toFixed(3)]);
     rows.push([]);
     rows.push(["Total", String(k.invoiceCount), k.taxableSales.toFixed(3), k.vat.toFixed(3), k.gross.toFixed(3)]);
-    const csv = rows.map((r) => r.map(esc).join(",")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `vat-summary-${fromDate}_${toDate}.csv`;
-    a.click(); URL.revokeObjectURL(url);
+    void downloadXlsx(rows, `vat-summary-${fromDate}_${toDate}`);
   }
 
   const k = data.kpis;
@@ -115,7 +110,7 @@ export default function VatSummary({ data, properties, preset, rangeText, fromDa
           <p className="sub">{tv("subtitle")}<span className="tag">{rangeText}</span></p>
         </div>
         <div className="rhead-actions">
-          <button className="btn btn-primary btn-sm" onClick={exportCsv}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
+          <button className="btn btn-primary btn-sm" onClick={exportXlsx}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
         </div>
       </div>
 

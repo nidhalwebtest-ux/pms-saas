@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { downloadXlsx } from "@/lib/reports/export-xlsx";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { DATE_PRESETS } from "../reports-config";
@@ -96,18 +97,12 @@ export default function RevenueTrend({ data, properties, preset, rangeText, from
     return d.toLocaleDateString(loc, { day: "numeric", month: "short" });
   };
 
-  function exportCsv() {
-    const esc = (v: string | number) => { const s = String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  function exportXlsx() {
     const rows = [["Period start", "Period end", "Net (OMR)", "Invoiced", "Returns", "Transactions"]];
     for (const b of data.buckets) rows.push([b.start.slice(0, 10), b.end.slice(0, 10), b.net.toFixed(3), b.invoiced.toFixed(3), b.returned.toFixed(3), String(b.txCount)]);
     rows.push([]);
     rows.push(["Total", "", k.total.toFixed(3), k.invoiced.toFixed(3), k.returned.toFixed(3), String(k.txCount)]);
-    const csv = rows.map((r) => r.map(esc).join(",")).join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = `revenue-trend-${fromDate}_${toDate}.csv`;
-    a.click(); URL.revokeObjectURL(url);
+    void downloadXlsx(rows, `revenue-trend-${fromDate}_${toDate}`);
   }
 
   const k = data.kpis;
@@ -155,7 +150,7 @@ export default function RevenueTrend({ data, properties, preset, rangeText, from
           <p className="sub">{trt("subtitle")}<span className="tag">{rangeText}</span></p>
         </div>
         <div className="rhead-actions">
-          <button className="btn btn-primary btn-sm" onClick={exportCsv}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
+          <button className="btn btn-primary btn-sm" onClick={exportXlsx}><svg className="ic-sm"><use href="#i-download" /></svg>{t("actions.export")}</button>
         </div>
       </div>
 

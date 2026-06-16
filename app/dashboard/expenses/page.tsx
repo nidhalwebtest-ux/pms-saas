@@ -17,7 +17,7 @@ export default async function ExpensesPage({
 }: {
   searchParams: Promise<{ status?: string; propertyId?: string; categoryId?: string }>;
 }) {
-  await assertView("expenses");
+  const access = await assertView("expenses");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -59,8 +59,8 @@ export default async function ExpensesPage({
     }),
   ]);
 
-  const canSubmit  = ["OWNER", "STAFF"].includes(dbUser.role);
-  const canManage  = ["OWNER", "MANAGER"].includes(dbUser.role);
+  const canSubmit  = access.canCreate("expenses") && ["OWNER", "STAFF"].includes(dbUser.role);
+  const canManage  = access.can("expenses", "EDIT") && ["OWNER", "MANAGER"].includes(dbUser.role);
 
   const t = await getTranslations("expenses");
 

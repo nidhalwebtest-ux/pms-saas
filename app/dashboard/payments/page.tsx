@@ -33,7 +33,7 @@ export default async function PaymentsListPage({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
-  await assertView("payments");
+  const access = await assertView("payments");
   const params = await searchParams;
   const q        = params.q      ?? "";
   const method   = params.method ?? "";
@@ -182,12 +182,14 @@ export default async function PaymentsListPage({
             </p>
           </div>
         </div>
+        {access.canCreate("payments") && (
         <Link
           href="/dashboard/payments/new"
           className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
         >
           {t("newPayment")}
         </Link>
+        )}
       </div>
 
       {/* ── Filters ── */}

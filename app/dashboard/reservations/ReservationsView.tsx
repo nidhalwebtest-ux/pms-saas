@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
+import { useCan } from "@/components/PermissionsProvider";
 import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import { format as fmtDateFns } from "date-fns";
 import { toast } from "sonner";
@@ -383,6 +384,7 @@ export default function ReservationsView({
 }) {
   const router = useRouter();
   const t        = useTranslations("reservations");
+  const canCreate = useCan("reservations", "CREATE");
   const tTabs    = useTranslations("reservations.tabs");
   const tTable   = useTranslations("reservations.table");
   const tStatus  = useTranslations("reservations.statuses");
@@ -638,11 +640,13 @@ export default function ReservationsView({
           <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
           <p className="text-sm text-gray-500 mt-0.5">{todayLabel}</p>
         </div>
+        {canCreate && (
         <Link href="/dashboard/reservations/new"
           className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 transition-colors">
           <PlusIcon className="h-4 w-4" />
           {t("newReservation")}
         </Link>
+        )}
       </div>
 
       {/* ── Filters ─────────────────────────────────────────────────────────── */}

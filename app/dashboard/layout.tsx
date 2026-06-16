@@ -11,6 +11,7 @@ import { getAccessiblePropertyIds } from "@/lib/property-scope";
 import { canNav, type Role } from "@/lib/permissions";
 import { resolvePermissions, navAccessFor } from "@/lib/rbac";
 import { OrgProvider } from "@/lib/org-context";
+import { PermissionsProvider } from "@/components/PermissionsProvider";
 
 export default async function DashboardLayout({
   children,
@@ -69,6 +70,7 @@ export default async function DashboardLayout({
 
   return (
     <OrgProvider value={{ currency }}>
+     <PermissionsProvider perms={access.perms} isOwner={access.isOwner}>
       {/*
        * `overflow-x-hidden` is a defensive guard so a stray overflowing
        * child can never push the viewport wider than the window — that
@@ -102,6 +104,7 @@ export default async function DashboardLayout({
           defaultPropertyId={selectedPropertyId ?? properties[0]?.id}
         />
       </div>
+     </PermissionsProvider>
     </OrgProvider>
   );
 }

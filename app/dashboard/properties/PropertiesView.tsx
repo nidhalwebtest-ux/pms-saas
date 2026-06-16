@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
+import { useCan } from "@/components/PermissionsProvider";
 import {
   Squares2X2Icon,
   ListBulletIcon,
@@ -346,6 +347,7 @@ export default function PropertiesView({
   totalUnfiltered: number;
 }) {
   const t       = useTranslations("buildings");
+  const canCreate = useCan("buildings", "CREATE");
   const tTb     = useTranslations("buildings.toolbar");
   const tTable  = useTranslations("buildings.table");
   const tCard   = useTranslations("buildings.card");
@@ -491,6 +493,7 @@ export default function PropertiesView({
 
         {/* Right: New property + view toggle */}
         <div className="flex items-center gap-2">
+          {canCreate && (
           <Link
             href="/dashboard/properties/new"
             className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition-colors shadow-sm"
@@ -498,6 +501,7 @@ export default function PropertiesView({
             <PlusIcon className="h-3.5 w-3.5" />
             {t("newProperty")}
           </Link>
+          )}
           <SegmentedControl<"table" | "card" | "summary">
             value={viewMode}
             onValueChange={setViewMode}
@@ -581,6 +585,7 @@ export default function PropertiesView({
                 <PropertyCard key={p.id} property={p} />
               ))}
               {/* New property card */}
+              {canCreate && (
               <Link
                 href="/dashboard/properties/new"
                 className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-200 bg-white py-12 text-sm font-medium text-gray-400 hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600 transition-all"
@@ -588,6 +593,7 @@ export default function PropertiesView({
                 <PlusIcon className="h-8 w-8" />
                 {tCard("addBuilding")}
               </Link>
+              )}
             </div>
           )}
         </>

@@ -6,6 +6,7 @@ import MoveUnitModal from "@/components/reservations/MoveUnitModal";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useTranslations, useLocale } from "next-intl";
+import { useCan } from "@/components/PermissionsProvider";
 import { format as fmtDateFns } from "date-fns";
 import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import {
@@ -1761,6 +1762,9 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
 
   const [res, setRes] = useState<ReservationData | null>(null);
   const [loading, setLoading] = useState(true);
+  const canManageRes     = useCan("reservations", "CREATE");
+  const canRecordPayment = useCan("payments", "CREATE");
+  const canGenInvoices   = useCan("invoices", "CREATE");
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [activeInvoice, setActiveInvoice] = useState<InvoiceRow | null>(null);
   const [activeReturn, setActiveReturn] = useState<ReturnRow | null>(null);
@@ -1861,7 +1865,7 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
 
             {/* Right: action buttons */}
             <div className="flex items-center gap-2 flex-wrap">
-              <ActionButtons ds={res.displayStatus} onAction={setActiveModal} reservationId={res.id} rateType={res.rateType} allowEarlyCheckIn={allowEarlyCheckIn} canEdit={canEdit} />
+              {canManageRes && <ActionButtons ds={res.displayStatus} onAction={setActiveModal} reservationId={res.id} rateType={res.rateType} allowEarlyCheckIn={allowEarlyCheckIn} canEdit={canEdit} />}
             </div>
           </div>
         </div>
@@ -2130,7 +2134,7 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
               {!res.invoicesGenerated ? (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-400 text-center py-2">{tInvoices("noneGenerated")}</p>
-                  {["PENDING", "CONFIRMED", "CHECKED_IN"].includes(res.status) && (
+                  {canGenInvoices && ["PENDING", "CONFIRMED", "CHECKED_IN"].includes(res.status) && (
                     <button
                       onClick={() => setActiveModal("generate-invoices")}
                       className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
@@ -2389,7 +2393,7 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
 
                 {/* Action buttons */}
                 <div className="flex flex-col gap-2 pt-1">
-                  {!isPaid && (
+                  {!isPaid && canRecordPayment && (
                     <button
                       onClick={() => setActiveModal("payment")}
                       className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-colors"
@@ -2496,12 +2500,14 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
                   ))}
                 </div>
               )}
+              {canManageRes && (
               <button
                 onClick={() => setActiveModal("note")}
                 className="mt-4 w-full py-2 border border-dashed border-gray-300 hover:border-gray-400 text-sm text-gray-500 hover:text-gray-700 rounded-lg transition-colors flex items-center justify-center gap-1.5"
               >
                 <PlusIcon className="h-4 w-4" /> {tActivity("addNote")}
               </button>
+              )}
             </Collapsible>
 
           </div>

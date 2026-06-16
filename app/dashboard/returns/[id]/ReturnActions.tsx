@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { BanknotesIcon } from "@heroicons/react/24/outline";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
+import { useCan } from "@/components/PermissionsProvider";
 
 interface Props {
   returnId: string;
@@ -17,6 +18,7 @@ type PaymentMethod = "CASH" | "BANK_TRANSFER" | "CARD" | "CHEQUE" | "ONLINE" | "
 
 export default function ReturnActions({ returnId, refundAmount, openRefundPanel = false }: Props) {
   const router  = useRouter();
+  const canRefund = useCan("returns", "CREATE");
   const t       = useTranslations("returns.actions");
   const tMethod = useTranslations("invoices.paymentMethods");
 
@@ -59,6 +61,8 @@ export default function ReturnActions({ returnId, refundAmount, openRefundPanel 
       setLoading(false);
     }
   }
+
+  if (!canRefund) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-2">

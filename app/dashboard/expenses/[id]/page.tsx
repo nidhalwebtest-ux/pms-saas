@@ -5,6 +5,7 @@ import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
+import { getSessionAccess } from "@/lib/access";
 import Link from "next/link";
 import {
   ArrowLeftIcon,
@@ -85,10 +86,14 @@ export default async function ExpenseDetailsPage({
 
   const amount = Number(expense.amount);
   const isOwn = expense.submittedById === user.id;
-  const canApprove = ["OWNER", "MANAGER"].includes(dbUser.role) && expense.status === "PENDING";
-  const canProcess = ["OWNER", "ACCOUNTANT"].includes(dbUser.role) && expense.status === "APPROVED";
-  const canEdit    = expense.status === "PENDING" && isOwn;
-  const canDelete  = expense.status === "PENDING" && (isOwn || dbUser.role === "OWNER");
+  // Combine the role/status rules with the permission matrix (custom roles).
+  const access = await getSessionAccess();
+  const canManageExpense = access?.can("expenses", "EDIT") ?? false;
+  const canWriteExpense  = access?.canCreate("expenses") ?? false;
+  const canApprove = ["OWNER", "MANAGER"].includes(dbUser.role) && expense.status === "PENDING" && canManageExpense;
+  const canProcess = ["OWNER", "ACCOUNTANT"].includes(dbUser.role) && expense.status === "APPROVED" && canManageExpense;
+  const canEdit    = expense.status === "PENDING" && isOwn && canWriteExpense;
+  const canDelete  = expense.status === "PENDING" && (isOwn || dbUser.role === "OWNER") && canWriteExpense;
 
   const receipts = [expense.receiptImage, expense.receiptImage2].filter(Boolean) as string[];
 

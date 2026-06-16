@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
+import { useCan } from "@/components/PermissionsProvider";
 import {
   PrinterIcon,
   CreditCardIcon,
@@ -24,6 +25,8 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
   const router = useRouter();
   const t       = useTranslations("invoices.actions");
   const tMethod = useTranslations("invoices.paymentMethods");
+  const canEditInvoice   = useCan("invoices", "CREATE");
+  const canRecordPayment = useCan("payments", "CREATE");
 
   const [issuing, setIssuing] = useState(false);
   const [showPayment, setShowPayment] = useState(openPaymentPanel);
@@ -96,7 +99,7 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
     <div className="space-y-4">
       {/* Action buttons */}
       <div className="flex flex-wrap items-center gap-2">
-        {canIssue && (
+        {canIssue && canEditInvoice && (
           <button
             onClick={handleIssue}
             disabled={issuing}
@@ -106,7 +109,7 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
             {issuing ? t("issuing") : t("issueInvoice")}
           </button>
         )}
-        {canPay && (
+        {canPay && canRecordPayment && (
           <button
             onClick={() => setShowPayment(true)}
             className="inline-flex items-center gap-1.5 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-500 transition-colors"

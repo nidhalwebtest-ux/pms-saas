@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
+import { useCan } from "@/components/PermissionsProvider";
 import {
   CheckCircleIcon,
   CreditCardIcon,
@@ -43,6 +44,8 @@ export default function InvoicesTable({
   totalCount,
 }: InvoicesTableProps) {
   const router = useRouter();
+  const canEditInvoice   = useCan("invoices", "CREATE");
+  const canRecordPayment = useCan("payments", "CREATE");
   const searchParams = useSearchParams();
   const tTbl = useTranslations("invoices.table");
   const tStatus = useTranslations("invoices.statuses");
@@ -86,14 +89,14 @@ export default function InvoicesTable({
             id: "issue",
             label: tRow("issue"),
             icon: <CheckCircleIcon className="h-4 w-4" />,
-            visible: isDraft,
+            visible: isDraft && canEditInvoice,
             onClick: () => router.push(`/dashboard/invoices/${r.id}`),
           },
           {
             id: "pay",
             label: tRow("pay"),
             icon: <CreditCardIcon className="h-4 w-4" />,
-            visible: !isDraft && !isCancelled && hasBalance,
+            visible: !isDraft && !isCancelled && hasBalance && canRecordPayment,
             onClick: () =>
               router.push(`/dashboard/invoices/${r.id}?action=payment`),
           },

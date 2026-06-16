@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
+import { getSessionAccess } from "@/lib/access";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -103,6 +104,8 @@ export default async function TenantProfilePage({
   if (!tenant || tenant.organizationId !== dbUser?.organizationId) {
     return notFound();
   }
+
+  const canEditTenant = (await getSessionAccess())?.canEdit("tenants") ?? false;
 
   // Invoices + transaction counts for the shared TransactionsPanel.
   const [tenantInvoices, resCount, invCount, payCount] = await Promise.all([
@@ -255,6 +258,7 @@ export default async function TenantProfilePage({
             <ListBulletIcon className="h-4 w-4 text-gray-400" />
             {t("tenantsList")}
           </Link>
+          {canEditTenant && (
           <Link
             href={`/dashboard/tenants/${id}/edit`}
             className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"
@@ -262,6 +266,7 @@ export default async function TenantProfilePage({
             <PencilSquareIcon className="h-4 w-4 text-gray-400" />
             {t("editProfile")}
           </Link>
+          )}
           <Link
             href={`/dashboard/reservations/new?tenantId=${id}`}
             className="inline-flex items-center gap-1.5 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50"

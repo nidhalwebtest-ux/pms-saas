@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
+import { getSessionAccess } from "@/lib/access";
 import { Prisma } from "@prisma/client";
 import {
   HomeModernIcon,
@@ -118,6 +119,7 @@ export default async function UnitDetailPage({
   // Building scope: block units outside the user's assigned buildings.
   const acc = await getSessionAccessibleProperties();
   if (acc && !acc.includes(unit.propertyId)) redirect("/dashboard/no-access");
+  const canEditUnit = (await getSessionAccess())?.canEdit("units") ?? false;
 
   const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations, new Date(), { showReserved });
   const cfg           = UNIT_STATUS_CONFIG[displayStatus];
@@ -239,6 +241,7 @@ export default async function UnitDetailPage({
             <ListBulletIcon className="h-4 w-4" />
             {t("unitsList")}
           </Link>
+          {canEditUnit && (
           <Link
             href={`/dashboard/units/${unitId}/edit`}
             className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"
@@ -246,6 +249,7 @@ export default async function UnitDetailPage({
             <PencilSquareIcon className="h-4 w-4" />
             {t("edit")}
           </Link>
+          )}
           <Link
             href={`/dashboard/reservations/new?unitId=${unitId}`}
             className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500 shadow-sm transition-colors"

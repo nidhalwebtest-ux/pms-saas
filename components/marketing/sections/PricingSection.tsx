@@ -87,7 +87,7 @@ export default async function PricingSection() {
                   <span className="text-sm text-gray-500">{tier.per}</span>
                 </div>
                 <div className="mt-5 mb-6">
-                  <MarketingButton href="#trial" variant={tier.ctaVariant} size="lg" fullWidth>
+                  <MarketingButton href="/login?mode=signup" variant={tier.ctaVariant} size="lg" fullWidth>
                     {tier.cta}
                   </MarketingButton>
                 </div>

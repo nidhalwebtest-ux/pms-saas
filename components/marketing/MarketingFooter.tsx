@@ -5,19 +5,18 @@ import Container from "./ui/Container";
 export default async function MarketingFooter() {
   const t = await getTranslations("marketing.footer");
   const PRODUCT = [
-    { href: "#features", label: t("linkFeatures") },
-    { href: "#pricing",  label: t("linkPricing") },
-    { href: "#how",      label: t("linkHow") },
-    { href: "#faq",      label: t("linkFaq") },
+    { href: "/#features", label: t("linkFeatures") },
+    { href: "/#pricing",  label: t("linkPricing") },
+    { href: "/#how",      label: t("linkHow") },
+    { href: "/#faq",      label: t("linkFaq") },
   ];
   const COMPANY = [
-    { href: "#about",   label: t("linkAbout") },
-    { href: "#blog",    label: t("linkBlog") },
-    { href: "#contact", label: t("linkContact") },
+    { href: "/about",   label: t("linkAbout") },
+    { href: "/contact", label: t("linkContact") },
   ];
   const LEGAL = [
-    { href: "#privacy", label: t("linkPrivacy") },
-    { href: "#terms",   label: t("linkTerms") },
+    { href: "/privacy", label: t("linkPrivacy") },
+    { href: "/terms",   label: t("linkTerms") },
   ];
   const year = new Date().getFullYear();
   return (
@@ -25,7 +24,7 @@ export default async function MarketingFooter() {
       <Container>
         <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
           <div>
-            <Link href="#top" className="inline-flex items-center gap-2.5 text-[17px] font-semibold tracking-tight text-gray-900">
+            <Link href="/" className="inline-flex items-center gap-2.5 text-[17px] font-semibold tracking-tight text-gray-900">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src="/brand/binaya-mark.svg" alt="" className="h-[30px] w-[30px]" />
               <span>

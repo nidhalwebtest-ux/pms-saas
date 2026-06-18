@@ -2,8 +2,14 @@ import LoginForm from "./LoginForm";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { readAuthFlash } from "@/lib/auth-flash";
 
-export default async function LoginPage() {
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mode?: string }>;
+}) {
   const flash = await readAuthFlash();
+  const { mode } = await searchParams;
+  const initialMode = mode === "signup" ? "signup" : "signin";
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 p-4">
@@ -18,6 +24,7 @@ export default async function LoginPage() {
       </div>
 
       <LoginForm
+        initialMode={initialMode}
         initialError={flash?.error}
         initialWarn={flash?.warn}
         lockoutUntil={flash?.lockoutUntil}

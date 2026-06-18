@@ -10,10 +10,10 @@ import { MarketingButton } from "./ui/MarketingButton";
 import { type Locale } from "@/i18n/config";
 
 const NAV_LINKS = [
-  { href: "#features", key: "features" },
-  { href: "#how",      key: "how" },
-  { href: "#pricing",  key: "pricing" },
-  { href: "#faq",      key: "faq" },
+  { href: "/#features", key: "features" },
+  { href: "/#how",      key: "how" },
+  { href: "/#pricing",  key: "pricing" },
+  { href: "/#faq",      key: "faq" },
 ];
 
 export default function MarketingNavbar() {
@@ -60,7 +60,7 @@ export default function MarketingNavbar() {
           ].join(" ")}
         >
           <Link
-            href="#top"
+            href="/"
             className="inline-flex items-center gap-2.5 text-[17px] font-semibold tracking-tight text-gray-900"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -87,12 +87,12 @@ export default function MarketingNavbar() {
           <div className="flex items-center gap-1.5">
             <LanguageSwitch />
             <div className="hidden sm:inline-flex">
-              <MarketingButton href="#login" variant="ghost" size="sm">
+              <MarketingButton href="/login" variant="ghost" size="sm">
                 {t("login")}
               </MarketingButton>
             </div>
             <div className="hidden sm:inline-flex">
-              <MarketingButton href="#trial" variant="primary" size="md">
+              <MarketingButton href="/login?mode=signup" variant="primary" size="md">
                 {t("trial")}
               </MarketingButton>
             </div>
@@ -161,10 +161,10 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
             ))}
           </nav>
           <div className="mt-5 flex flex-col gap-2 border-t border-gray-200 pt-5">
-            <MarketingButton href="#login" variant="secondary" size="lg" fullWidth>
+            <MarketingButton href="/login" variant="secondary" size="lg" fullWidth>
               {t("login")}
             </MarketingButton>
-            <MarketingButton href="#trial" variant="primary" size="lg" fullWidth>
+            <MarketingButton href="/login?mode=signup" variant="primary" size="lg" fullWidth>
               {t("trial")}
             </MarketingButton>
           </div>

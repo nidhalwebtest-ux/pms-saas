@@ -1,4 +1,4 @@
-import { ArrowRight, Play, CheckCircle2, Users } from "lucide-react";
+import { ArrowRight, CheckCircle2, Users } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import Container from "../ui/Container";
 import { MarketingButton } from "../ui/MarketingButton";
@@ -33,12 +33,11 @@ export default async function HeroSection() {
           </p>
 
           <div className="mb-6 flex flex-wrap gap-3">
-            <MarketingButton href="#trial" variant="primary" size="xl">
+            <MarketingButton href="/login?mode=signup" variant="primary" size="xl">
               {t("ctaTrial")}
               <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" strokeWidth={1.75} />
             </MarketingButton>
-            <MarketingButton href="#demo" variant="secondary" size="xl">
-              <Play className="h-3.5 w-3.5 fill-current" strokeWidth={0} />
+            <MarketingButton href="#how" variant="secondary" size="xl">
               {t("ctaDemo")}
             </MarketingButton>
           </div>

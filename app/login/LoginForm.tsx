@@ -103,10 +103,12 @@ function GoogleIcon() {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function LoginForm({
+  initialMode = "signin",
   initialError,
   initialWarn,
   lockoutUntil,
 }: {
+  initialMode?: "signin" | "signup";
   initialError?: string;
   initialWarn?: string;
   lockoutUntil?: number;   // Unix ms — when the lockout expires
@@ -119,7 +121,7 @@ export default function LoginForm({
   const tErr     = useTranslations("auth.login.serverErrors");
   const tWarn    = useTranslations("auth.login.serverWarnings");
 
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [password, setPassword] = useState("");

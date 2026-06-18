@@ -28,11 +28,11 @@ export default async function FinalCtaSection() {
               {t("description")}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
-              <MarketingButton href="#trial" variant="primary" size="xl">
+              <MarketingButton href="/login?mode=signup" variant="primary" size="xl">
                 {t("ctaTrial")}
                 <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" strokeWidth={1.75} />
               </MarketingButton>
-              <MarketingButton href="#demo" variant="secondary" size="xl">
+              <MarketingButton href="/contact" variant="secondary" size="xl">
                 {t("ctaDemo")}
               </MarketingButton>
             </div>

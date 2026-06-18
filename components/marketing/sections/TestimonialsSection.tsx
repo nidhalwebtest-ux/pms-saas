@@ -43,7 +43,7 @@ export default async function TestimonialsSection() {
           ))}
         </div>
         <div className="mt-10 text-center">
-          <ButtonLink href="#case-studies">
+          <ButtonLink href="#pricing">
             {t("readMore")}
             <ArrowRight className="h-3 w-3 rtl:rotate-180" strokeWidth={2} />
           </ButtonLink>

@@ -34,7 +34,7 @@ export default async function HowItWorksSection() {
           ))}
         </div>
         <div className="mt-12 text-center">
-          <MarketingButton href="#trial" variant="primary" size="lg">
+          <MarketingButton href="/login?mode=signup" variant="primary" size="lg">
             {t("cta")}
             <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" strokeWidth={1.75} />
           </MarketingButton>

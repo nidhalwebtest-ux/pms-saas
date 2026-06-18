@@ -34,13 +34,14 @@ export function MarketingButton({
       variant={variant}
       size={size}
       lift={variant === "primary"}
-      onClick={href ? (e) => e.preventDefault() : rest.onClick}
     >
       {children}
     </Button>
   );
 
   if (href) {
+    // Wrap in a Link for real navigation. The inner Button must NOT preventDefault
+    // — doing so cancels the Link's navigation (every CTA would become a no-op).
     return (
       <Link href={href} className={rest.fullWidth ? "block w-full" : "inline-flex"}>
         {btn}

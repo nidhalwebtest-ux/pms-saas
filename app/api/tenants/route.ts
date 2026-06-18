@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { forbiddenIfNo } from "@/lib/access";
 
 async function getOrgId() {
   const supabase = await createClient();
@@ -55,6 +56,8 @@ export async function GET(req: NextRequest) {
 
 // POST /api/tenants
 export async function POST(req: NextRequest) {
+  const denied = await forbiddenIfNo("tenants", "CREATE");
+  if (denied) return denied;
   const orgId = await getOrgId();
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 

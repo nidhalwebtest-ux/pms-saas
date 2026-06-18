@@ -6,6 +6,7 @@ import { PrismaClient } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
+import { hasAccess } from "@/lib/access";
 
 export async function createUnit(formData: FormData) {
   const supabase = await createClient();
@@ -13,6 +14,7 @@ export async function createUnit(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  if (!(await hasAccess("units", "CREATE"))) redirect("/dashboard/no-access");
 
   // 1. Extract Data
   const propertyId = formData.get("propertyId") as string;
@@ -61,6 +63,7 @@ export async function updateUnit(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  if (!(await hasAccess("units", "EDIT"))) redirect("/dashboard/no-access");
 
   const unitId = formData.get("unitId") as string;
   const propertyId = formData.get("propertyId") as string; // Needed for redirect

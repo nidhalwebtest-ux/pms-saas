@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { assertView } from "@/lib/access";
+import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import { createClient } from "@/utils/supabase/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
@@ -49,13 +50,16 @@ export default async function PropertiesPage({
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
 
-  // The buildings list always shows every building in the org. The global
-  // property selector in the header is meant to scope content *within* a
-  // building (units, reservations, payments) — not hide buildings from
-  // their own list. Otherwise a freshly created building would never appear
-  // here when a different building was previously selected.
+  // Per-user building scope: a user assigned to specific buildings sees only
+  // those here; an unrestricted user (no assignments) or owner sees all
+  // (accessible = null). This differs from the header property selector, which
+  // only scopes content *within* a building — assignment is a hard restriction.
+  const accessible = await getSessionAccessibleProperties();
+  const scopeFilter: Prisma.PropertyWhereInput = accessible ? { id: { in: accessible } } : {};
+
   const whereClause: Prisma.PropertyWhereInput = {
     organizationId: dbUser.organizationId,
+    ...scopeFilter,
     ...(q && {
       OR: [
         { name:        { contains: q, mode: "insensitive" } },
@@ -93,6 +97,7 @@ export default async function PropertiesPage({
   // user typed in the search box.
   const orgScope: Prisma.PropertyWhereInput = {
     organizationId: dbUser.organizationId,
+    ...scopeFilter,
   };
 
   const [raw, allocationsThisMonth, activeCount, inactiveCount, archivedCount] = await Promise.all([

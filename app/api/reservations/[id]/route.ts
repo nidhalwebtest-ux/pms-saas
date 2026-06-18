@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { forbiddenIfNo } from "@/lib/access";
+import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
@@ -101,6 +102,19 @@ export async function GET(
   if (!r) return NextResponse.json({ error: "Not found." }, { status: 404 });
   if (r.tenant.organizationId !== actor.organizationId)
     return NextResponse.json({ error: "Not found." }, { status: 404 });
+
+  // Building scope: a restricted user may only open a reservation that touches
+  // at least one of their assigned buildings (null accessible = unrestricted).
+  const accessible = await getSessionAccessibleProperties();
+  if (accessible) {
+    const resPropIds = new Set<string>();
+    if (r.unit?.property?.id) resPropIds.add(r.unit.property.id);
+    for (const ru of r.reservationUnits) {
+      if (ru.unit?.property?.id) resPropIds.add(ru.unit.property.id);
+    }
+    if (![...resPropIds].some((pid) => accessible.includes(pid)))
+      return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
 
   const org = await prisma.organization.findUnique({
     where:  { id: actor.organizationId },

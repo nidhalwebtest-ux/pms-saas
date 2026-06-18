@@ -3,6 +3,7 @@ import Image from "next/image";
 import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
+import { assertView } from "@/lib/access";
 import { getTranslations, getLocale } from "next-intl/server";
 import { format } from "date-fns";
 import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
@@ -30,6 +31,7 @@ export default async function PropertyDetailsPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await assertView("buildings");
   const { id } = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

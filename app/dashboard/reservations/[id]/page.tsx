@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { assertView } from "@/lib/access";
 import ReservationDetail from "./ReservationDetail";
 
 export default async function ReservationPage({
@@ -8,6 +9,7 @@ export default async function ReservationPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await assertView("reservations");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");

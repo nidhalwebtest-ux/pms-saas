@@ -15,6 +15,8 @@ import {
 import { getTranslations, getLocale } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { assertView } from "@/lib/access";
+import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import {
   Badge,
   getReturnStatusBadge,
@@ -29,6 +31,7 @@ export default async function ReturnDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
+  await assertView("returns");
   let orgUser: Awaited<ReturnType<typeof requireOrgUser>>;
   try {
     orgUser = await requireOrgUser();
@@ -55,6 +58,16 @@ export default async function ReturnDetailPage({
   });
 
   if (!ret || ret.organizationId !== orgUser.organizationId) notFound();
+
+  // Building scope: a restricted user may only open a return whose reservation
+  // touches one of their assigned buildings (null accessible = unrestricted).
+  const accessible = await getSessionAccessibleProperties();
+  if (accessible) {
+    const propIds = (ret.reservation?.reservationUnits ?? [])
+      .map((ru) => ru.unit?.propertyId)
+      .filter((p): p is string => !!p);
+    if (!propIds.some((pid) => accessible.includes(pid))) redirect("/dashboard/no-access");
+  }
 
   const locale  = await getLocale();
   const dfLoc   = locale === "ar" ? arLocale : enLocale;

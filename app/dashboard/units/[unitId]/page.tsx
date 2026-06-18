@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
-import { getSessionAccess } from "@/lib/access";
+import { getSessionAccess, assertView } from "@/lib/access";
 import { Prisma } from "@prisma/client";
 import {
   HomeModernIcon,
@@ -37,6 +37,7 @@ export default async function UnitDetailPage({
 }) {
   const { unitId } = await params;
 
+  await assertView("units");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");

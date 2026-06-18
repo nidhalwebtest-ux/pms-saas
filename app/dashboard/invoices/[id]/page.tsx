@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
+import { assertView } from "@/lib/access";
 import Link from "next/link";
 import { format } from "date-fns";
 import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
@@ -72,6 +73,7 @@ export default async function InvoiceDetailPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
+  await assertView("invoices");
   let orgUser: Awaited<ReturnType<typeof requireOrgUser>>;
   try {
     orgUser = await requireOrgUser();

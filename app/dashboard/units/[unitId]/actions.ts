@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { hasAccess } from "@/lib/access";
 
 export type ActionResponse = { success?: boolean; error?: string; id?: string };
 
@@ -40,6 +41,7 @@ async function assertPriceOrg(priceId: string, organizationId: string) {
 export async function createDefaultPrice(formData: FormData): Promise<ActionResponse> {
   const actor = await getOrgUser();
   if (!actor) return { error: "Unauthorized" };
+  if (!(await hasAccess("units", "EDIT"))) return { error: "forbidden" };
 
   const unitId = formData.get("unitId") as string;
   if (!await assertUnitOrg(unitId, actor.organizationId!)) return { error: "Unauthorized" };
@@ -66,6 +68,7 @@ export async function createDefaultPrice(formData: FormData): Promise<ActionResp
 export async function upsertDefaultPrice(formData: FormData): Promise<ActionResponse> {
   const actor = await getOrgUser();
   if (!actor) return { error: "Unauthorized" };
+  if (!(await hasAccess("units", "EDIT"))) return { error: "forbidden" };
 
   const unitId  = formData.get("unitId")  as string;
   const priceId = formData.get("priceId") as string | null;
@@ -122,6 +125,7 @@ async function resolveSeasonalMonthlyRate(
 export async function createSeasonalPrice(formData: FormData): Promise<ActionResponse> {
   const actor = await getOrgUser();
   if (!actor) return { error: "Unauthorized" };
+  if (!(await hasAccess("units", "EDIT"))) return { error: "forbidden" };
 
   const unitId      = formData.get("unitId")      as string;
   const name        = (formData.get("name") as string)?.trim();
@@ -157,6 +161,7 @@ export async function createSeasonalPrice(formData: FormData): Promise<ActionRes
 export async function updateUnitPrice(formData: FormData): Promise<ActionResponse> {
   const actor = await getOrgUser();
   if (!actor) return { error: "Unauthorized" };
+  if (!(await hasAccess("units", "EDIT"))) return { error: "forbidden" };
 
   const priceId = formData.get("priceId") as string;
   const price   = await assertPriceOrg(priceId, actor.organizationId!);
@@ -207,6 +212,7 @@ export async function updateUnitPrice(formData: FormData): Promise<ActionRespons
 export async function deleteUnitPrice(priceId: string): Promise<ActionResponse> {
   const actor = await getOrgUser();
   if (!actor) return { error: "Unauthorized" };
+  if (!(await hasAccess("units", "EDIT"))) return { error: "forbidden" };
 
   const price = await assertPriceOrg(priceId, actor.organizationId!);
   if (!price) return { error: "Unauthorized" };
@@ -221,6 +227,7 @@ export async function deleteUnitPrice(priceId: string): Promise<ActionResponse> 
 export async function toggleUnitPrice(priceId: string): Promise<ActionResponse> {
   const actor = await getOrgUser();
   if (!actor) return { error: "Unauthorized" };
+  if (!(await hasAccess("units", "EDIT"))) return { error: "forbidden" };
 
   const price = await assertPriceOrg(priceId, actor.organizationId!);
   if (!price) return { error: "Unauthorized" };
@@ -235,6 +242,7 @@ export async function toggleUnitPrice(priceId: string): Promise<ActionResponse> 
 export async function addUnitNote(formData: FormData): Promise<ActionResponse> {
   const actor = await getOrgUser();
   if (!actor) return { error: "Unauthorized" };
+  if (!(await hasAccess("units", "EDIT"))) return { error: "forbidden" };
 
   const unitId  = formData.get("unitId")  as string;
   const content = (formData.get("content") as string)?.trim();
@@ -253,6 +261,7 @@ export async function addUnitNote(formData: FormData): Promise<ActionResponse> {
 export async function deleteUnitNote(noteId: string): Promise<ActionResponse> {
   const actor = await getOrgUser();
   if (!actor) return { error: "Unauthorized" };
+  if (!(await hasAccess("units", "EDIT"))) return { error: "forbidden" };
 
   const note = await prisma.unitNote.findUnique({
     where:   { id: noteId },

@@ -5,7 +5,7 @@ import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
-import { getSessionAccess } from "@/lib/access";
+import { getSessionAccess, assertView } from "@/lib/access";
 import Link from "next/link";
 import {
   ArrowLeftIcon,
@@ -37,6 +37,7 @@ export default async function ExpenseDetailsPage({
 }) {
   const { id } = await params;
 
+  await assertView("expenses");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");

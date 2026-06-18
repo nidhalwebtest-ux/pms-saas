@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { forbiddenIfNo } from "@/lib/access";
 
 async function getOrgId() {
   const supabase = await createClient();
@@ -23,6 +24,8 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ unitId: string; priceId: string }> },
 ) {
+  const denied = await forbiddenIfNo("units", "EDIT");
+  if (denied) return denied;
   const { priceId } = await params;
   const orgId = await getOrgId();
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -67,6 +70,8 @@ export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ unitId: string; priceId: string }> },
 ) {
+  const denied = await forbiddenIfNo("units", "EDIT");
+  if (denied) return denied;
   const { priceId } = await params;
   const orgId = await getOrgId();
   if (!orgId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

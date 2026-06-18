@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
-import { getSessionAccess } from "@/lib/access";
+import { getSessionAccess, assertView } from "@/lib/access";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -73,6 +73,7 @@ export default async function TenantProfilePage({
     try { return fn(key as never); } catch { return key; }
   };
 
+  await assertView("tenants");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");

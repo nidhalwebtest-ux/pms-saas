@@ -21,7 +21,7 @@ export interface PdfBranding {
   showNotes: boolean;
 }
 
-const DEFAULT_BRAND = "#1d4ed8";
+const DEFAULT_BRAND = "#185FA5";
 
 /** Darken a #rrggbb hex by `amt` (0..1) for the header gradient end. */
 function darken(hex: string, amt = 0.18): string {

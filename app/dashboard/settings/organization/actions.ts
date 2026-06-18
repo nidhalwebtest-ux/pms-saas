@@ -39,8 +39,8 @@ export async function updateOrganization(
   const removeLogo = formData.get("removeLogo") === "1";
 
   // ── PDF / document customization ─────────────────────────────────────────────
-  const rawBrand = (formData.get("pdfBrandColor") as string)?.trim() || "#1d4ed8";
-  const pdfBrandColor = /^#[0-9a-fA-F]{6}$/.test(rawBrand) ? rawBrand : "#1d4ed8";
+  const rawBrand = (formData.get("pdfBrandColor") as string)?.trim() || "#185FA5";
+  const pdfBrandColor = /^#[0-9a-fA-F]{6}$/.test(rawBrand) ? rawBrand : "#185FA5";
   const pdfFooterText   = (formData.get("pdfFooterText")   as string)?.trim() || null;
   const pdfFooterTextAr = (formData.get("pdfFooterTextAr") as string)?.trim() || null;
   const pdfPaperSize = (formData.get("pdfPaperSize") as string) === "Letter" ? "Letter" : "A4";

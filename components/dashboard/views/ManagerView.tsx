@@ -99,7 +99,7 @@ function MinimalLineChart({ data, noDataLabel, dateFnsLocale }: { data: RevPoint
             {format(parseISO(data[i].date), "d MMM", { locale: dateFnsLocale })}
           </text>
         ))}
-        <path d={pathD} fill="none" stroke="#3b82f6" strokeWidth={2} strokeLinejoin="round" />
+        <path d={pathD} fill="none" stroke="#185FA5" strokeWidth={2} strokeLinejoin="round" />
         {data.map((pt, i) => (
           <circle
             key={i}
@@ -107,7 +107,7 @@ function MinimalLineChart({ data, noDataLabel, dateFnsLocale }: { data: RevPoint
             cy={yPx(pt.revenue)}
             r={4}
             fill="white"
-            stroke="#3b82f6"
+            stroke="#185FA5"
             strokeWidth={2}
             className="cursor-pointer opacity-0 hover:opacity-100"
             onMouseEnter={() =>
@@ -185,7 +185,7 @@ function MinimalBarChart({ data, noDataLabel }: { data: OccTrendPoint[]; noDataL
               width={barW}
               height={Math.max(barH(pt.revenue), 2)}
               rx={4}
-              fill="#6366f1"
+              fill="#185FA5"
               className="cursor-pointer hover:fill-indigo-400 transition-colors"
               onMouseEnter={() =>
                 setTip({ x: xCenter(i), y: barY(pt.revenue), label: pt.month, val: omr(pt.revenue) })

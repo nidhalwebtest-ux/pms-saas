@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { login, signup, signInWithGoogle } from "./actions";
 import {
-  BuildingOfficeIcon,
   EnvelopeIcon,
   LockClosedIcon,
   EyeIcon,
@@ -212,13 +211,9 @@ export default function LoginForm({
     >
       {/* ── Branding ──────────────────────────────────────────── */}
       <div className="mb-8 flex flex-col items-center gap-3">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-600 shadow-lg shadow-blue-500/40">
-          <BuildingOfficeIcon className="h-8 w-8 text-white" />
-        </div>
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-white">{tBrand("name")}</h1>
-          <p className="text-sm text-slate-400">{tBrand("tagline")}</p>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/binaya-logo-horizontal-white.svg" alt="Binaya" className="h-12 w-auto" />
+        <p className="text-sm text-slate-400">{tBrand("tagline")}</p>
       </div>
 
       {/* ── Card ──────────────────────────────────────────────── */}

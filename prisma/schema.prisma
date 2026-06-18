@@ -161,7 +161,7 @@ model Organization {
   /// generated PDF (reservation, invoice, receipt, return, expense, statement).
   /// pdfBrandColor drives each document's header + primary accent (via --brand);
   /// status colours stay semantic. Footer text overrides the default footer line.
-  pdfBrandColor         String  @default("#1d4ed8")
+  pdfBrandColor         String  @default("#185FA5")
   pdfFooterText         String?
   pdfFooterTextAr       String?
   pdfPaperSize          String  @default("A4")   // A4 | Letter

@@ -402,7 +402,7 @@ export function AvailabilityCalendar({
           {data && !loading && (
             <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-b border-gray-200 bg-white px-6 py-2.5">
               <StatChip color="#22C55E" label={tStats("vacant")}     value={data.stats.vacant}   total={data.stats.totalUnitNights} />
-              <StatChip color="#3B82F6" label={tStats("confirmed")}  value={data.stats.reserved} total={data.stats.totalUnitNights} />
+              <StatChip color="#185FA5" label={tStats("confirmed")}  value={data.stats.reserved} total={data.stats.totalUnitNights} />
               <StatChip color="#EF4444" label={tStats("checkedIn")}  value={data.stats.occupied} total={data.stats.totalUnitNights} />
               {data.stats.blocked > 0 && (
                 <StatChip color="#6B7280" label={tStats("blocked")} value={data.stats.blocked} total={data.stats.totalUnitNights} />
@@ -536,7 +536,7 @@ export function AvailabilityCalendar({
                                   // earlier-half color stays on the correct side (QA #22).
                                   : `linear-gradient(${isRtl ? 225 : 135}deg, ${cell.leftColor} 50%, ${cell.rightColor} 50%)`,
                                 outline: todayFlag
-                                  ? "2px solid #2563EB"
+                                  ? "2px solid #185FA5"
                                   : cell.isGap
                                     ? "2px dashed #F97316"
                                     : "none",
@@ -558,7 +558,7 @@ export function AvailabilityCalendar({
             {[
               { color: "#22C55E", label: tStats("vacant") },
               { color: "#EAB308", label: tStats("pending") },
-              { color: "#3B82F6", label: tStats("confirmed") },
+              { color: "#185FA5", label: tStats("confirmed") },
               { color: "#EF4444", label: tStats("checkedIn") },
               { color: "#6B7280", label: tStats("blocked") },
             ].map((item) => (
@@ -767,7 +767,7 @@ function CalendarTooltip({
 
 // Color map (mirrors API colors — kept in sync manually)
 const STATUS_COLORS: Record<string, string> = {
-  CONFIRMED:  "#3B82F6",
+  CONFIRMED:  "#185FA5",
   CHECKED_IN: "#EF4444",
   PENDING:    "#EAB308",
 };

@@ -1,0 +1,6 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Binaya app icon">
+  <title>Binaya</title>
+  <rect x="0" y="0" width="512" height="512" rx="120" fill="#185FA5"/>
+  <path d="M128 408 L128 245 A128 128 0 0 1 384 245 L384 408 L314 408 L314 256 A58 58 0 0 0 198 256 L198 408 Z" fill="#FFFFFF"/>
+  <rect x="226" y="320" width="60" height="88" rx="14" fill="#85B7EB"/>
+</svg>

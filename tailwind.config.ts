@@ -27,7 +27,39 @@ const config: Config = {
           500: "var(--brand-500)",
           600: "var(--brand-600)",
           700: "var(--brand-700)",
+          800: "var(--brand-800)",
           900: "var(--brand-900)",
+          950: "var(--brand-950)",
+          DEFAULT: "var(--brand-500)",
+        },
+        // Logo accent (#85B7EB) for highlights/illustrations.
+        accent: {
+          DEFAULT: "var(--brand-accent)",
+          light: "var(--brand-200)",
+          dark: "var(--brand-400)",
+        },
+        // Whole-app rebrand: the Binaya blue family. Existing `blue-*`, `indigo-*`
+        // and `sky-*` utilities across the app now resolve to the brand ramp so
+        // the entire UI matches the logo without touching every component.
+        blue: {
+          50: "var(--brand-50)", 100: "var(--brand-100)", 200: "var(--brand-200)",
+          300: "var(--brand-300)", 400: "var(--brand-400)", 500: "var(--brand-500)",
+          600: "var(--brand-600)", 700: "var(--brand-700)", 800: "var(--brand-800)",
+          900: "var(--brand-900)", 950: "var(--brand-950)",
+          DEFAULT: "var(--brand-500)",
+        },
+        indigo: {
+          50: "var(--brand-50)", 100: "var(--brand-100)", 200: "var(--brand-200)",
+          300: "var(--brand-300)", 400: "var(--brand-400)", 500: "var(--brand-500)",
+          600: "var(--brand-600)", 700: "var(--brand-700)", 800: "var(--brand-800)",
+          900: "var(--brand-900)", 950: "var(--brand-950)",
+          DEFAULT: "var(--brand-500)",
+        },
+        sky: {
+          50: "var(--brand-50)", 100: "var(--brand-100)", 200: "var(--brand-200)",
+          300: "var(--brand-300)", 400: "var(--brand-400)", 500: "var(--brand-500)",
+          600: "var(--brand-600)", 700: "var(--brand-700)", 800: "var(--brand-800)",
+          900: "var(--brand-900)", 950: "var(--brand-950)",
           DEFAULT: "var(--brand-500)",
         },
         gray: {

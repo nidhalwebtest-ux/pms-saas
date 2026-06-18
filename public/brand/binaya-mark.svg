@@ -1,0 +1,5 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Binaya mark">
+  <title>Binaya</title>
+  <path d="M11 53 L11 30 A21 21 0 0 1 53 30 L53 53 L41 53 L41 32 A9 9 0 0 0 23 32 L23 53 Z" fill="#185FA5"/>
+  <rect x="29" y="40" width="8" height="13" rx="2" fill="#85B7EB"/>
+</svg>

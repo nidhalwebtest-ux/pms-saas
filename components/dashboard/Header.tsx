@@ -30,12 +30,11 @@ export default async function Header({ userEmail, userName, role, roleName, isCu
 
       {/* ── Start: Logo + Property selector ───────────────────────── */}
       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-initial">
-        <div className="h-7 w-7 rounded-md bg-blue-600 flex items-center justify-center flex-shrink-0">
-          <span className="text-white font-bold text-sm">P</span>
-        </div>
-        <span className="text-lg font-semibold tracking-tight text-gray-900 hidden md:block">
-          {t("appName")} <span className="text-xs text-gray-400 font-normal ltr-numbers">{t("version")}</span>
-        </span>
+        {/* Binaya logo — mark on mobile, full wordmark on md+ */}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/binaya-mark.svg" alt="Binaya" className="h-7 w-7 md:hidden flex-shrink-0" />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/brand/binaya-logo-horizontal.svg" alt="Binaya" className="hidden md:block h-7 w-auto" />
 
         {/* Divider */}
         <div className="hidden md:block h-5 w-px bg-gray-200 mx-1" />

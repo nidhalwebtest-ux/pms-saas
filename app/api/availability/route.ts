@@ -24,7 +24,7 @@ async function getOrgId() {
 
 // ── Color palette (hex) ────────────────────────────────────────────────────────
 const STATUS_COLOR: Record<string, string> = {
-  CONFIRMED: "#3B82F6",
+  CONFIRMED: "#185FA5",
   CHECKED_IN: "#EF4444",
   PENDING:    "#EAB308",
 };

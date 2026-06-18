@@ -26,9 +26,8 @@ export default async function MarketingFooter() {
         <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
           <div>
             <Link href="#top" className="inline-flex items-center gap-2.5 text-[17px] font-semibold tracking-tight text-gray-900">
-              <span className="grid h-[30px] w-[30px] place-items-center rounded-lg bg-brand-500 text-[15px] font-semibold text-white shadow-brand">
-                B
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/binaya-mark.svg" alt="" className="h-[30px] w-[30px]" />
               <span>
                 Binaya <span className="font-normal text-gray-500">PMS</span>
               </span>

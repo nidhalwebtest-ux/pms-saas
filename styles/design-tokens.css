@@ -11,16 +11,21 @@
    ============================================================================ */
 
 :root {
-  /* ── Brand · indigo · primary action ────────────────────── */
-  --brand-50:  oklch(0.972 0.018 258);
-  --brand-100: oklch(0.940 0.040 258);
-  --brand-200: oklch(0.880 0.080 258);
-  --brand-300: oklch(0.760 0.130 258);
-  --brand-400: oklch(0.580 0.165 258);
-  --brand-500: oklch(0.460 0.170 258); /* primary */
-  --brand-600: oklch(0.400 0.165 258); /* hover */
-  --brand-700: oklch(0.330 0.140 258); /* pressed */
-  --brand-900: oklch(0.220 0.090 258);
+  /* ── Brand · Binaya blue · primary action ───────────────────
+     Anchored on the logo palette: #185FA5 (primary) at 500 and
+     #85B7EB (accent) at 300. Hue 252, authored in OKLCH. */
+  --brand-50:  oklch(0.972 0.018 252);
+  --brand-100: oklch(0.940 0.038 252);
+  --brand-200: oklch(0.882 0.070 252);
+  --brand-300: oklch(0.764 0.092 252); /* accent #85B7EB */
+  --brand-400: oklch(0.610 0.120 252);
+  --brand-500: oklch(0.481 0.131 252); /* primary #185FA5 */
+  --brand-600: oklch(0.430 0.128 252); /* hover */
+  --brand-700: oklch(0.360 0.110 252); /* pressed */
+  --brand-800: oklch(0.300 0.090 252);
+  --brand-900: oklch(0.235 0.070 252);
+  --brand-950: oklch(0.180 0.052 252);
+  --brand-accent: var(--brand-300);    /* #85B7EB */
 
   /* ── Neutrals · cool, blue-leaning ──────────────────────── */
   --gray-0:   #ffffff;
@@ -66,9 +71,9 @@
   --khareef-700: oklch(0.400 0.100 175);
 
   /* ── Marketing · primary CTA shadows ───────────────────── */
-  --shadow-brand:       0 1px 2px oklch(0.46 0.17 258 / 0.25),
+  --shadow-brand:       0 1px 2px oklch(0.481 0.131 252 / 0.25),
                         inset 0 1px 0 oklch(1 0 0 / 0.18);
-  --shadow-brand-hover: 0 4px 12px oklch(0.46 0.17 258 / 0.35);
+  --shadow-brand-hover: 0 4px 12px oklch(0.481 0.131 252 / 0.35);
 
   /* ── Semantic · info ────────────────────────────────────── */
   --info-50:  oklch(0.965 0.025 235);

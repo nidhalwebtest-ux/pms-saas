@@ -66,7 +66,7 @@ export default async function Header({ userEmail, userName, role, roleName, isCu
 
         {/* User: name always; avatar + role on desktop only */}
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white flex-shrink-0">
+          <div className="hidden sm:flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-xs font-semibold text-white flex-shrink-0">
             {displayName[0].toUpperCase()}
           </div>
           <div className="text-end min-w-0">

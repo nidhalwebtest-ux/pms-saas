@@ -4067,6 +4067,18 @@
         "title": "Team Management",
         "description": "Invite staff and manage their access levels."
       },
+      "buildings": {
+        "title": "Building access",
+        "allBuildings": "All buildings",
+        "specific": "Specific buildings",
+        "count": "{count, plural, one {# building} other {# buildings}}",
+        "edit": "Edit building access",
+        "noBuildings": "No buildings yet.",
+        "save": "Save",
+        "cancel": "Cancel",
+        "saved": "Building access updated",
+        "error": "Could not update building access."
+      },
       "stats": {
         "total": "Total Staff",
         "admin": "Admin",
@@ -4237,6 +4249,7 @@
       "created": "Role created",
       "deleted": "Role deleted",
       "saved": "Role saved",
+      "save": "Save changes",
       "saving": "Saving…",
       "revert": "Discard changes",
       "standard": "Standard",

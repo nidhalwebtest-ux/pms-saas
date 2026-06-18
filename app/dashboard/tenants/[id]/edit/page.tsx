@@ -4,12 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/FormComponents";
 import TenantForm from "@/components/dashboard/TenantForm";
+import { assertCan } from "@/lib/access";
 
 export default async function EditTenantPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await assertCan("tenants", "EDIT");
   const { id } = await params;
 
   const supabase = await createClient();

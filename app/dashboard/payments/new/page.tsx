@@ -4,12 +4,14 @@ import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import SmartPaymentForm from "./SmartPaymentForm";
+import { assertCan } from "@/lib/access";
 
 export default async function NewPaymentPage({
   searchParams,
 }: {
   searchParams: Promise<{ tenantId?: string; invoiceId?: string }>;
 }) {
+  await assertCan("payments", "CREATE");
   const params = await searchParams;
 
   const supabase = await createClient();

@@ -20,6 +20,7 @@ import { quickUpdateUnit } from "./actions";
 import type { UnitRow } from "./page";
 import { DataTable, EmptyState, Badge, getUnitTypeBadge, type UnitTypeKey } from "@/components/ui";
 import { SearchIllustration } from "@/components/ui/empty-state/illustrations";
+import { useCan } from "@/components/PermissionsProvider";
 import { UnitThumbnail, buildUnitColumns, unitRowVariant } from "./columns";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -200,6 +201,7 @@ export default function UnitsView({
   const t        = useTranslations("units.list");
   const tFilters = useTranslations("units.filters");
   const router   = useRouter();
+  const canEditUnit = useCan("units", "EDIT");
 
   const columns = useMemo(() => buildUnitColumns({ t }), [t]);
 
@@ -215,16 +217,18 @@ export default function UnitsView({
         id: "quick-edit",
         label: t("actionQuickEdit"),
         icon: <BoltIcon className="h-4 w-4" />,
+        visible: canEditUnit,
         onClick: () => setEditingId(u.id),
       },
       {
         id: "edit",
         label: t("actionFullEdit"),
         icon: <PencilSquareIcon className="h-4 w-4" />,
+        visible: canEditUnit,
         onClick: () => router.push(`/dashboard/units/${u.id}/edit`),
       },
     ],
-    [t, router],
+    [t, router, canEditUnit],
   );
 
   const statusValue = (s: string) => {

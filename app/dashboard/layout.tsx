@@ -30,7 +30,7 @@ export default async function DashboardLayout({
       organizationId: true,
       role: true,
       firstName: true,
-      assignedRole: { select: { key: true, permissions: true } },
+      assignedRole: { select: { key: true, name: true, permissions: true } },
       organization: { select: { currency: true } },
     },
   });
@@ -87,6 +87,8 @@ export default async function DashboardLayout({
             userEmail={user.email}
             userName={dbUser.firstName}
             role={role}
+            roleName={dbUser.assignedRole?.name ?? null}
+            isCustomRole={!!dbUser.assignedRole && !dbUser.assignedRole.key}
             properties={properties}
             selectedPropertyId={selectedPropertyId}
           />

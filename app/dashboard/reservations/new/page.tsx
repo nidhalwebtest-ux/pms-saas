@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/FormComponents";
 import BookingEngine from "@/components/dashboard/BookingEngine";
 import { getSelectedPropertyId } from "@/lib/selected-property";
+import { assertCan } from "@/lib/access";
 import Link from "next/link";
 
 export default async function NewReservationPage({
@@ -12,6 +13,7 @@ export default async function NewReservationPage({
 }: {
   searchParams: Promise<{ unitId?: string; tenantId?: string }>;
 }) {
+  await assertCan("reservations", "CREATE");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");

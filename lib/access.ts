@@ -70,6 +70,18 @@ export async function assertView(entity: string): Promise<SessionAccess> {
 }
 
 /**
+ * Page guard for a specific level (e.g. edit pages need EDIT, not just VIEW).
+ * Redirects to /login when unauthenticated, /dashboard/no-access when the user
+ * lacks `level` on `entity`. Returns the resolved access.
+ */
+export async function assertCan(entity: string, level: PermissionLevel): Promise<SessionAccess> {
+  const access = await getSessionAccess();
+  if (!access) redirect("/login");
+  if (!access.can(entity, level)) redirect("/dashboard/no-access");
+  return access;
+}
+
+/**
  * Server-action / API guard: throw unless the user has at least `level` on
  * `entity`. Throws a plain Error("forbidden") for callers to surface.
  */

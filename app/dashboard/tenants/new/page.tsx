@@ -3,8 +3,10 @@ import { createClient } from "@/utils/supabase/server";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/FormComponents";
 import TenantForm from "@/components/dashboard/TenantForm";
+import { assertCan } from "@/lib/access";
 
 export default async function NewTenantPage() {
+  await assertCan("tenants", "CREATE");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");

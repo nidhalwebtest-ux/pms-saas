@@ -26,6 +26,7 @@ import type { SortingState } from "@tanstack/react-table";
 import { quickUpdateTenant } from "./actions";
 import type { TenantRow } from "./page";
 import { DataTable, NoTenantsFirstTime, SegmentedControl } from "@/components/ui";
+import { useCan } from "@/components/PermissionsProvider";
 import {
   Avatar,
   ClassBadge,
@@ -232,6 +233,7 @@ function EditableRow({
 
 function TenantCard({ tenant }: { tenant: TenantRow }) {
   const tCard = useTranslations("tenants.list.card");
+  const canEdit = useCan("tenants", "EDIT");
   const sourceLabel = useSourceLabel();
 
   return (
@@ -311,12 +313,14 @@ function TenantCard({ tenant }: { tenant: TenantRow }) {
           >
             <EyeIcon className="h-3.5 w-3.5" /> {tCard("view")}
           </Link>
-          <Link
-            href={`/dashboard/tenants/${tenant.id}/edit`}
-            className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-blue-600 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition-colors"
-          >
-            <PencilSquareIcon className="h-3.5 w-3.5" /> {tCard("edit")}
-          </Link>
+          {canEdit && (
+            <Link
+              href={`/dashboard/tenants/${tenant.id}/edit`}
+              className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-blue-600 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 transition-colors"
+            >
+              <PencilSquareIcon className="h-3.5 w-3.5" /> {tCard("edit")}
+            </Link>
+          )}
         </div>
       </div>
     </div>
@@ -403,6 +407,7 @@ export default function TenantsView({
   const tRow     = useTranslations("tenants.list.row");
   const tList    = useTranslations("tenants.list");
   const router   = useRouter();
+  const canEditTenant = useCan("tenants", "EDIT");
   const [viewMode,     setViewMode]     = useState<"table" | "card" | "summary">("table");
   const [sorting,      setSorting]      = useState<SortingState>([
     { id: "name", desc: false },
@@ -446,17 +451,18 @@ export default function TenantsView({
         id: "quick-edit",
         label: tRow("quickEdit"),
         icon: <BoltIcon className="h-4 w-4" />,
-        visible: editMode,
+        visible: editMode && canEditTenant,
         onClick: () => setInlineEditId(r.id),
       },
       {
         id: "edit",
         label: tRow("edit"),
         icon: <PencilSquareIcon className="h-4 w-4" />,
+        visible: canEditTenant,
         onClick: () => router.push(`/dashboard/tenants/${r.id}/edit`),
       },
     ],
-    [tRow, editMode, router],
+    [tRow, editMode, router, canEditTenant],
   );
 
   const viewTitles: Record<"table" | "card" | "summary", string> = {
@@ -484,7 +490,7 @@ export default function TenantsView({
           >
             <PrinterIcon className="h-3.5 w-3.5" /> {tBar("print")}
           </button>
-          {viewMode === "table" && (
+          {viewMode === "table" && canEditTenant && (
             <>
               <div className="h-4 w-px bg-gray-200" />
               <button

@@ -3,12 +3,14 @@ import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import BulkCreateForm from "./BulkCreateForm";
 import { getTranslations } from "next-intl/server";
+import { assertCan } from "@/lib/access";
 
 export default async function BulkCreatePage({
   searchParams,
 }: {
   searchParams: Promise<{ propertyId?: string }>;
 }) {
+  await assertCan("units", "CREATE");
   const { propertyId } = await searchParams;
   const t = await getTranslations("units.bulk");
 

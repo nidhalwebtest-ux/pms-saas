@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
 import { NAV_ACCESS, type Role } from "@/lib/permissions";
+import { atLeast, type PermissionLevel } from "@/lib/rbac";
+import { usePerms } from "@/components/PermissionsProvider";
 import { REPORT_GROUPS } from "@/app/dashboard/reports/reports-config";
 
 // ── Nav config ────────────────────────────────────────────────────────────────
@@ -128,23 +130,35 @@ function cn(...c: (string | false | undefined)[]) {
   return c.filter(Boolean).join(" ");
 }
 
-// Settings (and expense-category) sub-pages map to a setup permission entity.
-// A child with no mapping (e.g. My Profile) is always shown when its parent is.
-const CHILD_ENTITY: Record<string, string> = {
-  "/dashboard/settings/team":              "team",
-  "/dashboard/settings/roles":             "roles",
-  "/dashboard/settings/organization":      "organization",
-  "/dashboard/settings/reservations":      "settingsReservations",
-  "/dashboard/settings/payments":          "settingsPayments",
-  "/dashboard/settings/returns":           "settingsReturns",
-  "/dashboard/settings/units":             "settingsUnits",
-  "/dashboard/settings/expense-categories":"expenseCategories",
+// Nav dropdown children that require a specific permission level on an entity.
+// "List"/"ledger"/"profile" children (and report items) have no entry → they
+// inherit their parent's visibility. CREATE-level children (New tenant, New
+// reservation, Record payment, Submit expense) hide unless the user can create.
+const CHILD_REQUIRES: Record<string, { entity: string; level: PermissionLevel }> = {
+  // Lists group — Properties dropdown splits into Buildings vs Units.
+  "/dashboard/properties":                 { entity: "buildings", level: "VIEW" },
+  "/dashboard/units":                      { entity: "units",     level: "VIEW" },
+  // Create actions.
+  "/dashboard/tenants/new":                { entity: "tenants",      level: "CREATE" },
+  "/dashboard/reservations/new":           { entity: "reservations", level: "CREATE" },
+  "/dashboard/payments/new":               { entity: "payments",     level: "CREATE" },
+  "/dashboard/expenses/new":               { entity: "expenses",     level: "CREATE" },
+  // Setup (Settings sub-pages + Manage categories).
+  "/dashboard/settings/team":              { entity: "team",                 level: "VIEW" },
+  "/dashboard/settings/roles":             { entity: "roles",                level: "VIEW" },
+  "/dashboard/settings/organization":      { entity: "organization",         level: "VIEW" },
+  "/dashboard/settings/reservations":      { entity: "settingsReservations", level: "VIEW" },
+  "/dashboard/settings/payments":          { entity: "settingsPayments",     level: "VIEW" },
+  "/dashboard/settings/returns":           { entity: "settingsReturns",      level: "VIEW" },
+  "/dashboard/settings/units":             { entity: "settingsUnits",        level: "VIEW" },
+  "/dashboard/settings/expense-categories":{ entity: "expenseCategories",    level: "VIEW" },
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Navigation({ role, navAccess }: { role: Role; navAccess?: Record<string, boolean> }) {
   const pathname = usePathname();
+  const { perms, isOwner } = usePerms();
   const navRef   = useRef<HTMLElement>(null);
   const t        = useTranslations("nav");
   const tReports = useTranslations("reports");
@@ -171,13 +185,13 @@ export default function Navigation({ role, navAccess }: { role: Role; navAccess?
   }, []);
 
   // Prefer the permission-matrix-derived visibility map; fall back to the
-  // legacy role-based NAV_ACCESS for any key it doesn't cover. Children that map
-  // to a setup entity (Settings sub-pages, Manage categories) are filtered by
-  // that entity's matrix access too.
+  // legacy role-based NAV_ACCESS for any key it doesn't cover. Dropdown children
+  // are additionally filtered by their required entity+level (Buildings vs Units,
+  // create actions, Settings sub-pages) using the live permission matrix.
   const childVisible = (href: string) => {
-    const entity = CHILD_ENTITY[href];
-    if (!entity) return true;
-    return navAccess ? !!navAccess[entity] : (NAV_ACCESS["settings"] ?? []).includes(role);
+    const req = CHILD_REQUIRES[href];
+    if (!req) return true;
+    return isOwner || atLeast(perms, req.entity, req.level);
   };
   const visible = navigationConfig
     .filter((item) =>

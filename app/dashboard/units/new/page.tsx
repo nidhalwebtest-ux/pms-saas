@@ -4,12 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { assertCan } from "@/lib/access";
 
 export default async function NewUnitPage({
   searchParams,
 }: {
   searchParams: Promise<{ propertyId?: string }>;
 }) {
+  await assertCan("units", "CREATE");
   const { propertyId } = await searchParams;
 
   const supabase = await createClient();

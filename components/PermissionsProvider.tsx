@@ -28,3 +28,8 @@ export function useCan(entity: string, level: PermissionLevel = "VIEW"): boolean
   const { perms, isOwner } = useContext(Ctx);
   return isOwner || atLeast(perms, entity, level);
 }
+
+/** Raw permission context — for components that check many entities at once. */
+export function usePerms(): PermCtx {
+  return useContext(Ctx);
+}

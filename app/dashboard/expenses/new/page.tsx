@@ -5,12 +5,14 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import SubmitExpenseForm from "./SubmitExpenseForm";
+import { assertCan } from "@/lib/access";
 
 export default async function NewExpensePage({
   searchParams,
 }: {
   searchParams: Promise<{ propertyId?: string }>;
 }) {
+  await assertCan("expenses", "CREATE");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");

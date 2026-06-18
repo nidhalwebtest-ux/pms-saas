@@ -4,12 +4,14 @@ import { prisma } from "@/lib/prisma";
 import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { assertCan } from "@/lib/access";
 
 export default async function EditUnitPage({
   params,
 }: {
   params: Promise<{ unitId: string }>;
 }) {
+  await assertCan("units", "EDIT");
   const { unitId } = await params;
   const t = await getTranslations("units.editPage");
 

@@ -10,14 +10,20 @@ interface Props {
   userEmail:         string | undefined;
   userName:          string | null | undefined;
   role:              Role;
+  /** Display name of the user's assigned role (custom or system). */
+  roleName?:         string | null;
+  /** True when the assigned role is a custom (non-system) role. */
+  isCustomRole?:     boolean;
   properties:        { id: string; name: string }[];
   selectedPropertyId: string;
 }
 
-export default async function Header({ userEmail, userName, role, properties, selectedPropertyId }: Props) {
+export default async function Header({ userEmail, userName, role, roleName, isCustomRole, properties, selectedPropertyId }: Props) {
   const displayName = userName || userEmail?.split("@")[0] || "User";
   const t      = await getTranslations("dashboard.header");
   const tRoles = await getTranslations("settings.roles");
+  // Custom roles show their own name as-is; system/enum roles use the localized label.
+  const roleLabel = isCustomRole && roleName ? roleName : tRoles(role);
 
   return (
     <div className="flex h-16 items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 lg:px-8 border-b border-gray-200 min-w-0">
@@ -68,7 +74,7 @@ export default async function Header({ userEmail, userName, role, properties, se
             <p className="text-sm font-semibold text-gray-900 leading-tight truncate max-w-[110px] sm:max-w-[160px]">{displayName}</p>
             <div className="hidden sm:block">
               <Badge {...getUserRoleBadge(role)} size="sm">
-                {tRoles(role)}
+                {roleLabel}
               </Badge>
             </div>
           </div>

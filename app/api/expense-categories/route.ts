@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { forbiddenIfNo } from "@/lib/access";
 
 const SEED_CATEGORIES = [
   { name: "Cleaning",                nameAr: "تنظيف",              icon: "🧹", sortOrder: 1 },
@@ -44,12 +45,10 @@ export async function GET() {
  * POST /api/expense-categories — create a custom category.
  */
 export async function POST(req: NextRequest) {
+  const denied = await forbiddenIfNo("expenseCategories", "EDIT");
+  if (denied) return denied;
   let orgUser;
   try { orgUser = await requireOrgUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
-
-  if (!["OWNER", "MANAGER"].includes(orgUser.role ?? "")) {
-    return NextResponse.json({ error: "Only Admin can manage categories" }, { status: 403 });
-  }
 
   const body = await req.json();
   const { name, nameAr, icon } = body;

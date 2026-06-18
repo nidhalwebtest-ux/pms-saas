@@ -128,6 +128,19 @@ function cn(...c: (string | false | undefined)[]) {
   return c.filter(Boolean).join(" ");
 }
 
+// Settings (and expense-category) sub-pages map to a setup permission entity.
+// A child with no mapping (e.g. My Profile) is always shown when its parent is.
+const CHILD_ENTITY: Record<string, string> = {
+  "/dashboard/settings/team":              "team",
+  "/dashboard/settings/roles":             "roles",
+  "/dashboard/settings/organization":      "organization",
+  "/dashboard/settings/reservations":      "settingsReservations",
+  "/dashboard/settings/payments":          "settingsPayments",
+  "/dashboard/settings/returns":           "settingsReturns",
+  "/dashboard/settings/units":             "settingsUnits",
+  "/dashboard/settings/expense-categories":"expenseCategories",
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function Navigation({ role, navAccess }: { role: Role; navAccess?: Record<string, boolean> }) {
@@ -158,12 +171,25 @@ export default function Navigation({ role, navAccess }: { role: Role; navAccess?
   }, []);
 
   // Prefer the permission-matrix-derived visibility map; fall back to the
-  // legacy role-based NAV_ACCESS for any key it doesn't cover.
-  const visible = navigationConfig.filter((item) =>
-    navAccess && item.key in navAccess
-      ? navAccess[item.key]
-      : (NAV_ACCESS[item.key] ?? []).includes(role),
-  );
+  // legacy role-based NAV_ACCESS for any key it doesn't cover. Children that map
+  // to a setup entity (Settings sub-pages, Manage categories) are filtered by
+  // that entity's matrix access too.
+  const childVisible = (href: string) => {
+    const entity = CHILD_ENTITY[href];
+    if (!entity) return true;
+    return navAccess ? !!navAccess[entity] : (NAV_ACCESS["settings"] ?? []).includes(role);
+  };
+  const visible = navigationConfig
+    .filter((item) =>
+      navAccess && item.key in navAccess
+        ? navAccess[item.key]
+        : (NAV_ACCESS[item.key] ?? []).includes(role),
+    )
+    .map((item) =>
+      item.children
+        ? { ...item, children: item.children.filter((c) => childVisible(c.href)) }
+        : item,
+    );
 
   // Close everything when clicking outside the nav
   useEffect(() => {

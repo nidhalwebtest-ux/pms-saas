@@ -2,11 +2,13 @@ import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { assertView } from "@/lib/access";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import ExpenseCategoryManager from "./ExpenseCategoryManager";
 
 export default async function ExpenseCategoriesPage() {
+  await assertView("expenseCategories");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -16,7 +18,6 @@ export default async function ExpenseCategoriesPage() {
     select: { organizationId: true, role: true },
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
-  if (!["OWNER", "MANAGER"].includes(dbUser.role)) redirect("/dashboard");
 
   const t = await getTranslations("settings.categories.header");
 

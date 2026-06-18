@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireOrgUser } from "@/lib/tenant";
-import { can, type Role } from "@/lib/permissions";
+import { hasAccess } from "@/lib/access";
 import { normalizeMatrix, type PermissionMap } from "@/lib/rbac";
 
 export type RoleResult =
@@ -12,7 +12,7 @@ export type RoleResult =
 
 async function guard() {
   const actor = await requireOrgUser();
-  if (!can(actor.role as Role, "manageRoles")) throw new Error("forbidden");
+  if (!(await hasAccess("roles", "EDIT"))) throw new Error("forbidden");
   return actor;
 }
 

@@ -158,10 +158,26 @@ export const NAV_ENTITY: Record<string, string[]> = {
   salesTargets: ["salesTargets"],
 };
 
+/** Setup entities, each surfaced as a Settings sub-page (nav child). */
+export const SETUP_ENTITIES: string[] = [
+  "organization", "team", "roles",
+  "settingsReservations", "settingsPayments", "settingsReturns",
+  "settingsUnits", "expenseCategories",
+];
+
 export function navAccessFor(access: ResolvedAccess): Record<string, boolean> {
   const out: Record<string, boolean> = { dashboard: true };
   for (const [navKey, entities] of Object.entries(NAV_ENTITY)) {
     out[navKey] = access.isOwner || entities.some((e) => atLeast(access.perms, e, "VIEW"));
   }
+  // Setup entities: one boolean per entity (Settings sub-pages) plus a
+  // `settings` aggregate (the Settings parent shows when any setup is visible).
+  let anySetup = false;
+  for (const e of SETUP_ENTITIES) {
+    const v = access.isOwner || atLeast(access.perms, e, "VIEW");
+    out[e] = v;
+    if (v) anySetup = true;
+  }
+  out.settings = access.isOwner || anySetup;
   return out;
 }

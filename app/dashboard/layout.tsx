@@ -8,7 +8,7 @@ import AvailabilityCalendarButton from "@/components/dashboard/AvailabilityCalen
 import { prisma } from "@/lib/prisma";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import { getAccessiblePropertyIds } from "@/lib/property-scope";
-import { canNav, type Role } from "@/lib/permissions";
+import { type Role } from "@/lib/permissions";
 import { resolvePermissions, navAccessFor } from "@/lib/rbac";
 import { OrgProvider } from "@/lib/org-context";
 import { PermissionsProvider } from "@/components/PermissionsProvider";
@@ -39,10 +39,10 @@ export default async function DashboardLayout({
   const role = (dbUser.role ?? "STAFF") as Role;
   const currency = dbUser.organization?.currency ?? "OMR";
 
-  // Effective nav visibility: operational tabs from the permission matrix,
-  // `settings` still gated by the legacy enum role (setup enforcement = Phase 2b).
+  // Effective nav visibility: operational tabs AND setup entities (Settings
+  // sub-pages + the `settings` aggregate) all derive from the permission matrix.
   const access = resolvePermissions(role, dbUser.assignedRole);
-  const navAccess = { ...navAccessFor(access), settings: canNav(role, "settings") };
+  const navAccess = navAccessFor(access);
 
   // Per-user building scope: null = unrestricted (all org). Owner is always unrestricted.
   const accessible = access.isOwner ? null : await getAccessiblePropertyIds(user.id, dbUser.organizationId);

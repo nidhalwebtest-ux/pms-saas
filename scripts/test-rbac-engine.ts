@@ -111,15 +111,44 @@ ok("nav ACCOUNTANT sees invoices", navA.invoices === true);
 ok("nav ACCOUNTANT sees payments", navA.payments === true);
 ok("nav ACCOUNTANT hides reports", navA.reports === false);
 
-// custom None-everything role → nav shows only dashboard
+// custom None-everything role → nav shows only dashboard (no operational, no settings)
 const rNone = resolvePermissions("CUSTOM", { key: null, permissions: {} });
 const navNone = navAccessFor(rNone);
 ok("nav all-NONE custom → dashboard only",
   navNone.dashboard === true && Object.keys(NAV_ENTITY).every(k => navNone[k] === false));
+ok("nav all-NONE custom → settings hidden", navNone.settings === false);
+
+// ── setup / settings nav (matrix-driven) ────────────────────────────────────
+ok("nav OWNER sees settings", navOwner.settings === true);
+ok("nav STAFF hides settings (all setup NONE)", navStaff.settings === false);
+ok("nav ACCOUNTANT hides settings", navA.settings === false);
+// per-setup-entity booleans surfaced for Settings sub-pages
+ok("nav OWNER organization sub", navOwner.organization === true);
+ok("nav OWNER roles sub", navOwner.roles === true);
+ok("nav STAFF organization sub hidden", navStaff.organization === false);
+// downgraded MANAGER: enum MANAGER but custom role grants only operational VIEW,
+// all setup NONE → settings parent + every setup sub-page hidden
+const rDowngraded = resolvePermissions("MANAGER", { key: null, permissions: {
+  buildings: "VIEW", units: "VIEW", tenants: "VIEW", reservations: "VIEW",
+  invoices: "VIEW", payments: "VIEW", returns: "VIEW", expenses: "VIEW",
+  reports: "VIEW", salesTargets: "VIEW",
+} });
+const navDown = navAccessFor(rDowngraded);
+ok("downgraded MANAGER not owner", rDowngraded.isOwner === false);
+ok("downgraded MANAGER sees operational nav", navDown.invoices === true && navDown.reports === true);
+ok("downgraded MANAGER settings hidden", navDown.settings === false);
+ok("downgraded MANAGER roles sub hidden", navDown.roles === false);
+ok("downgraded MANAGER organization sub hidden", navDown.organization === false);
+// a custom role with only roles VIEW → settings shows, only roles sub visible
+const rRolesOnly = resolvePermissions("CUSTOM", { key: null, permissions: { roles: "VIEW" } });
+const navRoles = navAccessFor(rRolesOnly);
+ok("roles-only VIEW → settings visible", navRoles.settings === true);
+ok("roles-only VIEW → roles sub visible", navRoles.roles === true);
+ok("roles-only VIEW → organization sub hidden", navRoles.organization === false);
 
 // properties nav = buildings OR units (VIEW on either is enough)
 const rUnitsOnly = resolvePermissions("CUSTOM", { key: null, permissions: { units: "VIEW" } });
 ok("nav properties via units-only VIEW", navAccessFor(rUnitsOnly).properties === true);
 
-console.log(`\nBit 1 — engine: ${pass} passed, ${fail} failed`);
+console.log(`\nBit 1 — engine (incl. setup nav): ${pass} passed, ${fail} failed`);
 if (fail) { console.log("FAILED:", fails.join(", ")); process.exit(1); }

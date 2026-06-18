@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { canNav, type Role } from "@/lib/permissions";
+import { hasAccess } from "@/lib/access";
 
 export type SaveUnitSettingsResult =
   | { ok: true }
@@ -22,8 +22,7 @@ export async function updateUnitSettings(
   });
   if (!dbUser?.organizationId) return { ok: false, error: "no_org" };
 
-  const role = (dbUser.role ?? "STAFF") as Role;
-  if (!canNav(role, "settings")) {
+  if (!(await hasAccess("settingsUnits", "EDIT"))) {
     return { ok: false, error: "forbidden" };
   }
 

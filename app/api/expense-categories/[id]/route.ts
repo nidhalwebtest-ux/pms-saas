@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { forbiddenIfNo } from "@/lib/access";
 
 /**
  * PUT /api/expense-categories/[id] — edit a custom category.
@@ -9,12 +10,10 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const denied = await forbiddenIfNo("expenseCategories", "EDIT");
+  if (denied) return denied;
   let orgUser;
   try { orgUser = await requireOrgUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
-
-  if (!["OWNER", "MANAGER"].includes(orgUser.role ?? "")) {
-    return NextResponse.json({ error: "Only Admin can manage categories" }, { status: 403 });
-  }
 
   const { id } = await params;
   const cat = await prisma.expenseCat.findUnique({ where: { id } });
@@ -45,12 +44,10 @@ export async function PATCH(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const denied = await forbiddenIfNo("expenseCategories", "EDIT");
+  if (denied) return denied;
   let orgUser;
   try { orgUser = await requireOrgUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
-
-  if (!["OWNER", "MANAGER"].includes(orgUser.role ?? "")) {
-    return NextResponse.json({ error: "Only Admin can manage categories" }, { status: 403 });
-  }
 
   const { id } = await params;
   const cat = await prisma.expenseCat.findUnique({ where: { id } });

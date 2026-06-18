@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
-import { canNav, type Role } from "@/lib/permissions";
+import { hasAccess } from "@/lib/access";
 
 export type SavePaymentSettingsResult =
   | { ok: true }
@@ -22,8 +22,7 @@ export async function updatePaymentSettings(
   });
   if (!dbUser?.organizationId) return { ok: false, error: "no_org" };
 
-  const role = (dbUser.role ?? "STAFF") as Role;
-  if (!canNav(role, "settings")) return { ok: false, error: "forbidden" };
+  if (!(await hasAccess("settingsPayments", "EDIT"))) return { ok: false, error: "forbidden" };
 
   const raw = formData.get("overpaymentPolicy") as string;
   const overpaymentPolicy = ["BLOCK", "WARN", "ALLOW"].includes(raw) ? raw : "WARN";

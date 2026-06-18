@@ -1,12 +1,12 @@
 import AccessDenied from "@/components/dashboard/AccessDenied";
-import { hasRole } from "@/lib/route-guard";
+import { getSessionAccess } from "@/lib/access";
 
 export default async function TeamSettingsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const allowed = await hasRole(["OWNER", "MANAGER"]);
-  if (!allowed) return <AccessDenied />;
+  const access = await getSessionAccess();
+  if (!access?.canView("team")) return <AccessDenied />;
   return <>{children}</>;
 }

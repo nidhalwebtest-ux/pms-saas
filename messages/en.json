@@ -392,6 +392,7 @@
     "recordPayment": "Record payment",
     "reservationSettings": "Reservation Settings",
     "paymentSettings": "Payment Settings",
+    "bankAccounts": "Bank Accounts",
     "returnSettings": "Return Settings",
     "unitSettings": "Unit Settings"
   },
@@ -4242,6 +4243,47 @@
         "toggleFailed": "Failed to toggle"
       }
     },
+    "banks": {
+      "header": {
+        "title": "Bank Accounts",
+        "description": "Manage the bank accounts your company receives payments into."
+      },
+      "listTitle": "Bank accounts",
+      "addButton": "Add bank account",
+      "empty": "No bank accounts yet. Add one to route bank payments.",
+      "loading": "Loading bank accounts…",
+      "newTitle": "New bank account",
+      "editTitle": "Edit bank account",
+      "bankNameLabel": "Bank name",
+      "bankNamePlaceholder": "e.g. Bank Muscat",
+      "labelLabel": "Label / branch",
+      "labelPlaceholder": "e.g. Main operating account",
+      "accountNumberLabel": "Account number",
+      "accountNumberPlaceholder": "e.g. 0123456789",
+      "openingBalanceLabel": "Opening balance",
+      "openingBalanceShort": "Opening",
+      "setDefault": "Set as default account",
+      "defaultBadge": "Default",
+      "saveButton": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "active": "Active",
+      "inactive": "Inactive",
+      "deleteTitle": "Delete",
+      "toasts": {
+        "loadFailed": "Failed to load bank accounts",
+        "nameRequired": "Bank name is required",
+        "added": "Bank account added",
+        "updated": "Bank account updated",
+        "saveFailed": "Failed to save bank account",
+        "activated": "Bank account activated",
+        "deactivated": "Bank account deactivated",
+        "toggleFailed": "Failed to update status",
+        "confirmDelete": "Delete \"{name}\"? This cannot be undone.",
+        "deleted": "Bank account deleted",
+        "deleteFailed": "Failed to delete bank account"
+      }
+    },
     "rolePermissions": {
       "title": "Roles & Permissions",
       "subtitle": "Define what each role can view, create, edit and delete across the system.",
@@ -4300,6 +4342,7 @@
         "settingsPayments": "Payment Settings",
         "settingsReturns": "Return Settings",
         "settingsUnits": "Unit Settings",
+        "banks": "Bank Accounts",
         "expenseCategories": "Expense Categories"
       },
       "levels": {

@@ -43,7 +43,8 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     entities: [
       { key: "organization" }, { key: "team" }, { key: "roles" },
       { key: "settingsReservations" }, { key: "settingsPayments" },
-      { key: "settingsReturns" }, { key: "settingsUnits" }, { key: "expenseCategories" },
+      { key: "settingsReturns" }, { key: "settingsUnits" },
+      { key: "banks" }, { key: "expenseCategories" },
     ],
   },
 ];
@@ -81,7 +82,8 @@ export const DEFAULT_MATRICES: Record<SystemRoleKey, PermissionMap> = {
     reports: "NONE", salesTargets: "NONE",
     organization: "NONE", team: "NONE", roles: "NONE",
     settingsReservations: "NONE", settingsPayments: "NONE",
-    settingsReturns: "NONE", settingsUnits: "NONE", expenseCategories: "NONE",
+    settingsReturns: "NONE", settingsUnits: "NONE",
+    banks: "NONE", expenseCategories: "NONE",
   },
 
   // Accountant — finance: invoices/payments/returns + process expenses; no
@@ -93,7 +95,8 @@ export const DEFAULT_MATRICES: Record<SystemRoleKey, PermissionMap> = {
     reports: "NONE", salesTargets: "NONE",
     organization: "NONE", team: "NONE", roles: "NONE",
     settingsReservations: "NONE", settingsPayments: "NONE",
-    settingsReturns: "NONE", settingsUnits: "NONE", expenseCategories: "NONE",
+    settingsReturns: "NONE", settingsUnits: "NONE",
+    banks: "NONE", expenseCategories: "NONE",
   },
 };
 
@@ -162,7 +165,7 @@ export const NAV_ENTITY: Record<string, string[]> = {
 export const SETUP_ENTITIES: string[] = [
   "organization", "team", "roles",
   "settingsReservations", "settingsPayments", "settingsReturns",
-  "settingsUnits", "expenseCategories",
+  "settingsUnits", "banks", "expenseCategories",
 ];
 
 export function navAccessFor(access: ResolvedAccess): Record<string, boolean> {

@@ -231,6 +231,7 @@ model Organization {
   expenseCategories  ExpenseCat[]
   expenses           Expense[]
   reservations       Reservation[]
+  bankAccounts       BankAccount[]
 }
 
 // 4. Users
@@ -836,6 +837,31 @@ model ExpenseCat {
   expenses       Expense[]
 
   createdAt      DateTime      @default(now())
+
+  @@index([organizationId])
+}
+
+// ── Bank accounts ─────────────────────────────────────────────────────────────
+/// A company bank account (e.g. "Bank Muscat — Main"). Non-cash payments
+/// (transfer/card/cheque/online) route to one of these; the bank statement +
+/// matching (later phases) build a ledger per account. Org-level, not per-building.
+model BankAccount {
+  id             String       @id @default(uuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  bankName       String       // "Bank Muscat", "Bank Dhofar"
+  label          String?      // optional: branch / "Main operating account"
+  accountNumber  String?      // may be partial/masked
+  currency       String       @default("OMR")
+  openingBalance Decimal      @default(0) @db.Decimal(12, 3)
+  isActive       Boolean      @default(true)
+  isDefault      Boolean      @default(false)
+  sortOrder      Int          @default(0)
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   @@index([organizationId])
 }

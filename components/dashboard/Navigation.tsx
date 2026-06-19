@@ -120,6 +120,7 @@ const navigationConfig: NavItem[] = [
       { labelKey: "organization", href: "/dashboard/settings/organization" },
       { labelKey: "reservationSettings", href: "/dashboard/settings/reservations" },
       { labelKey: "paymentSettings", href: "/dashboard/settings/payments" },
+      { labelKey: "bankAccounts", href: "/dashboard/settings/banks" },
       { labelKey: "returnSettings", href: "/dashboard/settings/returns" },
       { labelKey: "unitSettings", href: "/dashboard/settings/units" },
     ],
@@ -151,6 +152,7 @@ const CHILD_REQUIRES: Record<string, { entity: string; level: PermissionLevel }>
   "/dashboard/settings/payments":          { entity: "settingsPayments",     level: "VIEW" },
   "/dashboard/settings/returns":           { entity: "settingsReturns",      level: "VIEW" },
   "/dashboard/settings/units":             { entity: "settingsUnits",        level: "VIEW" },
+  "/dashboard/settings/banks":             { entity: "banks",                level: "VIEW" },
   "/dashboard/settings/expense-categories":{ entity: "expenseCategories",    level: "VIEW" },
 };
 

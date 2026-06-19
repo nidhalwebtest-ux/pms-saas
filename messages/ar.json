@@ -392,6 +392,7 @@
     "recordPayment": "تسجيل دفعة",
     "reservationSettings": "إعدادات الحجوزات",
     "paymentSettings": "إعدادات المدفوعات",
+    "bankAccounts": "الحسابات البنكية",
     "returnSettings": "إعدادات المرتجعات",
     "unitSettings": "إعدادات الوحدات"
   },
@@ -4242,6 +4243,47 @@
         "toggleFailed": "فشل التبديل"
       }
     },
+    "banks": {
+      "header": {
+        "title": "الحسابات البنكية",
+        "description": "أدر الحسابات البنكية التي تستقبل شركتك المدفوعات فيها."
+      },
+      "listTitle": "الحسابات البنكية",
+      "addButton": "إضافة حساب بنكي",
+      "empty": "لا توجد حسابات بنكية بعد. أضف حساباً لتوجيه المدفوعات البنكية.",
+      "loading": "جارٍ تحميل الحسابات البنكية…",
+      "newTitle": "حساب بنكي جديد",
+      "editTitle": "تعديل الحساب البنكي",
+      "bankNameLabel": "اسم البنك",
+      "bankNamePlaceholder": "مثال: بنك مسقط",
+      "labelLabel": "الوصف / الفرع",
+      "labelPlaceholder": "مثال: الحساب التشغيلي الرئيسي",
+      "accountNumberLabel": "رقم الحساب",
+      "accountNumberPlaceholder": "مثال: 0123456789",
+      "openingBalanceLabel": "الرصيد الافتتاحي",
+      "openingBalanceShort": "الافتتاحي",
+      "setDefault": "تعيين كحساب افتراضي",
+      "defaultBadge": "افتراضي",
+      "saveButton": "حفظ",
+      "saving": "جارٍ الحفظ…",
+      "cancel": "إلغاء",
+      "active": "نشط",
+      "inactive": "غير نشط",
+      "deleteTitle": "حذف",
+      "toasts": {
+        "loadFailed": "فشل تحميل الحسابات البنكية",
+        "nameRequired": "اسم البنك مطلوب",
+        "added": "تمت إضافة الحساب البنكي",
+        "updated": "تم تحديث الحساب البنكي",
+        "saveFailed": "فشل حفظ الحساب البنكي",
+        "activated": "تم تفعيل الحساب البنكي",
+        "deactivated": "تم تعطيل الحساب البنكي",
+        "toggleFailed": "فشل تحديث الحالة",
+        "confirmDelete": "حذف \"{name}\"؟ لا يمكن التراجع عن هذا.",
+        "deleted": "تم حذف الحساب البنكي",
+        "deleteFailed": "فشل حذف الحساب البنكي"
+      }
+    },
     "rolePermissions": {
       "title": "الأدوار والصلاحيات",
       "subtitle": "حدّد ما يمكن لكل دور عرضه وإنشاؤه وتعديله وحذفه في النظام.",
@@ -4300,6 +4342,7 @@
         "settingsPayments": "إعدادات المدفوعات",
         "settingsReturns": "إعدادات المرتجعات",
         "settingsUnits": "إعدادات الوحدات",
+        "banks": "الحسابات البنكية",
         "expenseCategories": "فئات المصروفات"
       },
       "levels": {

@@ -34,6 +34,7 @@ export async function POST(req: NextRequest) {
     notes?: string;
     invoiceAllocations?: { invoiceId: string; amount: number }[];
     reservationId?: string;
+    bankAccountId?: string;
   };
   try {
     body = await req.json();
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { tenantId, amount, method, reference, notes, invoiceAllocations, reservationId } = body;
+  const { tenantId, amount, method, reference, notes, invoiceAllocations, reservationId, bankAccountId } = body;
 
   if (!tenantId)  return NextResponse.json({ error: "tenantId is required" },  { status: 400 });
   if (!amount)    return NextResponse.json({ error: "amount is required" },    { status: 400 });
@@ -87,6 +88,7 @@ export async function POST(req: NextRequest) {
       orgId:              orgUser.organizationId,
       userId:             orgUser.userId,
       reservationId,
+      bankAccountId,
       invoiceAllocations,
     });
 

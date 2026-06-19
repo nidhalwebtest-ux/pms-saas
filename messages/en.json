@@ -3540,6 +3540,7 @@
       "issueFailed": "Failed to issue invoice",
       "paymentSuccess": "Payment recorded",
       "paymentFailed": "Failed to record payment",
+      "bankRequired": "Select a bank account for bank transfers",
       "somethingWentWrong": "Something went wrong"
     },
     "paymentMethods": {
@@ -3675,6 +3676,7 @@
       "receiptNumber": "Receipt Number",
       "dateTime": "Date & Time",
       "paymentMethod": "Payment Method",
+      "bankAccount": "Bank Account",
       "reference": "Reference",
       "notes": "Notes",
       "recordedBy": "Recorded by",
@@ -3750,9 +3752,17 @@
         "couldNotResolve": "Could not resolve tenant. Please try again.",
         "loadInvoices": "Failed to load invoices",
         "recordFailed": "Failed to record payment",
+        "bankRequired": "Select a bank account for bank transfers",
         "networkError": "Network error",
         "recorded": "Payment recorded successfully"
       }
+    },
+    "bank": {
+      "label": "Bank account",
+      "choose": "Select a bank account…",
+      "default": "default",
+      "noneYet": "No bank accounts set up.",
+      "addOne": "Add one"
     },
     "edit": {
       "title": "Edit Payment Metadata",

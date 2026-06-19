@@ -21,6 +21,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getUnitPriceForRange } from "@/lib/pricing";
+import { methodNeedsBank, methodRequiresBank } from "@/lib/banks";
 import {
   collapseToSegments,
   calculateNights,
@@ -84,6 +85,7 @@ export interface RecordPaymentParams {
   userId:             string;
   receivedById?:      string;
   reservationId?:     string;
+  bankAccountId?:     string | null; // which bank a non-cash payment settles into
   invoiceAllocations?: { invoiceId: string; amount: number }[];
 }
 
@@ -1406,6 +1408,7 @@ export async function recordPayment(
     userId,
     receivedById,
     reservationId,
+    bankAccountId,
     invoiceAllocations,
   } = params;
 
@@ -1415,6 +1418,21 @@ export async function recordPayment(
   const today = new Date();
 
   return prisma.$transaction(async (tx) => {
+    // Resolve + validate the bank account for non-cash methods.
+    let resolvedBankId: string | null = null;
+    if (methodNeedsBank(method)) {
+      if (bankAccountId) {
+        const bank = await tx.bankAccount.findUnique({
+          where: { id: bankAccountId },
+          select: { organizationId: true, isActive: true },
+        });
+        if (!bank || bank.organizationId !== orgId) throw new Error("Invalid bank account.");
+        resolvedBankId = bankAccountId;
+      } else if (methodRequiresBank(method)) {
+        throw new Error("A bank account is required for bank transfers.");
+      }
+    }
+
     // 1. Generate payment number
     const paymentNumber = await nextPaymentNumber(orgId, tx);
 
@@ -1432,6 +1450,7 @@ export async function recordPayment(
         receivedById:   receivedById ?? null,
         tenantId,
         reservationId:  reservationId ?? null,
+        bankAccountId:  resolvedBankId,
       },
     });
 

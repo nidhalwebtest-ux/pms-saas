@@ -190,6 +190,9 @@ export async function GET(
         receivedBy: {
           select: { id: true, firstName: true, lastName: true },
         },
+        bankAccount: {
+          select: { bankName: true, label: true },
+        },
       },
     }),
     actor.organizationId
@@ -373,7 +376,7 @@ export async function GET(
     <div class="amount-box">
       <div>
         <div class="amount-label">${t("fields.amount")}<span class="sec" style="text-transform:none;letter-spacing:0;direction:${secondaryDir};margin-${isRtl ? "right" : "left"}:4px">${tOther("fields.amount")}</span></div>
-        <div style="font-size:11px;color:#15803d;margin-top:2px">${t("fields.method", { method: fmtMethod(payment.method) })}</div>
+        <div style="font-size:11px;color:#15803d;margin-top:2px">${t("fields.method", { method: fmtMethod(payment.method) })}${payment.bankAccount ? ` · ${payment.bankAccount.bankName}${payment.bankAccount.label ? " — " + payment.bankAccount.label : ""}` : ""}</div>
       </div>
       <div class="amount-value"><span class="ltr-num">${amount.toFixed(3)}</span> ${tCommon("omr")}</div>
     </div>

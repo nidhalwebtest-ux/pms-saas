@@ -18,6 +18,8 @@ import {
   CheckIcon,
 } from "@heroicons/react/24/outline";
 import { Alert, Button } from "@/components/ui";
+import BankSelect from "@/components/dashboard/BankSelect";
+import { methodNeedsBank, methodRequiresBank } from "@/lib/banks";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -137,6 +139,7 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
   // Payment details
   const [amount, setAmount]               = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CARD" | "BANK_TRANSFER" | "CHEQUE">("CASH");
+  const [bankAccountId, setBankAccountId] = useState("");
   const [reference, setReference]        = useState("");
   const [notes, setNotes]                 = useState("");
   const [paymentDate, setPaymentDate]     = useState(new Date().toISOString().slice(0, 10));
@@ -289,6 +292,11 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
       return;
     }
 
+    if (methodRequiresBank(paymentMethod) && !bankAccountId) {
+      toast.error(tErr("bankRequired"));
+      return;
+    }
+
     const body: Record<string, unknown> = {
       tenantId:  effectiveTenantId,
       amount:    numAmount,
@@ -296,6 +304,7 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
       reference: reference || undefined,
       notes:     notes || undefined,
       date:      paymentDate,
+      bankAccountId: methodNeedsBank(paymentMethod) ? (bankAccountId || undefined) : undefined,
     };
 
     if (mode === "invoice" && preInvoice) {
@@ -575,6 +584,17 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
                 ))}
               </div>
             </div>
+
+            {/* Bank account — shown for non-cash methods */}
+            {methodNeedsBank(paymentMethod) && (
+              <div className="sm:col-span-2">
+                <BankSelect
+                  value={bankAccountId}
+                  onChange={setBankAccountId}
+                  required={methodRequiresBank(paymentMethod)}
+                />
+              </div>
+            )}
 
             {/* Reference */}
             <div>

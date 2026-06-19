@@ -112,6 +112,9 @@ export default async function PaymentDetailPage({
       receivedBy: {
         select: { id: true, firstName: true, lastName: true },
       },
+      bankAccount: {
+        select: { id: true, bankName: true, label: true },
+      },
     },
   });
 
@@ -212,6 +215,15 @@ export default async function PaymentDetailPage({
                 </Badge>
               </dd>
             </div>
+            {payment.bankAccount && (
+              <div className="flex justify-between py-2.5">
+                <dt className="text-gray-500">{tDet("bankAccount")}</dt>
+                <dd className="font-medium text-gray-900">
+                  {payment.bankAccount.bankName}
+                  {payment.bankAccount.label ? ` — ${payment.bankAccount.label}` : ""}
+                </dd>
+              </div>
+            )}
             {payment.reference && (
               <div className="flex justify-between py-2.5">
                 <dt className="text-gray-500">{tDet("reference")}</dt>

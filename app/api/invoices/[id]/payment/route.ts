@@ -57,6 +57,7 @@ export async function POST(
     method?: string;
     reference?: string;
     notes?: string;
+    bankAccountId?: string;
   };
   try {
     body = await req.json();
@@ -89,6 +90,7 @@ export async function POST(
       method:    body.method,
       reference: body.reference,
       notes:     body.notes,
+      bankAccountId: body.bankAccountId,
       orgId:     orgUser.organizationId,
       userId:    orgUser.userId,
       invoiceAllocations: [{ invoiceId: id, amount }],

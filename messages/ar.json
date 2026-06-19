@@ -3540,6 +3540,7 @@
       "issueFailed": "فشل إصدار الفاتورة",
       "paymentSuccess": "تم تسجيل الدفعة",
       "paymentFailed": "فشل تسجيل الدفعة",
+      "bankRequired": "اختر حساباً بنكياً للتحويلات البنكية",
       "somethingWentWrong": "حدث خطأ ما"
     },
     "paymentMethods": {
@@ -3675,6 +3676,7 @@
       "receiptNumber": "رقم الإيصال",
       "dateTime": "التاريخ والوقت",
       "paymentMethod": "طريقة الدفع",
+      "bankAccount": "الحساب البنكي",
       "reference": "المرجع",
       "notes": "ملاحظات",
       "recordedBy": "سجّلها",
@@ -3750,9 +3752,17 @@
         "couldNotResolve": "تعذّر تحديد المستأجر. يرجى المحاولة مرة أخرى.",
         "loadInvoices": "تعذّر تحميل الفواتير",
         "recordFailed": "تعذّر تسجيل الدفعة",
+        "bankRequired": "اختر حساباً بنكياً للتحويلات البنكية",
         "networkError": "خطأ في الشبكة",
         "recorded": "تم تسجيل الدفعة بنجاح"
       }
+    },
+    "bank": {
+      "label": "الحساب البنكي",
+      "choose": "اختر حساباً بنكياً…",
+      "default": "افتراضي",
+      "noneYet": "لا توجد حسابات بنكية.",
+      "addOne": "أضف واحداً"
     },
     "edit": {
       "title": "تعديل بيانات الدفعة",

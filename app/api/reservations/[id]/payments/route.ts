@@ -31,6 +31,7 @@ export async function POST(
     method = "CASH",
     reference,
     notes,
+    bankAccountId,
     // Optional: explicit invoice allocation [{invoiceId, amount}]
     invoiceAllocations,
   } = body;
@@ -59,6 +60,7 @@ export async function POST(
       userId:         actor.id,
       receivedById:   actor.id,
       reservationId:  id,
+      bankAccountId:  bankAccountId ?? undefined,
       invoiceAllocations: invoiceAllocations ?? undefined,
     });
 

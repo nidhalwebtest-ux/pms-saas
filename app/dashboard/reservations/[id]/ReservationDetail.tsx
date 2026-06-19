@@ -7,6 +7,8 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { useTranslations, useLocale } from "next-intl";
 import { useCan } from "@/components/PermissionsProvider";
+import BankSelect from "@/components/dashboard/BankSelect";
+import { methodNeedsBank, methodRequiresBank } from "@/lib/banks";
 import { format as fmtDateFns } from "date-fns";
 import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import {
@@ -323,7 +325,7 @@ function PaymentForm({
   onChange,
 }: {
   balanceDue: string;
-  value: { amount: string; method: string; reference: string };
+  value: { amount: string; method: string; reference: string; bankAccountId: string };
   onChange: (v: typeof value) => void;
 }) {
   const t = useTranslations("reservations.detail.paymentForm");
@@ -356,6 +358,13 @@ function PaymentForm({
           </select>
         </div>
       </div>
+      {methodNeedsBank(value.method) && (
+        <BankSelect
+          value={value.bankAccountId ?? ""}
+          onChange={(id) => onChange({ ...value, bankAccountId: id })}
+          required={methodRequiresBank(value.method)}
+        />
+      )}
       <div>
         <label className="block text-xs font-medium text-gray-600 mb-1">{t("reference")}</label>
         <input
@@ -714,7 +723,7 @@ function PaymentModal({ res, onSuccess, onClose, overpaymentPolicy = "WARN" }: {
   const [manualAmounts, setManualAmounts] = useState<Record<string, string>>(() =>
     Object.fromEntries(outstandingInvoices.map((inv) => [inv.id, ""])),
   );
-  const [form, setForm] = useState({ amount: res.balanceDue, method: "CASH", reference: "" });
+  const [form, setForm] = useState({ amount: res.balanceDue, method: "CASH", reference: "", bankAccountId: "" });
   const [loading, setLoading] = useState(false);
 
   // In auto mode: compute how the payment would be distributed (oldest-first)
@@ -774,6 +783,7 @@ function PaymentModal({ res, onSuccess, onClose, overpaymentPolicy = "WARN" }: {
         amount:             amt,
         method:             form.method,
         reference:          form.reference || null,
+        bankAccountId:      methodNeedsBank(form.method) ? (form.bankAccountId || undefined) : undefined,
         invoiceAllocations,
       }),
     });
@@ -1106,6 +1116,7 @@ function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
     amount: Number(invoice.balanceDue).toFixed(3),
     method: "CASH",
     reference: "",
+    bankAccountId: "",
   });
   const [loading, setLoading] = useState(false);
 
@@ -1120,6 +1131,7 @@ function InvoicePayModal({ res, invoice, onSuccess, onClose }: {
         amount:  amt,
         method:  form.method,
         reference: form.reference || null,
+        bankAccountId: methodNeedsBank(form.method) ? (form.bankAccountId || undefined) : undefined,
         invoiceAllocations: [{ invoiceId: invoice.id, amount: amt }],
       }),
     });

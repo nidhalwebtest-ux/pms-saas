@@ -11,6 +11,8 @@ import {
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
+import BankSelect from "@/components/dashboard/BankSelect";
+import { methodNeedsBank, methodRequiresBank } from "@/lib/banks";
 
 interface Props {
   invoiceId: string;
@@ -35,6 +37,7 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
   const [amount, setAmount] = useState(balanceDue.toFixed(3));
   const [method, setMethod] = useState<PaymentMethod>("CASH");
   const [reference, setReference] = useState("");
+  const [bankAccountId, setBankAccountId] = useState("");
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
 
@@ -64,6 +67,10 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
       toast.error(t("invalidAmount"));
       return;
     }
+    if (methodRequiresBank(method) && !bankAccountId) {
+      toast.error(t("bankRequired"));
+      return;
+    }
     setPaymentLoading(true);
     try {
       const res = await fetch(`/api/invoices/${invoiceId}/payment`, {
@@ -75,6 +82,7 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
           reference: reference || undefined,
           date: paymentDate,
           notes: notes || undefined,
+          bankAccountId: methodNeedsBank(method) ? (bankAccountId || undefined) : undefined,
         }),
       });
       if (!res.ok) {
@@ -175,6 +183,15 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
                     <option value="OTHER">{tMethod("OTHER")}</option>
                   </select>
                 </div>
+
+                {/* Bank account — non-cash methods */}
+                {methodNeedsBank(method) && (
+                  <BankSelect
+                    value={bankAccountId}
+                    onChange={setBankAccountId}
+                    required={methodRequiresBank(method)}
+                  />
+                )}
 
                 {/* Date */}
                 <div>

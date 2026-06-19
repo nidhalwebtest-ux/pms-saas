@@ -31,7 +31,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     key: "transactions",
     entities: [
       { key: "reservations" }, { key: "invoices" }, { key: "payments" },
-      { key: "returns" }, { key: "expenses" },
+      { key: "returns" }, { key: "expenses" }, { key: "reconciliation" },
     ],
   },
   {
@@ -78,7 +78,7 @@ export const DEFAULT_MATRICES: Record<SystemRoleKey, PermissionMap> = {
   STAFF: {
     buildings: "VIEW", units: "VIEW", tenants: "FULL",
     reservations: "FULL", invoices: "CREATE", payments: "CREATE",
-    returns: "CREATE", expenses: "CREATE",
+    returns: "CREATE", expenses: "CREATE", reconciliation: "CREATE",
     reports: "NONE", salesTargets: "NONE",
     organization: "NONE", team: "NONE", roles: "NONE",
     settingsReservations: "NONE", settingsPayments: "NONE",
@@ -91,7 +91,7 @@ export const DEFAULT_MATRICES: Record<SystemRoleKey, PermissionMap> = {
   ACCOUNTANT: {
     buildings: "NONE", units: "NONE", tenants: "VIEW",
     reservations: "VIEW", invoices: "EDIT", payments: "FULL",
-    returns: "EDIT", expenses: "EDIT",
+    returns: "EDIT", expenses: "EDIT", reconciliation: "FULL",
     reports: "NONE", salesTargets: "NONE",
     organization: "NONE", team: "NONE", roles: "NONE",
     settingsReservations: "NONE", settingsPayments: "NONE",
@@ -157,6 +157,7 @@ export const NAV_ENTITY: Record<string, string[]> = {
   returns:      ["returns"],
   payments:     ["payments"],
   expenses:     ["expenses"],
+  cashier:      ["reconciliation"],
   reports:      ["reports"],
   salesTargets: ["salesTargets"],
 };

@@ -24,6 +24,7 @@ export interface LedgerInput {
   reference?:     string | null;
   paymentId?:     string | null;
   expenseId?:     string | null;
+  cashierSessionId?: string | null;
   createdById?:   string | null;
 }
 
@@ -42,6 +43,7 @@ export async function postBankTxn(tx: Prisma.TransactionClient, input: LedgerInp
       reference:      input.reference ?? null,
       paymentId:      input.paymentId ?? null,
       expenseId:      input.expenseId ?? null,
+      cashierSessionId: input.cashierSessionId ?? null,
       createdById:    input.createdById ?? null,
     },
   });

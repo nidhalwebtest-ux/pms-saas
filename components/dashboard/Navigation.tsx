@@ -67,6 +67,7 @@ const navigationConfig: NavItem[] = [
   },
   { key: "invoices",     labelKey: "invoices",     href: "/dashboard/invoices" },
   { key: "returns",      labelKey: "returns",      href: "/dashboard/returns" },
+  { key: "cashier",      labelKey: "cashier",      href: "/dashboard/cashier" },
   {
     key:      "payments",
     labelKey: "payments",

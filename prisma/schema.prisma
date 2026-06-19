@@ -232,6 +232,7 @@ model Organization {
   expenses           Expense[]
   reservations       Reservation[]
   bankAccounts       BankAccount[]
+  cashierSessions    CashierSession[]
 }
 
 // 4. Users
@@ -285,6 +286,7 @@ model User {
   submittedExpenses             Expense[]       @relation("ExpenseSubmittedBy")
   reviewedExpenses              Expense[]       @relation("ExpenseReviewedBy")
   processedExpenses             Expense[]       @relation("ExpenseProcessedBy")
+  cashierSessions               CashierSession[] @relation("CashierSessions")
 
   createdAt      DateTime     @default(now())
 }
@@ -327,6 +329,7 @@ model Property {
   assignments    PropertyAssignment[]
   expenses       Expense[]
   invoices       Invoice[]
+  cashierSessions CashierSession[]
 
   createdAt      DateTime @default(now())
 }
@@ -871,6 +874,7 @@ model BankAccount {
   payments       Payment[]
   expenses       Expense[]
   transactions   BankTransaction[]
+  cashierDeposits CashierSession[] @relation("CashierDeposits")
 
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
@@ -909,6 +913,7 @@ model BankTransaction {
   payment        Payment?     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   expenseId      String?      @unique
   expense        Expense?     @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  cashierSessionId String?    // DEPOSIT_IN rows from a cashier reconciliation
 
   isVoid         Boolean      @default(false)
   createdById    String?
@@ -917,6 +922,51 @@ model BankTransaction {
 
   @@index([bankAccountId, date])
   @@index([organizationId])
+}
+
+// ── Cashier (daily cash reconciliation) ───────────────────────────────────────
+/// One end-of-day cash count: expected drawer cash (cash payments − cash
+/// refunds for the day) vs counted cash → variance, then the cash is deposited
+/// to a bank (posting a DEPOSIT_IN ledger row).
+enum CashierSessionStatus {
+  OPEN
+  RECONCILED
+  DEPOSITED
+}
+
+model CashierSession {
+  id             String   @id @default(uuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  propertyId     String?
+  property       Property?    @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  cashierId      String
+  cashier        User         @relation("CashierSessions", fields: [cashierId], references: [id])
+
+  businessDate   DateTime     // the day being reconciled
+
+  systemCash     Decimal      @default(0) @db.Decimal(12, 3) // expected drawer cash
+  countedCash    Decimal      @default(0) @db.Decimal(12, 3) // physically counted
+  variance       Decimal      @default(0) @db.Decimal(12, 3) // counted − system
+
+  status         CashierSessionStatus @default(RECONCILED)
+
+  // Deposit of the cash into a bank account
+  depositBankAccountId String?
+  depositBankAccount   BankAccount? @relation("CashierDeposits", fields: [depositBankAccountId], references: [id])
+  depositedAmount      Decimal?     @db.Decimal(12, 3)
+  depositReference     String?
+  depositedAt          DateTime?
+
+  notes          String?
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, businessDate])
 }
 
 // ── Expenses ──────────────────────────────────────────────────────────────────

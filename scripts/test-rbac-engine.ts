@@ -29,7 +29,7 @@ ok("ALL_ENTITY_KEYS = flattened groups",
   ALL_ENTITY_KEYS.length === PERMISSION_GROUPS.flatMap(g=>g.entities).length);
 ok("no duplicate entity keys",
   new Set(ALL_ENTITY_KEYS).size === ALL_ENTITY_KEYS.length);
-ok("19 entities catalogued", ALL_ENTITY_KEYS.length === 19);
+ok("20 entities catalogued", ALL_ENTITY_KEYS.length === 20);
 
 // ── atLeast / levelFor hierarchy ────────────────────────────────────────────
 const m = { invoices: "CREATE" as const };

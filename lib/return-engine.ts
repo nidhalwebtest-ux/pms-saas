@@ -14,6 +14,8 @@
 
 import { prisma } from "@/lib/prisma";
 import { getUnitPriceForRange } from "@/lib/pricing";
+import { methodNeedsBank } from "@/lib/banks";
+import { postBankTxn } from "@/lib/bank-ledger";
 import {
   roundOMR,
   calculateNights,
@@ -714,8 +716,9 @@ export async function processRefund(params: {
   method:     string;
   reference?: string;
   notes?:     string;
+  bankAccountId?: string | null;
 }) {
-  const { returnId, orgId, userId, amount, method, reference, notes } = params;
+  const { returnId, orgId, userId, amount, method, reference, notes, bankAccountId } = params;
 
   const ret = await prisma.return.findUnique({
     where: { id: returnId },
@@ -752,7 +755,18 @@ export async function processRefund(params: {
     const tenantId     = ret.tenant.id;
     const reservationId = ret.reservation?.id;
 
-    await tx.payment.create({
+    // Validate the bank account for bank-routed refunds (org-owned).
+    let resolvedBankId: string | null = null;
+    if (methodNeedsBank(method) && bankAccountId) {
+      const bank = await tx.bankAccount.findUnique({
+        where: { id: bankAccountId },
+        select: { organizationId: true },
+      });
+      if (!bank || bank.organizationId !== orgId) throw new Error("Invalid bank account.");
+      resolvedBankId = bankAccountId;
+    }
+
+    const refundPayment = await tx.payment.create({
       data: {
         tenantId,
         reservationId: reservationId ?? null,
@@ -764,8 +778,24 @@ export async function processRefund(params: {
         isRefund:     true,
         receivedById: userId,
         date:         now,
+        bankAccountId: resolvedBankId,
       },
     });
+
+    // Bank ledger outflow when the refund leaves a bank account.
+    if (resolvedBankId) {
+      await postBankTxn(tx, {
+        organizationId: orgId,
+        bankAccountId:  resolvedBankId,
+        type:           "REFUND_OUT",
+        amount,
+        date:           now,
+        description:    `Refund ${ret.returnNumber}`,
+        reference:      reference ?? null,
+        paymentId:      refundPayment.id,
+        createdById:    userId,
+      });
+    }
 
     // Activity log on reservation
     if (reservationId) {

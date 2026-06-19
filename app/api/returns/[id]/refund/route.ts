@@ -26,7 +26,7 @@ export async function POST(
 
   const { id } = await params;
   const body = await req.json();
-  const { amount, method, reference, notes } = body;
+  const { amount, method, reference, notes, bankAccountId } = body;
 
   if (!amount || Number(amount) <= 0)
     return NextResponse.json({ error: "Valid amount is required" }, { status: 400 });
@@ -42,6 +42,7 @@ export async function POST(
       method,
       reference: reference ?? undefined,
       notes:     notes ?? undefined,
+      bankAccountId: bankAccountId ?? undefined,
     });
 
     return NextResponse.json({

@@ -3355,6 +3355,7 @@
       "refundSuccess": "تم تنفيذ الاسترداد",
       "refundFailed": "تعذّر تنفيذ الاسترداد",
       "invalidAmount": "أدخل مبلغًا صحيحًا",
+      "bankRequired": "اختر حساباً بنكياً للتحويلات البنكية",
       "somethingWentWrong": "حدث خطأ ما"
     },
     "detail": {
@@ -4050,6 +4051,7 @@
       "errors": {
         "selectMethod": "يرجى اختيار طريقة الدفع",
         "bankRefRequired": "المرجع البنكي مطلوب للتحويل البنكي",
+        "bankRequired": "اختر الحساب البنكي الذي دُفع منه",
         "processFailed": "تعذرت المعالجة",
         "networkError": "خطأ في الشبكة",
         "processed": "تمت معالجة المصروف"

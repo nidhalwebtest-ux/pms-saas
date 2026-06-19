@@ -7,6 +7,8 @@ import { useTranslations } from "next-intl";
 import { BanknotesIcon } from "@heroicons/react/24/outline";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
 import { useCan } from "@/components/PermissionsProvider";
+import BankSelect from "@/components/dashboard/BankSelect";
+import { methodNeedsBank, methodRequiresBank } from "@/lib/banks";
 
 interface Props {
   returnId: string;
@@ -27,6 +29,7 @@ export default function ReturnActions({ returnId, refundAmount, openRefundPanel 
   const [amount, setAmount] = useState(refundAmount.toFixed(3));
   const [method, setMethod] = useState<PaymentMethod>("CASH");
   const [reference, setReference] = useState("");
+  const [bankAccountId, setBankAccountId] = useState("");
   const [notes, setNotes] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
@@ -34,6 +37,10 @@ export default function ReturnActions({ returnId, refundAmount, openRefundPanel 
     const parsed = parseFloat(amount);
     if (isNaN(parsed) || parsed <= 0) {
       toast.error(t("invalidAmount"));
+      return;
+    }
+    if (methodRequiresBank(method) && !bankAccountId) {
+      toast.error(t("bankRequired"));
       return;
     }
     setLoading(true);
@@ -46,6 +53,7 @@ export default function ReturnActions({ returnId, refundAmount, openRefundPanel 
           method,
           reference: reference || undefined,
           notes: notes || undefined,
+          bankAccountId: methodNeedsBank(method) ? (bankAccountId || undefined) : undefined,
         }),
       });
       if (!res.ok) {
@@ -110,6 +118,9 @@ export default function ReturnActions({ returnId, refundAmount, openRefundPanel 
                   <option value="OTHER">{tMethod("OTHER")}</option>
                 </select>
               </div>
+              {methodNeedsBank(method) && (
+                <BankSelect value={bankAccountId} onChange={setBankAccountId} required={methodRequiresBank(method)} />
+              )}
               <div>
                 <label className="block text-xs font-medium text-fg-secondary mb-1">
                   {t("reference")} <span className="text-fg-tertiary">{t("optional")}</span>

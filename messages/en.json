@@ -3355,6 +3355,7 @@
       "refundSuccess": "Refund processed",
       "refundFailed": "Could not process refund",
       "invalidAmount": "Enter a valid amount",
+      "bankRequired": "Select a bank account for bank transfers",
       "somethingWentWrong": "Something went wrong"
     },
     "detail": {
@@ -4050,6 +4051,7 @@
       "errors": {
         "selectMethod": "Please select a payment method",
         "bankRefRequired": "Bank reference is required for bank transfer",
+        "bankRequired": "Select the bank account this was paid from",
         "processFailed": "Failed to process",
         "networkError": "Network error",
         "processed": "Expense processed"

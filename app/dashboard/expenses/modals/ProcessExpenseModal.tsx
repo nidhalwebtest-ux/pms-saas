@@ -10,6 +10,7 @@ import {
   CheckBadgeIcon,
 } from "@heroicons/react/24/outline";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
+import BankSelect from "@/components/dashboard/BankSelect";
 
 interface Expense {
   id: string;
@@ -36,6 +37,7 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
   const tErr = useTranslations("expenses.processModal.errors");
   const [paymentMethod, setPaymentMethod] = useState<string>("");
   const [bankReference, setBankReference] = useState("");
+  const [bankAccountId, setBankAccountId] = useState("");
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -48,12 +50,16 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
       toast.error(tErr("bankRefRequired"));
       return;
     }
+    if (paymentMethod === "bank_transfer" && !bankAccountId) {
+      toast.error(tErr("bankRequired"));
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch(`/api/expenses/${expense.id}/process`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentMethod, bankReference, notes }),
+        body: JSON.stringify({ paymentMethod, bankReference, notes, bankAccountId: paymentMethod === "bank_transfer" ? bankAccountId : undefined }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -113,16 +119,19 @@ export default function ProcessExpenseModal({ expense, onClose, onDone }: Props)
         </div>
 
         {paymentMethod === "bank_transfer" && (
-          <div className="mt-4">
-            <label className="block text-xs font-semibold text-fg-secondary mb-1.5">
-              {t("bankRefLabel")} <span className="text-error-500">*</span>
-            </label>
-            <input
-              value={bankReference}
-              onChange={(e) => setBankReference(e.target.value)}
-              placeholder={t("bankRefPlaceholder")}
-              className="w-full rounded-md border border-border-default px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 focus:outline-none"
-            />
+          <div className="mt-4 space-y-4">
+            <BankSelect value={bankAccountId} onChange={setBankAccountId} required />
+            <div>
+              <label className="block text-xs font-semibold text-fg-secondary mb-1.5">
+                {t("bankRefLabel")} <span className="text-error-500">*</span>
+              </label>
+              <input
+                value={bankReference}
+                onChange={(e) => setBankReference(e.target.value)}
+                placeholder={t("bankRefPlaceholder")}
+                className="w-full rounded-md border border-border-default px-3 py-2 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 focus:outline-none"
+              />
+            </div>
           </div>
         )}
 

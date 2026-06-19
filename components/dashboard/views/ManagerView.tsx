@@ -281,7 +281,16 @@ const ALERT_ICONS: Record<string, string> = {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-export function ManagerView({ propertyId }: { propertyId: string }) {
+export function ManagerView({
+  propertyId,
+  variant = "full",
+}: {
+  propertyId: string;
+  /** "full" = the standalone manager view; "highlights" = only building
+   *  performance, expense breakdown, and aging receivables (merged dashboard). */
+  variant?: "full" | "highlights";
+}) {
+  const highlightsOnly = variant === "highlights";
   const t        = useTranslations("dashboard.manager");
   const tKpis    = useTranslations("dashboard.manager.kpis");
   const tTrend   = useTranslations("dashboard.manager.trend");
@@ -343,7 +352,7 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
   return (
     <div className="space-y-6">
       {/* ── Alerts ── */}
-      {alerts.length > 0 && (
+      {!highlightsOnly && alerts.length > 0 && (
         <div className="space-y-2">
           {alerts.map((a) => (
             <div
@@ -365,6 +374,7 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
       )}
 
       {/* ── KPI cards ── */}
+      {!highlightsOnly && (
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <KpiCard
           label={tKpis("revenueMTD")}
@@ -422,8 +432,10 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
           vsLastMonthLabel={tTrend("vsLastMonth")}
         />
       </div>
+      )}
 
       {/* ── Charts row ── */}
+      {!highlightsOnly && (
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Revenue trend */}
         <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5">
@@ -441,6 +453,7 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
           <MinimalBarChart data={occupancyTrend} noDataLabel={tCharts("noData")} />
         </div>
       </div>
+      )}
 
       {/* ── Building comparison ── */}
       {buildingComparison.length > 0 && (
@@ -623,7 +636,7 @@ export function ManagerView({ propertyId }: { propertyId: string }) {
       </div>
 
       {/* ── Receptionist performance ── */}
-      {receptionistPerformance.length > 0 && (
+      {!highlightsOnly && receptionistPerformance.length > 0 && (
         <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
           <div className="flex items-center gap-2 border-b border-gray-100 px-5 py-3">
             <UserGroupIcon className="h-4 w-4 text-gray-400" />

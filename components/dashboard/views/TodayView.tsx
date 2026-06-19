@@ -2,12 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { format, formatDistanceToNow, parseISO } from "date-fns";
+import { formatDistanceToNow, parseISO } from "date-fns";
 import { ar as arLocale, enUS as enLocale } from "date-fns/locale";
 import { useTranslations, useLocale } from "next-intl";
 import {
   ArrowRightIcon,
-  BanknotesIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
   HomeModernIcon,
@@ -80,8 +79,6 @@ const ACTION_TONE: Record<string, "info" | "success" | "warning" | "danger" | "n
   PAYMENT_RECORDED: "success",
   NO_SHOW:          "neutral",
 };
-
-const METHOD_KEYS = ["CASH", "CARD", "BANK_TRANSFER", "CHEQUE", "OTHER"] as const;
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -296,13 +293,10 @@ export function TodayView({ propertyId }: { propertyId: string }) {
   const t       = useTranslations("dashboard.today");
   const tStats  = useTranslations("dashboard.today.stats");
   const tSec    = useTranslations("dashboard.today.sections");
-  const tFin    = useTranslations("dashboard.today.financial");
-  const tMeth   = useTranslations("dashboard.today.methods");
   const tAct    = useTranslations("dashboard.today.activity");
   const tActLab = useTranslations("dashboard.today.activity.labels");
   const locale  = useLocale();
   const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
-  const omr     = useFormatCurrency();
 
   const [data, setData]       = useState<TodayData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -427,100 +421,8 @@ export function TodayView({ propertyId }: { propertyId: string }) {
         </div>
       </div>
 
-      {/* ── Financial summary + Activity feed ── */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {/* Financial summary */}
-        <div className="rounded-xl bg-surface border border-border-subtle p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <BanknotesIcon className="h-5 w-5 text-green-600" />
-            <h3 className="text-sm font-semibold text-gray-900">
-              {tFin("title")}
-            </h3>
-            <span className="text-xs text-gray-400">
-              {format(new Date(), "d MMM yyyy", { locale: dateFnsLocale })}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            {/* Payments */}
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                {tFin("paymentsReceived")}
-              </p>
-              <dl className="space-y-1.5">
-                {METHOD_KEYS.map(
-                  (method) =>
-                    (data.paymentsToday[method] ?? 0) > 0 && (
-                      <div key={method} className="flex justify-between text-sm">
-                        <dt className="text-gray-500">{tMeth(method)}</dt>
-                        <dd className="font-medium text-gray-900 ltr-numbers">
-                          {omr(data.paymentsToday[method] ?? 0)}
-                        </dd>
-                      </div>
-                    ),
-                )}
-                <div className="flex justify-between text-sm border-t border-gray-100 pt-1.5 mt-1.5">
-                  <dt className="font-semibold text-gray-700">{tFin("total")}</dt>
-                  <dd className="font-bold text-green-700 ltr-numbers">
-                    {omr(data.paymentsToday.total ?? 0)}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-
-            {/* Expenses */}
-            <div>
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
-                {tFin("expenses")}
-              </p>
-              {data.expensesToday.count === 0 ? (
-                <p className="text-sm text-gray-400">{tFin("noExpenses")}</p>
-              ) : (
-                <dl className="space-y-1.5">
-                  <div className="flex justify-between text-sm">
-                    <dt className="text-gray-500">{tFin("count")}</dt>
-                    <dd className="font-medium">{data.expensesToday.count}</dd>
-                  </div>
-                  <div className="flex justify-between text-sm border-t border-gray-100 pt-1.5 mt-1.5">
-                    <dt className="font-semibold text-gray-700">{tFin("total")}</dt>
-                    <dd className="font-bold text-red-600 ltr-numbers">
-                      {omr(data.expensesToday.total)}
-                    </dd>
-                  </div>
-                </dl>
-              )}
-
-              {/* Quick links */}
-              <div className="mt-4 flex flex-col gap-1.5">
-                <Link href="/dashboard/payments/new" className="block">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    leftIcon={<BanknotesIcon className="h-3.5 w-3.5" />}
-                    onClick={(e) => e.preventDefault()}
-                    fullWidth
-                  >
-                    {tFin("recordPayment")}
-                  </Button>
-                </Link>
-                <Link href="/dashboard/expenses/new" className="block">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    leftIcon={<ArrowUpIcon className="h-3.5 w-3.5" />}
-                    onClick={(e) => e.preventDefault()}
-                    fullWidth
-                  >
-                    {tFin("logExpense")}
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent activity feed */}
-        <div className="overflow-hidden rounded-xl bg-surface border border-border-subtle">
+      {/* ── Recent activity feed ── */}
+      <div className="overflow-hidden rounded-xl bg-surface border border-border-subtle">
           <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
             <div className="flex items-center gap-2">
               <ClockIcon className="h-4 w-4 text-fg-tertiary" />
@@ -589,7 +491,6 @@ export function TodayView({ propertyId }: { propertyId: string }) {
             </ul>
           )}
         </div>
-      </div>
     </div>
   );
 }

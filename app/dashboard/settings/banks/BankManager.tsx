@@ -11,6 +11,7 @@ import {
   BuildingLibraryIcon,
   ArrowPathIcon,
   DocumentTextIcon,
+  ArrowsRightLeftIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
 import { useFormatCurrency } from "@/lib/org-context";
@@ -247,6 +248,13 @@ export default function BankManager({ canEdit, canDelete }: { canEdit: boolean; 
                     title={t("statementAction")}
                   >
                     <DocumentTextIcon className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href={`/dashboard/settings/banks/${b.id}/matching`}
+                    className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                    title={t("matchAction")}
+                  >
+                    <ArrowsRightLeftIcon className="h-4 w-4" />
                   </Link>
                   <button
                     onClick={() => toggle(b)}

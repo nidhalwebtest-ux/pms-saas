@@ -874,6 +874,7 @@ model BankAccount {
   payments       Payment[]
   expenses       Expense[]
   transactions   BankTransaction[]
+  statementLines BankStatementLine[]
   cashierDeposits CashierSession[] @relation("CashierDeposits")
 
   createdAt      DateTime     @default(now())
@@ -915,10 +916,47 @@ model BankTransaction {
   expense        Expense?     @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   cashierSessionId String?    // DEPOSIT_IN rows from a cashier reconciliation
 
+  // Bank matching (Phase 5): the imported statement line this book row matches.
+  matchedLine    BankStatementLine? @relation("LineMatch")
+
   isVoid         Boolean      @default(false)
   createdById    String?
 
   createdAt      DateTime     @default(now())
+
+  @@index([bankAccountId, date])
+  @@index([organizationId])
+}
+
+// ── Bank matching ─────────────────────────────────────────────────────────────
+/// A line from the bank's real statement (CSV import or manual entry), matched
+/// 1:1 against a book BankTransaction during reconciliation.
+enum BankLineStatus {
+  UNMATCHED
+  MATCHED
+  IGNORED
+}
+
+model BankStatementLine {
+  id             String         @id @default(uuid())
+
+  organizationId String
+  bankAccountId  String
+  bankAccount    BankAccount    @relation(fields: [bankAccountId], references: [id], onDelete: Cascade)
+
+  date           DateTime
+  description    String?
+  reference      String?
+  amount         Decimal        @db.Decimal(12, 3) // signed: + credit, − debit
+
+  importBatchId  String?
+  status         BankLineStatus @default(UNMATCHED)
+
+  matchedTxnId   String?        @unique
+  matchedTxn     BankTransaction? @relation("LineMatch", fields: [matchedTxnId], references: [id], onDelete: SetNull)
+
+  createdById    String?
+  createdAt      DateTime       @default(now())
 
   @@index([bankAccountId, date])
   @@index([organizationId])

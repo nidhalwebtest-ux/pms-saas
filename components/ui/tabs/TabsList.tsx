@@ -11,7 +11,7 @@ import type { TabsListProps, TabsSize, TabsVariant } from "./types";
 const listClass: Record<TabsVariant, string> = {
   underline:
     "relative flex items-stretch border-b border-border-subtle " +
-    "scrollbar-none",
+    "overflow-x-auto scrollbar-none",
   pill:
     "relative inline-flex bg-subtle border border-border-subtle rounded-[10px] p-[3px] gap-[2px]",
   boxed:

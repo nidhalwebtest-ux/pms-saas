@@ -100,6 +100,7 @@ export default function SalesPerformance() {
 
       {/* Table */}
       <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-200 overflow-hidden">
+        <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-100">
           <thead className="bg-gray-50">
             <tr>
@@ -158,6 +159,7 @@ export default function SalesPerformance() {
             </tfoot>
           )}
         </table>
+        </div>
       </div>
     </div>
   );

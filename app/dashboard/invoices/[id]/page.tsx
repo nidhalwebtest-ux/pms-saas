@@ -275,6 +275,7 @@ export default async function InvoiceDetailPage({
             <div className="px-5 py-4 border-b border-gray-100">
               <h2 className="text-sm font-semibold text-gray-900">{tDet("lineItems")}</h2>
             </div>
+            <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-100">
               <thead className="bg-gray-50">
                 <tr>
@@ -337,6 +338,7 @@ export default async function InvoiceDetailPage({
                 )}
               </tbody>
             </table>
+            </div>
 
             {/* Totals */}
             <div className="border-t border-gray-200 bg-gray-50/50 px-5 py-4">
@@ -388,6 +390,7 @@ export default async function InvoiceDetailPage({
             {invoice.allocations.length === 0 ? (
               <p className="px-5 py-6 text-sm text-gray-400 text-center">{tDet("noPayments")}</p>
             ) : (
+              <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-100">
                 <thead className="bg-gray-50">
                   <tr>
@@ -423,6 +426,7 @@ export default async function InvoiceDetailPage({
                   ))}
                 </tbody>
               </table>
+              </div>
             )}
           </div>
         </div>

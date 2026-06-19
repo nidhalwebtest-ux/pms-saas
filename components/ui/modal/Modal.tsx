@@ -58,10 +58,10 @@ const sheetWidth: Record<ModalSize, string> = {
 };
 
 const drawerWidth: Record<ModalSize, string> = {
-  sm: "w-[380px]",
-  md: "w-[480px]",
-  lg: "w-[640px]",
-  xl: "w-[800px]",
+  sm: "w-[380px] max-w-[calc(100vw-2rem)]",
+  md: "w-[480px] max-w-[calc(100vw-2rem)]",
+  lg: "w-[640px] max-w-[calc(100vw-2rem)]",
+  xl: "w-[800px] max-w-[calc(100vw-2rem)]",
   full: "w-[min(95vw,1280px)]",
 };
 

@@ -295,6 +295,7 @@ export default async function PaymentDetailPage({
             <BanknotesIcon className="h-4 w-4 text-gray-400" />
             <h3 className="text-sm font-semibold text-gray-700">{tDet("appliedToInvoices")}</h3>
           </div>
+          <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-gray-50">
               <tr>
@@ -342,6 +343,7 @@ export default async function PaymentDetailPage({
               </tr>
             </tfoot>
           </table>
+          </div>
         </div>
       )}
 

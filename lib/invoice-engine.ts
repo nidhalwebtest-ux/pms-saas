@@ -22,6 +22,7 @@
 import { prisma } from "@/lib/prisma";
 import { getUnitPriceForRange } from "@/lib/pricing";
 import { methodNeedsBank, methodRequiresBank } from "@/lib/banks";
+import { postBankTxn } from "@/lib/bank-ledger";
 import {
   collapseToSegments,
   calculateNights,
@@ -1453,6 +1454,21 @@ export async function recordPayment(
         bankAccountId:  resolvedBankId,
       },
     });
+
+    // Post the bank ledger row for this inflow (cash stays out of the ledger).
+    if (resolvedBankId) {
+      await postBankTxn(tx, {
+        organizationId: orgId,
+        bankAccountId:  resolvedBankId,
+        type:           "PAYMENT_IN",
+        amount:         paymentAmount,
+        date:           today,
+        description:    `Payment ${paymentNumber ?? ""}`.trim(),
+        reference:      reference ?? null,
+        paymentId:      payment.id,
+        createdById:    receivedById ?? userId ?? null,
+      });
+    }
 
     const createdAllocations: any[] = [];
     let remaining = paymentAmount;

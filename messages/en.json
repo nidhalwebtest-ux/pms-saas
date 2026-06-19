@@ -4280,6 +4280,42 @@
       "active": "Active",
       "inactive": "Inactive",
       "deleteTitle": "Delete",
+      "statementAction": "View statement",
+      "statement": {
+        "title": "Bank Statement",
+        "opening": "Opening balance",
+        "closing": "Closing balance",
+        "totalIn": "Money in",
+        "totalOut": "Money out",
+        "openingRow": "Opening balance",
+        "empty": "No transactions in this period.",
+        "exportXlsx": "Excel",
+        "exportPdf": "PDF",
+        "preparing": "Preparing…",
+        "presets": {
+          "thisMonth": "This month",
+          "lastMonth": "Last month",
+          "thisYear": "This year",
+          "all": "All time"
+        },
+        "col": {
+          "date": "Date",
+          "type": "Type",
+          "description": "Description",
+          "reference": "Reference",
+          "in": "Money In",
+          "out": "Money Out",
+          "balance": "Balance"
+        },
+        "types": {
+          "PAYMENT_IN": "Payment",
+          "REFUND_OUT": "Refund",
+          "DEPOSIT_IN": "Cash deposit",
+          "EXPENSE_OUT": "Expense",
+          "ADJUSTMENT": "Adjustment",
+          "FEE": "Bank fee"
+        }
+      },
       "toasts": {
         "loadFailed": "Failed to load bank accounts",
         "nameRequired": "Bank name is required",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import {
@@ -9,7 +10,7 @@ import {
   TrashIcon,
   BuildingLibraryIcon,
   ArrowPathIcon,
-  StarIcon,
+  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarSolid } from "@heroicons/react/24/solid";
 import { useFormatCurrency } from "@/lib/org-context";
@@ -240,6 +241,13 @@ export default function BankManager({ canEdit, canDelete }: { canEdit: boolean; 
                   <p className="text-sm font-semibold text-gray-700 ltr-numbers">{omr(Number(b.openingBalance))}</p>
                 </div>
                 <div className="flex items-center gap-1.5">
+                  <Link
+                    href={`/dashboard/settings/banks/${b.id}/statement`}
+                    className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                    title={t("statementAction")}
+                  >
+                    <DocumentTextIcon className="h-4 w-4" />
+                  </Link>
                   <button
                     onClick={() => toggle(b)}
                     disabled={!canEdit}

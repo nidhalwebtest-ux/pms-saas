@@ -4280,6 +4280,42 @@
       "active": "نشط",
       "inactive": "غير نشط",
       "deleteTitle": "حذف",
+      "statementAction": "عرض كشف الحساب",
+      "statement": {
+        "title": "كشف الحساب البنكي",
+        "opening": "الرصيد الافتتاحي",
+        "closing": "الرصيد الختامي",
+        "totalIn": "وارد",
+        "totalOut": "صادر",
+        "openingRow": "الرصيد الافتتاحي",
+        "empty": "لا توجد حركات في هذه الفترة.",
+        "exportXlsx": "إكسل",
+        "exportPdf": "PDF",
+        "preparing": "جارٍ التحضير…",
+        "presets": {
+          "thisMonth": "هذا الشهر",
+          "lastMonth": "الشهر الماضي",
+          "thisYear": "هذه السنة",
+          "all": "كل الفترات"
+        },
+        "col": {
+          "date": "التاريخ",
+          "type": "النوع",
+          "description": "الوصف",
+          "reference": "المرجع",
+          "in": "وارد",
+          "out": "صادر",
+          "balance": "الرصيد"
+        },
+        "types": {
+          "PAYMENT_IN": "دفعة",
+          "REFUND_OUT": "استرداد",
+          "DEPOSIT_IN": "إيداع نقدي",
+          "EXPENSE_OUT": "مصروف",
+          "ADJUSTMENT": "تسوية",
+          "FEE": "رسوم بنكية"
+        }
+      },
       "toasts": {
         "loadFailed": "فشل تحميل الحسابات البنكية",
         "nameRequired": "اسم البنك مطلوب",

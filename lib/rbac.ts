@@ -157,16 +157,19 @@ export const NAV_ENTITY: Record<string, string[]> = {
   returns:      ["returns"],
   payments:     ["payments"],
   expenses:     ["expenses"],
-  cashier:      ["reconciliation"],
+  cashier:      ["reconciliation", "banks"],
   reports:      ["reports"],
   salesTargets: ["salesTargets"],
 };
 
 /** Setup entities, each surfaced as a Settings sub-page (nav child). */
+// Entities that map to a Settings sub-page (drives the Settings nav aggregate).
+// `banks` is a Setup-group permission but lives under the "Cashier & Bank" nav
+// group, so it is intentionally excluded here.
 export const SETUP_ENTITIES: string[] = [
   "organization", "team", "roles",
   "settingsReservations", "settingsPayments", "settingsReturns",
-  "settingsUnits", "banks", "expenseCategories",
+  "settingsUnits", "expenseCategories",
 ];
 
 export function navAccessFor(access: ResolvedAccess): Record<string, boolean> {

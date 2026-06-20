@@ -67,7 +67,16 @@ const navigationConfig: NavItem[] = [
   },
   { key: "invoices",     labelKey: "invoices",     href: "/dashboard/invoices" },
   { key: "returns",      labelKey: "returns",      href: "/dashboard/returns" },
-  { key: "cashier",      labelKey: "cashier",      href: "/dashboard/cashier" },
+  {
+    key:      "cashier",
+    labelKey: "cashier",
+    href:     "/dashboard/cashier",
+    activePatterns: ["/dashboard/settings/banks"],
+    children: [
+      { labelKey: "cashierReconciliation", href: "/dashboard/cashier" },
+      { labelKey: "bankAccounts",          href: "/dashboard/settings/banks" },
+    ],
+  },
   {
     key:      "payments",
     labelKey: "payments",
@@ -121,7 +130,6 @@ const navigationConfig: NavItem[] = [
       { labelKey: "organization", href: "/dashboard/settings/organization" },
       { labelKey: "reservationSettings", href: "/dashboard/settings/reservations" },
       { labelKey: "paymentSettings", href: "/dashboard/settings/payments" },
-      { labelKey: "bankAccounts", href: "/dashboard/settings/banks" },
       { labelKey: "returnSettings", href: "/dashboard/settings/returns" },
       { labelKey: "unitSettings", href: "/dashboard/settings/units" },
     ],
@@ -140,6 +148,8 @@ const CHILD_REQUIRES: Record<string, { entity: string; level: PermissionLevel }>
   // Lists group — Properties dropdown splits into Buildings vs Units.
   "/dashboard/properties":                 { entity: "buildings", level: "VIEW" },
   "/dashboard/units":                      { entity: "units",     level: "VIEW" },
+  // Cashier & Bank group.
+  "/dashboard/cashier":                    { entity: "reconciliation", level: "VIEW" },
   // Create actions.
   "/dashboard/tenants/new":                { entity: "tenants",      level: "CREATE" },
   "/dashboard/reservations/new":           { entity: "reservations", level: "CREATE" },

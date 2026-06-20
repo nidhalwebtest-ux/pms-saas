@@ -422,9 +422,10 @@ export default function ReservationsView({
       if (advFilters.rateType)   sp.set("rateType",   advFilters.rateType);
       if (advFilters.source)     sp.set("source",     advFilters.source);
 
+      const summaryQs = advFilters.propertyId ? `?propertyId=${advFilters.propertyId}` : "";
       const [listRes, summaryRes] = await Promise.all([
         fetch(`/api/reservations?${sp}`),
-        fetch("/api/reservations/summary"),
+        fetch(`/api/reservations/summary${summaryQs}`),
       ]);
       const [listData, sumData] = await Promise.all([listRes.json(), summaryRes.json()]);
 
@@ -440,14 +441,15 @@ export default function ReservationsView({
   // Initial + 60-second summary refresh
   useEffect(() => { fetchData(); }, [fetchData]);
   useEffect(() => {
+    const qs = advFilters.propertyId ? `?propertyId=${advFilters.propertyId}` : "";
     const id = setInterval(() => {
-      fetch("/api/reservations/summary")
+      fetch(`/api/reservations/summary${qs}`)
         .then((r) => r.json())
         .then((d) => { if (d.all !== undefined) setSummary(d); })
         .catch(() => {});
     }, 60_000);
     return () => clearInterval(id);
-  }, []);
+  }, [advFilters.propertyId]);
 
   // ── Derived list ─────────────────────────────────────────────────────────────
 

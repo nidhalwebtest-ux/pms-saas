@@ -1,11 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getEffectivePropertyIds } from "@/lib/property-scope";
 import {
   getDisplayStatus,
   displayStatusToTab,
   type StoredStatus,
 } from "@/lib/reservation-status";
+import type { Prisma } from "@prisma/client";
 
 async function getActor() {
   const supabase = await createClient();
@@ -18,12 +20,29 @@ async function getActor() {
   return dbUser?.organizationId ? dbUser : null;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const actor = await getActor();
   if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Scope counts to the selected building + the user's accessible set so the tab
+  // totals match the (already-scoped) list. null = unrestricted (all org).
+  const propertyId = new URL(req.url).searchParams.get("propertyId") ?? "";
+  const propIds = await getEffectivePropertyIds(propertyId);
+
+  const where: Prisma.ReservationWhereInput = {
+    tenant: { organizationId: actor.organizationId! },
+    ...(propIds
+      ? {
+          OR: [
+            { unit: { propertyId: { in: propIds } } },
+            { reservationUnits: { some: { unit: { propertyId: { in: propIds } } } } },
+          ],
+        }
+      : {}),
+  };
+
   const raws = await prisma.reservation.findMany({
-    where: { tenant: { organizationId: actor.organizationId! } },
+    where,
     select: { status: true, startDate: true, endDate: true },
   });
 

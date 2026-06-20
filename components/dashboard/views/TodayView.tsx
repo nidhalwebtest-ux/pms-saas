@@ -2,18 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { formatDistanceToNow, parseISO } from "date-fns";
-import { ar as arLocale, enUS as enLocale } from "date-fns/locale";
-import { useTranslations, useLocale } from "next-intl";
+import { useTranslations } from "next-intl";
 import {
-  ArrowRightIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
   HomeModernIcon,
   ArrowUpIcon,
   ArrowDownIcon,
-  ClockIcon,
-  UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { useFormatCurrency } from "@/lib/org-context";
 import {
@@ -68,17 +63,6 @@ interface TodayData {
   expensesToday: { total: number; count: number };
   recentActivities: ActivityItem[];
 }
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-const ACTION_TONE: Record<string, "info" | "success" | "warning" | "danger" | "neutral"> = {
-  CREATED:          "info",
-  CHECKED_IN:       "success",
-  CHECKED_OUT:      "warning",
-  CANCELLED:        "danger",
-  PAYMENT_RECORDED: "success",
-  NO_SHOW:          "neutral",
-};
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -293,10 +277,6 @@ export function TodayView({ propertyId }: { propertyId: string }) {
   const t       = useTranslations("dashboard.today");
   const tStats  = useTranslations("dashboard.today.stats");
   const tSec    = useTranslations("dashboard.today.sections");
-  const tAct    = useTranslations("dashboard.today.activity");
-  const tActLab = useTranslations("dashboard.today.activity.labels");
-  const locale  = useLocale();
-  const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
 
   const [data, setData]       = useState<TodayData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -421,76 +401,6 @@ export function TodayView({ propertyId }: { propertyId: string }) {
         </div>
       </div>
 
-      {/* ── Recent activity feed ── */}
-      <div className="overflow-hidden rounded-xl bg-surface border border-border-subtle">
-          <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3">
-            <div className="flex items-center gap-2">
-              <ClockIcon className="h-4 w-4 text-fg-tertiary" />
-              <h3 className="text-sm font-semibold text-fg">
-                {tAct("title")}
-              </h3>
-            </div>
-            <Link href="/dashboard/reservations" className="inline-flex">
-              <Button
-                variant="link"
-                size="sm"
-                rightIcon={<ArrowRightIcon className="h-3 w-3 rtl:rotate-180" />}
-                onClick={(e) => e.preventDefault()}
-              >
-                {tAct("allReservations")}
-              </Button>
-            </Link>
-          </div>
-
-          {data.recentActivities.length === 0 ? (
-            <EmptyState
-              inline
-              variant="encouraging"
-              size="sm"
-              illustration={<UserGroupIcon className="h-6 w-6" />}
-              title={tAct("noActivity")}
-            />
-          ) : (
-            <ul className="divide-y divide-border-subtle max-h-80 overflow-y-auto">
-              {data.recentActivities.map((act) => {
-                const actionLabel = tActLab.has(act.action) ? tActLab(act.action) : act.action;
-                return (
-                  <li key={act.id} className="px-4 py-2.5 hover:bg-subtle transition-colors">
-                    <div className="flex items-start gap-2.5">
-                      <Badge tone={ACTION_TONE[act.action] ?? "neutral"} size="sm" appearance="subtle">
-                        {actionLabel}
-                      </Badge>
-                    </div>
-                    <p className="mt-0.5 text-xs text-fg-secondary truncate">
-                      {act.description}
-                    </p>
-                    <div className="mt-0.5 flex items-center gap-2 text-[10px] text-fg-tertiary">
-                      {act.performedBy && (
-                        <span className="font-medium text-fg-tertiary">
-                          {act.performedBy}
-                        </span>
-                      )}
-                      <span>
-                        {formatDistanceToNow(parseISO(act.createdAt), {
-                          addSuffix: true,
-                          locale: dateFnsLocale,
-                        })}
-                      </span>
-                      {act.reservationId && (
-                        <Link
-                          href={`/dashboard/reservations/${act.reservationId}`}
-                          className="text-brand-600 hover:text-brand-700"
-                        >
-                          {act.reservationNumber ?? tAct("viewLink")}
-                        </Link>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
     </div>
   );
 }

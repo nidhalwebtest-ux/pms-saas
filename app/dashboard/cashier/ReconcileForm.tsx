@@ -19,7 +19,7 @@ export default function ReconcileForm({
   expectedCash: number;
   banks: Bank[];
 }) {
-  const t = useTranslations("cashier");
+  const t = useTranslations("settings.cashier");
   const router = useRouter();
 
   const [counted, setCounted] = useState("");

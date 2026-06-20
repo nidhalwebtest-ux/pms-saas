@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 /** Date selector that navigates the cashier page to ?date=… (server recomputes). */
 export default function DateField({ date }: { date: string }) {
   const router = useRouter();
-  const t = useTranslations("cashier");
+  const t = useTranslations("settings.cashier");
   return (
     <label className="flex items-center gap-2 text-sm text-gray-600">
       <span>{t("businessDate")}</span>

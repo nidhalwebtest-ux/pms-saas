@@ -44,7 +44,7 @@ export default async function CashierPage({
 
   const locale = await getLocale();
   const dfLocale = locale === "ar" ? arLocale : enLocale;
-  const t = await getTranslations("cashier");
+  const t = await getTranslations("settings.cashier");
   const tMethod = await getTranslations("payments.methods");
   const money = (n: number) => `${n.toFixed(3)} OMR`;
 

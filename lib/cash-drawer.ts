@@ -30,13 +30,25 @@ export async function resolveDrawerProperty(
     const fromUnit = r?.unit?.propertyId ?? r?.reservationUnits[0]?.unit?.propertyId;
     if (fromUnit) return fromUnit;
   }
-  // Fall back to the (legacy) invoice's property.
+  // Fall back to the invoice's property, then its reservation's unit.
   if (args.invoiceId) {
     const inv = await tx.invoice.findUnique({
       where: { id: args.invoiceId },
-      select: { propertyId: true },
+      select: {
+        propertyId: true,
+        reservation: {
+          select: {
+            unit: { select: { propertyId: true } },
+            reservationUnits: { select: { unit: { select: { propertyId: true } } }, take: 1 },
+          },
+        },
+      },
     });
-    if (inv?.propertyId) return inv.propertyId;
+    const fromInvoice =
+      inv?.propertyId ??
+      inv?.reservation?.unit?.propertyId ??
+      inv?.reservation?.reservationUnits[0]?.unit?.propertyId;
+    if (fromInvoice) return fromInvoice;
   }
   return null;
 }

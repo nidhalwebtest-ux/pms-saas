@@ -83,17 +83,22 @@ export async function getCashierDaybook(params: {
   }
 
   // Non-cash collections for this building, this day (informational, net-zero).
+  // Map a payment to its building via its reservation OR its (allocated/legacy)
+  // invoice — payments are often recorded against invoices with no direct
+  // reservation link, so reservation-only matching misses them.
   const nonCash = await prisma.payment.findMany({
     where: {
       organizationId: orgId,
       date: { gte: start, lte: end },
       method: { not: "CASH" },
-      reservation: {
-        OR: [
-          { unit: { propertyId } },
-          { reservationUnits: { some: { unit: { propertyId } } } },
-        ],
-      },
+      OR: [
+        { reservation: { unit: { propertyId } } },
+        { reservation: { reservationUnits: { some: { unit: { propertyId } } } } },
+        { invoice: { propertyId } },
+        { invoice: { reservation: { unit: { propertyId } } } },
+        { allocations: { some: { invoice: { propertyId } } } },
+        { allocations: { some: { invoice: { reservation: { unit: { propertyId } } } } } },
+      ],
     },
     select: {
       id: true, date: true, method: true, reference: true, isRefund: true,

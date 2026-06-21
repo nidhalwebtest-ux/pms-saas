@@ -906,6 +906,7 @@ enum BankTxnType {
   PAYMENT_IN
   REFUND_OUT
   DEPOSIT_IN
+  TRANSFER_OUT
   EXPENSE_OUT
   ADJUSTMENT
   FEE
@@ -930,6 +931,8 @@ model BankTransaction {
   expenseId      String?      @unique
   expense        Expense?     @relation(fields: [expenseId], references: [id], onDelete: Cascade)
   cashierSessionId String?    // DEPOSIT_IN rows from a cashier reconciliation
+  // Groups the two legs of a cash deposit (drawer TRANSFER_OUT + bank DEPOSIT_IN).
+  transferGroupId String?
 
   // Bank matching (Phase 5): the imported statement line this book row matches.
   matchedLine    BankStatementLine? @relation("LineMatch")
@@ -941,6 +944,7 @@ model BankTransaction {
 
   @@index([bankAccountId, date])
   @@index([organizationId])
+  @@index([transferGroupId])
 }
 
 // ── Bank matching ─────────────────────────────────────────────────────────────

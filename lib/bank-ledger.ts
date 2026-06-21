@@ -9,10 +9,10 @@ import type { Prisma } from "@prisma/client";
  * its source (payment / expense / deposit).
  */
 export type BankTxnType =
-  | "PAYMENT_IN" | "REFUND_OUT" | "DEPOSIT_IN"
+  | "PAYMENT_IN" | "REFUND_OUT" | "DEPOSIT_IN" | "TRANSFER_OUT"
   | "EXPENSE_OUT" | "ADJUSTMENT" | "FEE";
 
-const OUTFLOW = new Set<BankTxnType>(["REFUND_OUT", "EXPENSE_OUT", "FEE"]);
+const OUTFLOW = new Set<BankTxnType>(["REFUND_OUT", "EXPENSE_OUT", "FEE", "TRANSFER_OUT"]);
 
 export interface LedgerInput {
   organizationId: string;
@@ -25,6 +25,7 @@ export interface LedgerInput {
   paymentId?:     string | null;
   expenseId?:     string | null;
   cashierSessionId?: string | null;
+  transferGroupId?: string | null;
   createdById?:   string | null;
 }
 
@@ -47,6 +48,7 @@ export async function postBankTxn(tx: Prisma.TransactionClient, input: LedgerInp
       paymentId:      input.paymentId ?? null,
       expenseId:      input.expenseId ?? null,
       cashierSessionId: input.cashierSessionId ?? null,
+      transferGroupId: input.transferGroupId ?? null,
       createdById:    input.createdById ?? null,
     },
   });

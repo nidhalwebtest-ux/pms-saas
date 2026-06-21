@@ -128,6 +128,151 @@ export async function reconcileAndLock(fd: FormData): Promise<ActionResponse> {
 }
 
 /**
+ * Deposit cash from a building's drawer into a bank account — a dependent
+ * two-leg transaction: TRANSFER_OUT of the drawer + DEPOSIT_IN to the bank,
+ * linked by a shared transferGroupId. The drawer balance drops and the deposit
+ * appears on the bank statement.
+ */
+export async function createCashDeposit(fd: FormData): Promise<ActionResponse> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthorized" };
+  if (!(await hasAccess("reconciliation", "CREATE"))) return { error: "forbidden" };
+
+  const access = await getSessionAccess();
+  if (!access?.organizationId) return { error: "no_org" };
+  const orgId = access.organizationId;
+
+  const propertyId = (fd.get("propertyId") as string)?.trim();
+  if (!propertyId) return { error: "no_building" };
+
+  const bankAccountId = (fd.get("bankAccountId") as string)?.trim();
+  if (!bankAccountId) return { error: "bank" };
+
+  const amount = round3(parseFloat((fd.get("amount") as string) || "0"));
+  if (!Number.isFinite(amount) || amount <= 0) return { error: "amount" };
+
+  const reference = (fd.get("reference") as string)?.trim() || null;
+
+  // Building must belong to the org and be accessible.
+  const property = await prisma.property.findFirst({
+    where: { id: propertyId, organizationId: orgId },
+    select: { id: true, name: true },
+  });
+  if (!property) return { error: "invalid_building" };
+  const accessible = await getSessionAccessibleProperties();
+  if (!canAccessProperty(accessible, propertyId)) return { error: "forbidden" };
+
+  // Target bank must be a real, active bank account in the org.
+  const bank = await prisma.bankAccount.findFirst({
+    where: { id: bankAccountId, organizationId: orgId, type: "BANK", isActive: true },
+    select: { id: true, bankName: true },
+  });
+  if (!bank) return { error: "invalid_bank" };
+
+  const now = new Date();
+
+  // Don't mutate a locked day (the deposit posts today).
+  const lockedToday = await prisma.cashierSession.findFirst({
+    where: { organizationId: orgId, propertyId, status: "LOCKED", businessDate: { gte: startOfDay(now), lte: endOfDay(now) } },
+    select: { id: true },
+  });
+  if (lockedToday) return { error: "day_locked" };
+
+  try {
+    const groupId = crypto.randomUUID();
+    await prisma.$transaction(async (tx) => {
+      const drawer = await getOrCreateCashDrawer(tx, orgId, propertyId);
+      if (!drawer) throw new Error("no_drawer");
+
+      // Can't deposit more than the drawer holds.
+      const agg = await tx.bankTransaction.aggregate({
+        where: { bankAccountId: drawer.id, isVoid: false },
+        _sum: { amount: true },
+      });
+      const balance = round3(Number(drawer.openingBalance) + Number(agg._sum.amount ?? 0));
+      if (amount > balance + 0.0005) throw new Error("insufficient_cash");
+
+      await postBankTxn(tx, {
+        organizationId: orgId,
+        bankAccountId: drawer.id,
+        type: "TRANSFER_OUT",
+        amount,
+        date: now,
+        description: `Deposit to ${bank.bankName}`,
+        reference,
+        transferGroupId: groupId,
+        createdById: user.id,
+      });
+      await postBankTxn(tx, {
+        organizationId: orgId,
+        bankAccountId: bank.id,
+        type: "DEPOSIT_IN",
+        amount,
+        date: now,
+        description: `Cash deposit — ${property.name}`,
+        reference,
+        transferGroupId: groupId,
+        createdById: user.id,
+      });
+    });
+
+    revalidatePath("/dashboard/cashier");
+    return { ok: true };
+  } catch (err: any) {
+    if (err?.message === "insufficient_cash") return { error: "insufficient_cash" };
+    if (err?.message === "no_drawer") return { error: "no_drawer" };
+    console.error("[createCashDeposit]", err);
+    return { error: "generic" };
+  }
+}
+
+/**
+ * Manager-only: remove a cash deposit (both legs). Blocked if the drawer leg
+ * falls on a locked day.
+ */
+export async function deleteCashDeposit(transferGroupId: string): Promise<ActionResponse> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "unauthorized" };
+  if (!(await hasAccess("reconciliation", "FULL"))) return { error: "forbidden" };
+
+  const access = await getSessionAccess();
+  if (!access?.organizationId) return { error: "no_org" };
+  const orgId = access.organizationId;
+
+  const legs = await prisma.bankTransaction.findMany({
+    where: { transferGroupId, organizationId: orgId },
+    include: { bankAccount: { select: { type: true, propertyId: true } } },
+  });
+  if (legs.length === 0) return { error: "not_found" };
+
+  // If the drawer leg's day is locked for its building, block.
+  const drawerLeg = legs.find((l) => l.bankAccount.type === "CASH");
+  if (drawerLeg?.bankAccount.propertyId) {
+    const locked = await prisma.cashierSession.findFirst({
+      where: {
+        organizationId: orgId,
+        propertyId: drawerLeg.bankAccount.propertyId,
+        status: "LOCKED",
+        businessDate: { gte: startOfDay(drawerLeg.date), lte: endOfDay(drawerLeg.date) },
+      },
+      select: { id: true },
+    });
+    if (locked) return { error: "day_locked" };
+  }
+
+  try {
+    await prisma.bankTransaction.deleteMany({ where: { transferGroupId, organizationId: orgId } });
+    revalidatePath("/dashboard/cashier");
+    return { ok: true };
+  } catch (err) {
+    console.error("[deleteCashDeposit]", err);
+    return { error: "generic" };
+  }
+}
+
+/**
  * Manager-only unlock: reverse the day's reconciliation. Removes the variance
  * ADJUSTMENT (so the drawer balance returns to its pre-lock state) and deletes
  * the locked session so the day can be reconciled again.

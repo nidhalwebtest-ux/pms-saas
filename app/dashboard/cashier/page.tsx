@@ -11,6 +11,8 @@ import { getCashierDaybook } from "@/lib/cashier-daybook";
 import DateField from "./DateField";
 import BuildingField from "./BuildingField";
 import ReconcileForm from "./ReconcileForm";
+import DepositForm from "./DepositForm";
+import DepositsList from "./DepositsList";
 
 export default async function CashierPage({
   searchParams,
@@ -83,7 +85,40 @@ export default async function CashierPage({
   });
 
   const canReconcile = access.canCreate("reconciliation");
-  const canManage = access.canDelete("reconciliation"); // FULL → unlock
+  const canManage = access.canDelete("reconciliation"); // FULL → unlock / delete deposit
+
+  // Current drawer balance (all-time) + recent deposits for this building.
+  let drawerBalance = 0;
+  let depositRows: { groupId: string; dateText: string; bankName: string; amount: number; reference: string | null }[] = [];
+  if (daybook.drawerId) {
+    const [drawerAcct, agg, transfers] = await Promise.all([
+      prisma.bankAccount.findUnique({ where: { id: daybook.drawerId }, select: { openingBalance: true } }),
+      prisma.bankTransaction.aggregate({ where: { bankAccountId: daybook.drawerId, isVoid: false }, _sum: { amount: true } }),
+      prisma.bankTransaction.findMany({
+        where: { bankAccountId: daybook.drawerId, type: "TRANSFER_OUT", isVoid: false, transferGroupId: { not: null } },
+        orderBy: { date: "desc" },
+        take: 6,
+        select: { date: true, amount: true, reference: true, transferGroupId: true },
+      }),
+    ]);
+    drawerBalance = Number(drawerAcct?.openingBalance ?? 0) + Number(agg._sum.amount ?? 0);
+
+    const groupIds = transfers.map((t) => t.transferGroupId!).filter(Boolean);
+    const bankLegs = groupIds.length
+      ? await prisma.bankTransaction.findMany({
+          where: { transferGroupId: { in: groupIds }, type: "DEPOSIT_IN" },
+          select: { transferGroupId: true, bankAccount: { select: { bankName: true } } },
+        })
+      : [];
+    const bankByGroup = new Map(bankLegs.map((l) => [l.transferGroupId, l.bankAccount?.bankName ?? "—"]));
+    depositRows = transfers.map((tr) => ({
+      groupId: tr.transferGroupId!,
+      dateText: format(new Date(tr.date), "d MMM yyyy", { locale: dfLocale }),
+      bankName: bankByGroup.get(tr.transferGroupId) ?? "—",
+      amount: Math.abs(Number(tr.amount)),
+      reference: tr.reference,
+    }));
+  }
 
   const locked = lockedSession
     ? {
@@ -187,7 +222,7 @@ export default async function CashierPage({
         </div>
       </div>
 
-      {/* Reconcile & lock (Phase 4 adds the drawer→bank deposit) */}
+      {/* Reconcile & lock */}
       {(canReconcile || locked) && (
         <ReconcileForm
           businessDate={dateStr}
@@ -196,6 +231,16 @@ export default async function CashierPage({
           locked={locked}
           canManage={canManage}
         />
+      )}
+
+      {/* Deposit cash to a bank (drawer → bank, dependent transaction) */}
+      {canReconcile && (
+        <DepositForm propertyId={propertyId} drawerBalance={drawerBalance} />
+      )}
+
+      {/* Recent deposits */}
+      {canReconcile && (
+        <DepositsList deposits={depositRows} canManage={canManage} />
       )}
 
       {/* Recent sessions */}

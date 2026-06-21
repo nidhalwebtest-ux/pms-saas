@@ -71,9 +71,12 @@ const navigationConfig: NavItem[] = [
     key:      "cashier",
     labelKey: "cashier",
     href:     "/dashboard/cashier",
-    activePatterns: ["/dashboard/settings/banks"],
+    activePatterns: ["/dashboard/settings/banks", "/dashboard/deposits", "/dashboard/adjustments"],
     children: [
       { labelKey: "cashierReconciliation", href: "/dashboard/cashier" },
+      { labelKey: "deposits",              href: "/dashboard/deposits" },
+      { labelKey: "newDeposit",            href: "/dashboard/deposits/new" },
+      { labelKey: "adjustments",           href: "/dashboard/adjustments" },
       { labelKey: "bankAccounts",          href: "/dashboard/settings/banks" },
     ],
   },
@@ -150,6 +153,9 @@ const CHILD_REQUIRES: Record<string, { entity: string; level: PermissionLevel }>
   "/dashboard/units":                      { entity: "units",     level: "VIEW" },
   // Cashier & Bank group.
   "/dashboard/cashier":                    { entity: "reconciliation", level: "VIEW" },
+  "/dashboard/deposits":                   { entity: "reconciliation", level: "VIEW" },
+  "/dashboard/deposits/new":               { entity: "reconciliation", level: "CREATE" },
+  "/dashboard/adjustments":                { entity: "reconciliation", level: "VIEW" },
   // Create actions.
   "/dashboard/tenants/new":                { entity: "tenants",      level: "CREATE" },
   "/dashboard/reservations/new":           { entity: "reservations", level: "CREATE" },

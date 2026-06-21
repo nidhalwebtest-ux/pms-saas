@@ -376,6 +376,9 @@
     "payments": "Payments",
     "cashier": "Cashier & Bank",
     "cashierReconciliation": "Cashier Reconciliation",
+    "deposits": "Deposits",
+    "newDeposit": "New Deposit",
+    "adjustments": "Reconciliation Adjustments",
     "expenses": "Expenses",
     "allExpenses": "All Expenses",
     "submitExpense": "Submit Expense",
@@ -3604,6 +3607,69 @@
       "refundSuffix": " (Refund)",
       "notesLabel": "Notes",
       "thankYou": "Thank you for your stay!"
+    }
+  },
+  "deposits": {
+    "title": "Deposits",
+    "newDeposit": "New Deposit",
+    "list": {
+      "title": "Deposits",
+      "summary": "{count} deposits · {total}",
+      "totalsLabel": "{count} deposits",
+      "delete": "Delete deposit",
+      "deleteConfirm": "Delete this deposit? Both the drawer and bank entries will be removed.",
+      "deleted": "Deposit deleted"
+    },
+    "table": {
+      "date": "Date",
+      "building": "Building",
+      "bank": "Bank",
+      "amount": "Amount",
+      "reference": "Reference"
+    },
+    "filters": {
+      "searchPlaceholder": "Search reference or building…",
+      "building": "Building",
+      "allBuildings": "All buildings"
+    },
+    "tabs": {
+      "all": "All",
+      "today": "Today",
+      "week": "This week",
+      "month": "This month"
+    },
+    "new": {
+      "subtitle": "Move cash from a building's drawer into a bank account.",
+      "building": "Building",
+      "noBuildings": "No buildings available.",
+      "cancel": "Cancel"
+    }
+  },
+  "adjustments": {
+    "title": "Reconciliation Adjustments",
+    "list": {
+      "title": "Reconciliation Adjustments",
+      "summary": "{count} adjustments · net {net}",
+      "netLabel": "{count} adjustments · net"
+    },
+    "table": {
+      "date": "Date",
+      "building": "Building",
+      "amount": "Amount",
+      "kind": "Type",
+      "overage": "Overage",
+      "shortage": "Shortage",
+      "by": "Reconciled by"
+    },
+    "filters": {
+      "building": "Building",
+      "allBuildings": "All buildings"
+    },
+    "tabs": {
+      "all": "All",
+      "today": "Today",
+      "week": "This week",
+      "month": "This month"
     }
   },
   "payments": {

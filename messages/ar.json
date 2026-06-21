@@ -376,6 +376,9 @@
     "payments": "المدفوعات",
     "cashier": "الصندوق والبنوك",
     "cashierReconciliation": "تسوية الصندوق",
+    "deposits": "الإيداعات",
+    "newDeposit": "إيداع جديد",
+    "adjustments": "تسويات الصندوق",
     "expenses": "المصروفات",
     "allExpenses": "جميع المصروفات",
     "submitExpense": "تقديم مصروف",
@@ -3604,6 +3607,69 @@
       "refundSuffix": " (استرداد)",
       "notesLabel": "ملاحظات",
       "thankYou": "شكراً لإقامتكم!"
+    }
+  },
+  "deposits": {
+    "title": "الإيداعات",
+    "newDeposit": "إيداع جديد",
+    "list": {
+      "title": "الإيداعات",
+      "summary": "{count} إيداع · {total}",
+      "totalsLabel": "{count} إيداع",
+      "delete": "حذف الإيداع",
+      "deleteConfirm": "حذف هذا الإيداع؟ ستُحذف قيود الدرج والبنك معاً.",
+      "deleted": "تم حذف الإيداع"
+    },
+    "table": {
+      "date": "التاريخ",
+      "building": "المبنى",
+      "bank": "البنك",
+      "amount": "المبلغ",
+      "reference": "المرجع"
+    },
+    "filters": {
+      "searchPlaceholder": "ابحث بالمرجع أو المبنى…",
+      "building": "المبنى",
+      "allBuildings": "كل المباني"
+    },
+    "tabs": {
+      "all": "الكل",
+      "today": "اليوم",
+      "week": "هذا الأسبوع",
+      "month": "هذا الشهر"
+    },
+    "new": {
+      "subtitle": "انقل النقد من صندوق المبنى إلى حساب بنكي.",
+      "building": "المبنى",
+      "noBuildings": "لا توجد مبانٍ متاحة.",
+      "cancel": "إلغاء"
+    }
+  },
+  "adjustments": {
+    "title": "تسويات الصندوق",
+    "list": {
+      "title": "تسويات الصندوق",
+      "summary": "{count} تسوية · الصافي {net}",
+      "netLabel": "{count} تسوية · الصافي"
+    },
+    "table": {
+      "date": "التاريخ",
+      "building": "المبنى",
+      "amount": "المبلغ",
+      "kind": "النوع",
+      "overage": "زيادة",
+      "shortage": "عجز",
+      "by": "سوّاها"
+    },
+    "filters": {
+      "building": "المبنى",
+      "allBuildings": "كل المباني"
+    },
+    "tabs": {
+      "all": "الكل",
+      "today": "اليوم",
+      "week": "هذا الأسبوع",
+      "month": "هذا الشهر"
     }
   },
   "payments": {

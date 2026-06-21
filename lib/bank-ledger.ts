@@ -28,10 +28,13 @@ export interface LedgerInput {
   createdById?:   string | null;
 }
 
-/** Post a signed ledger row. Outflow types are stored negative. */
+/** Post a signed ledger row. Outflow types are stored negative; ADJUSTMENT keeps
+ * the sign of the amount passed in (can be + overage or − shortage). */
 export async function postBankTxn(tx: Prisma.TransactionClient, input: LedgerInput) {
   const magnitude = Math.abs(input.amount);
-  const signed = OUTFLOW.has(input.type) ? -magnitude : magnitude;
+  const signed =
+    input.type === "ADJUSTMENT" ? input.amount :
+    OUTFLOW.has(input.type) ? -magnitude : magnitude;
   return tx.bankTransaction.create({
     data: {
       organizationId: input.organizationId,

@@ -985,6 +985,7 @@ enum CashierSessionStatus {
   OPEN
   RECONCILED
   DEPOSITED
+  LOCKED
 }
 
 model CashierSession {
@@ -1001,11 +1002,20 @@ model CashierSession {
 
   businessDate   DateTime     // the day being reconciled
 
-  systemCash     Decimal      @default(0) @db.Decimal(12, 3) // expected drawer cash
+  openingBalance Decimal      @default(0) @db.Decimal(12, 3) // drawer opening that day
+  closingBalance Decimal      @default(0) @db.Decimal(12, 3) // daybook closing (= systemCash)
+  systemCash     Decimal      @default(0) @db.Decimal(12, 3) // expected drawer cash (closing)
   countedCash    Decimal      @default(0) @db.Decimal(12, 3) // physically counted
   variance       Decimal      @default(0) @db.Decimal(12, 3) // counted − system
 
   status         CashierSessionStatus @default(RECONCILED)
+
+  // Day lock: a LOCKED day is frozen; variance posts an ADJUSTMENT ledger row
+  // that re-anchors the drawer to the counted cash. Manager-only unlock reverses it.
+  lockedAt       DateTime?
+  lockedById     String?
+  lockedByName   String?      // denormalized for display
+  adjustmentTxnId String?     // the variance ADJUSTMENT BankTransaction (if any)
 
   // Deposit of the cash into a bank account
   depositBankAccountId String?

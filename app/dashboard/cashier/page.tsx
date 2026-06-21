@@ -62,10 +62,13 @@ export default async function CashierPage({
 
   const daybook = await getCashierDaybook({ orgId, propertyId, date });
 
-  const banks = await prisma.bankAccount.findMany({
-    where: { organizationId: orgId, type: "BANK", isActive: true },
-    select: { id: true, bankName: true, label: true, isDefault: true, isActive: true },
-    orderBy: [{ isDefault: "desc" }, { bankName: "asc" }],
+  // Day bounds for the selected business date.
+  const dayStart = new Date(date); dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(date); dayEnd.setHours(23, 59, 59, 999);
+
+  // Is this building/day already locked?
+  const lockedSession = await prisma.cashierSession.findFirst({
+    where: { organizationId: orgId, propertyId, status: "LOCKED", businessDate: { gte: dayStart, lte: dayEnd } },
   });
 
   const recent = await prisma.cashierSession.findMany({
@@ -74,11 +77,27 @@ export default async function CashierPage({
     take: 8,
     include: {
       cashier: { select: { firstName: true, lastName: true } },
+      property: { select: { name: true } },
       depositBankAccount: { select: { bankName: true } },
     },
   });
 
   const canReconcile = access.canCreate("reconciliation");
+  const canManage = access.canDelete("reconciliation"); // FULL → unlock
+
+  const locked = lockedSession
+    ? {
+        id: lockedSession.id,
+        countedCash: Number(lockedSession.countedCash),
+        variance: Number(lockedSession.variance),
+        closingBalance: Number(lockedSession.closingBalance),
+        lockedByName: lockedSession.lockedByName,
+        lockedAtText: lockedSession.lockedAt
+          ? format(new Date(lockedSession.lockedAt), "d MMM yyyy, HH:mm", { locale: dfLocale })
+          : null,
+        hasAdjustment: !!lockedSession.adjustmentTxnId,
+      }
+    : null;
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -168,12 +187,14 @@ export default async function CashierPage({
         </div>
       </div>
 
-      {/* Reconcile + deposit (Phase 3/4 will add locking + drawer→bank transfer) */}
-      {canReconcile && (
+      {/* Reconcile & lock (Phase 4 adds the drawer→bank deposit) */}
+      {(canReconcile || locked) && (
         <ReconcileForm
           businessDate={dateStr}
-          expectedCash={daybook.closingBalance}
-          banks={banks}
+          propertyId={propertyId}
+          closingBalance={daybook.closingBalance}
+          locked={locked}
+          canManage={canManage}
         />
       )}
 
@@ -190,27 +211,32 @@ export default async function CashierPage({
               <thead className="bg-gray-50">
                 <tr className="text-xs uppercase tracking-wide text-gray-400">
                   <th className="px-4 py-2 text-start">{t("col.date")}</th>
+                  <th className="px-4 py-2 text-start">{t("col.building")}</th>
                   <th className="px-4 py-2 text-start">{t("col.cashier")}</th>
                   <th className="px-4 py-2 text-end">{t("col.expected")}</th>
                   <th className="px-4 py-2 text-end">{t("col.counted")}</th>
                   <th className="px-4 py-2 text-end">{t("col.variance")}</th>
-                  <th className="px-4 py-2 text-start">{t("col.deposit")}</th>
+                  <th className="px-4 py-2 text-start">{t("col.status")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {recent.map((s) => {
                   const v = Number(s.variance);
+                  const isLocked = s.status === "LOCKED";
                   return (
                     <tr key={s.id}>
                       <td className="px-4 py-2.5 text-gray-700 ltr-numbers">{format(new Date(s.businessDate), "d MMM yyyy", { locale: dfLocale })}</td>
+                      <td className="px-4 py-2.5 text-gray-600">{s.property?.name ?? "—"}</td>
                       <td className="px-4 py-2.5 text-gray-600">{`${s.cashier.firstName ?? ""} ${s.cashier.lastName ?? ""}`.trim()}</td>
                       <td className="px-4 py-2.5 text-end text-gray-600 ltr-numbers">{money(Number(s.systemCash))}</td>
                       <td className="px-4 py-2.5 text-end text-gray-600 ltr-numbers">{money(Number(s.countedCash))}</td>
                       <td className={`px-4 py-2.5 text-end font-medium ltr-numbers ${Math.abs(v) < 0.001 ? "text-green-600" : "text-red-600"}`}>
                         {v > 0 ? "+" : ""}{money(v)}
                       </td>
-                      <td className="px-4 py-2.5 text-gray-600">
-                        {s.depositBankAccount ? `${s.depositBankAccount.bankName} · ${money(Number(s.depositedAmount ?? 0))}` : "—"}
+                      <td className="px-4 py-2.5">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${isLocked ? "bg-gray-100 text-gray-600" : "bg-green-100 text-green-700"}`}>
+                          {t(`status.${s.status}`)}
+                        </span>
                       </td>
                     </tr>
                   );

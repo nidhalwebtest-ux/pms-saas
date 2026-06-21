@@ -23,6 +23,7 @@ import { prisma } from "@/lib/prisma";
 import { getUnitPriceForRange } from "@/lib/pricing";
 import { methodNeedsBank, methodRequiresBank } from "@/lib/banks";
 import { postBankTxn } from "@/lib/bank-ledger";
+import { resolveDrawerProperty, getOrCreateCashDrawer } from "@/lib/cash-drawer";
 import {
   collapseToSegments,
   calculateNights,
@@ -1455,7 +1456,9 @@ export async function recordPayment(
       },
     });
 
-    // Post the bank ledger row for this inflow (cash stays out of the ledger).
+    // Post the inflow to the ledger: non-cash → its bank account; cash → the
+    // building's cash drawer (auto-created if needed). Cash with no resolvable
+    // building stays out of any drawer, as before.
     if (resolvedBankId) {
       await postBankTxn(tx, {
         organizationId: orgId,
@@ -1468,6 +1471,25 @@ export async function recordPayment(
         paymentId:      payment.id,
         createdById:    receivedById ?? userId ?? null,
       });
+    } else if (method === "CASH") {
+      const propertyId = await resolveDrawerProperty(tx, {
+        reservationId,
+        invoiceId: invoiceAllocations?.[0]?.invoiceId,
+      });
+      const drawer = await getOrCreateCashDrawer(tx, orgId, propertyId);
+      if (drawer) {
+        await postBankTxn(tx, {
+          organizationId: orgId,
+          bankAccountId:  drawer.id,
+          type:           "PAYMENT_IN",
+          amount:         paymentAmount,
+          date:           today,
+          description:    `Cash payment ${paymentNumber ?? ""}`.trim(),
+          reference:      reference ?? null,
+          paymentId:      payment.id,
+          createdById:    receivedById ?? userId ?? null,
+        });
+      }
     }
 
     const createdAllocations: any[] = [];

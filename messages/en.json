@@ -4260,7 +4260,9 @@
     "banks": {
       "header": {
         "title": "Bank Accounts",
-        "description": "Manage the bank accounts your company receives payments into."
+        "description": "Manage the bank accounts your company receives payments into.",
+        "cashDrawersTitle": "Cash Drawers",
+        "cashDrawersDescription": "One cash drawer per building. Cash payments, refunds and petty-cash expenses flow through it; set the opening float to the cash currently in the drawer."
       },
       "listTitle": "Bank accounts",
       "addButton": "Add bank account",
@@ -4572,6 +4574,34 @@
           "desc": "Accept it silently; the extra becomes an unapplied credit on the account."
         }
       }
+    },
+    "cashDrawers": {
+      "listTitle": "Cash drawers",
+      "listSubtitle": "One per building. Auto-created on the first cash movement.",
+      "addButton": "Add drawer",
+      "empty": "No cash drawers yet. They're created automatically when cash is collected, or add one now to set its opening float.",
+      "loading": "Loading cash drawers…",
+      "newTitle": "Set up a cash drawer",
+      "editTitle": "Edit cash drawer",
+      "floatHint": "Set the opening float to the cash currently in the drawer at go-live. This anchors the running balance.",
+      "buildingLabel": "Building",
+      "buildingPlaceholder": "Select a building…",
+      "buildingRequired": "Please choose a building.",
+      "openingFloatLabel": "Opening float (OMR)",
+      "openingFloatShort": "Opening float",
+      "floatLocked": "Locked — the drawer already has transactions. Adjust via reconciliation.",
+      "balanceShort": "Balance",
+      "txns": "{count, plural, =0 {no transactions} one {# transaction} other {# transactions}}",
+      "saveButton": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "active": "Active",
+      "inactive": "Inactive",
+      "added": "Cash drawer created",
+      "updated": "Cash drawer updated",
+      "loadFailed": "Couldn't load cash drawers",
+      "saveFailed": "Couldn't save the cash drawer",
+      "toggleFailed": "Couldn't update the cash drawer"
     },
     "cashier": {
       "title": "Cash Reconciliation",

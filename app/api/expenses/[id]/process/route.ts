@@ -3,6 +3,7 @@ import { forbiddenIfNo } from "@/lib/access";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { postBankTxn } from "@/lib/bank-ledger";
+import { getOrCreateCashDrawer } from "@/lib/cash-drawer";
 
 /**
  * PATCH /api/expenses/[id]/process — accountant processes an approved expense.
@@ -77,7 +78,8 @@ export async function PATCH(
       },
     });
 
-    // Post the bank ledger outflow for bank-paid expenses.
+    // Ledger outflow: bank-transfer expense leaves its bank account; petty-cash
+    // expense leaves the building's cash drawer (auto-created if needed).
     if (resolvedBankId) {
       await postBankTxn(tx, {
         organizationId: orgUser.organizationId,
@@ -90,6 +92,21 @@ export async function PATCH(
         expenseId:      exp.id,
         createdById:    orgUser.userId,
       });
+    } else if (paymentMethod === "petty_cash") {
+      const drawer = await getOrCreateCashDrawer(tx, orgUser.organizationId, exp.propertyId);
+      if (drawer) {
+        await postBankTxn(tx, {
+          organizationId: orgUser.organizationId,
+          bankAccountId:  drawer.id,
+          type:           "EXPENSE_OUT",
+          amount:         Number(exp.amount),
+          date:           now,
+          description:    `Petty cash — Expense ${exp.expenseNumber}`,
+          reference:      bankReference?.trim() || null,
+          expenseId:      exp.id,
+          createdById:    orgUser.userId,
+        });
+      }
     }
     return exp;
   });

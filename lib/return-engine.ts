@@ -16,6 +16,7 @@ import { prisma } from "@/lib/prisma";
 import { getUnitPriceForRange } from "@/lib/pricing";
 import { methodNeedsBank } from "@/lib/banks";
 import { postBankTxn } from "@/lib/bank-ledger";
+import { resolveDrawerProperty, getOrCreateCashDrawer } from "@/lib/cash-drawer";
 import {
   roundOMR,
   calculateNights,
@@ -782,7 +783,8 @@ export async function processRefund(params: {
       },
     });
 
-    // Bank ledger outflow when the refund leaves a bank account.
+    // Ledger outflow: bank refund leaves its bank account; cash refund leaves
+    // the building's cash drawer.
     if (resolvedBankId) {
       await postBankTxn(tx, {
         organizationId: orgId,
@@ -795,6 +797,22 @@ export async function processRefund(params: {
         paymentId:      refundPayment.id,
         createdById:    userId,
       });
+    } else if (method === "CASH") {
+      const propertyId = await resolveDrawerProperty(tx, { reservationId, invoiceId: ret.invoiceId });
+      const drawer = await getOrCreateCashDrawer(tx, orgId, propertyId);
+      if (drawer) {
+        await postBankTxn(tx, {
+          organizationId: orgId,
+          bankAccountId:  drawer.id,
+          type:           "REFUND_OUT",
+          amount,
+          date:           now,
+          description:    `Cash refund ${ret.returnNumber}`,
+          reference:      reference ?? null,
+          paymentId:      refundPayment.id,
+          createdById:    userId,
+        });
+      }
     }
 
     // Activity log on reservation

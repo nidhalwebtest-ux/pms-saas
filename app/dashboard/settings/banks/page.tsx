@@ -6,6 +6,7 @@ import { assertView } from "@/lib/access";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import BankManager from "./BankManager";
+import CashDrawerManager from "./CashDrawerManager";
 
 export default async function BanksSettingsPage() {
   const access = await assertView("banks");
@@ -34,6 +35,12 @@ export default async function BanksSettingsPage() {
       </div>
 
       <BankManager canEdit={access.canEdit("banks")} canDelete={access.canDelete("banks")} />
+
+      <div className="mt-10">
+        <h2 className="text-lg font-bold text-gray-900">{t("cashDrawersTitle")}</h2>
+        <p className="text-sm text-gray-500 mt-0.5 mb-4">{t("cashDrawersDescription")}</p>
+        <CashDrawerManager canEdit={access.canEdit("banks")} />
+      </div>
     </div>
   );
 }

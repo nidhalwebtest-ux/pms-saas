@@ -17,7 +17,7 @@ export async function GET() {
   try { orgUser = await requireOrgUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
 
   const banks = await prisma.bankAccount.findMany({
-    where: { organizationId: orgUser.organizationId },
+    where: { organizationId: orgUser.organizationId, type: "BANK" },
     orderBy: [{ isDefault: "desc" }, { sortOrder: "asc" }, { bankName: "asc" }],
   });
 
@@ -44,14 +44,15 @@ export async function POST(req: NextRequest) {
     // Only one default account per org.
     if (makeDefault) {
       await tx.bankAccount.updateMany({
-        where: { organizationId: orgUser.organizationId, isDefault: true },
+        where: { organizationId: orgUser.organizationId, type: "BANK", isDefault: true },
         data: { isDefault: false },
       });
     }
-    const count = await tx.bankAccount.count({ where: { organizationId: orgUser.organizationId } });
+    const count = await tx.bankAccount.count({ where: { organizationId: orgUser.organizationId, type: "BANK" } });
     return tx.bankAccount.create({
       data: {
         organizationId: orgUser.organizationId,
+        type:           "BANK",
         bankName,
         label: (body.label as string)?.trim() || null,
         accountNumber: (body.accountNumber as string)?.trim() || null,

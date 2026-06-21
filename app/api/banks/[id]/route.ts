@@ -12,7 +12,8 @@ function parseMoney(v: unknown): string | null {
 
 async function loadOwned(id: string, organizationId: string) {
   const bank = await prisma.bankAccount.findUnique({ where: { id } });
-  return bank && bank.organizationId === organizationId ? bank : null;
+  // Only real bank accounts are managed here; cash drawers use /api/cash-drawers.
+  return bank && bank.organizationId === organizationId && bank.type === "BANK" ? bank : null;
 }
 
 // PUT /api/banks/[id] — edit a bank account.

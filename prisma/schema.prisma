@@ -330,6 +330,7 @@ model Property {
   expenses       Expense[]
   invoices       Invoice[]
   cashierSessions CashierSession[]
+  cashDrawers    BankAccount[] @relation("PropertyCashDrawers")
 
   createdAt      DateTime @default(now())
 }
@@ -852,21 +853,34 @@ model ExpenseCat {
   @@index([organizationId])
 }
 
-// ── Bank accounts ─────────────────────────────────────────────────────────────
-/// A company bank account (e.g. "Bank Muscat — Main"). Non-cash payments
-/// (transfer/card/cheque/online) route to one of these; the bank statement +
-/// matching (later phases) build a ledger per account. Org-level, not per-building.
+// ── Bank accounts & cash drawers ──────────────────────────────────────────────
+/// A monetary account: either a real bank account (type=BANK, e.g. "Bank Muscat
+/// — Main") that non-cash payments route into, or a per-building CASH drawer
+/// (type=CASH, one per Property) that cash payments/refunds/petty-cash expenses
+/// flow through. Both share the signed BankTransaction ledger + statement engine;
+/// a CASH drawer's `openingBalance` is its opening cash float.
+enum AccountType {
+  BANK
+  CASH
+}
+
 model BankAccount {
   id             String       @id @default(uuid())
 
   organizationId String
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
-  bankName       String       // "Bank Muscat", "Bank Dhofar"
+  type           AccountType  @default(BANK)
+
+  // CASH drawers belong to one building; BANK accounts are org-level (null).
+  propertyId     String?
+  property       Property?    @relation("PropertyCashDrawers", fields: [propertyId], references: [id], onDelete: Cascade)
+
+  bankName       String       // "Bank Muscat", "Bank Dhofar"; for drawers: "Cash Drawer"
   label          String?      // optional: branch / "Main operating account"
   accountNumber  String?      // may be partial/masked
   currency       String       @default("OMR")
-  openingBalance Decimal      @default(0) @db.Decimal(12, 3)
+  openingBalance Decimal      @default(0) @db.Decimal(12, 3) // CASH: opening float
   isActive       Boolean      @default(true)
   isDefault      Boolean      @default(false)
   sortOrder      Int          @default(0)
@@ -880,7 +894,8 @@ model BankAccount {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  @@index([organizationId])
+  @@index([organizationId, type])
+  @@index([propertyId])
 }
 
 /// Signed ledger of everything that hits a bank account. One row per event:

@@ -27,7 +27,7 @@ export default async function CashierPage({
   const [summary, banks, recent] = await Promise.all([
     getCashierSummary({ orgId: orgUser.organizationId, date }),
     prisma.bankAccount.findMany({
-      where: { organizationId: orgUser.organizationId, isActive: true },
+      where: { organizationId: orgUser.organizationId, type: "BANK", isActive: true },
       select: { id: true, bankName: true, label: true, isDefault: true, isActive: true },
       orderBy: [{ isDefault: "desc" }, { bankName: "asc" }],
     }),

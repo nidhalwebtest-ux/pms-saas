@@ -5,48 +5,78 @@ import { BanknotesIcon } from "@heroicons/react/24/outline";
 import { assertView } from "@/lib/access";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
-import { getCashierSummary } from "@/lib/cashier";
+import { getSelectedPropertyId } from "@/lib/selected-property";
+import { getSessionAccessibleProperties } from "@/lib/property-scope";
+import { getCashierDaybook } from "@/lib/cashier-daybook";
 import DateField from "./DateField";
+import BuildingField from "./BuildingField";
 import ReconcileForm from "./ReconcileForm";
-
-const METHODS = ["CASH", "CARD", "BANK_TRANSFER", "CHEQUE", "ONLINE", "OTHER"] as const;
 
 export default async function CashierPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; propertyId?: string }>;
 }) {
   const access = await assertView("reconciliation");
   const orgUser = await requireOrgUser();
   const sp = await searchParams;
+  const orgId = orgUser.organizationId;
 
   const today = new Date();
   const date = sp.date && !isNaN(new Date(sp.date).getTime()) ? new Date(sp.date) : today;
   const dateStr = format(date, "yyyy-MM-dd");
 
-  const [summary, banks, recent] = await Promise.all([
-    getCashierSummary({ orgId: orgUser.organizationId, date }),
-    prisma.bankAccount.findMany({
-      where: { organizationId: orgUser.organizationId, type: "BANK", isActive: true },
-      select: { id: true, bankName: true, label: true, isDefault: true, isActive: true },
-      orderBy: [{ isDefault: "desc" }, { bankName: "asc" }],
-    }),
-    prisma.cashierSession.findMany({
-      where: { organizationId: orgUser.organizationId },
-      orderBy: { createdAt: "desc" },
-      take: 8,
-      include: {
-        cashier: { select: { firstName: true, lastName: true } },
-        depositBankAccount: { select: { bankName: true } },
-      },
-    }),
-  ]);
+  // Buildings the user may see (null = unrestricted).
+  const accessible = await getSessionAccessibleProperties();
+  const buildings = await prisma.property.findMany({
+    where: {
+      organizationId: orgId,
+      isArchived: false,
+      ...(accessible ? { id: { in: accessible } } : {}),
+    },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
 
-  const locale = await getLocale();
-  const dfLocale = locale === "ar" ? arLocale : enLocale;
   const t = await getTranslations("settings.cashier");
   const tMethod = await getTranslations("payments.methods");
+  const locale = await getLocale();
+  const dfLocale = locale === "ar" ? arLocale : enLocale;
   const money = (n: number) => `${n.toFixed(3)} OMR`;
+
+  if (buildings.length === 0) {
+    return (
+      <div className="max-w-5xl mx-auto">
+        <Header t={t} />
+        <div className="mt-6 rounded-xl bg-white p-10 text-center shadow-sm ring-1 ring-gray-200">
+          <p className="text-sm text-gray-400">{t("noBuildings")}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Resolve the active building: URL → sidebar cookie → first accessible.
+  const cookieProp = await getSelectedPropertyId();
+  const requested = sp.propertyId || cookieProp || "";
+  const propertyId = buildings.some((b) => b.id === requested) ? requested : buildings[0].id;
+
+  const daybook = await getCashierDaybook({ orgId, propertyId, date });
+
+  const banks = await prisma.bankAccount.findMany({
+    where: { organizationId: orgId, type: "BANK", isActive: true },
+    select: { id: true, bankName: true, label: true, isDefault: true, isActive: true },
+    orderBy: [{ isDefault: "desc" }, { bankName: "asc" }],
+  });
+
+  const recent = await prisma.cashierSession.findMany({
+    where: { organizationId: orgId },
+    orderBy: { createdAt: "desc" },
+    take: 8,
+    include: {
+      cashier: { select: { firstName: true, lastName: true } },
+      depositBankAccount: { select: { bankName: true } },
+    },
+  });
 
   const canReconcile = access.canCreate("reconciliation");
 
@@ -54,78 +84,95 @@ export default async function CashierPage({
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-            <BanknotesIcon className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
-            <p className="text-sm text-gray-500">{t("subtitle")}</p>
-          </div>
+        <Header t={t} />
+        <div className="flex flex-wrap items-center gap-3">
+          <BuildingField propertyId={propertyId} date={dateStr} buildings={buildings} />
+          <DateField date={dateStr} propertyId={propertyId} />
         </div>
-        <DateField date={dateStr} />
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Card label={t("expectedCash")} value={money(summary.expectedCash)} tone="bold" hint={t("expectedCashHint")} />
-        <Card label={tMethod("CARD")} value={money(summary.byMethod.CARD)} />
-        <Card label={tMethod("BANK_TRANSFER")} value={money(summary.byMethod.BANK_TRANSFER)} />
-        <Card label={t("totalCollected")} value={money(summary.totalCollected)} tone="green" />
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <Card label={t("openingBalance")} value={money(daybook.openingBalance)} />
+        <Card label={t("cashIn")} value={money(daybook.cashIn)} tone="green" />
+        <Card label={t("cashOut")} value={money(daybook.cashOut)} tone="red" />
+        <Card label={t("closingBalance")} value={money(daybook.closingBalance)} tone="bold" hint={t("closingHint")} />
+        <Card label={t("nonCashCollected")} value={money(daybook.nonCashTotal)} hint={t("nonCashHint")} />
       </div>
 
-      {/* By method + by cashier */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-          <h3 className="mb-3 text-sm font-semibold text-gray-900">{t("byMethod")}</h3>
-          <dl className="space-y-1.5">
-            {METHODS.map((m) => (
-              <div key={m} className="flex justify-between text-sm">
-                <dt className="text-gray-500">{tMethod(m)}</dt>
-                <dd className="font-medium text-gray-900 ltr-numbers">{money(summary.byMethod[m] ?? 0)}</dd>
-              </div>
-            ))}
-            <div className="flex justify-between border-t border-gray-100 pt-1.5 text-sm">
-              <dt className="font-semibold text-gray-700">{t("totalCollected")}</dt>
-              <dd className="font-bold text-gray-900 ltr-numbers">{money(summary.totalCollected)}</dd>
-            </div>
-          </dl>
+      {!daybook.hasDrawer && (
+        <div className="rounded-lg bg-amber-50 px-4 py-3 text-xs text-amber-700 ring-1 ring-amber-200">
+          {t("noDrawerNotice")}
         </div>
+      )}
 
-        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-          <h3 className="mb-3 text-sm font-semibold text-gray-900">{t("byCashier")}</h3>
-          {summary.byCashier.length === 0 ? (
-            <p className="text-sm text-gray-400">{t("noPayments")}</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead>
-                  <tr className="text-xs uppercase tracking-wide text-gray-400">
-                    <th className="py-1.5 text-start">{t("cashier")}</th>
-                    <th className="py-1.5 text-end">{tMethod("CASH")}</th>
-                    <th className="py-1.5 text-end">{t("total")}</th>
+      {/* Daybook */}
+      <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-200 overflow-hidden">
+        <div className="border-b border-gray-100 bg-gray-50 px-5 py-3">
+          <h3 className="text-sm font-semibold text-gray-700">{t("daybookTitle")}</h3>
+          <p className="text-[11px] text-gray-400 mt-0.5">{t("daybookSubtitle")}</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-100 text-sm">
+            <thead className="bg-gray-50">
+              <tr className="text-xs uppercase tracking-wide text-gray-400">
+                <th className="px-4 py-2 text-start">{t("col.time")}</th>
+                <th className="px-4 py-2 text-start">{t("col.description")}</th>
+                <th className="px-4 py-2 text-start">{t("col.method")}</th>
+                <th className="px-4 py-2 text-end">{t("col.debit")}</th>
+                <th className="px-4 py-2 text-end">{t("col.credit")}</th>
+                <th className="px-4 py-2 text-end">{t("col.balance")}</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {/* Opening balance */}
+              <tr className="bg-gray-50/50 font-medium">
+                <td className="px-4 py-2.5 text-gray-500" colSpan={5}>{t("openingBalance")}</td>
+                <td className="px-4 py-2.5 text-end text-gray-700 ltr-numbers">{money(daybook.openingBalance)}</td>
+              </tr>
+
+              {daybook.rows.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-400">{t("noMovements")}</td>
+                </tr>
+              ) : (
+                daybook.rows.map((r) => (
+                  <tr key={r.id} className={r.kind === "NONCASH" ? "bg-blue-50/20" : ""}>
+                    <td className="px-4 py-2.5 text-gray-500 ltr-numbers whitespace-nowrap">{format(new Date(r.time), "HH:mm")}</td>
+                    <td className="px-4 py-2.5 text-gray-700">
+                      {r.description ?? (r.kind === "CASH" ? t(`ledgerType.${r.type}`) : tMethod(r.method ?? "OTHER"))}
+                      {r.reference && <span className="ml-1.5 text-xs text-gray-400 ltr-numbers">· {r.reference}</span>}
+                      {r.kind === "NONCASH" && (
+                        <span className="ml-1.5 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-semibold text-blue-700">{t("nonCashTag")}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-gray-600">{r.method ? tMethod(r.method) : t(`ledgerType.${r.type}`)}</td>
+                    <td className="px-4 py-2.5 text-end text-green-700 ltr-numbers">{r.debit ? money(r.debit) : "—"}</td>
+                    <td className="px-4 py-2.5 text-end text-red-600 ltr-numbers">{r.credit ? money(r.credit) : "—"}</td>
+                    <td className="px-4 py-2.5 text-end font-medium text-gray-900 ltr-numbers">
+                      {r.kind === "CASH" ? money(r.balance) : <span className="text-gray-300">{money(r.balance)}</span>}
+                    </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {summary.byCashier.map((c) => (
-                    <tr key={c.userId}>
-                      <td className="py-2 text-gray-700">{c.name}</td>
-                      <td className="py-2 text-end text-gray-600 ltr-numbers">{money(c.cash)}</td>
-                      <td className="py-2 text-end font-medium text-gray-900 ltr-numbers">{money(c.total)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                ))
+              )}
+
+              {/* Closing balance */}
+              <tr className="border-t-2 border-gray-200 bg-gray-50 font-semibold">
+                <td className="px-4 py-2.5 text-gray-700" colSpan={3}>{t("closingBalance")}</td>
+                <td className="px-4 py-2.5 text-end text-green-700 ltr-numbers">{money(daybook.cashIn)}</td>
+                <td className="px-4 py-2.5 text-end text-red-600 ltr-numbers">{money(daybook.cashOut)}</td>
+                <td className="px-4 py-2.5 text-end text-gray-900 ltr-numbers">{money(daybook.closingBalance)}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Reconcile + deposit */}
+      {/* Reconcile + deposit (Phase 3/4 will add locking + drawer→bank transfer) */}
       {canReconcile && (
         <ReconcileForm
           businessDate={dateStr}
-          expectedCash={summary.expectedCash}
+          expectedCash={daybook.closingBalance}
           banks={banks}
         />
       )}
@@ -177,8 +224,25 @@ export default async function CashierPage({
   );
 }
 
-function Card({ label, value, tone, hint }: { label: string; value: string; tone?: "green" | "bold"; hint?: string }) {
-  const cls = tone === "green" ? "text-green-700" : tone === "bold" ? "text-gray-900 font-bold" : "text-gray-900";
+function Header({ t }: { t: Awaited<ReturnType<typeof getTranslations>> }) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+        <BanknotesIcon className="h-5 w-5" />
+      </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
+        <p className="text-sm text-gray-500">{t("subtitle")}</p>
+      </div>
+    </div>
+  );
+}
+
+function Card({ label, value, tone, hint }: { label: string; value: string; tone?: "green" | "red" | "bold"; hint?: string }) {
+  const cls =
+    tone === "green" ? "text-green-700" :
+    tone === "red" ? "text-red-600" :
+    tone === "bold" ? "text-gray-900 font-bold" : "text-gray-900";
   return (
     <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</p>

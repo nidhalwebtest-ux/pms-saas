@@ -1,8 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-// Prefixes that require an authenticated session
-const PROTECTED = ["/dashboard", "/onboarding"];
+// Prefixes that require an authenticated session. `/admin` is the founder-only
+// internal CRM; middleware only enforces authentication here — the super-admin
+// allowlist check lives in app/(admin)/layout.tsx (lib/super-admin.ts).
+const PROTECTED = ["/dashboard", "/onboarding", "/admin"];
 // Paths that should redirect authenticated users away (e.g. login page)
 const AUTH_ONLY = ["/login"];
 

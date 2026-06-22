@@ -1185,3 +1185,148 @@ model Role {
   @@unique([organizationId, name])
   @@index([organizationId])
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 99. Internal Founder CRM (admin-only sales tool)
+//
+// These tables are INTENTIONALLY org-agnostic — they are NOT tenant/PMS data.
+// They belong to the founder (super-admin) and operationalize the sales
+// playbook for acquiring the first property-management customers in Salalah.
+// Access is gated by an env-var email allowlist (lib/super-admin.ts), not by
+// the per-organization RBAC system. No organizationId on purpose.
+//
+// scoreTotal + tier are computed in app code on every write (utils/crm-scoring.ts),
+// matching the rest of the codebase — there are no Postgres generated columns here.
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum ContactRole {
+  OWNER
+  MANAGER
+  RECEPTIONIST
+  UNKNOWN
+}
+
+enum ProspectArea {
+  AL_HAFFA
+  AL_DAHARIZ
+  CITY_CENTER
+  OTHER
+}
+
+enum ProspectSource {
+  GOOGLE_MAPS
+  BOOKING_COM
+  AIRBNB
+  INSTAGRAM
+  REFERRAL
+  OTHER
+}
+
+enum ProspectStage {
+  NOT_CONTACTED
+  VISITED
+  DEMO_DONE
+  INTERESTED
+  SIGNED
+  ACTIVE
+  LOST
+}
+
+enum InterestLevel {
+  HOT
+  WARM
+  COLD
+  UNKNOWN
+}
+
+enum VisitWhoMet {
+  OWNER
+  MANAGER
+  RECEPTIONIST
+  NOBODY
+}
+
+enum FollowupChannel {
+  WHATSAPP
+  CALL
+  VISIT
+  OTHER
+}
+
+model Prospect {
+  id                String         @id @default(uuid())
+
+  // ── Identity ───────────────────────────────────────────────────────────
+  businessName      String
+  contactPersonName String?
+  roleOfContact     ContactRole    @default(UNKNOWN)
+  phone             String?        // WhatsApp-capable; stored E.164-ish for wa.me
+  area              ProspectArea   @default(OTHER)
+  addressNotes      String?
+  source            ProspectSource @default(OTHER)
+  estimatedUnits    Int?
+  listedOnBooking   Boolean        @default(false)  // priority signal in playbook
+  websiteOrSocial   String?
+
+  // ── Scoring (playbook 5-factor framework, each 1/3/5) ──────────────────
+  scoreSize            Int @default(1)
+  scoreKhareefActivity Int @default(1)
+  scorePainSignals     Int @default(1)
+  scoreDigitalComfort  Int @default(1)
+  scoreReachability    Int @default(1)
+  scoreTotal           Int @default(5)   // computed = sum of the five factors
+  tier                 Int @default(3)   // computed: >=20 → 1, 13–19 → 2, <13 → 3
+
+  // ── Pipeline ───────────────────────────────────────────────────────────
+  stage            ProspectStage @default(NOT_CONTACTED)
+  interestLevel    InterestLevel @default(UNKNOWN)
+  mainPainNamed    String?       // the pain they described — drives the pitch
+  nextFollowupDate DateTime?
+  lostReason       String?       // only when stage = LOST (pattern analysis)
+
+  // ── Working notes ──────────────────────────────────────────────────────
+  notes            String?
+
+  visits           ProspectVisit[]
+  followups        ProspectFollowup[]
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([stage])
+  @@index([tier])
+  @@index([nextFollowupDate])
+}
+
+model ProspectVisit {
+  id              String      @id @default(uuid())
+  prospectId      String
+  prospect        Prospect    @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+
+  visitDate       DateTime    @default(now())
+  whoMet          VisitWhoMet @default(NOBODY)
+  outcomeNotes    String?
+  objectionRaised String?     // for pattern detection
+  nextAction      String?
+
+  createdAt       DateTime    @default(now())
+
+  @@index([prospectId])
+}
+
+model ProspectFollowup {
+  id            String          @id @default(uuid())
+  prospectId    String
+  prospect      Prospect        @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+
+  dueDate       DateTime
+  channel       FollowupChannel @default(WHATSAPP)
+  purpose       String?
+  completed     Boolean         @default(false)
+  completedDate DateTime?
+
+  createdAt     DateTime        @default(now())
+
+  @@index([prospectId])
+  @@index([completed, dueDate])
+}

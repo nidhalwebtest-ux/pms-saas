@@ -67,6 +67,9 @@ export default async function ProspectDetailPage({
     nextFollowupDate: p.nextFollowupDate ? p.nextFollowupDate.toISOString() : null,
     lostReason: p.lostReason,
     notes: p.notes,
+    buildingPhoto: p.buildingPhoto,
+    latitude: p.latitude,
+    longitude: p.longitude,
     createdAt: p.createdAt.toISOString(),
     visits: p.visits.map((v) => ({
       id: v.id,

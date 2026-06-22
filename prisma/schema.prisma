@@ -1284,6 +1284,11 @@ model Prospect {
   nextFollowupDate DateTime?
   lostReason       String?       // only when stage = LOST (pattern analysis)
 
+  // ── Building photo + location ──────────────────────────────────────────
+  buildingPhoto    String?       // public pms-media URL
+  latitude         Float?
+  longitude        Float?
+
   // ── Working notes ──────────────────────────────────────────────────────
   notes            String?
 

@@ -30,6 +30,9 @@ export type ProspectRow = {
   nextFollowupDate: string | null; // ISO
   lostReason: string | null;
   notes: string | null;
+  buildingPhoto: string | null;
+  latitude: number | null;
+  longitude: number | null;
   createdAt: string; // ISO
 };
 
@@ -96,6 +99,9 @@ export default async function ProspectsPage({
     nextFollowupDate: p.nextFollowupDate ? p.nextFollowupDate.toISOString() : null,
     lostReason: p.lostReason,
     notes: p.notes,
+    buildingPhoto: p.buildingPhoto,
+    latitude: p.latitude,
+    longitude: p.longitude,
     createdAt: p.createdAt.toISOString(),
   }));
 

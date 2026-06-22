@@ -165,6 +165,32 @@ export async function updateScores(id: string, fd: FormData): Promise<ActionResu
   return { ok: true, id };
 }
 
+/* ── Building photo + location ───────────────────────────────────────────── */
+
+export async function updateBuildingPhoto(
+  id: string,
+  url: string | null,
+): Promise<ActionResult> {
+  if (!(await getSuperAdmin())) return { error: "Not authorized" };
+  await prisma.prospect.update({ where: { id }, data: { buildingPhoto: url } });
+  revalidate(id);
+  return { ok: true, id };
+}
+
+export async function updateLocation(
+  id: string,
+  latitude: number | null,
+  longitude: number | null,
+): Promise<ActionResult> {
+  if (!(await getSuperAdmin())) return { error: "Not authorized" };
+  // Basic sanity-clamp; null clears the pin.
+  const lat = latitude == null || isNaN(latitude) ? null : Math.max(-90, Math.min(90, latitude));
+  const lng = longitude == null || isNaN(longitude) ? null : Math.max(-180, Math.min(180, longitude));
+  await prisma.prospect.update({ where: { id }, data: { latitude: lat, longitude: lng } });
+  revalidate(id);
+  return { ok: true, id };
+}
+
 /* ── Visits ──────────────────────────────────────────────────────────────── */
 
 /**

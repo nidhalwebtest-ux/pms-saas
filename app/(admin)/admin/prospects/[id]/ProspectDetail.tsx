@@ -36,6 +36,8 @@ import ScoringCard from "./ScoringCard";
 import VisitsTimeline from "./VisitsTimeline";
 import FollowupsCard from "./FollowupsCard";
 import NotesCard from "./NotesCard";
+import BuildingPhoto from "./BuildingPhoto";
+import LocationCard from "./LocationCard";
 import type { ProspectDetailData } from "./page";
 
 function InterestControl({ id, interest }: { id: string; interest: string }) {
@@ -185,6 +187,12 @@ export default function ProspectDetail({ prospect: p }: { prospect: ProspectDeta
         <InterestControl id={p.id} interest={p.interestLevel} />
       </div>
 
+      {/* ── Building photo + location ──────────────────────────────── */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <BuildingPhoto prospectId={p.id} photo={p.buildingPhoto} />
+        <LocationCard prospectId={p.id} latitude={p.latitude} longitude={p.longitude} />
+      </div>
+
       {/* ── Working columns ────────────────────────────────────────── */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
@@ -197,7 +205,9 @@ export default function ProspectDetail({ prospect: p }: { prospect: ProspectDeta
         </div>
       </div>
 
-      <ProspectFormModal open={editOpen} onClose={() => setEditOpen(false)} prospect={p} />
+      {editOpen && (
+        <ProspectFormModal key={p.id} open onClose={() => setEditOpen(false)} prospect={p} />
+      )}
     </div>
   );
 }

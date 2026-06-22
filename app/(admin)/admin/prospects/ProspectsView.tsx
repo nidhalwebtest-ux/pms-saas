@@ -135,11 +135,16 @@ export default function ProspectsView({
         aria-label="Prospects"
       />
 
-      <ProspectFormModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        prospect={editing}
-      />
+      {/* Mounted only while open + keyed so the form re-initializes with the
+          correct prospect each time (lazy useState init runs once per mount). */}
+      {modalOpen && (
+        <ProspectFormModal
+          key={editing?.id ?? "new"}
+          open
+          onClose={() => setModalOpen(false)}
+          prospect={editing}
+        />
+      )}
     </div>
   );
 }

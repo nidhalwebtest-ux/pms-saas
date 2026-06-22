@@ -5,6 +5,7 @@ import { requireAccess } from "@/lib/access";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
+import { getSelectedPropertyId } from "@/lib/selected-property";
 import NewDepositForm from "./NewDepositForm";
 
 export default async function NewDepositPage() {
@@ -41,6 +42,10 @@ export default async function NewDepositPage() {
     }),
   );
 
+  // Lock to the building selected in the sidebar (if it's one the user can see).
+  const selected = await getSelectedPropertyId();
+  const lockedPropertyId = selected && buildings.some((b) => b.id === selected) ? selected : "";
+
   return (
     <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6">
       <div className="mb-6 flex items-center gap-4">
@@ -58,7 +63,7 @@ export default async function NewDepositPage() {
           <p className="text-sm text-gray-400">{tNew("noBuildings")}</p>
         </div>
       ) : (
-        <NewDepositForm buildings={buildings} />
+        <NewDepositForm buildings={buildings} lockedPropertyId={lockedPropertyId} />
       )}
     </div>
   );

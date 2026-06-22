@@ -158,13 +158,13 @@ function GuestRow({ res, type }: { res: ReservationRow; type: "arrival" | "depar
           <div className="flex gap-1.5 justify-end">
             {(type === "departure" || type === "overstay") && res.balance > 0.001 && (
               <Link href={`/dashboard/payments/new?reservationId=${res.id}`} className="inline-flex">
-                <Button variant="primary" size="sm" onClick={(e) => e.preventDefault()}>
+                <Button variant="primary" size="sm" tabIndex={-1}>
                   {t("collect")}
                 </Button>
               </Link>
             )}
             <Link href={`/dashboard/reservations/${res.id}`} className="inline-flex">
-              <Button variant="secondary" size="sm" onClick={(e) => e.preventDefault()}>
+              <Button variant="secondary" size="sm" tabIndex={-1}>
                 {t("view")}
               </Button>
             </Link>

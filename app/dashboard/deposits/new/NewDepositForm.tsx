@@ -11,12 +11,13 @@ import { createCashDeposit } from "../../cashier/actions";
 
 interface BuildingOpt { id: string; name: string; balance: number }
 
-export default function NewDepositForm({ buildings }: { buildings: BuildingOpt[] }) {
+export default function NewDepositForm({ buildings, lockedPropertyId }: { buildings: BuildingOpt[]; lockedPropertyId?: string }) {
   const t = useTranslations("settings.cashier");
   const tNew = useTranslations("deposits.new");
   const router = useRouter();
 
-  const [propertyId, setPropertyId] = useState(buildings[0]?.id ?? "");
+  const [propertyId, setPropertyId] = useState(lockedPropertyId || buildings[0]?.id || "");
+  const buildingLocked = !!lockedPropertyId;
   const [bankAccountId, setBankAccountId] = useState("");
   const [amount, setAmount] = useState("");
   const [reference, setReference] = useState("");
@@ -53,11 +54,13 @@ export default function NewDepositForm({ buildings }: { buildings: BuildingOpt[]
           <select
             value={propertyId}
             onChange={(e) => setPropertyId(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+            disabled={buildingLocked}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-500"
           >
             {buildings.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
           </select>
           <p className="mt-1 text-xs text-gray-500">{t("drawerBalance")}: <span className="ltr-numbers font-semibold text-gray-700">{money(balance)}</span></p>
+          {buildingLocked && <p className="mt-0.5 text-[11px] text-gray-400">{tNew("lockedHint")}</p>}
         </Field>
 
         <Field label={t("depositToBank")} required>

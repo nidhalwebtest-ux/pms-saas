@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { assertView } from "@/lib/access";
 import { getEffectivePropertyIds } from "@/lib/property-scope";
+import { getSelectedPropertyId } from "@/lib/selected-property";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
@@ -73,8 +74,8 @@ export default async function PaymentsListPage({
 
   // ── Tab counts ────────────────────────────────────────────────────────────
   // Building scope: a payment belongs to a building via its invoice or its
-  // reservation's unit(s). null propIds = unrestricted.
-  const propIds = await getEffectivePropertyIds("");
+  // reservation's unit(s). Honor the sidebar-selected building; null = all.
+  const propIds = await getEffectivePropertyIds(params.propertyId || (await getSelectedPropertyId()));
   const propScope: Prisma.PaymentWhereInput[] = propIds
     ? [{
         OR: [

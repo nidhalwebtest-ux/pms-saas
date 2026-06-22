@@ -3,6 +3,7 @@ import { forbiddenIfNo } from "@/lib/access";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { getEffectivePropertyIds } from "@/lib/property-scope";
+import { getSelectedPropertyId } from "@/lib/selected-property";
 import { Prisma } from "@prisma/client";
 
 function roundOMR(n: number) { return Math.round(n * 1000) / 1000; }
@@ -53,8 +54,9 @@ export async function GET(req: NextRequest) {
   }
 
   if (status) where.status = status as any;
-  // Building scope: limit to the user's accessible buildings (null = unrestricted).
-  const propIds = await getEffectivePropertyIds(propertyId);
+  // Building scope: explicit filter wins, else the sidebar-selected building;
+  // always clamped to the user's accessible buildings (null = unrestricted).
+  const propIds = await getEffectivePropertyIds(propertyId || (await getSelectedPropertyId()));
   if (propIds) where.propertyId = { in: propIds };
   if (categoryId) where.categoryId = categoryId;
   if (search) {

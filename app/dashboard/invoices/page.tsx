@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { assertView } from "@/lib/access";
 import { getEffectivePropertyIds } from "@/lib/property-scope";
+import { getSelectedPropertyId } from "@/lib/selected-property";
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { DocumentTextIcon, PlusIcon } from "@heroicons/react/24/outline";
@@ -50,7 +51,8 @@ export default async function InvoicesPage({
   const statusFilter = (params.status?.toUpperCase() as StatusFilter) || "ALL";
   const search = params.search || "";
   const page = Math.max(1, parseInt(params.page || "1", 10));
-  const propertyId = params.propertyId || "";
+  // Building view: explicit filter wins, else the sidebar-selected building.
+  const propertyId = params.propertyId || (await getSelectedPropertyId());
 
   // Start of today: an invoice due *today* is not overdue yet (overdue = past due).
   const now = new Date();

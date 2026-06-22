@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { assertView } from "@/lib/access";
 import { getEffectivePropertyIds } from "@/lib/property-scope";
+import { getSelectedPropertyId } from "@/lib/selected-property";
 import { Prisma } from "@prisma/client";
 import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 import { getTranslations } from "next-intl/server";
@@ -43,7 +44,8 @@ export default async function ReturnsPage({
   const statusFilter = (params.status?.toUpperCase() as StatusFilter) || "ALL";
   const search = params.search || "";
   const page = Math.max(1, parseInt(params.page || "1", 10));
-  const propertyId = params.propertyId || "";
+  // Building view: explicit filter wins, else the sidebar-selected building.
+  const propertyId = params.propertyId || (await getSelectedPropertyId());
 
   const currency = await getCurrentCurrency();
   const t       = await getTranslations("returns");

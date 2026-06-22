@@ -158,7 +158,7 @@ export function ConfirmDialog({ options, onConfirm, onCancel }: ConfirmDialogPro
       closeOnBackdrop={!submitting}
       closeOnEsc={!submitting}
     >
-      <ModalHeader title={view.title} icon={toneIcon(tone)} hideClose />
+      <ModalHeader title={view.title} icon={toneIcon(tone)} />
       <ModalBody>
         {view.description && (
           <p className="text-sm text-fg-secondary">{view.description}</p>

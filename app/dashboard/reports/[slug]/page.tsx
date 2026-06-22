@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { getSessionAccessibleProperties } from "@/lib/property-scope";
+import { getSelectedPropertyId } from "@/lib/selected-property";
 import { findReport, resolvePreset } from "../reports-config";
 import { getRevenueByBuilding } from "@/lib/reports/revenue-by-building";
 import { getRevenueByTenant } from "@/lib/reports/revenue-by-tenant";
@@ -48,6 +50,9 @@ import VatSummary from "./VatSummary";
 import RevenueByMonth from "./RevenueByMonth";
 import AnnualSummary from "./AnnualSummary";
 import ComingSoon from "./ComingSoon";
+import { getSessionAccess } from "@/lib/access";
+import AccessDenied from "@/components/dashboard/AccessDenied";
+import SalesPerformance from "@/app/dashboard/sales-targets/SalesPerformance";
 
 const VARIANTS: Record<string, ReportVariant> = {
   "revenue-by-building": { slug: "revenue-by-building", colNameKey: "colName", countKey: "unitsCount" },
@@ -63,7 +68,7 @@ const AGGREGATORS: Record<string, (a: { orgId: string; from: Date; to: Date; pro
   "revenue-by-source": getRevenueBySource,
 };
 
-const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis", "revenue-trend", "avg-length-of-stay", "khareef-performance", "revenue-comparison", "aging-receivables", "outstanding-balances", "cash-flow", "pnl-by-building", "expense-breakdown", "receptionist-performance", "tenant-reports", "booking-sources", "cancellation-analysis", "maintenance", "vat-summary", "revenue-by-month", "annual-summary"]);
+const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis", "revenue-trend", "avg-length-of-stay", "khareef-performance", "revenue-comparison", "aging-receivables", "outstanding-balances", "cash-flow", "pnl-by-building", "expense-breakdown", "receptionist-performance", "tenant-reports", "booking-sources", "cancellation-analysis", "maintenance", "vat-summary", "revenue-by-month", "annual-summary", "target-vs-actual"]);
 
 function ErrorCard({ title, message }: { title: string; message: string }) {
   return (
@@ -103,15 +108,42 @@ export default async function ReportPage({
   const sp = await searchParams;
   const defaultPreset = slug === "khareef-performance" ? "khareef" : (slug === "aging-receivables" || slug === "outstanding-balances") ? "today" : (slug === "vat-summary" || slug === "revenue-by-month" || slug === "annual-summary") ? "year" : "month";
   const range = resolvePreset(sp.preset ?? defaultPreset, new Date(), sp.from, sp.to);
-  const propertyId = sp.propertyId || undefined;
   const from = new Date(range.from);
   const to = new Date(range.to);
 
+  // Building view: honor the explicit report filter, else the sidebar selection,
+  // always clamped to the user's accessible buildings. Restricted users never see
+  // org-wide data: with no specific pick we default to their first building.
+  const accessible = await getSessionAccessibleProperties(); // null = unrestricted
+  const requested = sp.propertyId || (await getSelectedPropertyId()) || "";
+  let propertyId: string | undefined;
+  if (accessible) {
+    propertyId = requested && accessible.includes(requested) ? requested : accessible[0];
+  } else {
+    propertyId = requested || undefined;
+  }
+
   const propertiesPromise = prisma.property.findMany({
-    where: { organizationId: orgUser.organizationId, isArchived: false },
+    where: {
+      organizationId: orgUser.organizationId,
+      isArchived: false,
+      ...(accessible ? { id: { in: accessible } } : {}),
+    },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });
+
+  // ── Target vs Actual (sales targets) ────────────────────────────────────
+  if (slug === "target-vs-actual") {
+    const access = await getSessionAccess();
+    if (!access?.canView("salesTargets")) return <AccessDenied />;
+    return (
+      <main className="rpage">
+        <div className="rhead"><div className="title-block"><h1>{report.label}</h1></div></div>
+        <SalesPerformance />
+      </main>
+    );
+  }
 
   // ── Occupancy ──────────────────────────────────────────────────────────
   if (slug === "occupancy-by-building") {

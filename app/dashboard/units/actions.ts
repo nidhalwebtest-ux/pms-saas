@@ -50,7 +50,8 @@ export async function createUnit(formData: FormData): Promise<ActionResponse> {
 
   const propertyId = formData.get("propertyId") as string;
   const name = (formData.get("name") as string)?.trim();
-  const basePrice = parseFloat(formData.get("basePrice") as string);
+  const basePriceRaw = (formData.get("basePrice") as string)?.trim();
+  const basePrice = basePriceRaw ? parseFloat(basePriceRaw) : 0;
   const floor = parseInt(formData.get("floor") as string) || 0;
   const bedrooms = parseInt(formData.get("bedrooms") as string) ?? 1;
   const bathrooms = parseInt(formData.get("bathrooms") as string) ?? 1;
@@ -62,8 +63,8 @@ export async function createUnit(formData: FormData): Promise<ActionResponse> {
   const photos = parsePhotos(formData);
   const amenities = parseAmenities(formData);
 
-  if (!propertyId || !name || isNaN(basePrice) || basePrice < 0) {
-    return { error: "Property, Name, and a valid Base Price are required." };
+  if (!propertyId || !name || basePrice < 0) {
+    return { error: "Property and Name are required, and Base Price can't be negative." };
   }
 
   const property = await prisma.property.findUnique({
@@ -148,7 +149,8 @@ export async function updateUnit(formData: FormData): Promise<ActionResponse> {
   const id = formData.get("id") as string;
   const propertyId = formData.get("propertyId") as string;
   const name = (formData.get("name") as string)?.trim();
-  const basePrice = parseFloat(formData.get("basePrice") as string);
+  const basePriceRaw = (formData.get("basePrice") as string)?.trim();
+  const basePrice = basePriceRaw ? parseFloat(basePriceRaw) : 0;
   const floor = parseInt(formData.get("floor") as string) || 0;
   const bedrooms = parseInt(formData.get("bedrooms") as string) ?? 1;
   const bathrooms = parseInt(formData.get("bathrooms") as string) ?? 1;
@@ -160,8 +162,8 @@ export async function updateUnit(formData: FormData): Promise<ActionResponse> {
   const photos = parsePhotos(formData);
   const amenities = parseAmenities(formData);
 
-  if (!name || isNaN(basePrice) || basePrice < 0) {
-    return { error: "Name and a valid Base Price are required." };
+  if (!name || basePrice < 0) {
+    return { error: "Name is required, and Base Price can't be negative." };
   }
 
   const existingUnit = await prisma.unit.findUnique({

@@ -5,6 +5,8 @@ import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { assertCan } from "@/lib/access";
+import { getSelectedPropertyId } from "@/lib/selected-property";
+import { getSessionAccessibleProperties } from "@/lib/property-scope";
 
 export default async function NewUnitPage({
   searchParams,
@@ -25,11 +27,20 @@ export default async function NewUnitPage({
     select: { organizationId: true },
   });
 
+  // Restrict the building dropdown to the user's accessible buildings.
+  const accessible = await getSessionAccessibleProperties();
   const properties = await prisma.property.findMany({
-    where: { organizationId: dbUser?.organizationId! },
+    where: { organizationId: dbUser?.organizationId!, ...(accessible ? { id: { in: accessible } } : {}) },
     select: { id: true, name: true },
     orderBy: { name: "asc" },
   });
+
+  // Default the building to the explicit param, else the sidebar-selected one.
+  const selected = await getSelectedPropertyId();
+  const defaultPropertyId =
+    (propertyId && properties.some((p) => p.id === propertyId) && propertyId) ||
+    (selected && properties.some((p) => p.id === selected) && selected) ||
+    undefined;
 
   const t = await getTranslations("units.newPage");
 
@@ -40,7 +51,7 @@ export default async function NewUnitPage({
         description={t("description")}
         listHref="/dashboard/units"
       />
-      <UnitForm properties={properties} defaultPropertyId={propertyId} />
+      <UnitForm properties={properties} defaultPropertyId={defaultPropertyId} />
     </div>
   );
 }

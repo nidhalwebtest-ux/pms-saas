@@ -61,6 +61,7 @@ export const REPORT_GROUPS: ReportGroup[] = [
       { slug: "maintenance", label: "Maintenance", implemented: true },
       { slug: "booking-sources", label: "Booking Sources", implemented: true },
       { slug: "cancellation-analysis", label: "Cancellation Analysis", implemented: true },
+      { slug: "target-vs-actual", label: "Target vs Actual", implemented: true },
     ],
   },
   {

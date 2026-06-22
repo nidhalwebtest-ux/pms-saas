@@ -115,7 +115,6 @@ const navigationConfig: NavItem[] = [
       })),
     })),
   },
-  { key: "salesTargets", labelKey: "salesTargets", href: "/dashboard/sales-targets" },
   {
     key:      "settings",
     labelKey: "settings",
@@ -135,6 +134,7 @@ const navigationConfig: NavItem[] = [
       { labelKey: "paymentSettings", href: "/dashboard/settings/payments" },
       { labelKey: "returnSettings", href: "/dashboard/settings/returns" },
       { labelKey: "unitSettings", href: "/dashboard/settings/units" },
+      { labelKey: "salesTargets", href: "/dashboard/settings/sales-targets" },
     ],
   },
 ];
@@ -169,6 +169,8 @@ const CHILD_REQUIRES: Record<string, { entity: string; level: PermissionLevel }>
   "/dashboard/settings/payments":          { entity: "settingsPayments",     level: "VIEW" },
   "/dashboard/settings/returns":           { entity: "settingsReturns",      level: "VIEW" },
   "/dashboard/settings/units":             { entity: "settingsUnits",        level: "VIEW" },
+  "/dashboard/settings/sales-targets":     { entity: "salesTargets",         level: "VIEW" },
+  "/dashboard/reports/target-vs-actual":   { entity: "salesTargets",         level: "VIEW" },
   "/dashboard/settings/banks":             { entity: "banks",                level: "VIEW" },
   "/dashboard/settings/expense-categories":{ entity: "expenseCategories",    level: "VIEW" },
 };

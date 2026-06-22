@@ -2654,6 +2654,7 @@
       "maintenance": "Maintenance",
       "booking-sources": "Booking Sources",
       "cancellation-analysis": "Cancellation Analysis",
+      "target-vs-actual": "Target vs Actual",
       "vat-summary": "VAT Summary",
       "revenue-by-month": "Revenue by Month",
       "annual-summary": "Annual Summary"
@@ -3642,6 +3643,7 @@
       "subtitle": "Move cash from a building's drawer into a bank account.",
       "building": "Building",
       "noBuildings": "No buildings available.",
+      "lockedHint": "Set to the building selected in the sidebar. Change it from the sidebar property selector.",
       "cancel": "Cancel"
     }
   },

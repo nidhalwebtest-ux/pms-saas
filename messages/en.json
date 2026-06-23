@@ -5273,6 +5273,7 @@
       "dashboard": "Dashboard",
       "prospects": "Prospects",
       "followups": "Follow-ups",
+      "organizations": "Organizations",
       "settings": "Settings",
       "title": "Binaya Sales CRM",
       "founder": "Founder",
@@ -5533,6 +5534,13 @@
       },
       "interest": {
         "label": "Interest"
+      },
+      "delete": {
+        "button": "Delete",
+        "title": "Delete prospect?",
+        "message": "This permanently deletes “{name}” and all its visits, follow-ups and notes. This cannot be undone.",
+        "confirm": "Delete prospect",
+        "done": "Prospect deleted"
       }
     },
     "stage": {
@@ -5620,7 +5628,9 @@
       "placeholder": "Anything worth remembering about this prospect…",
       "save": "Save notes",
       "reset": "Reset",
-      "saved": "Notes saved"
+      "saved": "Notes saved",
+      "clear": "Clear notes",
+      "cleared": "Notes cleared"
     },
     "building": {
       "title": "Building photo",
@@ -5683,6 +5693,23 @@
       },
       "save": "Save goals",
       "saved": "Goals updated"
+    },
+    "organizations": {
+      "title": "Organizations",
+      "subtitle": "Every company using the platform, with live activity counts.",
+      "count": "{n} total",
+      "empty": "No organizations yet.",
+      "since": "since {date}",
+      "metrics": {
+        "users": "Users",
+        "buildings": "Buildings",
+        "units": "Units",
+        "tenants": "Tenants",
+        "reservations": "Reservations",
+        "invoices": "Invoices",
+        "payments": "Payments",
+        "expenses": "Expenses"
+      }
     }
   }
 }

@@ -12,6 +12,7 @@ import {
   BuildingOffice2Icon,
 } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui";
+import { compressImage } from "@/utils/compress-image";
 import { uploadBuildingPhoto, removeBuildingPhoto } from "../actions";
 
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -40,17 +41,21 @@ export default function BuildingPhoto({
       toast.error(t("building.chooseImage"));
       return;
     }
-    if (file.size > MAX_BYTES) {
+
+    setUploading(true);
+    // Downscale + re-encode in the browser so high-res camera photos upload fast.
+    const optimized = await compressImage(file, { maxDim: 1600, quality: 0.8 });
+    if (optimized.size > MAX_BYTES) {
+      setUploading(false);
       toast.error(t("building.maxSize"));
       return;
     }
 
     // Upload server-side (service-role client) — the browser client is blocked
     // by storage RLS for the prospects/ prefix.
-    setUploading(true);
     const fd = new FormData();
     fd.set("prospectId", prospectId);
-    fd.set("file", file);
+    fd.set("file", optimized);
     const res = await uploadBuildingPhoto(fd);
     setUploading(false);
 

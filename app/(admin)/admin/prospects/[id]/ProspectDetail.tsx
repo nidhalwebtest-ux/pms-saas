@@ -14,8 +14,9 @@ import {
   MapPinIcon,
   BuildingOffice2Icon,
   FireIcon,
+  TrashIcon,
 } from "@heroicons/react/24/outline";
-import { Badge, Button } from "@/components/ui";
+import { Badge, Button, useConfirmDialog } from "@/components/ui";
 import {
   INTERESTS,
   stageBadge,
@@ -25,7 +26,7 @@ import {
 } from "../../_lib/crm-options";
 import { fmtDate } from "../../_lib/format";
 import { waLink } from "@/utils/whatsapp";
-import { updateInterest } from "../actions";
+import { updateInterest, deleteProspect } from "../actions";
 import ProspectFormModal from "../ProspectFormModal";
 import StageControl from "./StageControl";
 import ScoringCard from "./ScoringCard";
@@ -85,8 +86,27 @@ function Chip({ icon: Icon, children }: { icon: typeof MapPinIcon; children: Rea
 
 export default function ProspectDetail({ prospect: p }: { prospect: ProspectDetailData }) {
   const t = useTranslations("admin");
+  const router = useRouter();
+  const confirm = useConfirmDialog();
   const [editOpen, setEditOpen] = useState(false);
+  const [, startDelete] = useTransition();
   const wa = waLink(p.phone);
+
+  const onDelete = async () => {
+    const { confirmed } = await confirm({
+      title: t("detail.delete.title"),
+      description: t("detail.delete.message", { name: p.businessName }),
+      confirmLabel: t("detail.delete.confirm"),
+      tone: "destructive",
+    });
+    if (!confirmed) return;
+    startDelete(async () => {
+      const res = await deleteProspect(p.id);
+      if ("error" in res) { toast.error(res.error); return; }
+      toast.success(t("detail.delete.done"));
+      router.push("/admin/prospects");
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -162,6 +182,16 @@ export default function ProspectDetail({ prospect: p }: { prospect: ProspectDeta
               onClick={() => setEditOpen(true)}
             >
               {t("detail.edit")}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onDelete}
+              leftIcon={<TrashIcon className="h-4 w-4" />}
+              className="text-error-600 hover:bg-error-50 hover:text-error-700"
+              aria-label={t("detail.delete.confirm")}
+            >
+              <span className="hidden sm:inline">{t("detail.delete.button")}</span>
             </Button>
           </div>
         </div>

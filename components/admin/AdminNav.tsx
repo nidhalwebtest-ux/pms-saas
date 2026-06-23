@@ -7,6 +7,7 @@ import {
   ChartBarSquareIcon,
   UserGroupIcon,
   BellAlertIcon,
+  BuildingOffice2Icon,
   Cog6ToothIcon,
 } from "@heroicons/react/24/outline";
 
@@ -14,6 +15,7 @@ const TABS = [
   { href: "/admin", key: "dashboard", icon: ChartBarSquareIcon, exact: true },
   { href: "/admin/prospects", key: "prospects", icon: UserGroupIcon, exact: false },
   { href: "/admin/followups", key: "followups", icon: BellAlertIcon, exact: false },
+  { href: "/admin/organizations", key: "organizations", icon: BuildingOffice2Icon, exact: false },
   { href: "/admin/settings", key: "settings", icon: Cog6ToothIcon, exact: false },
 ] as const;
 

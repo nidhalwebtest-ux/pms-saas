@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Modal,
@@ -29,12 +30,6 @@ import {
   SOURCES,
   STAGES,
   INTERESTS,
-  CONTACT_ROLE_LABELS,
-  AREA_LABELS,
-  SOURCE_LABELS,
-  STAGE_LABELS,
-  INTEREST_LABELS,
-  toOptions,
   tierBadge,
   tierLabel,
 } from "../_lib/crm-options";
@@ -105,6 +100,7 @@ export default function ProspectFormModal({
   prospect?: ProspectRow | null;
 }) {
   const router = useRouter();
+  const t = useTranslations("admin");
   const isEdit = !!prospect;
   const [v, setV] = useState<Values>(() => initialValues(prospect));
   const [pending, startTransition] = useTransition();
@@ -116,7 +112,7 @@ export default function ProspectFormModal({
 
   const submit = () => {
     if (!v.businessName.trim()) {
-      toast.error("Business name is required");
+      toast.error(t("form.requiredBusinessName"));
       return;
     }
     const fd = new FormData();
@@ -145,7 +141,7 @@ export default function ProspectFormModal({
         toast.error(res.error);
         return;
       }
-      toast.success(isEdit ? "Prospect updated" : "Prospect added");
+      toast.success(isEdit ? t("form.updated") : t("form.added"));
       router.refresh();
       onClose();
     });
@@ -154,55 +150,55 @@ export default function ProspectFormModal({
   return (
     <Modal open={open} onClose={onClose} size="lg" variant="centered">
       <ModalHeader
-        title={isEdit ? "Edit prospect" : "Add prospect"}
-        subtitle={isEdit ? prospect?.businessName : "Score them into a tier as you fill this in"}
+        title={isEdit ? t("form.editTitle") : t("form.addTitle")}
+        subtitle={isEdit ? prospect?.businessName : t("form.addSubtitle")}
       />
       <ModalBody>
         <div className="space-y-6">
           {/* ── Business ───────────────────────────────────────────── */}
           <section className="space-y-3">
-            <SectionTitle>Business</SectionTitle>
+            <SectionTitle>{t("form.sections.business")}</SectionTitle>
             <TextField
-              label="Business name"
+              label={t("form.businessName")}
               required
               value={v.businessName}
               onChange={(e) => set("businessName", e.target.value)}
-              placeholder="e.g. Salalah Bay Apartments"
+              placeholder={t("form.businessNamePh")}
             />
             <div className="grid gap-3 sm:grid-cols-2">
               <TextField
-                label="Contact person"
+                label={t("form.contactPerson")}
                 value={v.contactPersonName}
                 onChange={(e) => set("contactPersonName", e.target.value)}
-                placeholder="Name"
+                placeholder={t("form.contactPersonPh")}
               />
               <Select
-                label="Their role"
+                label={t("form.theirRole")}
                 value={v.roleOfContact}
                 onChange={(e) => set("roleOfContact", e.target.value)}
-                options={toOptions(CONTACT_ROLES, CONTACT_ROLE_LABELS)}
+                options={CONTACT_ROLES.map((v) => ({ value: v, label: t(`enums.contactRole.${v}`) }))}
               />
               <TextField
-                label="Phone (WhatsApp)"
+                label={t("form.phone")}
                 value={v.phone}
                 onChange={(e) => set("phone", e.target.value)}
-                placeholder="9XXXXXXX"
+                placeholder={t("form.phonePh")}
                 inputMode="tel"
               />
               <Select
-                label="Area"
+                label={t("form.area")}
                 value={v.area}
                 onChange={(e) => set("area", e.target.value)}
-                options={toOptions(AREAS, AREA_LABELS)}
+                options={AREAS.map((v) => ({ value: v, label: t(`enums.area.${v}`) }))}
               />
               <Select
-                label="Source"
+                label={t("form.source")}
                 value={v.source}
                 onChange={(e) => set("source", e.target.value)}
-                options={toOptions(SOURCES, SOURCE_LABELS)}
+                options={SOURCES.map((v) => ({ value: v, label: t(`enums.source.${v}`) }))}
               />
               <NumberField
-                label="Estimated units"
+                label={t("form.estimatedUnits")}
                 value={v.estimatedUnits}
                 onValueChange={(n) => set("estimatedUnits", n)}
                 min={0}
@@ -211,21 +207,21 @@ export default function ProspectFormModal({
               />
             </div>
             <TextField
-              label="Website / social"
+              label={t("form.websiteSocial")}
               value={v.websiteOrSocial}
               onChange={(e) => set("websiteOrSocial", e.target.value)}
-              placeholder="instagram.com/… or website"
+              placeholder={t("form.websiteSocialPh")}
             />
             <TextArea
-              label="Address notes"
+              label={t("form.addressNotes")}
               value={v.addressNotes}
               onChange={(e) => set("addressNotes", e.target.value)}
               rows={2}
-              placeholder="Landmark, building, how to find them…"
+              placeholder={t("form.addressNotesPh")}
             />
             <Toggle
-              label="Listed on Booking.com"
-              description="Priority signal — they already run short-term lets online"
+              label={t("form.listedOnBooking")}
+              description={t("form.listedOnBookingDesc")}
               checked={v.listedOnBooking}
               onCheckedChange={(c) => set("listedOnBooking", c)}
             />
@@ -234,7 +230,7 @@ export default function ProspectFormModal({
           {/* ── Qualification score ────────────────────────────────── */}
           <section className="space-y-4">
             <div className="flex items-center justify-between gap-2">
-              <SectionTitle>Qualification score</SectionTitle>
+              <SectionTitle>{t("form.sections.score")}</SectionTitle>
               <div className="flex items-center gap-2 rounded-lg bg-subtle px-3 py-1.5">
                 <span className="text-sm font-bold tabular-nums text-fg">{scoreTotal}</span>
                 <span className="text-xs text-fg-tertiary">/ 25</span>
@@ -253,45 +249,43 @@ export default function ProspectFormModal({
                 />
               ))}
             </div>
-            <p className="text-[11px] text-fg-tertiary">
-              Tier 1 = score 20+ (go now) · Tier 2 = 13–19 (nurture) · Tier 3 = under 13 (later)
-            </p>
+            <p className="text-[11px] text-fg-tertiary">{t("scoring.tierLegend")}</p>
           </section>
 
           {/* ── Pipeline ───────────────────────────────────────────── */}
           <section className="space-y-3">
-            <SectionTitle>Pipeline</SectionTitle>
+            <SectionTitle>{t("form.sections.pipeline")}</SectionTitle>
             <div className="grid gap-3 sm:grid-cols-2">
               <Select
-                label="Stage"
+                label={t("form.stage")}
                 value={v.stage}
                 onChange={(e) => set("stage", e.target.value)}
-                options={toOptions(STAGES, STAGE_LABELS)}
+                options={STAGES.map((v) => ({ value: v, label: t(`enums.stage.${v}`) }))}
               />
               <Select
-                label="Interest level"
+                label={t("form.interest")}
                 value={v.interestLevel}
                 onChange={(e) => set("interestLevel", e.target.value)}
-                options={toOptions(INTERESTS, INTEREST_LABELS)}
+                options={INTERESTS.map((v) => ({ value: v, label: t(`enums.interest.${v}`) }))}
               />
             </div>
             <TextArea
-              label="Main pain named"
-              helperText="What they told you hurts — this drives your pitch"
+              label={t("form.mainPain")}
+              helperText={t("form.mainPainHelper")}
               value={v.mainPainNamed}
               onChange={(e) => set("mainPainNamed", e.target.value)}
               rows={2}
             />
             <TextField
-              label="Next follow-up date"
+              label={t("form.nextFollowup")}
               type="date"
               value={v.nextFollowupDate}
               onChange={(e) => set("nextFollowupDate", e.target.value)}
             />
             {v.stage === "LOST" && (
               <TextArea
-                label="Lost reason"
-                helperText="For pattern analysis across lost deals"
+                label={t("form.lostReason")}
+                helperText={t("form.lostReasonHelper")}
                 value={v.lostReason}
                 onChange={(e) => set("lostReason", e.target.value)}
                 rows={2}
@@ -301,9 +295,9 @@ export default function ProspectFormModal({
 
           {/* ── Notes ──────────────────────────────────────────────── */}
           <section className="space-y-3">
-            <SectionTitle>Notes</SectionTitle>
+            <SectionTitle>{t("form.sections.notes")}</SectionTitle>
             <TextArea
-              label="Quick notes"
+              label={t("form.quickNotes")}
               value={v.notes}
               onChange={(e) => set("notes", e.target.value)}
               rows={3}
@@ -314,10 +308,10 @@ export default function ProspectFormModal({
       </ModalBody>
       <ModalFooter justify="between" sticky>
         <Button variant="ghost" onClick={onClose} disabled={pending}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button variant="primary" onClick={submit} loading={pending}>
-          {isEdit ? "Save changes" : "Add prospect"}
+          {isEdit ? t("common.save") : t("prospects.addProspect")}
         </Button>
       </ModalFooter>
     </Modal>

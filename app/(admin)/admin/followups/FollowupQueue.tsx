@@ -3,11 +3,11 @@
 import { useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ChatBubbleLeftRightIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { Badge, EmptyState } from "@/components/ui";
-import { CHANNEL_LABELS } from "../_lib/crm-options";
 import { fmtDate, dueState } from "../_lib/format";
 import { waLink } from "@/utils/whatsapp";
 import { toggleFollowup } from "../prospects/actions";
@@ -18,6 +18,7 @@ function QueueRow({ item, pending, onComplete }: {
   pending: boolean;
   onComplete: (item: QueueItem) => void;
 }) {
+  const t = useTranslations("admin");
   const wa = item.channel === "WHATSAPP" ? waLink(item.phone, item.purpose ?? undefined) : null;
   const overdue = dueState(item.dueDate) === "overdue";
 
@@ -27,7 +28,7 @@ function QueueRow({ item, pending, onComplete }: {
         type="button"
         onClick={() => onComplete(item)}
         disabled={pending}
-        title="Mark complete"
+        title={t("queue.markComplete")}
         className="mt-0.5 inline-flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full border border-border-default text-fg-tertiary transition-colors hover:border-success-500 hover:bg-success-50 hover:text-success-600 disabled:opacity-50 sm:mt-0"
       >
         <CheckIcon className="h-4 w-4" />
@@ -42,12 +43,12 @@ function QueueRow({ item, pending, onComplete }: {
             {item.businessName}
           </Link>
           <Badge tone="neutral" appearance="outline" size="sm">
-            {CHANNEL_LABELS[item.channel] ?? item.channel}
+            {t(`enums.channel.${item.channel}`)}
           </Badge>
           {overdue ? (
-            <Badge tone="danger" appearance="solid" size="sm">Overdue · {fmtDate(item.dueDate)}</Badge>
+            <Badge tone="danger" appearance="solid" size="sm">{t("followups.badge.overdue")} · {fmtDate(item.dueDate)}</Badge>
           ) : (
-            <Badge tone="warning" appearance="solid" size="sm">Today</Badge>
+            <Badge tone="warning" appearance="solid" size="sm">{t("followups.badge.today")}</Badge>
           )}
         </div>
         <p className="mt-0.5 text-sm text-fg-secondary">{item.purpose ?? "—"}</p>
@@ -61,7 +62,7 @@ function QueueRow({ item, pending, onComplete }: {
           className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-success-50 px-2.5 py-1.5 text-xs font-semibold text-success-700 hover:bg-success-100"
         >
           <ChatBubbleLeftRightIcon className="h-4 w-4" />
-          <span className="hidden sm:inline">WhatsApp</span>
+          <span className="hidden sm:inline">{t("queue.whatsapp")}</span>
         </a>
       )}
     </li>
@@ -69,6 +70,7 @@ function QueueRow({ item, pending, onComplete }: {
 }
 
 export default function FollowupQueue({ items }: { items: QueueItem[] }) {
+  const t = useTranslations("admin");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
@@ -79,7 +81,7 @@ export default function FollowupQueue({ items }: { items: QueueItem[] }) {
     startTransition(async () => {
       const res = await toggleFollowup(item.id, item.prospectId, true);
       if ("error" in res) { toast.error(res.error); return; }
-      toast.success("Done");
+      toast.success(t("common.done"));
       router.refresh();
     });
 
@@ -88,8 +90,8 @@ export default function FollowupQueue({ items }: { items: QueueItem[] }) {
       <EmptyState
         variant="positive"
         illustration={<CheckCircleIcon className="h-12 w-12 text-success-500" />}
-        title="All caught up"
-        description="No follow-ups due today or overdue. Nice work."
+        title={t("queue.allCaught")}
+        description={t("queue.allCaughtDesc")}
       />
     );
   }
@@ -99,7 +101,7 @@ export default function FollowupQueue({ items }: { items: QueueItem[] }) {
       {overdue.length > 0 && (
         <section>
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-error-600">
-            Overdue · {overdue.length}
+            {t("queue.overdue", { count: overdue.length })}
           </h3>
           <ul className="space-y-2">
             {overdue.map((i) => (
@@ -112,7 +114,7 @@ export default function FollowupQueue({ items }: { items: QueueItem[] }) {
       {today.length > 0 && (
         <section>
           <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-warning-700">
-            Due today · {today.length}
+            {t("queue.dueToday", { count: today.length })}
           </h3>
           <ul className="space-y-2">
             {today.map((i) => (

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   PlusIcon,
@@ -17,7 +18,7 @@ import {
   Select,
   useConfirmDialog,
 } from "@/components/ui";
-import { CHANNELS, CHANNEL_LABELS, toOptions } from "../../_lib/crm-options";
+import { CHANNELS } from "../../_lib/crm-options";
 import { fmtDate, dueState } from "../../_lib/format";
 import { waLink } from "@/utils/whatsapp";
 import {
@@ -27,14 +28,6 @@ import {
   seedFollowupRhythm,
 } from "../actions";
 import type { FollowupDTO } from "./page";
-
-function DueBadge({ iso, completed }: { iso: string; completed: boolean }) {
-  if (completed) return <Badge tone="success" appearance="subtle" size="sm">Done</Badge>;
-  const state = dueState(iso);
-  if (state === "overdue") return <Badge tone="danger" appearance="solid" size="sm">Overdue</Badge>;
-  if (state === "today") return <Badge tone="warning" appearance="solid" size="sm">Today</Badge>;
-  return <Badge tone="neutral" appearance="subtle" size="sm">Upcoming</Badge>;
-}
 
 export default function FollowupsCard({
   prospectId,
@@ -46,6 +39,7 @@ export default function FollowupsCard({
   followups: FollowupDTO[];
 }) {
   const router = useRouter();
+  const t = useTranslations("admin");
   const confirm = useConfirmDialog();
   const [pending, startTransition] = useTransition();
   const [adding, setAdding] = useState(false);
@@ -58,9 +52,17 @@ export default function FollowupsCard({
 
   const refresh = () => router.refresh();
 
+  const DueBadge = ({ iso, completed }: { iso: string; completed: boolean }) => {
+    if (completed) return <Badge tone="success" appearance="subtle" size="sm">{t("followups.badge.done")}</Badge>;
+    const state = dueState(iso);
+    if (state === "overdue") return <Badge tone="danger" appearance="solid" size="sm">{t("followups.badge.overdue")}</Badge>;
+    if (state === "today") return <Badge tone="warning" appearance="solid" size="sm">{t("followups.badge.today")}</Badge>;
+    return <Badge tone="neutral" appearance="subtle" size="sm">{t("followups.badge.upcoming")}</Badge>;
+  };
+
   const submitAdd = () => {
     if (!dueDate) {
-      toast.error("Pick a due date");
+      toast.error(t("followups.pickDate"));
       return;
     }
     const fd = new FormData();
@@ -71,7 +73,7 @@ export default function FollowupsCard({
     startTransition(async () => {
       const res = await addFollowup(fd);
       if ("error" in res) { toast.error(res.error); return; }
-      toast.success("Follow-up added");
+      toast.success(t("followups.added"));
       setAdding(false);
       setDueDate("");
       setPurpose("");
@@ -89,16 +91,16 @@ export default function FollowupsCard({
 
   const remove = async (f: FollowupDTO) => {
     const { confirmed } = await confirm({
-      title: "Delete follow-up?",
-      description: f.purpose ?? "This follow-up will be removed.",
-      confirmLabel: "Delete",
+      title: t("followups.deleteDialog.title"),
+      description: f.purpose ?? t("followups.deleteDialog.descFallback"),
+      confirmLabel: t("followups.deleteDialog.confirm"),
       tone: "destructive",
     });
     if (!confirmed) return;
     startTransition(async () => {
       const res = await deleteFollowup(f.id, prospectId);
       if ("error" in res) { toast.error(res.error); return; }
-      toast.success("Deleted");
+      toast.success(t("followups.deleted"));
       refresh();
     });
   };
@@ -107,7 +109,7 @@ export default function FollowupsCard({
     startTransition(async () => {
       const res = await seedFollowupRhythm(prospectId);
       if ("error" in res) { toast.error(res.error); return; }
-      toast.success("Standard rhythm added");
+      toast.success(t("followups.rhythmAdded"));
       refresh();
     });
 
@@ -127,7 +129,7 @@ export default function FollowupsCard({
           <div className="flex flex-wrap items-center gap-1.5">
             <DueBadge iso={f.dueDate} completed={f.completed} />
             <Badge tone="neutral" appearance="outline" size="sm">
-              {CHANNEL_LABELS[f.channel] ?? f.channel}
+              {t(`enums.channel.${f.channel}`)}
             </Badge>
             <span className="text-xs text-fg-tertiary">{fmtDate(f.dueDate)}</span>
           </div>
@@ -142,7 +144,7 @@ export default function FollowupsCard({
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex h-7 w-7 items-center justify-center rounded-md text-success-600 hover:bg-success-50"
-              title="Open WhatsApp"
+              title={t("followups.openWhatsapp")}
             >
               <ChatBubbleLeftRightIcon className="h-4 w-4" />
             </a>
@@ -152,7 +154,7 @@ export default function FollowupsCard({
             onClick={() => remove(f)}
             disabled={pending}
             className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-tertiary hover:bg-error-50 hover:text-error-600 disabled:opacity-50"
-            title="Delete"
+            title={t("common.delete")}
           >
             <TrashIcon className="h-4 w-4" />
           </button>
@@ -164,14 +166,14 @@ export default function FollowupsCard({
   return (
     <div className="rounded-2xl border border-border-default bg-surface p-4">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-fg">Follow-ups</h3>
+        <h3 className="text-sm font-semibold text-fg">{t("followups.title")}</h3>
         <Button
           variant="secondary"
           size="sm"
           leftIcon={<PlusIcon className="h-4 w-4" />}
           onClick={() => setAdding((v) => !v)}
         >
-          Add
+          {t("followups.add")}
         </Button>
       </div>
 
@@ -179,22 +181,22 @@ export default function FollowupsCard({
         <div className="mb-3 space-y-2 rounded-lg border border-border-default bg-canvas p-3">
           <div className="grid gap-2 sm:grid-cols-2">
             <TextField
-              label="Due date"
+              label={t("followups.dueDate")}
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
               reserveMessageSpace={false}
             />
             <Select
-              label="Channel"
+              label={t("followups.channel")}
               value={channel}
               onChange={(e) => setChannel(e.target.value)}
-              options={toOptions(CHANNELS, CHANNEL_LABELS)}
+              options={CHANNELS.map((v) => ({ value: v, label: t(`enums.channel.${v}`) }))}
               reserveMessageSpace={false}
             />
           </div>
           <TextArea
-            label="Purpose"
+            label={t("followups.purpose")}
             value={purpose}
             onChange={(e) => setPurpose(e.target.value)}
             rows={2}
@@ -202,10 +204,10 @@ export default function FollowupsCard({
           />
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={() => setAdding(false)} disabled={pending}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button variant="primary" size="sm" onClick={submitAdd} loading={pending}>
-              Add follow-up
+              {t("followups.addFollowup")}
             </Button>
           </div>
         </div>
@@ -213,7 +215,7 @@ export default function FollowupsCard({
 
       {followups.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border-default p-4 text-center">
-          <p className="text-sm text-fg-tertiary">No follow-ups yet.</p>
+          <p className="text-sm text-fg-tertiary">{t("followups.noneYet")}</p>
           <Button
             variant="ghost"
             size="sm"
@@ -222,7 +224,7 @@ export default function FollowupsCard({
             loading={pending}
             className="mt-1"
           >
-            Add the standard rhythm
+            {t("followups.addRhythm")}
           </Button>
         </div>
       ) : (
@@ -235,7 +237,7 @@ export default function FollowupsCard({
           {done.length > 0 && (
             <details className="mt-2">
               <summary className="cursor-pointer text-xs font-medium text-fg-tertiary">
-                Completed ({done.length})
+                {t("followups.completed", { count: done.length })}
               </summary>
               <ul className="divide-y divide-border-subtle">
                 {done.map((f) => (

@@ -8,9 +8,10 @@ import {
   ArrowRightIcon,
   ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/outline";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui";
-import { FUNNEL_STAGES, STAGE_LABELS, CHANNEL_LABELS, stageBadge } from "./_lib/crm-options";
+import { FUNNEL_STAGES } from "./_lib/crm-options";
 import { fmtDate, dueState } from "./_lib/format";
 import { waLink } from "@/utils/whatsapp";
 
@@ -26,12 +27,14 @@ function StatCard({
   target,
   Icon,
   accent,
+  targetLabel,
 }: {
   label: string;
   value: number;
   target: number;
   Icon: typeof MapPinIcon;
   accent: string;
+  targetLabel: string;
 }) {
   const pct = Math.min(100, Math.round((value / target) * 100));
   return (
@@ -40,7 +43,7 @@ function StatCard({
         <span className={`inline-flex h-8 w-8 items-center justify-center rounded-lg ${accent}`}>
           <Icon className="h-5 w-5" />
         </span>
-        <span className="text-xs text-fg-tertiary">Target {target}</span>
+        <span className="text-xs text-fg-tertiary">{targetLabel}</span>
       </div>
       <div className="mt-3 flex items-baseline gap-1.5">
         <span className="text-2xl font-bold tabular-nums text-fg">{value}</span>
@@ -55,6 +58,7 @@ function StatCard({
 }
 
 export default async function AdminDashboardPage() {
+  const t = await getTranslations("admin");
   const now = new Date();
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
   const weekAhead = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59, 999);
@@ -115,49 +119,49 @@ export default async function AdminDashboardPage() {
   const patterns = [...freq.values()].sort((a, b) => b.count - a.count).slice(0, 8);
 
   const cards = [
-    { label: "Visits completed", value: visitsCount, target: TARGETS.visits, Icon: MapPinIcon, accent: "bg-brand-50 text-brand-700" },
-    { label: "Demos delivered", value: demos, target: TARGETS.demos, Icon: PresentationChartLineIcon, accent: "bg-info-50 text-info-700" },
-    { label: "Interested / warm+", value: interested, target: TARGETS.interested, Icon: HandThumbUpIcon, accent: "bg-warning-50 text-warning-700" },
-    { label: "Signed founders", value: signed, target: TARGETS.signed, Icon: TrophyIcon, accent: "bg-success-50 text-success-700" },
-    { label: "Active users", value: active, target: TARGETS.active, Icon: BoltIcon, accent: "bg-brand-100 text-brand-700" },
+    { label: t("dashboard.kpi.visits"), value: visitsCount, target: TARGETS.visits, Icon: MapPinIcon, accent: "bg-brand-50 text-brand-700" },
+    { label: t("dashboard.kpi.demos"), value: demos, target: TARGETS.demos, Icon: PresentationChartLineIcon, accent: "bg-info-50 text-info-700" },
+    { label: t("dashboard.kpi.interested"), value: interested, target: TARGETS.interested, Icon: HandThumbUpIcon, accent: "bg-warning-50 text-warning-700" },
+    { label: t("dashboard.kpi.signed"), value: signed, target: TARGETS.signed, Icon: TrophyIcon, accent: "bg-success-50 text-success-700" },
+    { label: t("dashboard.kpi.active"), value: active, target: TARGETS.active, Icon: BoltIcon, accent: "bg-brand-100 text-brand-700" },
   ];
 
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-fg">Sales dashboard</h2>
-        <p className="text-sm text-fg-tertiary">Your funnel against the 30-day founding-member push</p>
+        <h2 className="text-xl font-bold text-fg">{t("dashboard.title")}</h2>
+        <p className="text-sm text-fg-tertiary">{t("dashboard.subtitle")}</p>
       </div>
 
       {/* ── Founding spots remaining (scarcity number) ─────────────── */}
       <div className="flex flex-col gap-3 rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-surface p-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">Founding spots remaining</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">{t("dashboard.founding.label")}</p>
           <p className="mt-1 text-sm text-fg-secondary">
-            Out of {FOUNDING_SPOTS} — this is the scarcity number you quote to prospects.
+            {t("dashboard.founding.sub", { total: FOUNDING_SPOTS })}
           </p>
         </div>
         <div className="flex items-baseline gap-2">
           <span className="text-5xl font-extrabold tabular-nums text-brand-600">{foundingRemaining}</span>
-          <span className="text-sm text-fg-tertiary">/ {FOUNDING_SPOTS} left</span>
+          <span className="text-sm text-fg-tertiary">{t("dashboard.founding.left", { total: FOUNDING_SPOTS })}</span>
         </div>
       </div>
 
       {/* ── KPI cards ──────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {cards.map((c) => (
-          <StatCard key={c.label} {...c} />
+          <StatCard key={c.label} {...c} targetLabel={t("dashboard.kpi.target", { n: c.target })} />
         ))}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* ── Funnel ───────────────────────────────────────────────── */}
         <div className="rounded-2xl border border-border-default bg-surface p-4">
-          <h3 className="mb-3 text-sm font-semibold text-fg">Pipeline funnel</h3>
+          <h3 className="mb-3 text-sm font-semibold text-fg">{t("dashboard.funnel.title")}</h3>
           <ul className="space-y-2">
             {stageCounts.map(({ stage, count }) => (
               <li key={stage} className="flex items-center gap-3">
-                <span className="w-28 flex-shrink-0 text-xs text-fg-secondary">{STAGE_LABELS[stage]}</span>
+                <span className="w-28 flex-shrink-0 text-xs text-fg-secondary">{t(`enums.stage.${stage}`)}</span>
                 <div className="h-5 flex-1 overflow-hidden rounded-md bg-subtle">
                   <div
                     className="flex h-full items-center rounded-md bg-brand-400 px-2"
@@ -173,9 +177,9 @@ export default async function AdminDashboardPage() {
 
         {/* ── Objection patterns ───────────────────────────────────── */}
         <div className="rounded-2xl border border-border-default bg-surface p-4">
-          <h3 className="mb-3 text-sm font-semibold text-fg">Objection &amp; lost-reason patterns</h3>
+          <h3 className="mb-3 text-sm font-semibold text-fg">{t("dashboard.objections.title")}</h3>
           {patterns.length === 0 ? (
-            <p className="text-sm text-fg-tertiary">No objections logged yet — they’ll surface here as you log visits.</p>
+            <p className="text-sm text-fg-tertiary">{t("dashboard.objections.empty")}</p>
           ) : (
             <ul className="space-y-1.5">
               {patterns.map((p) => (
@@ -195,13 +199,13 @@ export default async function AdminDashboardPage() {
         {/* ── Today's / overdue follow-ups ─────────────────────────── */}
         <div className="rounded-2xl border border-border-default bg-surface p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-fg">Due today &amp; overdue</h3>
+            <h3 className="text-sm font-semibold text-fg">{t("dashboard.due.title")}</h3>
             <Link href="/admin/followups" className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700">
-              Open queue <ArrowRightIcon className="h-3.5 w-3.5" />
+              {t("dashboard.due.openQueue")} <ArrowRightIcon className="h-3.5 w-3.5" />
             </Link>
           </div>
           {dueRows.length === 0 ? (
-            <p className="text-sm text-fg-tertiary">Nothing due. You’re caught up.</p>
+            <p className="text-sm text-fg-tertiary">{t("dashboard.due.empty")}</p>
           ) : (
             <ul className="space-y-2">
               {dueRows.map((f) => {
@@ -210,14 +214,14 @@ export default async function AdminDashboardPage() {
                 return (
                   <li key={f.id} className="flex items-center gap-2">
                     <Badge tone={overdue ? "danger" : "warning"} appearance="solid" size="sm">
-                      {overdue ? fmtDate(f.dueDate.toISOString()) : "Today"}
+                      {overdue ? fmtDate(f.dueDate.toISOString()) : t("followups.badge.today")}
                     </Badge>
                     <Link href={`/admin/prospects/${f.prospect.id}`} className="min-w-0 flex-1 truncate text-sm text-fg hover:text-brand-600">
                       <span className="font-medium">{f.prospect.businessName}</span>
-                      <span className="text-fg-tertiary"> · {f.purpose ?? CHANNEL_LABELS[f.channel]}</span>
+                      <span className="text-fg-tertiary"> · {f.purpose ?? t(`enums.channel.${f.channel}`)}</span>
                     </Link>
                     {wa && (
-                      <a href={wa} target="_blank" rel="noopener noreferrer" className="text-success-600 hover:text-success-700" title="WhatsApp">
+                      <a href={wa} target="_blank" rel="noopener noreferrer" className="text-success-600 hover:text-success-700" title={t("queue.whatsapp")}>
                         <ChatBubbleLeftRightIcon className="h-4 w-4" />
                       </a>
                     )}
@@ -230,9 +234,9 @@ export default async function AdminDashboardPage() {
 
         {/* ── This week's planned visits ───────────────────────────── */}
         <div className="rounded-2xl border border-border-default bg-surface p-4">
-          <h3 className="mb-3 text-sm font-semibold text-fg">This week’s planned visits</h3>
+          <h3 className="mb-3 text-sm font-semibold text-fg">{t("dashboard.planned.title")}</h3>
           {plannedVisits.length === 0 ? (
-            <p className="text-sm text-fg-tertiary">No visits scheduled in the next 7 days.</p>
+            <p className="text-sm text-fg-tertiary">{t("dashboard.planned.empty")}</p>
           ) : (
             <ul className="space-y-2">
               {plannedVisits.map((f) => (

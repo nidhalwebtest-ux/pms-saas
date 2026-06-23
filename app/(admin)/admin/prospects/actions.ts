@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { getSuperAdmin } from "@/lib/super-admin";
 import { computeScoring, normalizeScore, SCORE_FACTORS } from "@/utils/crm-scoring";
@@ -197,12 +198,12 @@ export async function updateLocation(
  * The playbook's suggested follow-up rhythm. Offsets in days from the visit.
  * Created as suggestions — fully editable/deletable, never forced.
  */
-const RHYTHM: { offset: number; channel: string; purpose: string }[] = [
-  { offset: 0, channel: "WHATSAPP", purpose: "Same-day thank-you + recap the pain we discussed" },
-  { offset: 3, channel: "WHATSAPP", purpose: "Day 3 — answer questions, nudge toward a demo" },
-  { offset: 7, channel: "CALL", purpose: "Day 7 — follow up on their decision" },
-  { offset: 14, channel: "WHATSAPP", purpose: "Day 14 — re-engage, share a relevant win" },
-  { offset: 30, channel: "VISIT", purpose: "Monthly — in-person touch-base" },
+const RHYTHM: { offset: number; channel: string; key: string }[] = [
+  { offset: 0, channel: "WHATSAPP", key: "sameDay" },
+  { offset: 3, channel: "WHATSAPP", key: "day3" },
+  { offset: 7, channel: "CALL", key: "day7" },
+  { offset: 14, channel: "WHATSAPP", key: "day14" },
+  { offset: 30, channel: "VISIT", key: "monthly" },
 ];
 
 function addDays(base: Date, days: number): Date {
@@ -212,12 +213,13 @@ function addDays(base: Date, days: number): Date {
 }
 
 async function seedRhythmFor(prospectId: string, from: Date) {
+  const t = await getTranslations("admin.rhythm");
   await prisma.prospectFollowup.createMany({
     data: RHYTHM.map((r) => ({
       prospectId,
       dueDate: addDays(from, r.offset),
       channel: r.channel as never,
-      purpose: r.purpose,
+      purpose: t(r.key),
     })),
   });
 }

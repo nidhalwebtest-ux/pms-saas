@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   ArrowLeftIcon,
@@ -16,16 +17,11 @@ import {
 } from "@heroicons/react/24/outline";
 import { Badge, Button } from "@/components/ui";
 import {
-  AREA_LABELS,
-  SOURCE_LABELS,
-  CONTACT_ROLE_LABELS,
   INTERESTS,
-  INTEREST_LABELS,
   stageBadge,
   interestBadge,
   tierBadge,
   tierLabel,
-  STAGE_LABELS,
 } from "../../_lib/crm-options";
 import { fmtDate } from "../../_lib/format";
 import { waLink } from "@/utils/whatsapp";
@@ -41,6 +37,7 @@ import LocationCard from "./LocationCard";
 import type { ProspectDetailData } from "./page";
 
 function InterestControl({ id, interest }: { id: string; interest: string }) {
+  const t = useTranslations("admin");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const set = (v: string) =>
@@ -51,7 +48,7 @@ function InterestControl({ id, interest }: { id: string; interest: string }) {
     });
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-medium text-fg-tertiary">Interest</span>
+      <span className="text-xs font-medium text-fg-tertiary">{t("detail.interest.label")}</span>
       <div className="flex gap-1">
         {INTERESTS.map((v) => {
           const active = interest === v;
@@ -68,7 +65,7 @@ function InterestControl({ id, interest }: { id: string; interest: string }) {
                   : "bg-subtle text-fg-secondary hover:bg-border-subtle"
               }`}
             >
-              {INTEREST_LABELS[v]}
+              {t(`enums.interest.${v}`)}
             </button>
           );
         })}
@@ -87,6 +84,7 @@ function Chip({ icon: Icon, children }: { icon: typeof MapPinIcon; children: Rea
 }
 
 export default function ProspectDetail({ prospect: p }: { prospect: ProspectDetailData }) {
+  const t = useTranslations("admin");
   const [editOpen, setEditOpen] = useState(false);
   const wa = waLink(p.phone);
 
@@ -96,7 +94,7 @@ export default function ProspectDetail({ prospect: p }: { prospect: ProspectDeta
         href="/admin/prospects"
         className="inline-flex items-center gap-1.5 text-sm text-fg-secondary hover:text-fg"
       >
-        <ArrowLeftIcon className="h-4 w-4" /> All prospects
+        <ArrowLeftIcon className="h-4 w-4" /> {t("detail.allProspects")}
       </Link>
 
       {/* ── Header ─────────────────────────────────────────────────── */}
@@ -106,28 +104,32 @@ export default function ProspectDetail({ prospect: p }: { prospect: ProspectDeta
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-lg font-bold text-fg sm:text-xl">{p.businessName}</h1>
               <Badge {...tierBadge(p.tier)} size="sm">{tierLabel(p.tier)}</Badge>
-              <Badge {...stageBadge(p.stage)} size="sm">{STAGE_LABELS[p.stage] ?? p.stage}</Badge>
+              <Badge {...stageBadge(p.stage)} size="sm">{t(`enums.stage.${p.stage}`)}</Badge>
               {p.interestLevel !== "UNKNOWN" && (
                 <Badge {...interestBadge(p.interestLevel)} size="sm">
-                  {INTEREST_LABELS[p.interestLevel]}
+                  {t(`enums.interest.${p.interestLevel}`)}
                 </Badge>
               )}
               {p.listedOnBooking && (
-                <Badge tone="accent" appearance="subtle" size="sm">On Booking.com</Badge>
+                <Badge tone="accent" appearance="subtle" size="sm">{t("detail.onBooking")}</Badge>
               )}
             </div>
             <p className="mt-1 text-sm text-fg-secondary">
               {p.contactPersonName
-                ? `${p.contactPersonName} · ${CONTACT_ROLE_LABELS[p.roleOfContact] ?? ""}`.replace(/ · $/, "")
-                : "No contact name yet"}
+                ? `${p.contactPersonName} · ${t(`enums.contactRole.${p.roleOfContact}`)}`.replace(/ · $/, "")
+                : t("detail.noContactName")}
             </p>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
-              <Chip icon={MapPinIcon}>{AREA_LABELS[p.area] ?? "—"}</Chip>
+              <Chip icon={MapPinIcon}>{t(`enums.area.${p.area}`)}</Chip>
               <Chip icon={BuildingOffice2Icon}>
-                {p.estimatedUnits != null ? `${p.estimatedUnits} units` : "Units unknown"}
+                {p.estimatedUnits != null
+                  ? t("detail.unitsCount", { count: p.estimatedUnits })
+                  : t("detail.unitsUnknown")}
               </Chip>
-              <Chip icon={FireIcon}>{SOURCE_LABELS[p.source] ?? "—"}</Chip>
-              {p.nextFollowupDate && <Chip icon={PhoneIcon}>Next: {fmtDate(p.nextFollowupDate)}</Chip>}
+              <Chip icon={FireIcon}>{t(`enums.source.${p.source}`)}</Chip>
+              {p.nextFollowupDate && (
+                <Chip icon={PhoneIcon}>{t("detail.next", { date: fmtDate(p.nextFollowupDate) })}</Chip>
+              )}
               {p.websiteOrSocial && (
                 <a
                   href={p.websiteOrSocial.startsWith("http") ? p.websiteOrSocial : `https://${p.websiteOrSocial}`}
@@ -147,11 +149,11 @@ export default function ProspectDetail({ prospect: p }: { prospect: ProspectDeta
             {wa ? (
               <a href={wa} target="_blank" rel="noopener noreferrer">
                 <Button variant="primary" size="sm" leftIcon={<ChatBubbleLeftRightIcon className="h-4 w-4" />}>
-                  WhatsApp
+                  {t("detail.whatsapp")}
                 </Button>
               </a>
             ) : (
-              <span className="text-xs text-fg-tertiary">No phone</span>
+              <span className="text-xs text-fg-tertiary">{t("detail.noPhone")}</span>
             )}
             <Button
               variant="secondary"
@@ -159,7 +161,7 @@ export default function ProspectDetail({ prospect: p }: { prospect: ProspectDeta
               leftIcon={<PencilSquareIcon className="h-4 w-4" />}
               onClick={() => setEditOpen(true)}
             >
-              Edit
+              {t("detail.edit")}
             </Button>
           </div>
         </div>
@@ -175,9 +177,9 @@ export default function ProspectDetail({ prospect: p }: { prospect: ProspectDeta
 
       {/* ── Main pain (prominent — drives the pitch) ───────────────── */}
       <div className="rounded-2xl border border-brand-200 bg-brand-50/60 p-4">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-700">Main pain</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-brand-700">{t("detail.mainPain.title")}</h3>
         <p className={`mt-1 ${p.mainPainNamed ? "text-sm text-fg" : "text-sm text-fg-tertiary"}`}>
-          {p.mainPainNamed ?? "Not captured yet — name their pain (Edit) so it can drive your pitch."}
+          {p.mainPainNamed ?? t("detail.mainPain.empty")}
         </p>
       </div>
 

@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   ArrowUpTrayIcon,
@@ -24,6 +25,7 @@ export default function BuildingPhoto({
   photo: string | null;
 }) {
   const router = useRouter();
+  const t = useTranslations("admin");
   const supabase = createClient();
   const [current, setCurrent] = useState<string | null>(photo);
   const [uploading, setUploading] = useState(false);
@@ -40,11 +42,11 @@ export default function BuildingPhoto({
   const handleFile = async (file?: File | null) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      toast.error("Please choose an image");
+      toast.error(t("building.chooseImage"));
       return;
     }
     if (file.size > MAX_BYTES) {
-      toast.error("Image must be under 5 MB");
+      toast.error(t("building.maxSize"));
       return;
     }
 
@@ -57,7 +59,7 @@ export default function BuildingPhoto({
 
     if (error) {
       setUploading(false);
-      toast.error(`Upload failed: ${error.message}`);
+      toast.error(t("building.uploadFailed", { message: error.message }));
       return;
     }
 
@@ -74,7 +76,7 @@ export default function BuildingPhoto({
         return;
       }
       await removeFromStorage(previous); // clean up the replaced photo
-      toast.success("Building photo saved");
+      toast.success(t("building.saved"));
       router.refresh();
     });
   };
@@ -89,14 +91,14 @@ export default function BuildingPhoto({
         return;
       }
       await removeFromStorage(previous);
-      toast.success("Photo removed");
+      toast.success(t("building.removed"));
       router.refresh();
     });
   };
 
   return (
     <div className="rounded-2xl border border-border-default bg-surface p-4">
-      <h3 className="mb-3 text-sm font-semibold text-fg">Building photo</h3>
+      <h3 className="mb-3 text-sm font-semibold text-fg">{t("building.title")}</h3>
 
       {current ? (
         <div className="relative aspect-video w-full overflow-hidden rounded-lg ring-1 ring-border-default">
@@ -105,7 +107,7 @@ export default function BuildingPhoto({
             type="button"
             onClick={remove}
             className="absolute end-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/55 text-white transition-colors hover:bg-error-600"
-            aria-label="Remove photo"
+            aria-label={t("building.remove")}
           >
             <TrashIcon className="h-4 w-4" />
           </button>
@@ -115,12 +117,12 @@ export default function BuildingPhoto({
           {uploading ? (
             <>
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
-              <p className="text-sm text-brand-600">Uploading…</p>
+              <p className="text-sm text-brand-600">{t("building.uploading")}</p>
             </>
           ) : (
             <>
               <BuildingOffice2Icon className="h-9 w-9 text-fg-tertiary/50" />
-              <p className="text-xs text-fg-tertiary">No photo yet</p>
+              <p className="text-xs text-fg-tertiary">{t("building.noPhoto")}</p>
             </>
           )}
         </div>
@@ -135,7 +137,7 @@ export default function BuildingPhoto({
           onClick={() => uploadRef.current?.click()}
           disabled={uploading}
         >
-          Upload
+          {t("building.upload")}
         </Button>
         <Button
           variant="secondary"
@@ -145,7 +147,7 @@ export default function BuildingPhoto({
           onClick={() => cameraRef.current?.click()}
           disabled={uploading}
         >
-          Take photo
+          {t("building.takePhoto")}
         </Button>
       </div>
 

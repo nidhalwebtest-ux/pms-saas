@@ -5,6 +5,8 @@ import Navigation from "@/components/dashboard/Navigation";
 import InactivityGuard from "@/components/dashboard/InactivityGuard";
 import NavigationProgress from "@/components/ui/NavigationProgress";
 import AvailabilityCalendarButton from "@/components/dashboard/AvailabilityCalendarButton";
+import AdminPanelButton from "@/components/dashboard/AdminPanelButton";
+import { getSuperAdmin } from "@/lib/super-admin";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import { getAccessiblePropertyIds } from "@/lib/property-scope";
@@ -43,6 +45,9 @@ export default async function DashboardLayout({
   // sub-pages + the `settings` aggregate) all derive from the permission matrix.
   const access = resolvePermissions(role, dbUser.assignedRole);
   const navAccess = navAccessFor(access);
+
+  // Founder quick-access FAB — only for super-admins (env allowlist).
+  const isSuperAdmin = !!(await getSuperAdmin());
 
   // Per-user building scope: null = unrestricted (all org). Owner is always unrestricted.
   const accessible = access.isOwner ? null : await getAccessiblePropertyIds(user.id, dbUser.organizationId);
@@ -105,6 +110,8 @@ export default async function DashboardLayout({
           properties={properties}
           defaultPropertyId={selectedPropertyId ?? properties[0]?.id}
         />
+
+        {isSuperAdmin && <AdminPanelButton />}
       </div>
      </PermissionsProvider>
     </OrgProvider>

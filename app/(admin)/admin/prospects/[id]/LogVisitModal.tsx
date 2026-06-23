@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Modal,
@@ -14,7 +15,7 @@ import {
   Select,
   Checkbox,
 } from "@/components/ui";
-import { WHO_MET, WHO_MET_LABELS, toOptions } from "../../_lib/crm-options";
+import { WHO_MET } from "../../_lib/crm-options";
 import { logVisit } from "../actions";
 
 function todayStr() {
@@ -34,6 +35,7 @@ export default function LogVisitModal({
   stage: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("admin");
   const [pending, startTransition] = useTransition();
   const [visitDate, setVisitDate] = useState(todayStr());
   const [whoMet, setWhoMet] = useState("OWNER");
@@ -60,7 +62,7 @@ export default function LogVisitModal({
         toast.error(res.error);
         return;
       }
-      toast.success("Visit logged");
+      toast.success(t("visits.log.logged"));
       router.refresh();
       onClose();
     });
@@ -68,54 +70,54 @@ export default function LogVisitModal({
 
   return (
     <Modal open={open} onClose={onClose} size="md" variant="centered">
-      <ModalHeader title="Log a visit" subtitle="Capture what happened while it's fresh" />
+      <ModalHeader title={t("visits.log.title")} subtitle={t("visits.log.subtitle")} />
       <ModalBody>
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <TextField
-              label="Visit date"
+              label={t("visits.log.visitDate")}
               type="date"
               value={visitDate}
               onChange={(e) => setVisitDate(e.target.value)}
             />
             <Select
-              label="Who did you meet?"
+              label={t("visits.log.whoMet")}
               value={whoMet}
               onChange={(e) => setWhoMet(e.target.value)}
-              options={toOptions(WHO_MET, WHO_MET_LABELS)}
+              options={WHO_MET.map((v) => ({ value: v, label: t(`enums.whoMet.${v}`) }))}
             />
           </div>
           <TextArea
-            label="Outcome notes"
+            label={t("visits.log.outcome")}
             value={outcomeNotes}
             onChange={(e) => setOutcomeNotes(e.target.value)}
             rows={3}
-            placeholder="What did you discuss? How did it go?"
+            placeholder={t("visits.log.outcomePh")}
           />
           <TextArea
-            label="Objection raised"
-            helperText="The push-back you heard — tracked for pattern detection"
+            label={t("visits.log.objection")}
+            helperText={t("visits.log.objectionHelper")}
             value={objectionRaised}
             onChange={(e) => setObjectionRaised(e.target.value)}
             rows={2}
           />
           <TextField
-            label="Next action"
+            label={t("visits.log.nextAction")}
             value={nextAction}
             onChange={(e) => setNextAction(e.target.value)}
-            placeholder="e.g. Send pricing, book a live demo"
+            placeholder={t("visits.log.nextActionPh")}
           />
           <div className="space-y-2 rounded-lg bg-subtle p-3">
             {stage === "NOT_CONTACTED" && (
               <Checkbox
-                label="Move stage to “Visited”"
+                label={t("visits.log.moveToVisited")}
                 checked={advance}
                 onChange={(e) => setAdvance(e.target.checked)}
               />
             )}
             <Checkbox
-              label="Add the standard follow-up rhythm"
-              description="Same-day, day 3, day 7, day 14, and a monthly touch — all editable after"
+              label={t("visits.log.addRhythm")}
+              description={t("visits.log.addRhythmDesc")}
               checked={seedRhythm}
               onChange={(e) => setSeedRhythm(e.target.checked)}
             />
@@ -124,10 +126,10 @@ export default function LogVisitModal({
       </ModalBody>
       <ModalFooter justify="between" sticky>
         <Button variant="ghost" onClick={onClose} disabled={pending}>
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button variant="primary" onClick={submit} loading={pending}>
-          Log visit
+          {t("visits.logVisit")}
         </Button>
       </ModalFooter>
     </Modal>

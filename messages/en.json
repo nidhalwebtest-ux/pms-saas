@@ -5245,5 +5245,404 @@
     "noReservations": "No reservations yet.",
     "noInvoices": "No invoices yet.",
     "noPayments": "No payments yet."
+  },
+  "admin": {
+    "quickAccess": "Admin Panel",
+    "nav": {
+      "dashboard": "Dashboard",
+      "prospects": "Prospects",
+      "followups": "Follow-ups",
+      "title": "Binaya Sales CRM",
+      "founder": "Founder",
+      "backToApp": "Back to app",
+      "backToAppShort": "App",
+      "sections": "Admin sections"
+    },
+    "common": {
+      "add": "Add",
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "open": "Open",
+      "remove": "Remove",
+      "clear": "Clear",
+      "reset": "Reset",
+      "done": "Done",
+      "optional": "optional",
+      "shownCount": "{count} shown",
+      "loading": "Loading…"
+    },
+    "enums": {
+      "contactRole": {
+        "OWNER": "Owner",
+        "MANAGER": "Manager",
+        "RECEPTIONIST": "Receptionist",
+        "UNKNOWN": "Unknown"
+      },
+      "area": {
+        "AL_HAFFA": "Al Haffa",
+        "AL_DAHARIZ": "Al Dahariz",
+        "CITY_CENTER": "City Center",
+        "OTHER": "Other"
+      },
+      "source": {
+        "GOOGLE_MAPS": "Google Maps",
+        "BOOKING_COM": "Booking.com",
+        "AIRBNB": "Airbnb",
+        "INSTAGRAM": "Instagram",
+        "REFERRAL": "Referral",
+        "OTHER": "Other"
+      },
+      "stage": {
+        "NOT_CONTACTED": "Not Contacted",
+        "VISITED": "Visited",
+        "DEMO_DONE": "Demo Done",
+        "INTERESTED": "Interested",
+        "SIGNED": "Signed",
+        "ACTIVE": "Active",
+        "LOST": "Lost"
+      },
+      "interest": {
+        "HOT": "Hot",
+        "WARM": "Warm",
+        "COLD": "Cold",
+        "UNKNOWN": "Unknown"
+      },
+      "whoMet": {
+        "OWNER": "Owner",
+        "MANAGER": "Manager",
+        "RECEPTIONIST": "Receptionist",
+        "NOBODY": "Nobody"
+      },
+      "channel": {
+        "WHATSAPP": "WhatsApp",
+        "CALL": "Call",
+        "VISIT": "Visit",
+        "OTHER": "Other"
+      }
+    },
+    "scoring": {
+      "title": "Qualification score",
+      "save": "Save score",
+      "edit": "Edit score",
+      "tierLegend": "Tier 1 = score 20+ (go now) · Tier 2 = 13–19 (nurture) · Tier 3 = under 13 (later)",
+      "updated": "Score updated",
+      "factors": {
+        "scoreSize": {
+          "title": "Portfolio size",
+          "help": "How many units do they manage?",
+          "l1Label": "Small",
+          "l1Desc": "Under 8 units",
+          "l3Label": "Medium",
+          "l3Desc": "8–20 units",
+          "l5Label": "Large",
+          "l5Desc": "20+ units / multi-building"
+        },
+        "scoreKhareefActivity": {
+          "title": "Khareef activity",
+          "help": "How active are they in the Jun–Sep peak season?",
+          "l1Label": "Low",
+          "l1Desc": "Mostly long-term / quiet in Khareef",
+          "l3Label": "Some",
+          "l3Desc": "A few short-term lets during Khareef",
+          "l5Label": "High",
+          "l5Desc": "Heavy short-term turnover all Khareef"
+        },
+        "scorePainSignals": {
+          "title": "Pain signals",
+          "help": "How visible is their operational pain?",
+          "l1Label": "Faint",
+          "l1Desc": "No obvious pain / seems organized",
+          "l3Label": "Present",
+          "l3Desc": "Some manual/spreadsheet pain mentioned",
+          "l5Label": "Strong",
+          "l5Desc": "Clear, painful problems they named"
+        },
+        "scoreDigitalComfort": {
+          "title": "Digital comfort",
+          "help": "How comfortable are they adopting software?",
+          "l1Label": "Low",
+          "l1Desc": "Paper-only, resistant to apps",
+          "l3Label": "Medium",
+          "l3Desc": "Uses WhatsApp/Excel, open to tools",
+          "l5Label": "High",
+          "l5Desc": "Already uses apps, tech-forward"
+        },
+        "scoreReachability": {
+          "title": "Reachability",
+          "help": "How easily can you reach the decision-maker?",
+          "l1Label": "Hard",
+          "l1Desc": "Gatekept / no direct line",
+          "l3Label": "Moderate",
+          "l3Desc": "Reachable via staff or eventually",
+          "l5Label": "Easy",
+          "l5Desc": "Direct line to the owner"
+        }
+      }
+    },
+    "dashboard": {
+      "title": "Sales dashboard",
+      "subtitle": "Your funnel against the 30-day founding-member push",
+      "founding": {
+        "label": "Founding spots remaining",
+        "sub": "Out of {total} — this is the scarcity number you quote to prospects.",
+        "left": "/ {total} left"
+      },
+      "kpi": {
+        "target": "Target {n}",
+        "visits": "Visits completed",
+        "demos": "Demos delivered",
+        "interested": "Interested / warm+",
+        "signed": "Signed founders",
+        "active": "Active users"
+      },
+      "funnel": {
+        "title": "Pipeline funnel"
+      },
+      "objections": {
+        "title": "Objection & lost-reason patterns",
+        "empty": "No objections logged yet — they’ll surface here as you log visits."
+      },
+      "due": {
+        "title": "Due today & overdue",
+        "openQueue": "Open queue",
+        "empty": "Nothing due. You’re caught up."
+      },
+      "planned": {
+        "title": "This week’s planned visits",
+        "empty": "No visits scheduled in the next 7 days."
+      }
+    },
+    "prospects": {
+      "title": "Prospects",
+      "subtitle": "{count} total · scored into tiers from the playbook",
+      "addProspect": "Add prospect",
+      "table": "Prospects",
+      "filters": {
+        "search": "Search business or contact…",
+        "all": "All",
+        "tier1": "Tier 1",
+        "tier2": "Tier 2",
+        "tier3": "Tier 3",
+        "stage": "Stage",
+        "area": "Area",
+        "interest": "Interest",
+        "allStages": "All stages",
+        "allAreas": "All areas",
+        "anyInterest": "Any interest"
+      },
+      "columns": {
+        "business": "Business",
+        "area": "Area",
+        "tier": "Tier",
+        "stage": "Stage",
+        "interest": "Interest",
+        "units": "Units",
+        "nextFollowup": "Next follow-up"
+      },
+      "empty": {
+        "firstTitle": "No prospects yet",
+        "firstDesc": "Add your first Salalah property manager and score them into a tier.",
+        "firstCta": "Add your first prospect",
+        "noMatchTitle": "No prospects match",
+        "noMatchDesc": "Try clearing filters or searching a different term."
+      },
+      "deleteDialog": {
+        "title": "Delete prospect?",
+        "desc": "“{name}” and all its visits & follow-ups will be permanently removed.",
+        "confirm": "Delete"
+      },
+      "toast": {
+        "deleted": "Prospect deleted"
+      }
+    },
+    "form": {
+      "addTitle": "Add prospect",
+      "editTitle": "Edit prospect",
+      "addSubtitle": "Score them into a tier as you fill this in",
+      "sections": {
+        "business": "Business",
+        "score": "Qualification score",
+        "pipeline": "Pipeline",
+        "notes": "Notes"
+      },
+      "businessName": "Business name",
+      "businessNamePh": "e.g. Salalah Bay Apartments",
+      "contactPerson": "Contact person",
+      "contactPersonPh": "Name",
+      "theirRole": "Their role",
+      "phone": "Phone (WhatsApp)",
+      "phonePh": "9XXXXXXX",
+      "area": "Area",
+      "source": "Source",
+      "estimatedUnits": "Estimated units",
+      "websiteSocial": "Website / social",
+      "websiteSocialPh": "instagram.com/… or website",
+      "addressNotes": "Address notes",
+      "addressNotesPh": "Landmark, building, how to find them…",
+      "listedOnBooking": "Listed on Booking.com",
+      "listedOnBookingDesc": "Priority signal — they already run short-term lets online",
+      "stage": "Stage",
+      "interest": "Interest level",
+      "mainPain": "Main pain named",
+      "mainPainHelper": "What they told you hurts — this drives your pitch",
+      "nextFollowup": "Next follow-up date",
+      "lostReason": "Lost reason",
+      "lostReasonHelper": "For pattern analysis across lost deals",
+      "quickNotes": "Quick notes",
+      "requiredBusinessName": "Business name is required",
+      "added": "Prospect added",
+      "updated": "Prospect updated"
+    },
+    "detail": {
+      "allProspects": "All prospects",
+      "noContactName": "No contact name yet",
+      "unitsCount": "{count} units",
+      "unitsUnknown": "Units unknown",
+      "next": "Next: {date}",
+      "onBooking": "On Booking.com",
+      "whatsapp": "WhatsApp",
+      "noPhone": "No phone",
+      "edit": "Edit",
+      "mainPain": {
+        "title": "Main pain",
+        "empty": "Not captured yet — name their pain (Edit) so it can drive your pitch."
+      },
+      "interest": {
+        "label": "Interest"
+      }
+    },
+    "stage": {
+      "title": "Pipeline stage",
+      "markLost": "Mark lost",
+      "reopen": "Reopen",
+      "lost": "Lost",
+      "movedTo": "Stage → {stage}",
+      "lostDialog": {
+        "title": "Mark prospect as lost?",
+        "desc": "Capture why — it feeds the objection/lost-pattern view on the dashboard.",
+        "confirm": "Mark lost",
+        "label": "Lost reason",
+        "detailsLabel": "Details",
+        "detailsPh": "What happened?"
+      },
+      "lostReasons": {
+        "price": "Price / budget",
+        "no_need": "No real need",
+        "competitor": "Chose a competitor",
+        "unresponsive": "Went unresponsive",
+        "not_now": "Timing — not now",
+        "other": "Other"
+      }
+    },
+    "visits": {
+      "title": "Visits",
+      "logVisit": "Log visit",
+      "empty": "No visits logged yet.",
+      "met": "Met: {who}",
+      "objection": "Objection:",
+      "next": "Next:",
+      "deleteDialog": {
+        "title": "Delete visit?",
+        "desc": "This visit record will be removed.",
+        "confirm": "Delete"
+      },
+      "deleted": "Visit deleted",
+      "log": {
+        "title": "Log a visit",
+        "subtitle": "Capture what happened while it’s fresh",
+        "visitDate": "Visit date",
+        "whoMet": "Who did you meet?",
+        "outcome": "Outcome notes",
+        "outcomePh": "What did you discuss? How did it go?",
+        "objection": "Objection raised",
+        "objectionHelper": "The push-back you heard — tracked for pattern detection",
+        "nextAction": "Next action",
+        "nextActionPh": "e.g. Send pricing, book a live demo",
+        "moveToVisited": "Move stage to “Visited”",
+        "addRhythm": "Add the standard follow-up rhythm",
+        "addRhythmDesc": "Same-day, day 3, day 7, day 14, and a monthly touch — all editable after",
+        "logged": "Visit logged"
+      }
+    },
+    "followups": {
+      "title": "Follow-ups",
+      "add": "Add",
+      "dueDate": "Due date",
+      "channel": "Channel",
+      "purpose": "Purpose",
+      "addFollowup": "Add follow-up",
+      "noneYet": "No follow-ups yet.",
+      "addRhythm": "Add the standard rhythm",
+      "completed": "Completed ({count})",
+      "badge": {
+        "done": "Done",
+        "overdue": "Overdue",
+        "today": "Today",
+        "upcoming": "Upcoming"
+      },
+      "pickDate": "Pick a due date",
+      "added": "Follow-up added",
+      "rhythmAdded": "Standard rhythm added",
+      "deleted": "Deleted",
+      "deleteDialog": {
+        "title": "Delete follow-up?",
+        "descFallback": "This follow-up will be removed.",
+        "confirm": "Delete"
+      },
+      "openWhatsapp": "Open WhatsApp"
+    },
+    "notes": {
+      "title": "Quick notes",
+      "placeholder": "Anything worth remembering about this prospect…",
+      "save": "Save notes",
+      "reset": "Reset",
+      "saved": "Notes saved"
+    },
+    "building": {
+      "title": "Building photo",
+      "noPhoto": "No photo yet",
+      "uploading": "Uploading…",
+      "upload": "Upload",
+      "takePhoto": "Take photo",
+      "remove": "Remove photo",
+      "chooseImage": "Please choose an image",
+      "maxSize": "Image must be under 5 MB",
+      "uploadFailed": "Upload failed: {message}",
+      "saved": "Building photo saved",
+      "removed": "Photo removed"
+    },
+    "location": {
+      "title": "Location",
+      "useMyLocation": "Use my location",
+      "hint": "Tap the map to drop a pin, or drag it to fine-tune. Use “Use my location” when you’re standing at the building.",
+      "none": "No location saved yet",
+      "openInMaps": "Open in Google Maps",
+      "clear": "Clear",
+      "loadingMap": "Loading map…",
+      "getting": "Getting your location…",
+      "captured": "Location captured",
+      "cleared": "Location cleared",
+      "unavailable": "Geolocation isn’t available on this device",
+      "failed": "Couldn’t get your location"
+    },
+    "queue": {
+      "title": "Follow-up queue",
+      "subtitle": "Everything due today and overdue — your morning list",
+      "allCaught": "All caught up",
+      "allCaughtDesc": "No follow-ups due today or overdue. Nice work.",
+      "overdue": "Overdue · {count}",
+      "dueToday": "Due today · {count}",
+      "markComplete": "Mark complete",
+      "whatsapp": "WhatsApp"
+    },
+    "rhythm": {
+      "sameDay": "Same-day thank-you + recap the pain we discussed",
+      "day3": "Day 3 — answer questions, nudge toward a demo",
+      "day7": "Day 7 — follow up on their decision",
+      "day14": "Day 14 — re-engage, share a relevant win",
+      "monthly": "Monthly — in-person touch-base"
+    }
   }
 }

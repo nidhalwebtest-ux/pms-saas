@@ -1,4 +1,5 @@
 import { BellAlertIcon } from "@heroicons/react/24/outline";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import FollowupQueue from "./FollowupQueue";
 
@@ -13,6 +14,7 @@ export type QueueItem = {
 };
 
 export default async function FollowupsPage() {
+  const t = await getTranslations("admin");
   // End of today (local) — anything due at or before this and not completed.
   const now = new Date();
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
@@ -40,8 +42,8 @@ export default async function FollowupsPage() {
           <BellAlertIcon className="h-5 w-5" />
         </span>
         <div>
-          <h2 className="text-xl font-bold text-fg">Follow-up queue</h2>
-          <p className="text-sm text-fg-tertiary">Everything due today and overdue — your morning list</p>
+          <h2 className="text-xl font-bold text-fg">{t("queue.title")}</h2>
+          <p className="text-sm text-fg-tertiary">{t("queue.subtitle")}</p>
         </div>
       </div>
 

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   ChartBarSquareIcon,
   UserGroupIcon,
@@ -9,20 +10,21 @@ import {
 } from "@heroicons/react/24/outline";
 
 const TABS = [
-  { href: "/admin", label: "Dashboard", icon: ChartBarSquareIcon, exact: true },
-  { href: "/admin/prospects", label: "Prospects", icon: UserGroupIcon, exact: false },
-  { href: "/admin/followups", label: "Follow-ups", icon: BellAlertIcon, exact: false },
+  { href: "/admin", key: "dashboard", icon: ChartBarSquareIcon, exact: true },
+  { href: "/admin/prospects", key: "prospects", icon: UserGroupIcon, exact: false },
+  { href: "/admin/followups", key: "followups", icon: BellAlertIcon, exact: false },
 ] as const;
 
 export default function AdminNav() {
   const pathname = usePathname();
+  const t = useTranslations("admin.nav");
 
   const isActive = (href: string, exact: boolean) =>
     exact ? pathname === href : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <nav className="flex items-center gap-1 overflow-x-auto" aria-label="Admin sections">
-      {TABS.map(({ href, label, icon: Icon, exact }) => {
+    <nav className="flex items-center gap-1 overflow-x-auto" aria-label={t("sections")}>
+      {TABS.map(({ href, key, icon: Icon, exact }) => {
         const active = isActive(href, exact);
         return (
           <Link
@@ -36,7 +38,7 @@ export default function AdminNav() {
             }`}
           >
             <Icon className="h-5 w-5" aria-hidden="true" />
-            {label}
+            {t(key)}
           </Link>
         );
       })}

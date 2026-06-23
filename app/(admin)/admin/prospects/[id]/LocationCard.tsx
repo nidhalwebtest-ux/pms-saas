@@ -3,19 +3,25 @@
 import { useState, useTransition } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { MapPinIcon, ArrowTopRightOnSquareIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui";
 import { updateLocation } from "../actions";
 
+function MapLoading() {
+  const t = useTranslations("admin");
+  return (
+    <div className="flex h-[260px] w-full items-center justify-center rounded-lg bg-subtle text-sm text-fg-tertiary">
+      {t("location.loadingMap")}
+    </div>
+  );
+}
+
 // Leaflet touches `window`, so load it browser-only.
 const LeafletPicker = dynamic(() => import("./LeafletPicker"), {
   ssr: false,
-  loading: () => (
-    <div className="flex h-[260px] w-full items-center justify-center rounded-lg bg-subtle text-sm text-fg-tertiary">
-      Loading map…
-    </div>
-  ),
+  loading: () => <MapLoading />,
 });
 
 export default function LocationCard({
@@ -28,6 +34,7 @@ export default function LocationCard({
   longitude: number | null;
 }) {
   const router = useRouter();
+  const t = useTranslations("admin");
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(
     latitude != null && longitude != null ? { lat: latitude, lng: longitude } : null,
   );
@@ -51,19 +58,19 @@ export default function LocationCard({
 
   const useMyLocation = () => {
     if (!("geolocation" in navigator)) {
-      toast.error("Geolocation isn't available on this device");
+      toast.error(t("location.unavailable"));
       return;
     }
-    toast.loading("Getting your location…", { id: "geo" });
+    toast.loading(t("location.getting"), { id: "geo" });
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         toast.dismiss("geo");
         pick(pos.coords.latitude, pos.coords.longitude);
-        toast.success("Location captured");
+        toast.success(t("location.captured"));
       },
       (err) => {
         toast.dismiss("geo");
-        toast.error(err.message || "Couldn't get your location");
+        toast.error(err.message || t("location.failed"));
       },
       { enableHighAccuracy: true, timeout: 10000 },
     );
@@ -72,7 +79,7 @@ export default function LocationCard({
   const clear = () => {
     setCoords(null);
     persist(null, null);
-    toast.success("Location cleared");
+    toast.success(t("location.cleared"));
   };
 
   const gmaps = coords ? `https://www.google.com/maps?q=${coords.lat},${coords.lng}` : null;
@@ -80,7 +87,7 @@ export default function LocationCard({
   return (
     <div className="rounded-2xl border border-border-default bg-surface p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-fg">Location</h3>
+        <h3 className="text-sm font-semibold text-fg">{t("location.title")}</h3>
         <Button
           variant="secondary"
           size="sm"
@@ -88,16 +95,13 @@ export default function LocationCard({
           onClick={useMyLocation}
           loading={pending}
         >
-          Use my location
+          {t("location.useMyLocation")}
         </Button>
       </div>
 
       <LeafletPicker lat={coords?.lat ?? null} lng={coords?.lng ?? null} onPick={pick} />
 
-      <p className="mt-2 text-xs text-fg-tertiary">
-        Tap the map to drop a pin, or drag it to fine-tune. Use “Use my location” when you’re
-        standing at the building.
-      </p>
+      <p className="mt-2 text-xs text-fg-tertiary">{t("location.hint")}</p>
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
         {coords ? (
@@ -105,7 +109,7 @@ export default function LocationCard({
             {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
           </span>
         ) : (
-          <span className="text-xs text-fg-tertiary">No location saved yet</span>
+          <span className="text-xs text-fg-tertiary">{t("location.none")}</span>
         )}
         <div className="flex items-center gap-3">
           {gmaps && (
@@ -115,7 +119,7 @@ export default function LocationCard({
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
             >
-              <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" /> Open in Google Maps
+              <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" /> {t("location.openInMaps")}
             </a>
           )}
           {coords && (
@@ -125,7 +129,7 @@ export default function LocationCard({
               disabled={pending}
               className="inline-flex items-center gap-1 text-xs font-medium text-error-600 hover:text-error-700 disabled:opacity-50"
             >
-              <TrashIcon className="h-3.5 w-3.5" /> Clear
+              <TrashIcon className="h-3.5 w-3.5" /> {t("location.clear")}
             </button>
           )}
         </div>

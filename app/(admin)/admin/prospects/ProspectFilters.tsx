@@ -1,16 +1,9 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { FilterBar, type QuickFilter } from "@/components/ui";
 import { useFilterParams } from "@/hooks/useFilterParams";
-import {
-  STAGES,
-  AREAS,
-  INTERESTS,
-  STAGE_LABELS,
-  AREA_LABELS,
-  INTEREST_LABELS,
-  toOptions,
-} from "../_lib/crm-options";
+import { STAGES, AREAS, INTERESTS } from "../_lib/crm-options";
 
 interface Props {
   currentSearch: string;
@@ -29,6 +22,7 @@ export default function ProspectFilters({
   currentInterest,
   counts,
 }: Props) {
+  const t = useTranslations("admin");
   const [, setFilters] = useFilterParams({
     q: { default: "", serialize: "raw" },
     tier: { default: "all", serialize: "raw" },
@@ -38,10 +32,10 @@ export default function ProspectFilters({
   });
 
   const tierTabs: QuickFilter[] = [
-    { id: "all", label: "All", count: counts.all },
-    { id: "1", label: "Tier 1", count: counts.t1 },
-    { id: "2", label: "Tier 2", count: counts.t2 },
-    { id: "3", label: "Tier 3", count: counts.t3 },
+    { id: "all", label: t("prospects.filters.all"), count: counts.all },
+    { id: "1", label: t("prospects.filters.tier1"), count: counts.t1 },
+    { id: "2", label: t("prospects.filters.tier2"), count: counts.t2 },
+    { id: "3", label: t("prospects.filters.tier3"), count: counts.t3 },
   ];
 
   const activeTier = ["all", "1", "2", "3"].includes(currentTier) ? currentTier : "all";
@@ -51,7 +45,7 @@ export default function ProspectFilters({
       search={{
         value: currentSearch,
         onChange: (q) => setFilters({ q }),
-        placeholder: "Search business or contact…",
+        placeholder: t("prospects.filters.search"),
       }}
       quickFilters={tierTabs}
       activeQuickFilter={activeTier}
@@ -60,29 +54,38 @@ export default function ProspectFilters({
         {
           id: "stage",
           type: "select",
-          label: "Stage",
+          label: t("prospects.filters.stage"),
           value: currentStage || "",
           allValue: "",
           onChange: (stage) => setFilters({ stage }),
-          options: toOptions(STAGES, STAGE_LABELS, "All stages"),
+          options: [
+            { value: "", label: t("prospects.filters.allStages") },
+            ...STAGES.map((v) => ({ value: v, label: t(`enums.stage.${v}`) })),
+          ],
         },
         {
           id: "area",
           type: "select",
-          label: "Area",
+          label: t("prospects.filters.area"),
           value: currentArea || "",
           allValue: "",
           onChange: (area) => setFilters({ area }),
-          options: toOptions(AREAS, AREA_LABELS, "All areas"),
+          options: [
+            { value: "", label: t("prospects.filters.allAreas") },
+            ...AREAS.map((v) => ({ value: v, label: t(`enums.area.${v}`) })),
+          ],
         },
         {
           id: "interest",
           type: "select",
-          label: "Interest",
+          label: t("prospects.filters.interest"),
           value: currentInterest || "",
           allValue: "",
           onChange: (interest) => setFilters({ interest }),
-          options: toOptions(INTERESTS, INTEREST_LABELS, "Any interest"),
+          options: [
+            { value: "", label: t("prospects.filters.anyInterest") },
+            ...INTERESTS.map((v) => ({ value: v, label: t(`enums.interest.${v}`) })),
+          ],
         },
       ]}
       activeFiltersDisplay="chips"

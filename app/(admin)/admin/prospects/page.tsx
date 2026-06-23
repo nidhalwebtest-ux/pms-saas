@@ -1,4 +1,5 @@
 import { Prisma } from "@prisma/client";
+import { getTranslations } from "next-intl/server";
 import { UserGroupIcon } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
 import ProspectFilters from "./ProspectFilters";
@@ -41,6 +42,7 @@ export default async function ProspectsPage({
 }: {
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
+  const t = await getTranslations("admin");
   const params = await searchParams;
   const q = params.q || "";
   const tier = params.tier || "all";
@@ -112,9 +114,9 @@ export default async function ProspectsPage({
           <UserGroupIcon className="h-5 w-5" />
         </span>
         <div>
-          <h2 className="text-xl font-bold text-fg">Prospects</h2>
+          <h2 className="text-xl font-bold text-fg">{t("prospects.title")}</h2>
           <p className="text-sm text-fg-tertiary">
-            {allCount} total · scored into tiers from the playbook
+            {t("prospects.subtitle", { count: allCount })}
           </p>
         </div>
       </div>

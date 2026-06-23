@@ -2,20 +2,14 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CheckIcon, XCircleIcon, ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 import { Badge, useConfirmDialog } from "@/components/ui";
-import { FUNNEL_STAGES, STAGE_LABELS } from "../../_lib/crm-options";
+import { FUNNEL_STAGES } from "../../_lib/crm-options";
 import { updateStage } from "../actions";
 
-const LOST_REASONS = [
-  { value: "price", label: "Price / budget" },
-  { value: "no_need", label: "No real need" },
-  { value: "competitor", label: "Chose a competitor" },
-  { value: "unresponsive", label: "Went unresponsive" },
-  { value: "not_now", label: "Timing — not now" },
-  { value: "other", label: "Other" },
-];
+const LOST_REASON_VALUES = ["price", "no_need", "competitor", "unresponsive", "not_now", "other"] as const;
 
 export default function StageControl({
   prospectId,
@@ -26,9 +20,15 @@ export default function StageControl({
   stage: string;
   lostReason: string | null;
 }) {
+  const t = useTranslations("admin");
   const router = useRouter();
   const confirm = useConfirmDialog();
   const [pending, startTransition] = useTransition();
+
+  const lostReasons = LOST_REASON_VALUES.map((value) => ({
+    value,
+    label: t(`stage.lostReasons.${value}`),
+  }));
 
   const currentIdx = FUNNEL_STAGES.indexOf(stage as (typeof FUNNEL_STAGES)[number]);
   const isLost = stage === "LOST";
@@ -40,27 +40,27 @@ export default function StageControl({
         toast.error(res.error);
         return;
       }
-      toast.success(`Stage → ${STAGE_LABELS[next] ?? next}`);
+      toast.success(t("stage.movedTo", { stage: t(`enums.stage.${next}`) }));
       router.refresh();
     });
   };
 
   const markLost = async () => {
     const { confirmed, reason, notes } = await confirm({
-      title: "Mark prospect as lost?",
-      description: "Capture why — it feeds the objection/lost-pattern view on the dashboard.",
-      confirmLabel: "Mark lost",
+      title: t("stage.lostDialog.title"),
+      description: t("stage.lostDialog.desc"),
+      confirmLabel: t("stage.lostDialog.confirm"),
       tone: "destructive",
       reason: {
-        options: LOST_REASONS,
-        label: "Lost reason",
+        options: lostReasons,
+        label: t("stage.lostDialog.label"),
         notesFor: ["other"],
-        notesLabel: "Details",
-        notesPlaceholder: "What happened?",
+        notesLabel: t("stage.lostDialog.detailsLabel"),
+        notesPlaceholder: t("stage.lostDialog.detailsPh"),
       },
     });
     if (!confirmed) return;
-    const label = LOST_REASONS.find((r) => r.value === reason)?.label ?? reason ?? "";
+    const label = lostReasons.find((r) => r.value === reason)?.label ?? reason ?? "";
     const text = [label, notes].filter(Boolean).join(" — ");
     move("LOST", text || null);
   };
@@ -68,7 +68,7 @@ export default function StageControl({
   return (
     <div className="rounded-2xl border border-border-default bg-surface p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-tertiary">Pipeline stage</h3>
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-fg-tertiary">{t("stage.title")}</h3>
         {isLost ? (
           <button
             type="button"
@@ -76,7 +76,7 @@ export default function StageControl({
             onClick={() => move("NOT_CONTACTED")}
             className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700 disabled:opacity-50"
           >
-            <ArrowUturnLeftIcon className="h-3.5 w-3.5" /> Reopen
+            <ArrowUturnLeftIcon className="h-3.5 w-3.5" /> {t("stage.reopen")}
           </button>
         ) : (
           <button
@@ -85,7 +85,7 @@ export default function StageControl({
             onClick={markLost}
             className="inline-flex items-center gap-1 text-xs font-medium text-error-600 hover:text-error-700 disabled:opacity-50"
           >
-            <XCircleIcon className="h-3.5 w-3.5" /> Mark lost
+            <XCircleIcon className="h-3.5 w-3.5" /> {t("stage.markLost")}
           </button>
         )}
       </div>
@@ -93,7 +93,7 @@ export default function StageControl({
       {isLost ? (
         <div className="flex flex-wrap items-center gap-2">
           <Badge tone="neutral" appearance="subtle" strikethrough>
-            Lost
+            {t("stage.lost")}
           </Badge>
           {lostReason && <span className="text-sm text-fg-secondary">{lostReason}</span>}
         </div>
@@ -118,7 +118,7 @@ export default function StageControl({
                   }`}
                 >
                   {done && <CheckIcon className="h-3.5 w-3.5" />}
-                  {STAGE_LABELS[s]}
+                  {t(`enums.stage.${s}`)}
                 </button>
               </li>
             );

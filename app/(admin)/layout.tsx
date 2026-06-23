@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { ArrowLeftIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { getSuperAdmin } from "@/lib/super-admin";
 import AdminNav from "@/components/admin/AdminNav";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 /**
  * Internal founder CRM shell. Separate from the customer dashboard chrome
@@ -20,6 +22,8 @@ export default async function AdminLayout({
   const admin = await getSuperAdmin();
   if (!admin) redirect("/dashboard");
 
+  const t = await getTranslations("admin.nav");
+
   return (
     <div className="min-h-screen bg-canvas">
       <header className="sticky top-0 z-20 border-b border-border-default bg-surface/95 backdrop-blur">
@@ -32,23 +36,26 @@ export default async function AdminLayout({
               </span>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h1 className="truncate text-sm font-bold text-fg">Binaya Sales CRM</h1>
+                  <h1 className="truncate text-sm font-bold text-fg">{t("title")}</h1>
                   <span className="hidden rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-700 sm:inline">
-                    Founder
+                    {t("founder")}
                   </span>
                 </div>
                 <p className="truncate text-xs text-fg-tertiary">{admin.email}</p>
               </div>
             </div>
 
-            <Link
-              href="/dashboard"
-              className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg border border-border-default px-3 py-1.5 text-xs font-medium text-fg-secondary transition-colors hover:bg-subtle hover:text-fg"
-            >
-              <ArrowLeftIcon className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Back to app</span>
-              <span className="sm:hidden">App</span>
-            </Link>
+            <div className="flex flex-shrink-0 items-center gap-2">
+              <LanguageSwitcher variant="dropdown" />
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-border-default px-3 py-1.5 text-xs font-medium text-fg-secondary transition-colors hover:bg-subtle hover:text-fg"
+              >
+                <ArrowLeftIcon className="h-3.5 w-3.5 rtl:rotate-180" />
+                <span className="hidden sm:inline">{t("backToApp")}</span>
+                <span className="sm:hidden">{t("backToAppShort")}</span>
+              </Link>
+            </div>
           </div>
 
           {/* Section tabs */}

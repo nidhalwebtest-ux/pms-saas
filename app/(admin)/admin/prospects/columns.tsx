@@ -3,17 +3,10 @@
 import Link from "next/link";
 import { ExclamationCircleIcon } from "@heroicons/react/24/solid";
 import { Badge, defineColumns } from "@/components/ui";
-import {
-  AREA_LABELS,
-  STAGE_LABELS,
-  INTEREST_LABELS,
-  CONTACT_ROLE_LABELS,
-  stageBadge,
-  interestBadge,
-  tierBadge,
-  tierLabel,
-} from "../_lib/crm-options";
+import { stageBadge, interestBadge, tierBadge, tierLabel } from "../_lib/crm-options";
 import type { ProspectRow } from "./page";
+
+type Translator = (key: string, values?: Record<string, string | number>) => string;
 
 /** Is this follow-up date today or in the past? */
 function isDue(iso: string | null): boolean {
@@ -40,14 +33,14 @@ export function prospectRowVariant(
   return "default";
 }
 
-export function buildProspectColumns() {
+export function buildProspectColumns(t: Translator) {
   const c = defineColumns<ProspectRow>();
 
   return [
     /* ── Business + contact ──────────────────────────────────────── */
     c.custom<string>({
       id: "businessName",
-      header: "Business",
+      header: t("prospects.columns.business"),
       accessorFn: (r) => r.businessName.toLowerCase(),
       sortingFn: "alphanumeric",
       meta: { mobile: "title" },
@@ -63,7 +56,7 @@ export function buildProspectColumns() {
             </Link>
             <div className="text-xs text-fg-tertiary">
               {r.contactPersonName
-                ? `${r.contactPersonName} · ${CONTACT_ROLE_LABELS[r.roleOfContact] ?? ""}`.replace(/ · $/, "")
+                ? `${r.contactPersonName} · ${t(`enums.contactRole.${r.roleOfContact}`)}`.replace(/ · $/, "")
                 : "—"}
             </div>
           </div>
@@ -74,19 +67,19 @@ export function buildProspectColumns() {
     /* ── Area ────────────────────────────────────────────────────── */
     c.custom<string>({
       id: "area",
-      header: "Area",
+      header: t("prospects.columns.area"),
       accessorFn: (r) => r.area,
       sortingFn: "alphanumeric",
-      meta: { mobile: "detail", mobilePriority: 3, mobileLabel: "Area" },
+      meta: { mobile: "detail", mobilePriority: 3, mobileLabel: t("prospects.columns.area") },
       cell: ({ row }) => (
-        <span className="text-sm text-fg-secondary">{AREA_LABELS[row.original.area] ?? "—"}</span>
+        <span className="text-sm text-fg-secondary">{t(`enums.area.${row.original.area}`)}</span>
       ),
     }),
 
     /* ── Tier (sortable by score total, highest first) ───────────── */
     c.custom<number>({
       id: "tier",
-      header: "Tier",
+      header: t("prospects.columns.tier"),
       accessorFn: (r) => r.scoreTotal,
       meta: { align: "center", numeric: true, mobile: "status" },
       cell: ({ row }) => {
@@ -107,13 +100,13 @@ export function buildProspectColumns() {
     /* ── Stage ───────────────────────────────────────────────────── */
     c.custom<string>({
       id: "stage",
-      header: "Stage",
+      header: t("prospects.columns.stage"),
       accessorFn: (r) => r.stage,
       sortingFn: "alphanumeric",
-      meta: { mobile: "detail", mobilePriority: 1, mobileLabel: "Stage" },
+      meta: { mobile: "detail", mobilePriority: 1, mobileLabel: t("prospects.columns.stage") },
       cell: ({ row }) => (
         <Badge {...stageBadge(row.original.stage)} size="sm">
-          {STAGE_LABELS[row.original.stage] ?? row.original.stage}
+          {t(`enums.stage.${row.original.stage}`)}
         </Badge>
       ),
     }),
@@ -121,16 +114,16 @@ export function buildProspectColumns() {
     /* ── Interest ────────────────────────────────────────────────── */
     c.custom<string>({
       id: "interestLevel",
-      header: "Interest",
+      header: t("prospects.columns.interest"),
       accessorFn: (r) => r.interestLevel,
       sortingFn: "alphanumeric",
-      meta: { mobile: "detail", mobilePriority: 2, mobileLabel: "Interest" },
+      meta: { mobile: "detail", mobilePriority: 2, mobileLabel: t("prospects.columns.interest") },
       cell: ({ row }) =>
         row.original.interestLevel === "UNKNOWN" ? (
           <span className="text-xs text-fg-tertiary">—</span>
         ) : (
           <Badge {...interestBadge(row.original.interestLevel)} size="sm">
-            {INTEREST_LABELS[row.original.interestLevel]}
+            {t(`enums.interest.${row.original.interestLevel}`)}
           </Badge>
         ),
     }),
@@ -138,9 +131,9 @@ export function buildProspectColumns() {
     /* ── Estimated units ─────────────────────────────────────────── */
     c.custom<number>({
       id: "estimatedUnits",
-      header: "Units",
+      header: t("prospects.columns.units"),
       accessorFn: (r) => r.estimatedUnits ?? -1,
-      meta: { align: "center", numeric: true, mobile: "detail", mobilePriority: 4, mobileLabel: "Units" },
+      meta: { align: "center", numeric: true, mobile: "detail", mobilePriority: 4, mobileLabel: t("prospects.columns.units") },
       cell: ({ row }) => (
         <span className="text-sm tabular-nums text-fg" dir="ltr">
           {row.original.estimatedUnits ?? "—"}
@@ -151,9 +144,9 @@ export function buildProspectColumns() {
     /* ── Next follow-up ──────────────────────────────────────────── */
     c.custom<number>({
       id: "nextFollowupDate",
-      header: "Next follow-up",
+      header: t("prospects.columns.nextFollowup"),
       accessorFn: (r) => (r.nextFollowupDate ? new Date(r.nextFollowupDate).getTime() : Number.MAX_SAFE_INTEGER),
-      meta: { mobile: "detail", mobilePriority: 5, mobileLabel: "Next follow-up" },
+      meta: { mobile: "detail", mobilePriority: 5, mobileLabel: t("prospects.columns.nextFollowup") },
       cell: ({ row }) => {
         const r = row.original;
         const due = isDue(r.nextFollowupDate);

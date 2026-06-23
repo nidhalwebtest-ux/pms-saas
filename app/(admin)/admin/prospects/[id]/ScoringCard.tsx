@@ -2,12 +2,12 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { PencilSquareIcon } from "@heroicons/react/24/outline";
 import { Badge, Button } from "@/components/ui";
 import {
   SCORE_FACTORS,
-  SCORING_RUBRIC,
   computeScoring,
   type ScoreValue,
 } from "@/utils/crm-scoring";
@@ -17,6 +17,7 @@ import { updateScores } from "../actions";
 import type { ProspectDetailData } from "./page";
 
 export default function ScoringCard({ prospect }: { prospect: ProspectDetailData }) {
+  const t = useTranslations("admin");
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -36,7 +37,7 @@ export default function ScoringCard({ prospect }: { prospect: ProspectDetailData
     startTransition(async () => {
       const res = await updateScores(prospect.id, fd);
       if ("error" in res) { toast.error(res.error); return; }
-      toast.success("Score updated");
+      toast.success(t("scoring.updated"));
       setEditing(false);
       router.refresh();
     });
@@ -56,7 +57,7 @@ export default function ScoringCard({ prospect }: { prospect: ProspectDetailData
   return (
     <div className="rounded-2xl border border-border-default bg-surface p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-fg">Qualification score</h3>
+        <h3 className="text-sm font-semibold text-fg">{t("scoring.title")}</h3>
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold tabular-nums text-fg">
             {editing ? live.scoreTotal : prospect.scoreTotal}
@@ -70,7 +71,7 @@ export default function ScoringCard({ prospect }: { prospect: ProspectDetailData
               type="button"
               onClick={() => setEditing(true)}
               className="inline-flex h-7 w-7 items-center justify-center rounded-md text-fg-tertiary hover:bg-subtle hover:text-fg"
-              title="Edit score"
+              title={t("scoring.edit")}
             >
               <PencilSquareIcon className="h-4 w-4" />
             </button>
@@ -92,10 +93,10 @@ export default function ScoringCard({ prospect }: { prospect: ProspectDetailData
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={cancel} disabled={pending}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             <Button variant="primary" size="sm" onClick={save} loading={pending}>
-              Save score
+              {t("scoring.save")}
             </Button>
           </div>
         </div>
@@ -103,10 +104,10 @@ export default function ScoringCard({ prospect }: { prospect: ProspectDetailData
         <dl className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
           {SCORE_FACTORS.map((f) => (
             <div key={f} className="flex items-center justify-between gap-2 rounded-md bg-subtle/60 px-2.5 py-1.5">
-              <dt className="text-xs text-fg-secondary">{SCORING_RUBRIC[f].title}</dt>
+              <dt className="text-xs text-fg-secondary">{t(`scoring.factors.${f}.title`)}</dt>
               <dd className="flex items-center gap-1.5">
                 <span className="text-xs font-medium text-fg">
-                  {SCORING_RUBRIC[f].levels[prospect[f] as ScoreValue]?.label ?? "—"}
+                  {t(`scoring.factors.${f}.l${prospect[f]}Label`)}
                 </span>
                 <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-brand-100 text-[11px] font-bold text-brand-700">
                   {prospect[f]}

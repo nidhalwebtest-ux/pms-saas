@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   PlusIcon,
@@ -30,6 +31,7 @@ export default function ProspectsView({
   hasAnyProspects: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("admin");
   const confirm = useConfirmDialog();
   const [, startTransition] = useTransition();
 
@@ -37,7 +39,7 @@ export default function ProspectsView({
   const [editing, setEditing] = useState<ProspectRow | null>(null);
   const [sorting, setSorting] = useState<SortingState>([{ id: "tier", desc: true }]);
 
-  const columns = useMemo(() => buildProspectColumns(), []);
+  const columns = useMemo(() => buildProspectColumns(t), [t]);
 
   const openAdd = () => {
     setEditing(null);
@@ -50,9 +52,9 @@ export default function ProspectsView({
 
   const handleDelete = async (p: ProspectRow) => {
     const { confirmed } = await confirm({
-      title: "Delete prospect?",
-      description: `“${p.businessName}” and all its visits & follow-ups will be permanently removed.`,
-      confirmLabel: "Delete",
+      title: t("prospects.deleteDialog.title"),
+      description: t("prospects.deleteDialog.desc", { name: p.businessName }),
+      confirmLabel: t("prospects.deleteDialog.confirm"),
       tone: "destructive",
     });
     if (!confirmed) return;
@@ -62,7 +64,7 @@ export default function ProspectsView({
         toast.error(res.error);
         return;
       }
-      toast.success("Prospect deleted");
+      toast.success(t("prospects.toast.deleted"));
       router.refresh();
     });
   };
@@ -71,35 +73,35 @@ export default function ProspectsView({
     () => (p: ProspectRow) => [
       {
         id: "view",
-        label: "Open",
+        label: t("common.open"),
         icon: <EyeIcon className="h-4 w-4" />,
         onClick: () => router.push(`/admin/prospects/${p.id}`),
       },
       {
         id: "edit",
-        label: "Edit",
+        label: t("common.edit"),
         icon: <PencilSquareIcon className="h-4 w-4" />,
         onClick: () => openEdit(p),
       },
       {
         id: "delete",
-        label: "Delete",
+        label: t("common.delete"),
         icon: <TrashIcon className="h-4 w-4" />,
         variant: "destructive" as const,
         onClick: () => handleDelete(p),
       },
     ],
-    [router],
+    [router, t],
   );
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
         <span className="text-xs text-fg-tertiary">
-          {prospects.length} shown
+          {t("common.shownCount", { count: prospects.length })}
         </span>
         <Button variant="primary" size="sm" leftIcon={<PlusIcon className="h-4 w-4" />} onClick={openAdd}>
-          Add prospect
+          {t("prospects.addProspect")}
         </Button>
       </div>
 
@@ -115,24 +117,24 @@ export default function ProspectsView({
           hasAnyProspects ? (
             <EmptyState
               variant="exploratory"
-              title="No prospects match"
-              description="Try clearing filters or searching a different term."
+              title={t("prospects.empty.noMatchTitle")}
+              description={t("prospects.empty.noMatchDesc")}
             />
           ) : (
             <EmptyState
               variant="encouraging"
               illustration={<UserGroupIcon className="h-12 w-12 text-brand-300" />}
-              title="No prospects yet"
-              description="Add your first Salalah property manager and score them into a tier."
+              title={t("prospects.empty.firstTitle")}
+              description={t("prospects.empty.firstDesc")}
               primaryAction={{
-                label: "Add your first prospect",
+                label: t("prospects.empty.firstCta"),
                 onClick: openAdd,
                 icon: <PlusIcon className="h-4 w-4" />,
               }}
             />
           )
         }
-        aria-label="Prospects"
+        aria-label={t("prospects.table")}
       />
 
       {/* Mounted only while open + keyed so the form re-initializes with the

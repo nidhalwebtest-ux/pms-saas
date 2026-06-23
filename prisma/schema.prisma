@@ -1206,13 +1206,6 @@ enum ContactRole {
   UNKNOWN
 }
 
-enum ProspectArea {
-  AL_HAFFA
-  AL_DAHARIZ
-  CITY_CENTER
-  OTHER
-}
-
 enum ProspectSource {
   GOOGLE_MAPS
   BOOKING_COM
@@ -1261,7 +1254,9 @@ model Prospect {
   contactPersonName String?
   roleOfContact     ContactRole    @default(UNKNOWN)
   phone             String?        // WhatsApp-capable; stored E.164-ish for wa.me
-  area              ProspectArea   @default(OTHER)
+  // Managed area classification (Admin → Settings). Nullable = unspecified.
+  areaId             String?
+  areaClassification AreaClassification? @relation(fields: [areaId], references: [id], onDelete: SetNull)
   addressNotes      String?
   source            ProspectSource @default(OTHER)
   estimatedUnits    Int?
@@ -1301,6 +1296,24 @@ model Prospect {
   @@index([stage])
   @@index([tier])
   @@index([nextFollowupDate])
+  @@index([areaId])
+}
+
+/// Founder-managed area categories for prospects (Admin → Settings).
+/// Org-agnostic, like the rest of the founder CRM. Drives the area filter,
+/// the form select, and the colour-coded dashboard map.
+model AreaClassification {
+  id        String     @id @default(uuid())
+  name      String
+  nameAr    String?
+  color     String     @default("#185FA5") // hex — marker + badge colour
+  sortOrder Int        @default(0)
+  prospects Prospect[]
+
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([sortOrder])
 }
 
 model ProspectVisit {

@@ -10,7 +10,6 @@ import {
   STAGES,
   INTERESTS,
   CONTACT_ROLES,
-  AREAS,
   SOURCES,
   WHO_MET,
   CHANNELS,
@@ -44,8 +43,19 @@ function revalidate(prospectId?: string) {
   if (prospectId) revalidatePath(`/admin/prospects/${prospectId}`);
 }
 
+/** Resolve a submitted areaId, dropping it to null if it doesn't exist. */
+async function resolveAreaId(fd: FormData): Promise<string | null> {
+  const raw = str(fd.get("areaId"));
+  if (!raw) return null;
+  const exists = await prisma.areaClassification.findUnique({
+    where: { id: raw },
+    select: { id: true },
+  });
+  return exists ? raw : null;
+}
+
 /** Extract + score the shared prospect fields from a form. */
-function readProspectFields(fd: FormData) {
+async function readProspectFields(fd: FormData) {
   const scores = Object.fromEntries(
     SCORE_FACTORS.map((f) => [f, normalizeScore(fd.get(f))]),
   ) as Record<(typeof SCORE_FACTORS)[number], number>;
@@ -61,7 +71,7 @@ function readProspectFields(fd: FormData) {
     contactPersonName: str(fd.get("contactPersonName")),
     roleOfContact: pickEnum(fd.get("roleOfContact"), CONTACT_ROLES, "UNKNOWN") as never,
     phone: str(fd.get("phone")),
-    area: pickEnum(fd.get("area"), AREAS, "OTHER") as never,
+    areaId: await resolveAreaId(fd),
     addressNotes: str(fd.get("addressNotes")),
     source: pickEnum(fd.get("source"), SOURCES, "OTHER") as never,
     estimatedUnits,
@@ -84,7 +94,7 @@ function readProspectFields(fd: FormData) {
 
 export async function createProspect(fd: FormData): Promise<ActionResult> {
   if (!(await getSuperAdmin())) return { error: "Not authorized" };
-  const data = readProspectFields(fd);
+  const data = await readProspectFields(fd);
   if (!data.businessName) return { error: "Business name is required" };
 
   const created = await prisma.prospect.create({ data, select: { id: true } });
@@ -96,7 +106,7 @@ export async function updateProspect(fd: FormData): Promise<ActionResult> {
   if (!(await getSuperAdmin())) return { error: "Not authorized" };
   const id = str(fd.get("id"));
   if (!id) return { error: "Missing prospect id" };
-  const data = readProspectFields(fd);
+  const data = await readProspectFields(fd);
   if (!data.businessName) return { error: "Business name is required" };
 
   await prisma.prospect.update({ where: { id }, data });

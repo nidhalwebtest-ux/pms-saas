@@ -5516,7 +5516,8 @@
       "quickNotes": "Quick notes",
       "requiredBusinessName": "Business name is required",
       "added": "Prospect added",
-      "updated": "Prospect updated"
+      "updated": "Prospect updated",
+      "areaNone": "No area"
     },
     "detail": {
       "allProspects": "All prospects",
@@ -5692,7 +5693,24 @@
         "foundingSpots": "Founding spots"
       },
       "save": "Save goals",
-      "saved": "Goals updated"
+      "saved": "Goals updated",
+      "areas": {
+        "title": "Area classifications",
+        "hint": "Categorize prospects by area. Each area gets a color used on the map and lists.",
+        "nameEn": "Name (English)",
+        "nameAr": "Name (Arabic)",
+        "nameEnPh": "e.g. Al Haffa",
+        "nameArPh": "مثال: الحافة",
+        "add": "Add area",
+        "save": "Save",
+        "saved": "Area saved",
+        "added": "Area added",
+        "deleted": "Area deleted",
+        "deleteTitle": "Delete area?",
+        "deleteDesc": "Delete “{name}”? Prospects in this area will become unassigned.",
+        "deleteConfirm": "Delete area",
+        "nameRequired": "Area name is required"
+      }
     },
     "organizations": {
       "title": "Organizations",
@@ -5710,6 +5728,13 @@
         "payments": "Payments",
         "expenses": "Expenses"
       }
+    },
+    "map": {
+      "title": "Prospects map",
+      "empty": "No prospect locations pinned yet. Add a location on a prospect to see it here.",
+      "openProfile": "Open profile →",
+      "unmapped": "{n} without a location",
+      "noArea": "No area"
     }
   }
 }

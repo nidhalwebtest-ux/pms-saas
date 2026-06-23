@@ -25,6 +25,7 @@ import {
   tierLabel,
 } from "../../_lib/crm-options";
 import { fmtDate } from "../../_lib/format";
+import type { AreaOption } from "../../_lib/area-label";
 import { waLink } from "@/utils/whatsapp";
 import { updateInterest, deleteProspect } from "../actions";
 import ProspectFormModal from "../ProspectFormModal";
@@ -84,7 +85,13 @@ function Chip({ icon: Icon, children }: { icon: typeof MapPinIcon; children: Rea
   );
 }
 
-export default function ProspectDetail({ prospect: p }: { prospect: ProspectDetailData }) {
+export default function ProspectDetail({
+  prospect: p,
+  areas,
+}: {
+  prospect: ProspectDetailData;
+  areas: AreaOption[];
+}) {
   const t = useTranslations("admin");
   const router = useRouter();
   const confirm = useConfirmDialog();
@@ -140,7 +147,17 @@ export default function ProspectDetail({ prospect: p }: { prospect: ProspectDeta
                 : t("detail.noContactName")}
             </p>
             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
-              <Chip icon={MapPinIcon}>{t(`enums.area.${p.area}`)}</Chip>
+              <Chip icon={MapPinIcon}>
+                <span className="inline-flex items-center gap-1.5">
+                  {p.areaColor && (
+                    <span
+                      className="inline-block h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: p.areaColor }}
+                    />
+                  )}
+                  {p.areaLabel}
+                </span>
+              </Chip>
               <Chip icon={BuildingOffice2Icon}>
                 {p.estimatedUnits != null
                   ? t("detail.unitsCount", { count: p.estimatedUnits })
@@ -238,7 +255,7 @@ export default function ProspectDetail({ prospect: p }: { prospect: ProspectDeta
       </div>
 
       {editOpen && (
-        <ProspectFormModal key={p.id} open onClose={() => setEditOpen(false)} prospect={p} />
+        <ProspectFormModal key={p.id} open onClose={() => setEditOpen(false)} prospect={p} areas={areas} />
       )}
     </div>
   );

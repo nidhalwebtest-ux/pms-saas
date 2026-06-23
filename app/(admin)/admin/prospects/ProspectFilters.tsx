@@ -1,9 +1,10 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { FilterBar, type QuickFilter } from "@/components/ui";
 import { useFilterParams } from "@/hooks/useFilterParams";
-import { STAGES, AREAS, INTERESTS } from "../_lib/crm-options";
+import { STAGES, INTERESTS } from "../_lib/crm-options";
+import { pickAreaLabel, type AreaOption } from "../_lib/area-label";
 
 interface Props {
   currentSearch: string;
@@ -12,6 +13,7 @@ interface Props {
   currentArea: string;
   currentInterest: string;
   counts: { all: number; t1: number; t2: number; t3: number };
+  areas: AreaOption[];
 }
 
 export default function ProspectFilters({
@@ -21,8 +23,10 @@ export default function ProspectFilters({
   currentArea,
   currentInterest,
   counts,
+  areas,
 }: Props) {
   const t = useTranslations("admin");
+  const locale = useLocale();
   const [, setFilters] = useFilterParams({
     q: { default: "", serialize: "raw" },
     tier: { default: "all", serialize: "raw" },
@@ -72,7 +76,7 @@ export default function ProspectFilters({
           onChange: (area) => setFilters({ area }),
           options: [
             { value: "", label: t("prospects.filters.allAreas") },
-            ...AREAS.map((v) => ({ value: v, label: t(`enums.area.${v}`) })),
+            ...areas.map((a) => ({ value: a.id, label: pickAreaLabel(locale, a.name, a.nameAr) })),
           ],
         },
         {

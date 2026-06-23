@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Modal,
@@ -26,13 +26,13 @@ import {
 import { ScoreSelector } from "../_lib/ScoreSelector";
 import {
   CONTACT_ROLES,
-  AREAS,
   SOURCES,
   STAGES,
   INTERESTS,
   tierBadge,
   tierLabel,
 } from "../_lib/crm-options";
+import { pickAreaLabel, type AreaOption } from "../_lib/area-label";
 import { createProspect, updateProspect } from "./actions";
 import type { ProspectRow } from "./page";
 
@@ -43,7 +43,7 @@ type Values = {
   contactPersonName: string;
   roleOfContact: string;
   phone: string;
-  area: string;
+  areaId: string;
   addressNotes: string;
   source: string;
   estimatedUnits: number | null;
@@ -64,7 +64,7 @@ function initialValues(p?: ProspectRow | null): Values {
     contactPersonName: p?.contactPersonName ?? "",
     roleOfContact: p?.roleOfContact ?? "UNKNOWN",
     phone: p?.phone ?? "",
-    area: p?.area ?? "OTHER",
+    areaId: p?.areaId ?? "",
     addressNotes: p?.addressNotes ?? "",
     source: p?.source ?? "OTHER",
     estimatedUnits: p?.estimatedUnits ?? null,
@@ -94,13 +94,16 @@ export default function ProspectFormModal({
   open,
   onClose,
   prospect,
+  areas,
 }: {
   open: boolean;
   onClose: () => void;
   prospect?: ProspectRow | null;
+  areas: AreaOption[];
 }) {
   const router = useRouter();
   const t = useTranslations("admin");
+  const locale = useLocale();
   const isEdit = !!prospect;
   const [v, setV] = useState<Values>(() => initialValues(prospect));
   const [pending, startTransition] = useTransition();
@@ -121,7 +124,7 @@ export default function ProspectFormModal({
     fd.set("contactPersonName", v.contactPersonName);
     fd.set("roleOfContact", v.roleOfContact);
     fd.set("phone", v.phone);
-    fd.set("area", v.area);
+    fd.set("areaId", v.areaId);
     fd.set("addressNotes", v.addressNotes);
     fd.set("source", v.source);
     if (v.estimatedUnits != null) fd.set("estimatedUnits", String(v.estimatedUnits));
@@ -187,9 +190,12 @@ export default function ProspectFormModal({
               />
               <Select
                 label={t("form.area")}
-                value={v.area}
-                onChange={(e) => set("area", e.target.value)}
-                options={AREAS.map((v) => ({ value: v, label: t(`enums.area.${v}`) }))}
+                value={v.areaId}
+                onChange={(e) => set("areaId", e.target.value)}
+                options={[
+                  { value: "", label: t("form.areaNone") },
+                  ...areas.map((a) => ({ value: a.id, label: pickAreaLabel(locale, a.name, a.nameAr) })),
+                ]}
               />
               <Select
                 label={t("form.source")}

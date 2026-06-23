@@ -5,11 +5,13 @@ import type { BadgeVariantProps } from "@/components/ui";
  *
  *  Display LABELS are NOT here — they live in the i18n `admin.enums.*` keys
  *  (messages/en.json + ar.json) and are resolved at the call site with
- *  useTranslations/getTranslations, e.g. t(`enums.area.${value}`).
+ *  useTranslations/getTranslations, e.g. t(`enums.stage.${value}`).
+ *
+ *  NOTE: "area" is no longer an enum — it's a managed AreaClassification table
+ *  (Admin → Settings). See _lib/areas.ts + _lib/area-label.ts.
  * ========================================================================= */
 
 export const CONTACT_ROLES = ["OWNER", "MANAGER", "RECEPTIONIST", "UNKNOWN"] as const;
-export const AREAS = ["AL_HAFFA", "AL_DAHARIZ", "CITY_CENTER", "OTHER"] as const;
 export const SOURCES = ["GOOGLE_MAPS", "BOOKING_COM", "AIRBNB", "INSTAGRAM", "REFERRAL", "OTHER"] as const;
 export const STAGES = ["NOT_CONTACTED", "VISITED", "DEMO_DONE", "INTERESTED", "SIGNED", "ACTIVE", "LOST"] as const;
 export const INTERESTS = ["HOT", "WARM", "COLD", "UNKNOWN"] as const;

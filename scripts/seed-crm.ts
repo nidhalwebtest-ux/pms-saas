@@ -179,6 +179,22 @@ async function main() {
   const removed = await prisma.prospect.deleteMany({ where: { businessName: { in: names } } });
   console.log(`Cleared ${removed.count} previously-seeded prospect(s).`);
 
+  // Map the legacy enum-style area to a managed AreaClassification row.
+  const AREA_NAME: Record<string, string | null> = {
+    AL_HAFFA: "Al Haffa",
+    AL_DAHARIZ: "Al Dahariz",
+    CITY_CENTER: "City Center",
+    OTHER: null,
+  };
+  const areaIdByEnum: Record<string, string | null> = {};
+  for (const [key, name] of Object.entries(AREA_NAME)) {
+    if (!name) { areaIdByEnum[key] = null; continue; }
+    const row =
+      (await prisma.areaClassification.findFirst({ where: { name } })) ??
+      (await prisma.areaClassification.create({ data: { name } }));
+    areaIdByEnum[key] = row.id;
+  }
+
   for (const s of SEEDS) {
     const { scoreTotal, tier } = computeScoring({
       scoreSize: s.scores[0],
@@ -194,7 +210,7 @@ async function main() {
         contactPersonName: s.contactPersonName,
         roleOfContact: s.roleOfContact,
         phone: s.phone,
-        area: s.area,
+        areaId: areaIdByEnum[s.area] ?? null,
         source: s.source,
         estimatedUnits: s.estimatedUnits,
         listedOnBooking: s.listedOnBooking,

@@ -1,7 +1,9 @@
 import { Prisma } from "@prisma/client";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { UserGroupIcon } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
+import { getAreaClassifications } from "../_lib/areas";
+import { pickAreaLabel } from "../_lib/area-label";
 import ProspectFilters from "./ProspectFilters";
 import ProspectsView from "./ProspectsView";
 
@@ -12,7 +14,9 @@ export type ProspectRow = {
   contactPersonName: string | null;
   roleOfContact: string;
   phone: string | null;
-  area: string;
+  areaId: string | null;
+  areaLabel: string; // locale-resolved name, "—" if unset
+  areaColor: string | null;
   addressNotes: string | null;
   source: string;
   estimatedUnits: number | null;
@@ -43,6 +47,7 @@ export default async function ProspectsPage({
   searchParams: Promise<{ [key: string]: string | undefined }>;
 }) {
   const t = await getTranslations("admin");
+  const locale = await getLocale();
   const params = await searchParams;
   const q = params.q || "";
   const tier = params.tier || "all";
@@ -60,11 +65,12 @@ export default async function ProspectsPage({
     }),
     ...(["1", "2", "3"].includes(tier) && { tier: parseInt(tier, 10) }),
     ...(stage && { stage: stage as never }),
-    ...(area && { area: area as never }),
+    ...(area && { areaId: area }),
     ...(interest && { interestLevel: interest as never }),
   };
 
-  const [raw, allCount, t1, t2, t3] = await Promise.all([
+  const [areas, raw, allCount, t1, t2, t3] = await Promise.all([
+    getAreaClassifications(),
     prisma.prospect.findMany({
       where,
       orderBy: [{ scoreTotal: "desc" }, { createdAt: "desc" }],
@@ -76,13 +82,19 @@ export default async function ProspectsPage({
     prisma.prospect.count({ where: { tier: 3 } }),
   ]);
 
-  const prospects: ProspectRow[] = raw.map((p) => ({
+  const areaById = new Map(areas.map((a) => [a.id, a]));
+
+  const prospects: ProspectRow[] = raw.map((p) => {
+    const a = p.areaId ? areaById.get(p.areaId) : undefined;
+    return {
     id: p.id,
     businessName: p.businessName,
     contactPersonName: p.contactPersonName,
     roleOfContact: p.roleOfContact,
     phone: p.phone,
-    area: p.area,
+    areaId: p.areaId,
+    areaLabel: a ? pickAreaLabel(locale, a.name, a.nameAr) : "—",
+    areaColor: a?.color ?? null,
     addressNotes: p.addressNotes,
     source: p.source,
     estimatedUnits: p.estimatedUnits,
@@ -105,7 +117,8 @@ export default async function ProspectsPage({
     latitude: p.latitude,
     longitude: p.longitude,
     createdAt: p.createdAt.toISOString(),
-  }));
+    };
+  });
 
   return (
     <div className="space-y-4">
@@ -128,9 +141,10 @@ export default async function ProspectsPage({
         currentArea={area}
         currentInterest={interest}
         counts={{ all: allCount, t1, t2, t3 }}
+        areas={areas}
       />
 
-      <ProspectsView prospects={prospects} hasAnyProspects={allCount > 0} />
+      <ProspectsView prospects={prospects} hasAnyProspects={allCount > 0} areas={areas} />
     </div>
   );
 }

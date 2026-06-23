@@ -22,13 +22,16 @@ import { buildProspectColumns, prospectRowVariant } from "./columns";
 import ProspectFormModal from "./ProspectFormModal";
 import { deleteProspect } from "./actions";
 import type { ProspectRow } from "./page";
+import type { AreaOption } from "../_lib/area-label";
 
 export default function ProspectsView({
   prospects,
   hasAnyProspects,
+  areas,
 }: {
   prospects: ProspectRow[];
   hasAnyProspects: boolean;
+  areas: AreaOption[];
 }) {
   const router = useRouter();
   const t = useTranslations("admin");
@@ -145,6 +148,7 @@ export default function ProspectsView({
           open
           onClose={() => setModalOpen(false)}
           prospect={editing}
+          areas={areas}
         />
       )}
     </div>

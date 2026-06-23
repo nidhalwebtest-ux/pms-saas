@@ -68,12 +68,23 @@ export function buildProspectColumns(t: Translator) {
     c.custom<string>({
       id: "area",
       header: t("prospects.columns.area"),
-      accessorFn: (r) => r.area,
+      accessorFn: (r) => r.areaLabel,
       sortingFn: "alphanumeric",
       meta: { mobile: "detail", mobilePriority: 3, mobileLabel: t("prospects.columns.area") },
-      cell: ({ row }) => (
-        <span className="text-sm text-fg-secondary">{t(`enums.area.${row.original.area}`)}</span>
-      ),
+      cell: ({ row }) => {
+        const r = row.original;
+        return (
+          <span className="inline-flex items-center gap-1.5 text-sm text-fg-secondary">
+            {r.areaColor && (
+              <span
+                className="inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                style={{ backgroundColor: r.areaColor }}
+              />
+            )}
+            {r.areaLabel}
+          </span>
+        );
+      },
     }),
 
     /* ── Tier (sortable by score total, highest first) ───────────── */

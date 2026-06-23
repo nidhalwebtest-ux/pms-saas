@@ -1,5 +1,8 @@
 import { notFound } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
+import { getAreaClassifications } from "../../_lib/areas";
+import { pickAreaLabel } from "../../_lib/area-label";
 import type { ProspectRow } from "../page";
 import ProspectDetail from "./ProspectDetail";
 
@@ -32,15 +35,21 @@ export default async function ProspectDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const locale = await getLocale();
 
-  const p = await prisma.prospect.findUnique({
-    where: { id },
-    include: {
-      visits: { orderBy: { visitDate: "desc" } },
-      followups: { orderBy: { dueDate: "asc" } },
-    },
-  });
+  const [p, areas] = await Promise.all([
+    prisma.prospect.findUnique({
+      where: { id },
+      include: {
+        visits: { orderBy: { visitDate: "desc" } },
+        followups: { orderBy: { dueDate: "asc" } },
+      },
+    }),
+    getAreaClassifications(),
+  ]);
   if (!p) notFound();
+
+  const area = p.areaId ? areas.find((a) => a.id === p.areaId) : undefined;
 
   const data: ProspectDetailData = {
     id: p.id,
@@ -48,7 +57,9 @@ export default async function ProspectDetailPage({
     contactPersonName: p.contactPersonName,
     roleOfContact: p.roleOfContact,
     phone: p.phone,
-    area: p.area,
+    areaId: p.areaId,
+    areaLabel: area ? pickAreaLabel(locale, area.name, area.nameAr) : "—",
+    areaColor: area?.color ?? null,
     addressNotes: p.addressNotes,
     source: p.source,
     estimatedUnits: p.estimatedUnits,
@@ -89,5 +100,5 @@ export default async function ProspectDetailPage({
     })),
   };
 
-  return <ProspectDetail prospect={data} />;
+  return <ProspectDetail prospect={data} areas={areas} />;
 }

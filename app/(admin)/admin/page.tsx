@@ -8,13 +8,17 @@ import {
   ArrowRightIcon,
   ChatBubbleLeftRightIcon,
 } from "@heroicons/react/24/outline";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui";
 import { FUNNEL_STAGES } from "./_lib/crm-options";
 import { getCrmSettings } from "./_lib/crm-settings";
+import { getAreaClassifications } from "./_lib/areas";
+import { pickAreaLabel } from "./_lib/area-label";
 import { fmtDate, dueState } from "./_lib/format";
 import { waLink } from "@/utils/whatsapp";
+import MapSection, { type AreaLegend } from "./MapSection";
+import type { MapProspect } from "./ProspectsMap";
 
 const has = (stage: string, set: string[]) => set.includes(stage);
 
@@ -56,13 +60,19 @@ function StatCard({
 
 export default async function AdminDashboardPage() {
   const t = await getTranslations("admin");
+  const locale = await getLocale();
   const now = new Date();
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
   const weekAhead = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59, 999);
 
-  const [settings, prospects, visitsCount, objectionRows, lostRows, dueRows, plannedVisits] = await Promise.all([
+  const [settings, areas, prospects, mapRows, visitsCount, objectionRows, lostRows, dueRows, plannedVisits] = await Promise.all([
     getCrmSettings(),
+    getAreaClassifications(),
     prisma.prospect.findMany({ select: { stage: true, interestLevel: true } }),
+    prisma.prospect.findMany({
+      where: { latitude: { not: null }, longitude: { not: null } },
+      select: { id: true, businessName: true, latitude: true, longitude: true, stage: true, tier: true, areaId: true },
+    }),
     prisma.prospectVisit.count(),
     prisma.prospectVisit.findMany({
       where: { objectionRaised: { not: null } },
@@ -116,6 +126,33 @@ export default async function AdminDashboardPage() {
   lostRows.forEach((l) => tally(l.lostReason));
   const patterns = [...freq.values()].sort((a, b) => b.count - a.count).slice(0, 8);
 
+  // ── Map: prospects with coordinates, coloured by area ─────────────────────
+  const areaById = new Map(areas.map((a) => [a.id, a]));
+  const mapProspects: MapProspect[] = mapRows.map((p) => {
+    const a = p.areaId ? areaById.get(p.areaId) : undefined;
+    return {
+      id: p.id,
+      businessName: p.businessName,
+      latitude: p.latitude as number,
+      longitude: p.longitude as number,
+      areaLabel: a ? pickAreaLabel(locale, a.name, a.nameAr) : t("map.noArea"),
+      areaColor: a?.color ?? null,
+      tier: p.tier,
+      stage: p.stage,
+    };
+  });
+  const legendCounts = new Map<string, number>();
+  for (const p of mapRows) if (p.areaId) legendCounts.set(p.areaId, (legendCounts.get(p.areaId) ?? 0) + 1);
+  const legend: AreaLegend[] = areas
+    .filter((a) => legendCounts.get(a.id))
+    .map((a) => ({
+      id: a.id,
+      label: pickAreaLabel(locale, a.name, a.nameAr),
+      color: a.color,
+      count: legendCounts.get(a.id) as number,
+    }));
+  const unmappedCount = prospects.length - mapRows.length;
+
   const cards = [
     { label: t("dashboard.kpi.visits"), value: visitsCount, target: settings.targetVisits, Icon: MapPinIcon, accent: "bg-brand-50 text-brand-700" },
     { label: t("dashboard.kpi.demos"), value: demos, target: settings.targetDemos, Icon: PresentationChartLineIcon, accent: "bg-info-50 text-info-700" },
@@ -151,6 +188,9 @@ export default async function AdminDashboardPage() {
           <StatCard key={c.label} {...c} targetLabel={t("dashboard.kpi.target", { n: c.target })} />
         ))}
       </div>
+
+      {/* ── Prospects map ──────────────────────────────────────────── */}
+      <MapSection prospects={mapProspects} legend={legend} unmappedCount={unmappedCount} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* ── Funnel ───────────────────────────────────────────────── */}

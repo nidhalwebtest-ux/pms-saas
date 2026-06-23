@@ -1335,3 +1335,18 @@ model ProspectFollowup {
   @@index([prospectId])
   @@index([completed, dueDate])
 }
+
+/// Founder CRM goals — a single org-agnostic settings row.
+/// Drives the 30-day funnel targets + founding-spot scarcity on the admin dashboard.
+model CrmSettings {
+  id               String   @id @default(uuid())
+  targetVisits     Int      @default(40)
+  targetDemos      Int      @default(15)
+  targetInterested Int      @default(10)
+  targetSigned     Int      @default(5)
+  targetActive     Int      @default(3)
+  foundingSpots    Int      @default(5)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}

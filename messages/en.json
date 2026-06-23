@@ -2669,7 +2669,11 @@
       "khareef": "Khareef season",
       "custom": "Custom…"
     },
-    "actions": { "schedule": "Schedule", "saveView": "Save view", "export": "Export" },
+    "actions": {
+      "schedule": "Schedule",
+      "saveView": "Save view",
+      "export": "Export"
+    },
     "filters": {
       "title": "Filters",
       "active": "{count} active",
@@ -2787,7 +2791,11 @@
       "pts": "pts",
       "firstToLast": "first → last period",
       "chartTitle": "Occupancy % over time",
-      "gran": { "day": "Day", "week": "Week", "month": "Month" },
+      "gran": {
+        "day": "Day",
+        "week": "Week",
+        "month": "Month"
+      },
       "empty": "No occupancy in this period.",
       "tableTitle": "Period breakdown",
       "tableMeta": "{count} periods",
@@ -3259,9 +3267,16 @@
     "title": "Sales Targets",
     "subtitle": "Set sales targets per salesrep, building or unit for each week or month.",
     "scope": "Set targets by",
-    "scopes": { "RECEPTIONIST": "Salesrep", "BUILDING": "Building", "UNIT": "Unit" },
+    "scopes": {
+      "RECEPTIONIST": "Salesrep",
+      "BUILDING": "Building",
+      "UNIT": "Unit"
+    },
     "periodType": "Period",
-    "periodTypes": { "MONTHLY": "Monthly", "WEEKLY": "Weekly" },
+    "periodTypes": {
+      "MONTHLY": "Monthly",
+      "WEEKLY": "Weekly"
+    },
     "period": "Select period",
     "entity": "Name",
     "target": "Target (OMR)",
@@ -3271,7 +3286,10 @@
     "save": "Save targets",
     "saving": "Saving…",
     "saved": "Targets saved",
-    "tabs": { "set": "Set Targets", "performance": "Target vs Actual" },
+    "tabs": {
+      "set": "Set Targets",
+      "performance": "Target vs Actual"
+    },
     "report": {
       "target": "Target",
       "actual": "Actual",
@@ -3280,7 +3298,10 @@
       "loading": "Loading…",
       "noData": "No targets or sales for this period."
     },
-    "errors": { "forbidden": "You don't have permission to set targets.", "generic": "Could not save targets. Please try again." }
+    "errors": {
+      "forbidden": "You don't have permission to set targets.",
+      "generic": "Could not save targets. Please try again."
+    }
   },
   "returns": {
     "title": "Returns",
@@ -5252,6 +5273,7 @@
       "dashboard": "Dashboard",
       "prospects": "Prospects",
       "followups": "Follow-ups",
+      "settings": "Settings",
       "title": "Binaya Sales CRM",
       "founder": "Founder",
       "backToApp": "Back to app",
@@ -5643,6 +5665,24 @@
       "day7": "Day 7 — follow up on their decision",
       "day14": "Day 14 — re-engage, share a relevant win",
       "monthly": "Monthly — in-person touch-base"
+    },
+    "settings": {
+      "title": "CRM Goals",
+      "subtitle": "Set your 30-day funnel targets and the number of founding spots.",
+      "funnelTitle": "30-day funnel targets",
+      "funnelHint": "The dashboard shows progress toward each of these.",
+      "scarcityTitle": "Founding spots",
+      "scarcityHint": "How many founding-customer slots you're offering — drives the scarcity counter.",
+      "fields": {
+        "targetVisits": "Visits",
+        "targetDemos": "Demos",
+        "targetInterested": "Interested",
+        "targetSigned": "Signed",
+        "targetActive": "Active",
+        "foundingSpots": "Founding spots"
+      },
+      "save": "Save goals",
+      "saved": "Goals updated"
     }
   }
 }

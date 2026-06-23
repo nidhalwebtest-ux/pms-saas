@@ -12,12 +12,9 @@ import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { Badge } from "@/components/ui";
 import { FUNNEL_STAGES } from "./_lib/crm-options";
+import { getCrmSettings } from "./_lib/crm-settings";
 import { fmtDate, dueState } from "./_lib/format";
 import { waLink } from "@/utils/whatsapp";
-
-/** Playbook 30-day targets. */
-const TARGETS = { visits: 40, demos: 15, interested: 10, signed: 5, active: 3 };
-const FOUNDING_SPOTS = 5;
 
 const has = (stage: string, set: string[]) => set.includes(stage);
 
@@ -63,7 +60,8 @@ export default async function AdminDashboardPage() {
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
   const weekAhead = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7, 23, 59, 59, 999);
 
-  const [prospects, visitsCount, objectionRows, lostRows, dueRows, plannedVisits] = await Promise.all([
+  const [settings, prospects, visitsCount, objectionRows, lostRows, dueRows, plannedVisits] = await Promise.all([
+    getCrmSettings(),
     prisma.prospect.findMany({ select: { stage: true, interestLevel: true } }),
     prisma.prospectVisit.count(),
     prisma.prospectVisit.findMany({
@@ -94,7 +92,7 @@ export default async function AdminDashboardPage() {
   const interested = prospects.filter(
     (p) => has(p.stage, ["INTERESTED", "SIGNED", "ACTIVE"]) || has(p.interestLevel, ["HOT", "WARM"]),
   ).length;
-  const foundingRemaining = Math.max(0, FOUNDING_SPOTS - signed);
+  const foundingRemaining = Math.max(0, settings.foundingSpots - signed);
 
   // ── Funnel stage counts (current stage) ──────────────────────────────────
   const stageCounts = FUNNEL_STAGES.map((s) => ({
@@ -119,11 +117,11 @@ export default async function AdminDashboardPage() {
   const patterns = [...freq.values()].sort((a, b) => b.count - a.count).slice(0, 8);
 
   const cards = [
-    { label: t("dashboard.kpi.visits"), value: visitsCount, target: TARGETS.visits, Icon: MapPinIcon, accent: "bg-brand-50 text-brand-700" },
-    { label: t("dashboard.kpi.demos"), value: demos, target: TARGETS.demos, Icon: PresentationChartLineIcon, accent: "bg-info-50 text-info-700" },
-    { label: t("dashboard.kpi.interested"), value: interested, target: TARGETS.interested, Icon: HandThumbUpIcon, accent: "bg-warning-50 text-warning-700" },
-    { label: t("dashboard.kpi.signed"), value: signed, target: TARGETS.signed, Icon: TrophyIcon, accent: "bg-success-50 text-success-700" },
-    { label: t("dashboard.kpi.active"), value: active, target: TARGETS.active, Icon: BoltIcon, accent: "bg-brand-100 text-brand-700" },
+    { label: t("dashboard.kpi.visits"), value: visitsCount, target: settings.targetVisits, Icon: MapPinIcon, accent: "bg-brand-50 text-brand-700" },
+    { label: t("dashboard.kpi.demos"), value: demos, target: settings.targetDemos, Icon: PresentationChartLineIcon, accent: "bg-info-50 text-info-700" },
+    { label: t("dashboard.kpi.interested"), value: interested, target: settings.targetInterested, Icon: HandThumbUpIcon, accent: "bg-warning-50 text-warning-700" },
+    { label: t("dashboard.kpi.signed"), value: signed, target: settings.targetSigned, Icon: TrophyIcon, accent: "bg-success-50 text-success-700" },
+    { label: t("dashboard.kpi.active"), value: active, target: settings.targetActive, Icon: BoltIcon, accent: "bg-brand-100 text-brand-700" },
   ];
 
   return (
@@ -138,12 +136,12 @@ export default async function AdminDashboardPage() {
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-brand-700">{t("dashboard.founding.label")}</p>
           <p className="mt-1 text-sm text-fg-secondary">
-            {t("dashboard.founding.sub", { total: FOUNDING_SPOTS })}
+            {t("dashboard.founding.sub", { total: settings.foundingSpots })}
           </p>
         </div>
         <div className="flex items-baseline gap-2">
           <span className="text-5xl font-extrabold tabular-nums text-brand-600">{foundingRemaining}</span>
-          <span className="text-sm text-fg-tertiary">{t("dashboard.founding.left", { total: FOUNDING_SPOTS })}</span>
+          <span className="text-sm text-fg-tertiary">{t("dashboard.founding.left", { total: settings.foundingSpots })}</span>
         </div>
       </div>
 

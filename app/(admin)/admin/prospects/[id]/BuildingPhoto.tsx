@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -12,8 +12,7 @@ import {
   BuildingOffice2Icon,
 } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui";
-import { createClient } from "@/utils/supabase/client";
-import { updateBuildingPhoto } from "../actions";
+import { uploadBuildingPhoto, removeBuildingPhoto } from "../actions";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
@@ -26,18 +25,14 @@ export default function BuildingPhoto({
 }) {
   const router = useRouter();
   const t = useTranslations("admin");
-  const supabase = createClient();
   const [current, setCurrent] = useState<string | null>(photo);
   const [uploading, setUploading] = useState(false);
   const [, startTransition] = useTransition();
   const uploadRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
 
-  const removeFromStorage = async (url: string | null) => {
-    if (!url) return;
-    const path = url.split("/pms-media/")[1];
-    if (path) await supabase.storage.from("pms-media").remove([path]);
-  };
+  // Keep local state in sync with the server after router.refresh().
+  useEffect(() => setCurrent(photo), [photo]);
 
   const handleFile = async (file?: File | null) => {
     if (!file) return;
@@ -50,47 +45,33 @@ export default function BuildingPhoto({
       return;
     }
 
+    // Upload server-side (service-role client) — the browser client is blocked
+    // by storage RLS for the prospects/ prefix.
     setUploading(true);
-    const ext = file.name.split(".").pop() ?? "jpg";
-    const path = `prospects/${prospectId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage
-      .from("pms-media")
-      .upload(path, file, { cacheControl: "3600", upsert: false });
-
-    if (error) {
-      setUploading(false);
-      toast.error(t("building.uploadFailed", { message: error.message }));
-      return;
-    }
-
-    const { data } = supabase.storage.from("pms-media").getPublicUrl(path);
-    const url = data.publicUrl;
-    const previous = current;
-    setCurrent(url);
+    const fd = new FormData();
+    fd.set("prospectId", prospectId);
+    fd.set("file", file);
+    const res = await uploadBuildingPhoto(fd);
     setUploading(false);
 
-    startTransition(async () => {
-      const res = await updateBuildingPhoto(prospectId, url);
-      if ("error" in res) {
-        toast.error(res.error);
-        return;
-      }
-      await removeFromStorage(previous); // clean up the replaced photo
-      toast.success(t("building.saved"));
-      router.refresh();
-    });
+    if ("error" in res) {
+      toast.error(t("building.uploadFailed", { message: res.error }));
+      return;
+    }
+    toast.success(t("building.saved"));
+    router.refresh();
   };
 
   const remove = () => {
     const previous = current;
     setCurrent(null);
     startTransition(async () => {
-      const res = await updateBuildingPhoto(prospectId, null);
+      const res = await removeBuildingPhoto(prospectId);
       if ("error" in res) {
+        setCurrent(previous);
         toast.error(res.error);
         return;
       }
-      await removeFromStorage(previous);
       toast.success(t("building.removed"));
       router.refresh();
     });

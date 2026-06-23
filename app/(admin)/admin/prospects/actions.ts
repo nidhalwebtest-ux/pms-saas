@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { getSuperAdmin } from "@/lib/super-admin";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { computeScoring, normalizeScore, SCORE_FACTORS } from "@/utils/crm-scoring";
 import {
   STAGES,
@@ -168,12 +169,69 @@ export async function updateScores(id: string, fd: FormData): Promise<ActionResu
 
 /* ── Building photo + location ───────────────────────────────────────────── */
 
-export async function updateBuildingPhoto(
-  id: string,
-  url: string | null,
-): Promise<ActionResult> {
+const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+/** Best-effort delete of a previously-stored building photo (RLS-bound on the client). */
+async function removeStoredPhoto(url: string | null) {
+  if (!url) return;
+  const path = url.split("/pms-media/")[1];
+  if (!path || !path.startsWith("prospects/")) return;
+  const admin = createAdminClient();
+  await admin.storage.from("pms-media").remove([path]);
+}
+
+/**
+ * Upload a building photo server-side via the service-role client. Client-side
+ * uploads to the `pms-media` bucket are blocked by storage RLS for the
+ * `prospects/` prefix; doing it here (admin client) bypasses RLS safely after
+ * we verify the caller is the super-admin.
+ */
+export async function uploadBuildingPhoto(fd: FormData): Promise<ActionResult> {
   if (!(await getSuperAdmin())) return { error: "Not authorized" };
+  const id = str(fd.get("prospectId"));
+  if (!id) return { error: "Missing prospect id" };
+
+  const file = fd.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "No file" };
+  if (file.size > MAX_PHOTO_BYTES) return { error: "Image is larger than 5MB" };
+  if (!file.type.startsWith("image/")) return { error: "Please choose an image" };
+
+  const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+  const path = `prospects/${id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  const admin = createAdminClient();
+  const { error } = await admin.storage
+    .from("pms-media")
+    .upload(path, buffer, { contentType: file.type, upsert: false });
+  if (error) {
+    console.error("[uploadBuildingPhoto] storage error:", error);
+    return { error: "Upload failed" };
+  }
+
+  const { data } = admin.storage.from("pms-media").getPublicUrl(path);
+  const url = data.publicUrl;
+
+  const prev = await prisma.prospect.findUnique({
+    where: { id },
+    select: { buildingPhoto: true },
+  });
   await prisma.prospect.update({ where: { id }, data: { buildingPhoto: url } });
+  await removeStoredPhoto(prev?.buildingPhoto ?? null); // clean up the replaced photo
+
+  revalidate(id);
+  return { ok: true, id };
+}
+
+/** Clear the building photo and delete it from storage (server-side). */
+export async function removeBuildingPhoto(id: string): Promise<ActionResult> {
+  if (!(await getSuperAdmin())) return { error: "Not authorized" };
+  const prev = await prisma.prospect.findUnique({
+    where: { id },
+    select: { buildingPhoto: true },
+  });
+  await prisma.prospect.update({ where: { id }, data: { buildingPhoto: null } });
+  await removeStoredPhoto(prev?.buildingPhoto ?? null);
   revalidate(id);
   return { ok: true, id };
 }
@@ -312,5 +370,33 @@ export async function deleteFollowup(id: string, prospectId: string): Promise<Ac
   if (!(await getSuperAdmin())) return { error: "Not authorized" };
   await prisma.prospectFollowup.delete({ where: { id } });
   revalidate(prospectId);
+  return { ok: true };
+}
+
+/* ── CRM goals / targets ─────────────────────────────────────────────────── */
+
+function posInt(v: FormDataEntryValue | null, fallback: number): number {
+  const n = typeof v === "string" ? parseInt(v, 10) : NaN;
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+export async function updateCrmTargets(fd: FormData): Promise<ActionResult> {
+  if (!(await getSuperAdmin())) return { error: "Not authorized" };
+  const existing = await prisma.crmSettings.findFirst({ orderBy: { createdAt: "asc" } });
+  const data = {
+    targetVisits: posInt(fd.get("targetVisits"), 40),
+    targetDemos: posInt(fd.get("targetDemos"), 15),
+    targetInterested: posInt(fd.get("targetInterested"), 10),
+    targetSigned: posInt(fd.get("targetSigned"), 5),
+    targetActive: posInt(fd.get("targetActive"), 3),
+    foundingSpots: posInt(fd.get("foundingSpots"), 5),
+  };
+  if (existing) {
+    await prisma.crmSettings.update({ where: { id: existing.id }, data });
+  } else {
+    await prisma.crmSettings.create({ data });
+  }
+  revalidatePath("/admin");
+  revalidatePath("/admin/settings");
   return { ok: true };
 }

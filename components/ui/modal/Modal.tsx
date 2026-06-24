@@ -219,6 +219,23 @@ export function Modal({
                 />
               </div>
             )}
+            {/* Bottom-sheet grab handle — a guaranteed tap-to-close affordance on
+                every bottom sheet (explicit, or a sheet auto-converted on mobile),
+                so even modals without a header X can always be dismissed. */}
+            {(variant === "bottom-sheet" || (isSheet && fullScreenOnMobile)) && (
+              <div
+                className={`${variant === "bottom-sheet" ? "flex" : "flex sm:hidden"} shrink-0 items-center justify-center pt-2.5 pb-1`}
+              >
+                <button
+                  type="button"
+                  onClick={onClose}
+                  aria-label="Close"
+                  className="group flex items-center justify-center p-1.5"
+                >
+                  <span className="h-1.5 w-10 rounded-full bg-border-default transition-colors group-hover:bg-border-strong" />
+                </button>
+              </div>
+            )}
             {children}
           </DialogPanel>
         </div>

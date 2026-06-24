@@ -12,9 +12,10 @@
 
 import { useState, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { createClient } from "@/utils/supabase/client";
 import { ArrowUpTrayIcon, XMarkIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
+import { compressImage } from "@/utils/compress-image";
+import { uploadMedia, deleteMedia } from "@/app/dashboard/actions/upload-media";
 
 interface Props {
   /** Pre-existing photo URLs loaded from the DB (edit mode). */
@@ -31,7 +32,6 @@ export default function PhotoUpload({ initialPhotos = [], folder, name = "photos
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const supabase = createClient();
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -44,25 +44,25 @@ export default function PhotoUpload({ initialPhotos = [], folder, name = "photos
         setUploadError(t("onlyImages"));
         continue;
       }
-      if (file.size > 5 * 1024 * 1024) {
+
+      // Downscale + re-encode in the browser so big camera photos upload fast.
+      const optimized = await compressImage(file, { maxDim: 1600, quality: 0.8 });
+      if (optimized.size > 5 * 1024 * 1024) {
         setUploadError(t("sizeLimit"));
         continue;
       }
 
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      // Upload server-side (service-role) — the browser client is RLS-blocked.
+      const fd = new FormData();
+      fd.set("folder", folder);
+      fd.set("file", optimized);
+      const res = await uploadMedia(fd);
 
-      const { error } = await supabase.storage
-        .from("pms-media")
-        .upload(path, file, { cacheControl: "3600", upsert: false });
-
-      if (error) {
-        setUploadError(t("uploadFailed", { message: error.message }));
+      if (!res.ok) {
+        setUploadError(t("uploadFailed", { message: res.error }));
         continue;
       }
-
-      const { data } = supabase.storage.from("pms-media").getPublicUrl(path);
-      added.push(data.publicUrl);
+      added.push(res.url);
     }
 
     setPhotos((prev) => [...prev, ...added]);
@@ -70,11 +70,7 @@ export default function PhotoUpload({ initialPhotos = [], folder, name = "photos
   };
 
   const removePhoto = async (url: string) => {
-    // Extract path after the bucket name in the public URL
-    const pathPart = url.split("/pms-media/")[1];
-    if (pathPart) {
-      await supabase.storage.from("pms-media").remove([pathPart]);
-    }
+    await deleteMedia(url);
     setPhotos((prev) => prev.filter((p) => p !== url));
   };
 

@@ -236,9 +236,14 @@ export default async function PropertyDetailsPage({
                       </Badge>
                     </td>
                     <td className="relative whitespace-nowrap py-4 ps-3 pe-4 text-end text-sm font-medium sm:pe-6">
-                      <Link href={`/dashboard/units/${unit.id}/edit`} className="text-blue-600 hover:text-blue-900">
-                        {t("table.edit")}
-                      </Link>
+                      <div className="flex items-center justify-end gap-3">
+                        <Link href={`/dashboard/units/${unit.id}`} className="text-blue-600 hover:text-blue-900">
+                          {t("table.view")}
+                        </Link>
+                        <Link href={`/dashboard/units/${unit.id}/edit`} className="text-gray-500 hover:text-gray-700">
+                          {t("table.edit")}
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                   );

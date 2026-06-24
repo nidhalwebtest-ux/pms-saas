@@ -87,7 +87,7 @@ export function FilterBarSearch({ search, className = "" }: FilterBarSearchProps
         placeholder={placeholder}
         aria-label={placeholder ?? "Search"}
         className={
-          "w-full h-9 rounded-lg bg-subtle border border-border-default ps-9 pe-3 text-[13px] " +
+          "w-full h-8 rounded-lg bg-subtle border border-border-default ps-9 pe-3 text-[13px] " +
           "placeholder:text-fg-tertiary " +
           "hover:bg-surface hover:border-border-strong " +
           "focus:bg-surface focus:border-brand-400 focus:outline-none focus:shadow-focus " +

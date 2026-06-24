@@ -822,6 +822,7 @@
         "basePrice": "السعر الأساسي",
         "status": "الحالة",
         "actions": "إجراءات",
+        "view": "عرض",
         "edit": "تعديل",
         "photosCount": "{count, plural, zero {لا صور} one {صورة واحدة} two {صورتان} few {# صور} many {# صورة} other {# صورة}}",
         "bedsBaths": "{beds} غرفة / {baths} حمام",

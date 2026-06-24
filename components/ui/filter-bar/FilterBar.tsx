@@ -73,7 +73,7 @@ export function FilterBar({
   return (
     <div
       data-testid={testId}
-      className={`flex flex-col gap-3 px-3 sm:px-[18px] py-[14px] bg-surface border border-border-subtle rounded-t-xl ${className}`}
+      className={`flex flex-col gap-2.5 px-3 sm:px-[18px] py-2.5 bg-surface border border-border-subtle rounded-t-xl ${className}`}
     >
       {/* Row 1 — search + collapsed trigger + actions */}
       {(search || actions || view || collapsedFiltersTrigger) && (

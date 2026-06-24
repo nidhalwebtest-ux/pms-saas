@@ -822,6 +822,7 @@
         "basePrice": "Base Price",
         "status": "Status",
         "actions": "Actions",
+        "view": "View",
         "edit": "Edit",
         "photosCount": "{count, plural, one {# photo} other {# photos}}",
         "bedsBaths": "{beds} Bed / {baths} Bath",

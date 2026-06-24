@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { useCan } from "@/components/PermissionsProvider";
 import {
@@ -31,10 +31,12 @@ import {
   Badge,
   DataTable,
   EmptyState,
+  FilterBar,
   NoBuildingsFirstTime,
   SegmentedControl,
   getPropertyTypeBadge,
   type PropertyTypeKey,
+  type QuickFilter,
 } from "@/components/ui";
 import { SearchIllustration } from "@/components/ui/empty-state/illustrations";
 import {
@@ -295,11 +297,11 @@ function SummaryCard({ property }: { property: PropertyRow }) {
 function CardEmptyState({
   hasAnyBuildings,
   hasActiveFilters,
-  clearHref,
+  onClear,
 }: {
   hasAnyBuildings: boolean;
   hasActiveFilters: boolean;
-  clearHref: string;
+  onClear: () => void;
 }) {
   const t = useTranslations("buildings.empty");
   if (!hasAnyBuildings) {
@@ -325,26 +327,28 @@ function CardEmptyState({
       <BuildingOffice2Icon className="h-10 w-10 text-gray-200" />
       <p className="text-sm text-gray-500">{t("noMatch")}</p>
       {hasActiveFilters && (
-        <Link
-          href={clearHref}
+        <button
+          type="button"
+          onClick={onClear}
           className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:border-blue-300 hover:text-blue-600 transition-colors"
         >
           <FunnelIcon className="h-3.5 w-3.5" />
           {t("clearFilters")}
-        </Link>
+        </button>
       )}
     </div>
   );
 }
 
+const PROPERTY_TYPE_OPTIONS = ["", "RESIDENTIAL", "MIXED", "HOTEL", "COMMERCIAL"] as const;
+type PropertyStatusTab = "all" | "active" | "inactive" | "archived";
+
 export default function PropertiesView({
   properties,
   initialSort,
-  totalUnfiltered,
 }: {
   properties: PropertyRow[];
   initialSort: string;
-  totalUnfiltered: number;
 }) {
   const t       = useTranslations("buildings");
   const canCreate = useCan("buildings", "CREATE");
@@ -355,6 +359,8 @@ export default function PropertiesView({
   const tDet    = useTranslations("buildings.detail");
   const tPrint  = useTranslations("buildings.print");
   const tCsv    = useTranslations("buildings.csv");
+  const tF      = useTranslations("buildings.filters");
+  const tS      = useTranslations("buildings.status");
   const locale  = useLocale();
   const router  = useRouter();
 
@@ -407,14 +413,48 @@ export default function PropertiesView({
   const [viewMode, setViewMode] = useState<"table" | "card" | "summary">("table");
   const [sorting,  setSorting]  = useState<SortingState>(parseSort(initialSort));
 
+  // ── Filter state (all client-side) ────────────────────────────────────────
+  const [search, setSearch]   = useState("");
+  const [typeF, setTypeF]     = useState("");
+  const [status, setStatus]   = useState<PropertyStatusTab>("active");
+
+  const totalUnfiltered = properties.length;
+
+  const statusCounts = useMemo(() => ({
+    all:      properties.length,
+    active:   properties.filter((p) => !p.isArchived && p.isActive).length,
+    inactive: properties.filter((p) => !p.isArchived && !p.isActive).length,
+    archived: properties.filter((p) => p.isArchived).length,
+  }), [properties]);
+
+  const filtered = useMemo(() => {
+    let rows = properties;
+    switch (status) {
+      case "active":   rows = rows.filter((p) => !p.isArchived && p.isActive); break;
+      case "inactive": rows = rows.filter((p) => !p.isArchived && !p.isActive); break;
+      case "archived": rows = rows.filter((p) => p.isArchived); break;
+    }
+    if (typeF) rows = rows.filter((p) => p.type === typeF);
+    const q = search.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter((p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.city.toLowerCase().includes(q) ||
+        (p.address?.toLowerCase().includes(q) ?? false) ||
+        (p.description?.toLowerCase().includes(q) ?? false),
+      );
+    }
+    return rows;
+  }, [properties, status, typeF, search]);
+
   // Card and summary views need a sorted array too — derive it from the
   // active TanStack sort by hand (those views do not own a TanStack table).
   const sorted = useMemo(() => {
     const sort = sorting[0];
-    if (!sort) return properties;
+    if (!sort) return filtered;
     const dir = sort.desc ? -1 : 1;
     const k = sort.id as keyof PropertyRow;
-    return [...properties].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       let av: unknown = a[k];
       let bv: unknown = b[k];
       if (typeof av === "string") av = (av as string).toLowerCase();
@@ -424,7 +464,7 @@ export default function PropertiesView({
       if (bv == null) return -1;
       return (av < bv ? -1 : av > bv ? 1 : 0) * dir;
     });
-  }, [properties, sorting]);
+  }, [filtered, sorting]);
 
   const handlePrint = () => window.print();
 
@@ -433,13 +473,8 @@ export default function PropertiesView({
 
   // Distinguish "no buildings exist" vs "filters hide them" so the empty state
   // can show the right CTA.
-  const searchParams   = useSearchParams();
-  const pathname       = usePathname();
-  const hasActiveFilters =
-    !!searchParams.get("q") ||
-    !!searchParams.get("type") ||
-    (searchParams.get("status") ?? "active") !== "active";
-  const clearFiltersHref = pathname; // strip all params
+  const hasActiveFilters = status !== "active" || !!typeF || !!search;
+  const clearFilters = () => { setStatus("active"); setTypeF(""); setSearch(""); };
 
   // ── Columns + row actions for the table view ──────────────────────────────
   const columns = useMemo(
@@ -465,8 +500,28 @@ export default function PropertiesView({
     [tTable, router],
   );
 
+  const statusTabs: PropertyStatusTab[] = ["all", "active", "inactive", "archived"];
+  const quickFilters: QuickFilter[] = statusTabs.map((k) => ({ id: k, label: tS(k), count: statusCounts[k] }));
+
   return (
     <div className="space-y-3">
+
+      {/* ── Filters (client-side, instant) ───────────────────────── */}
+      <FilterBar
+        search={{ value: search, onChange: setSearch, placeholder: tF("searchPlaceholder") }}
+        quickFilters={quickFilters}
+        activeQuickFilter={status}
+        onQuickFilterChange={(s) => setStatus(s as PropertyStatusTab)}
+        filters={[
+          {
+            id: "type", type: "select", label: tF("typeLabel"),
+            value: typeF, allValue: "", onChange: setTypeF,
+            options: PROPERTY_TYPE_OPTIONS.map((v) => ({ value: v, label: v === "" ? tT("all") : tT(v) })),
+          },
+        ]}
+        activeFiltersDisplay="chips"
+        onClearAll={() => setTypeF("")}
+      />
 
       {/* ── Action / toolbar bar ─────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
@@ -520,7 +575,7 @@ export default function PropertiesView({
       {viewMode === "table" && (
         <>
           <DataTable<PropertyRow>
-            data={properties}
+            data={filtered}
             columns={columns}
             mode="client"
             sorting={{ state: sorting, onChange: setSorting }}
@@ -541,7 +596,7 @@ export default function PropertiesView({
                     hasActiveFilters
                       ? {
                           label: t("empty.clearFilters"),
-                          onClick: () => router.push(clearFiltersHref),
+                          onClick: clearFilters,
                         }
                       : undefined
                   }
@@ -552,17 +607,17 @@ export default function PropertiesView({
           />
 
           {/* Footer summary */}
-          {properties.length > 0 && (
+          {filtered.length > 0 && (
             <p className="px-4 text-xs text-fg-tertiary ltr-numbers">
-              {tTable("footerBuildings", { count: properties.length })}
+              {tTable("footerBuildings", { count: filtered.length })}
               {tTable("footerSeparator")}
-              {tTable("footerTotalUnits", { count: properties.reduce((s, p) => s + p.totalUnits, 0) })}
+              {tTable("footerTotalUnits", { count: filtered.reduce((s, p) => s + p.totalUnits, 0) })}
               {tTable("footerSeparator")}
               <span className="text-success-700 font-medium">
-                {tTable("footerOccupied", { count: properties.reduce((s, p) => s + p.occupiedUnits, 0) })}
+                {tTable("footerOccupied", { count: filtered.reduce((s, p) => s + p.occupiedUnits, 0) })}
               </span>
               {tTable("footerSeparator")}
-              {tTable("footerVacant", { count: properties.reduce((s, p) => s + p.vacantUnits, 0) })}
+              {tTable("footerVacant", { count: filtered.reduce((s, p) => s + p.vacantUnits, 0) })}
             </p>
           )}
         </>
@@ -576,7 +631,7 @@ export default function PropertiesView({
               <CardEmptyState
                 hasAnyBuildings={totalUnfiltered > 0}
                 hasActiveFilters={hasActiveFilters}
-                clearHref={clearFiltersHref}
+                onClear={clearFilters}
               />
             </div>
           ) : (
@@ -607,7 +662,7 @@ export default function PropertiesView({
               <CardEmptyState
                 hasAnyBuildings={totalUnfiltered > 0}
                 hasActiveFilters={hasActiveFilters}
-                clearHref={clearFiltersHref}
+                onClear={clearFilters}
               />
             </div>
           ) : (

@@ -4,7 +4,6 @@ import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import { createClient } from "@/utils/supabase/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import PropertyFilters from "./PropertyFilters";
 import PropertiesView from "./PropertiesView";
 
 export type PropertyRow = {
@@ -27,17 +26,8 @@ export type PropertyRow = {
   revenueThisMonth: number;
 };
 
-export default async function PropertiesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
-}) {
+export default async function PropertiesPage() {
   await assertView("buildings");
-  const params = await searchParams;
-  const q           = params.q      || "";
-  const typeFilter  = params.type   || "";
-  const statusFilter = params.status || "active"; // "active" | "inactive" | "all"
-  const sortParam   = params.sort   || "name_asc";
 
   // Auth
   const supabase = await createClient();
@@ -57,50 +47,17 @@ export default async function PropertiesPage({
   const accessible = await getSessionAccessibleProperties();
   const scopeFilter: Prisma.PropertyWhereInput = accessible ? { id: { in: accessible } } : {};
 
+  // Load ALL buildings in scope (every status). Search / type / status tab all
+  // filter client-side over these rows — no DB refetch.
   const whereClause: Prisma.PropertyWhereInput = {
     organizationId: dbUser.organizationId,
     ...scopeFilter,
-    ...(q && {
-      OR: [
-        { name:        { contains: q, mode: "insensitive" } },
-        { city:        { contains: q, mode: "insensitive" } },
-        { address:     { contains: q, mode: "insensitive" } },
-        { description: { contains: q, mode: "insensitive" } },
-      ],
-    }),
-    ...(typeFilter && { type: typeFilter as any }),
-    // Status filter:
-    //   "all"      → no archive/active filter (show every building)
-    //   "active"   → not archived, isActive=true
-    //   "inactive" → not archived, isActive=false
-    //   "archived" → archived only
-    ...(statusFilter === "archived" && { isArchived: true }),
-    ...(statusFilter === "active"   && { isArchived: false, isActive: true  }),
-    ...(statusFilter === "inactive" && { isArchived: false, isActive: false }),
   };
-
-  // Build ORDER BY (server-side for text fields; derived fields sorted client-side)
-  let orderByClause: Prisma.PropertyOrderByWithRelationInput = { name: "asc" };
-  if (sortParam === "name_desc")    orderByClause = { name:      "desc" };
-  if (sortParam === "city_asc")     orderByClause = { city:      "asc"  };
-  if (sortParam === "city_desc")    orderByClause = { city:      "desc" };
-  if (sortParam === "type_asc")     orderByClause = { type:      "asc"  };
-  if (sortParam === "type_desc")    orderByClause = { type:      "desc" };
-  if (sortParam === "newest")       orderByClause = { createdAt: "desc" };
-  if (sortParam === "oldest")       orderByClause = { createdAt: "asc"  };
 
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  // Counts by status are independent of search/type filters so the tab badges
-  // and the "no buildings yet" detection stay accurate regardless of what the
-  // user typed in the search box.
-  const orgScope: Prisma.PropertyWhereInput = {
-    organizationId: dbUser.organizationId,
-    ...scopeFilter,
-  };
-
-  const [raw, allocationsThisMonth, activeCount, inactiveCount, archivedCount] = await Promise.all([
+  const [raw, allocationsThisMonth] = await Promise.all([
     prisma.property.findMany({
       where: whereClause,
       include: {
@@ -116,7 +73,7 @@ export default async function PropertiesPage({
           },
         },
       },
-      orderBy: orderByClause,
+      orderBy: { name: "asc" },
     }),
     // Revenue is sourced from invoice payment allocations (not raw payments
     // via reservation→unit→property). This way cancelled invoices and
@@ -133,17 +90,7 @@ export default async function PropertiesPage({
         invoice: { select: { propertyId: true } },
       },
     }),
-    prisma.property.count({ where: { ...orgScope, isArchived: false, isActive: true  } }),
-    prisma.property.count({ where: { ...orgScope, isArchived: false, isActive: false } }),
-    prisma.property.count({ where: { ...orgScope, isArchived: true } }),
   ]);
-
-  const statusCounts = {
-    all:      activeCount + inactiveCount + archivedCount,
-    active:   activeCount,
-    inactive: inactiveCount,
-    archived: archivedCount,
-  };
 
   // Build revenue map: propertyId → total OMR this month (via invoices)
   const revenueByProperty: Record<string, number> = {};
@@ -177,18 +124,7 @@ export default async function PropertiesPage({
 
   return (
     <div className="space-y-4">
-      <PropertyFilters
-        currentSearch={q}
-        currentType={typeFilter}
-        currentStatus={statusFilter}
-        totalResults={properties.length}
-        statusCounts={statusCounts}
-      />
-      <PropertiesView
-        properties={properties}
-        initialSort={sortParam}
-        totalUnfiltered={statusCounts.all}
-      />
+      <PropertiesView properties={properties} initialSort="name_asc" />
     </div>
   );
 }

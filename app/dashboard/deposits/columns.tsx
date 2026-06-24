@@ -9,6 +9,7 @@ import { formatAmount } from "@/lib/format-currency";
 export interface DepositRow {
   groupId: string;
   date: string;        // ISO
+  buildingId: string;
   building: string;
   bank: string;
   amount: number;

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { assertView } from "@/lib/access";
-import { getSessionAccessibleProperties } from "@/lib/property-scope";
+import { getEffectivePropertyIds } from "@/lib/property-scope";
+import { getSelectedPropertyId } from "@/lib/selected-property";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
@@ -11,12 +12,13 @@ import {
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import ExpensesListClient from "./ExpensesListClient";
+import type { ExpenseRow } from "./columns";
 
-export default async function ExpensesPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ status?: string; propertyId?: string; categoryId?: string }>;
-}) {
+function iso(d: Date | null): string | null {
+  return d ? d.toISOString() : null;
+}
+
+export default async function ExpensesPage() {
   const access = await assertView("expenses");
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -27,37 +29,76 @@ export default async function ExpensesPage({
     select: { organizationId: true, role: true },
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
-
-  const sp = await searchParams;
+  const orgId = dbUser.organizationId;
 
   // Default tab by role
-  let initialStatus = sp.status ?? "";
-  if (!sp.status) {
-    if (dbUser.role === "STAFF") initialStatus = "ALL";
-    else if (dbUser.role === "MANAGER" || dbUser.role === "OWNER") initialStatus = "PENDING";
-    else if (dbUser.role === "ACCOUNTANT") initialStatus = "PROCESSED";
-    else initialStatus = "ALL";
-  }
+  let initialStatus = "ALL";
+  if (dbUser.role === "STAFF") initialStatus = "ALL";
+  else if (dbUser.role === "MANAGER" || dbUser.role === "OWNER") initialStatus = "PENDING";
+  else if (dbUser.role === "ACCOUNTANT") initialStatus = "PROCESSED";
 
-  // Restrict the building filter to the user's accessible buildings.
-  const accessible = await getSessionAccessibleProperties();
+  // Building scope: sidebar-selected building clamped to the user's accessible
+  // set (null = unrestricted). Mirrors the old /api/expenses behaviour.
+  const propIds = await getEffectivePropertyIds(await getSelectedPropertyId());
 
-  const [properties, categories] = await Promise.all([
+  // The building filter dropdown is restricted to the user's accessible
+  // buildings (propIds === null means unrestricted → all org buildings).
+  const where = {
+    organizationId: orgId,
+    ...(dbUser.role === "STAFF" ? { submittedById: user.id } : {}),
+    ...(propIds ? { propertyId: { in: propIds } } : {}),
+  };
+
+  const [raw, properties, categories] = await Promise.all([
+    prisma.expense.findMany({
+      where,
+      include: {
+        category: { select: { id: true, name: true, nameAr: true, icon: true } },
+        property: { select: { id: true, name: true } },
+        submittedBy: { select: { id: true, firstName: true, lastName: true } },
+        reviewedBy: { select: { id: true, firstName: true, lastName: true } },
+        processedBy: { select: { id: true, firstName: true, lastName: true } },
+      },
+      orderBy: { submittedAt: "desc" },
+      take: 5000,
+    }),
     prisma.property.findMany({
       where: {
-        organizationId: dbUser.organizationId,
+        organizationId: orgId,
         isArchived: false,
-        ...(accessible ? { id: { in: accessible } } : {}),
+        ...(propIds ? { id: { in: propIds } } : {}),
       },
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
     prisma.expenseCat.findMany({
-      where: { organizationId: dbUser.organizationId },
+      where: { organizationId: orgId },
       select: { id: true, name: true, icon: true, isActive: true },
       orderBy: { sortOrder: "asc" },
     }),
   ]);
+
+  const expenses: ExpenseRow[] = raw.map((e) => ({
+    id:              e.id,
+    expenseNumber:   e.expenseNumber,
+    description:     e.description,
+    amount:          Number(e.amount),
+    status:          e.status as ExpenseRow["status"],
+    receiptImage:    e.receiptImage ?? "",
+    receiptImage2:   e.receiptImage2,
+    notes:           e.notes,
+    rejectionReason: e.rejectionReason,
+    paymentMethod:   e.paymentMethod,
+    bankReference:   e.bankReference,
+    submittedAt:     e.submittedAt.toISOString(),
+    reviewedAt:      iso(e.reviewedAt),
+    processedAt:     iso(e.processedAt),
+    category:        e.category,
+    property:        e.property,
+    submittedBy:     e.submittedBy,
+    reviewedBy:      e.reviewedBy,
+    processedBy:     e.processedBy,
+  }));
 
   const canSubmit  = access.canCreate("expenses") && ["OWNER", "STAFF"].includes(dbUser.role);
   const canManage  = access.can("expenses", "EDIT") && ["OWNER", "MANAGER"].includes(dbUser.role);
@@ -105,8 +146,7 @@ export default async function ExpensesPage({
         role={dbUser.role}
         userId={user.id}
         initialStatus={initialStatus}
-        initialPropertyId={sp.propertyId ?? ""}
-        initialCategoryId={sp.categoryId ?? ""}
+        expenses={expenses}
         properties={properties}
         categories={categories}
       />

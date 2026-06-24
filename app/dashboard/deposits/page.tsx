@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { Prisma } from "@prisma/client";
 import { ArrowUpTrayIcon } from "@heroicons/react/24/outline";
@@ -8,30 +7,16 @@ import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { getEffectivePropertyIds, getSessionAccessibleProperties } from "@/lib/property-scope";
 import { getCurrentCurrency } from "@/lib/get-org";
-import { formatAmount } from "@/lib/format-currency";
-import DepositsFilters from "./DepositsFilters";
-import DepositsTable from "./DepositsTable";
+import DepositsView from "./DepositsView";
 import type { DepositRow } from "./columns";
 
-function startOfDay(d: Date) { const r = new Date(d); r.setHours(0, 0, 0, 0); return r; }
-function endOfDay(d: Date) { const r = new Date(d); r.setHours(23, 59, 59, 999); return r; }
-
-export default async function DepositsListPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
-}) {
+export default async function DepositsListPage() {
   const access = await assertView("reconciliation");
   const orgUser = await requireOrgUser();
   const orgId = orgUser.organizationId;
-  const params = await searchParams;
-  const q = params.q ?? "";
-  const period = params.period ?? "all";
-  const building = params.building ?? "";
 
   const currency = await getCurrentCurrency();
   const t = await getTranslations("deposits");
-  const tList = await getTranslations("deposits.list");
 
   // Buildings the user may see (for the filter dropdown).
   const accessible = await getSessionAccessibleProperties();
@@ -41,21 +26,12 @@ export default async function DepositsListPage({
     orderBy: { name: "asc" },
   });
 
-  // Building scope (drawer's propertyId), honoring an explicit building filter.
-  const propIds = await getEffectivePropertyIds(building);
+  // Building scope (drawer's propertyId) from the sidebar property selector.
+  const propIds = await getEffectivePropertyIds();
 
-  const now = new Date();
-  const today = startOfDay(now);
-  const weekStart = new Date(today); weekStart.setDate(today.getDate() - today.getDay());
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  function periodRange(p: string): { gte?: Date; lte?: Date } {
-    if (p === "today") return { gte: today, lte: endOfDay(now) };
-    if (p === "week") return { gte: weekStart, lte: endOfDay(now) };
-    if (p === "month") return { gte: monthStart, lte: endOfDay(now) };
-    return {};
-  }
-
-  const base: Prisma.BankTransactionWhereInput = {
+  // Load ALL deposits in scope in ONE query. Filtering/tabs/search and the
+  // footer total are computed client-side over these rows — no DB refetch.
+  const where: Prisma.BankTransactionWhereInput = {
     organizationId: orgId,
     type: "TRANSFER_OUT",
     isVoid: false,
@@ -63,37 +39,18 @@ export default async function DepositsListPage({
     ...(propIds ? { bankAccount: { propertyId: { in: propIds } } } : {}),
   };
 
-  const [allCount, todayCount, weekCount, monthCount] = await Promise.all([
-    prisma.bankTransaction.count({ where: base }),
-    prisma.bankTransaction.count({ where: { ...base, date: periodRange("today") } }),
-    prisma.bankTransaction.count({ where: { ...base, date: periodRange("week") } }),
-    prisma.bankTransaction.count({ where: { ...base, date: periodRange("month") } }),
-  ]);
-
-  const dateRange = periodRange(period);
-  const where: Prisma.BankTransactionWhereInput = {
-    ...base,
-    ...(dateRange.gte || dateRange.lte ? { date: dateRange } : {}),
-    ...(q ? {
-      OR: [
-        { reference: { contains: q, mode: "insensitive" } },
-        { bankAccount: { property: { name: { contains: q, mode: "insensitive" } } } },
-      ],
-    } : {}),
-  };
-
   const transfers = await prisma.bankTransaction.findMany({
     where,
     orderBy: { date: "desc" },
-    take: 200,
+    take: 5000,
     select: {
       date: true, amount: true, reference: true, transferGroupId: true,
-      bankAccount: { select: { property: { select: { name: true } } } },
+      bankAccount: { select: { propertyId: true, property: { select: { name: true } } } },
     },
   });
 
   // Pair each drawer leg with its bank (DEPOSIT_IN) leg for the bank name.
-  const groupIds = transfers.map((t) => t.transferGroupId!).filter(Boolean);
+  const groupIds = transfers.map((tr) => tr.transferGroupId!).filter(Boolean);
   const bankLegs = groupIds.length
     ? await prisma.bankTransaction.findMany({
         where: { transferGroupId: { in: groupIds }, type: "DEPOSIT_IN" },
@@ -105,14 +62,13 @@ export default async function DepositsListPage({
   const rows: DepositRow[] = transfers.map((tr) => ({
     groupId: tr.transferGroupId!,
     date: tr.date.toISOString(),
+    buildingId: tr.bankAccount?.propertyId ?? "",
     building: tr.bankAccount?.property?.name ?? "—",
     bank: bankByGroup.get(tr.transferGroupId) ?? "—",
     amount: Math.abs(Number(tr.amount)),
     reference: tr.reference,
   }));
 
-  const total = rows.reduce((s, r) => s + r.amount, 0);
-  const hasActiveFilters = !!q || !!building || period !== "all";
   const canManage = access.canDelete("reconciliation");
 
   return (
@@ -124,9 +80,6 @@ export default async function DepositsListPage({
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
-            <p className="mt-0.5 text-sm text-gray-500">
-              {tList("summary", { count: rows.length, total: formatAmount(total, currency) })}
-            </p>
           </div>
         </div>
         {access.canCreate("reconciliation") && (
@@ -139,31 +92,12 @@ export default async function DepositsListPage({
         )}
       </div>
 
-      <div className="mb-4">
-        <DepositsFilters
-          currentPeriod={period}
-          currentQ={q}
-          currentBuilding={building}
-          counts={{ all: allCount, today: todayCount, week: weekCount, month: monthCount }}
-          buildings={buildings}
-        />
-      </div>
-
-      <DepositsTable
+      <DepositsView
         deposits={rows}
         currency={currency}
-        hasActiveFilters={hasActiveFilters}
+        buildings={buildings}
         canManage={canManage}
       />
-
-      {rows.length > 0 && (
-        <div className="mt-4 px-1 text-xs text-fg-tertiary">
-          <span className="font-medium text-fg">
-            {tList("totalsLabel", { count: rows.length })}{" "}
-            <strong className="text-fg tabular-nums ltr-numbers ms-2">{formatAmount(total, currency)}</strong>
-          </span>
-        </div>
-      )}
     </div>
   );
 }

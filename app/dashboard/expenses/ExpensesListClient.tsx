@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
@@ -9,7 +9,6 @@ import {
   XMarkIcon,
   EyeIcon,
   TrashIcon,
-  ArrowPathIcon,
   ClipboardDocumentCheckIcon,
 } from "@heroicons/react/24/outline";
 import type { SortingState } from "@tanstack/react-table";
@@ -41,21 +40,22 @@ const REJECT_REASON_KEYS = [
   "other",
 ] as const;
 
+const PAGE_SIZE = 25;
+
 export type { Expense };
 
 interface Props {
   role: string;
   userId: string;
   initialStatus: string;
-  initialPropertyId: string;
-  initialCategoryId: string;
+  expenses: Expense[];
   properties: { id: string; name: string }[];
   categories: { id: string; name: string; icon: string | null; isActive: boolean }[];
 }
 
 
 export default function ExpensesListClient({
-  role, userId, initialStatus, initialPropertyId, initialCategoryId, properties, categories,
+  role, userId, initialStatus, expenses, properties, categories,
 }: Props) {
   const tList = useTranslations("expenses.list");
   const tStatus = useTranslations("expenses.statuses");
@@ -68,16 +68,12 @@ export default function ExpensesListClient({
   const fmtAmount = useFormatAmount();
   const currency  = useOrgCurrency();
 
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [statusCounts, setStatusCounts] = useState<Record<string, { count: number; total: number }>>({});
-  const [loading, setLoading] = useState(true);
-
-  // Filters
-  const [statusFilter, setStatusFilter]   = useState(initialStatus);
-  const [propertyId, setPropertyId]       = useState(initialPropertyId);
-  const [categoryId, setCategoryId]       = useState(initialCategoryId);
-  const [search, setSearch]               = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  // ── Filters (all client-side, instant — no DB refetch) ──────────────────
+  const [statusFilter, setStatusFilter] = useState(initialStatus);
+  const [propertyId, setPropertyId]     = useState("");
+  const [categoryId, setCategoryId]     = useState("");
+  const [search, setSearch]             = useState("");
+  const [pageIndex, setPageIndex]       = useState(0);
 
   // Selection (bulk approve)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -94,37 +90,52 @@ export default function ExpensesListClient({
   const canApprove = ["OWNER", "MANAGER"].includes(role);
   const canProcess = ["OWNER", "ACCOUNTANT"].includes(role);
 
-  // Debounce search
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(search), 300);
-    return () => clearTimeout(t);
-  }, [search]);
+  // After a mutation, re-pull the server component data and clear selection.
+  const refresh = useCallback(() => {
+    setSelectedIds(new Set());
+    router.refresh();
+  }, [router]);
 
-  // ── Fetch ─────────────────────────────────────────────────────────────
-  const fetchExpenses = useCallback(async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (statusFilter && statusFilter !== "ALL") params.set("status", statusFilter);
-      if (propertyId) params.set("propertyId", propertyId);
-      if (categoryId) params.set("categoryId", categoryId);
-      if (debouncedSearch) params.set("search", debouncedSearch);
-      params.set("limit", "200");
-
-      const res = await fetch(`/api/expenses?${params.toString()}`);
-      const data = await res.json();
-      if (!res.ok) { toast.error(data.error ?? tList("toasts.loadFailed")); return; }
-      setExpenses(data.expenses ?? []);
-      setStatusCounts(data.statusCounts ?? {});
-      setSelectedIds(new Set()); // reset selection on refilter
-    } catch {
-      toast.error(tList("toasts.networkError"));
-    } finally {
-      setLoading(false);
+  // ── Tab counts (client-side, computed over the property/category/search-
+  //    filtered set so the counts track the active secondary filters) ──────
+  const baseFiltered = useMemo(() => {
+    let rows = expenses;
+    if (propertyId) rows = rows.filter((e) => e.property.id === propertyId);
+    if (categoryId) rows = rows.filter((e) => e.category.id === categoryId);
+    const q = search.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter((e) =>
+        e.description.toLowerCase().includes(q) ||
+        e.expenseNumber.toLowerCase().includes(q),
+      );
     }
-  }, [statusFilter, propertyId, categoryId, debouncedSearch, tList]);
+    return rows;
+  }, [expenses, propertyId, categoryId, search]);
 
-  useEffect(() => { fetchExpenses(); }, [fetchExpenses]);
+  const statusCounts = useMemo(() => {
+    const acc: Record<string, { count: number; total: number }> = {
+      ALL: { count: 0, total: 0 },
+      PENDING: { count: 0, total: 0 },
+      APPROVED: { count: 0, total: 0 },
+      REJECTED: { count: 0, total: 0 },
+      PROCESSED: { count: 0, total: 0 },
+    };
+    for (const e of baseFiltered) {
+      acc.ALL.count++;
+      acc.ALL.total += e.amount;
+      const s = acc[e.status];
+      if (s) { s.count++; s.total += e.amount; }
+    }
+    return acc;
+  }, [baseFiltered]);
+
+  // ── Filtered rows for the table ─────────────────────────────────────────
+  const filtered = useMemo(() => {
+    if (statusFilter && statusFilter !== "ALL") {
+      return baseFiltered.filter((e) => e.status === statusFilter);
+    }
+    return baseFiltered;
+  }, [baseFiltered, statusFilter]);
 
   // ── Actions ───────────────────────────────────────────────────────────
   async function handleApprove(id: string) {
@@ -143,7 +154,7 @@ export default function ExpensesListClient({
       const d = await res.json();
       if (!res.ok) { toast.error(d.error); return; }
       toast.success(tList("toasts.approved"));
-      fetchExpenses();
+      refresh();
     } catch { toast.error(tList("toasts.approveFailed")); }
   }
 
@@ -158,8 +169,7 @@ export default function ExpensesListClient({
       const d = await res.json();
       if (!res.ok) { toast.error(d.error); return; }
       toast.success(tList("toasts.bulkApproved", { count: d.approvedCount }));
-      setSelectedIds(new Set());
-      fetchExpenses();
+      refresh();
     } catch { toast.error(tList("toasts.bulkApproveFailed")); }
   }
 
@@ -177,7 +187,7 @@ export default function ExpensesListClient({
       const d = await res.json();
       if (!res.ok) { toast.error(d.error); return; }
       toast.success(tList("toasts.deleted"));
-      fetchExpenses();
+      refresh();
     } catch { toast.error(tList("toasts.deleteFailed")); }
   }
 
@@ -216,7 +226,7 @@ export default function ExpensesListClient({
           throw new Error(data.error ?? "reject failed");
         }
         toast.success(tRejectErr("rejected"));
-        fetchExpenses();
+        refresh();
       },
     });
   }
@@ -307,24 +317,23 @@ export default function ExpensesListClient({
     [tList],
   );
 
-  // Footer totals — kept from the original page footer.
+  // Footer totals — computed over the filtered rows.
   const footer = useMemo(() => {
-    const total = expenses.reduce((s, e) => s + e.amount, 0);
-    return { total, count: expenses.length };
-  }, [expenses]);
+    const total = filtered.reduce((s, e) => s + e.amount, 0);
+    return { total, count: filtered.length };
+  }, [filtered]);
 
   return (
     <div className="space-y-5">
       <FilterBar
         search={{
           value: search,
-          onChange: setSearch,
+          onChange: (v) => { setSearch(v); setPageIndex(0); },
           placeholder: tList("searchPlaceholder"),
-          debounceMs: 0, // local state already debounces via debouncedSearch
         }}
         quickFilters={quickFilters}
         activeQuickFilter={statusFilter}
-        onQuickFilterChange={setStatusFilter}
+        onQuickFilterChange={(s) => { setStatusFilter(s); setPageIndex(0); }}
         filters={[
           {
             id:       "property",
@@ -332,7 +341,7 @@ export default function ExpensesListClient({
             label:    tList("allBuildings"),
             value:    propertyId,
             allValue: "",
-            onChange: setPropertyId,
+            onChange: (v) => { setPropertyId(v); setPageIndex(0); },
             options:  [
               { value: "", label: tList("allBuildings") },
               ...properties.map((p) => ({ value: p.id, label: p.name })),
@@ -344,7 +353,7 @@ export default function ExpensesListClient({
             label:    tList("allCategories"),
             value:    categoryId,
             allValue: "",
-            onChange: setCategoryId,
+            onChange: (v) => { setCategoryId(v); setPageIndex(0); },
             options:  [
               { value: "", label: tList("allCategories") },
               ...categories.filter((c) => c.isActive).map((c) => ({
@@ -354,30 +363,25 @@ export default function ExpensesListClient({
             ],
           },
         ]}
-        actions={[
-          {
-            label:    tList("refresh"),
-            onClick:  fetchExpenses,
-            variant:  "ghost",
-            icon:     <ArrowPathIcon className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />,
-            disabled: loading,
-            iconOnlyMobile: true,
-          },
-        ]}
         activeFiltersDisplay="chips"
         onClearAll={() => {
           setPropertyId("");
           setCategoryId("");
+          setPageIndex(0);
         }}
       />
 
-      {/* ── Bulk action bar ──────────────────────────────────────────── */}
       {/* ── Table ────────────────────────────────────────────────────── */}
       <DataTable<Expense>
-        data={expenses}
+        data={filtered}
         columns={columns}
         mode="client"
         sorting={{ state: sorting, onChange: setSorting }}
+        pagination={{
+          pageIndex,
+          pageSize: PAGE_SIZE,
+          onChange: ({ pageIndex: next }) => setPageIndex(next),
+        }}
         selection={
           showCheckboxes
             ? {
@@ -392,7 +396,6 @@ export default function ExpensesListClient({
         bulkActions={showCheckboxes ? bulkActions : undefined}
         rowActions={rowActions}
         rowVariant={expenseRowVariant}
-        loading={loading}
         hasActiveFilters={
           !!search || statusFilter !== "ALL" || !!propertyId || !!categoryId
         }
@@ -419,6 +422,7 @@ export default function ExpensesListClient({
                 setPropertyId("");
                 setCategoryId("");
                 setSearch("");
+                setPageIndex(0);
               }}
             />
           )
@@ -427,7 +431,7 @@ export default function ExpensesListClient({
       />
 
       {/* Footer totals */}
-      {expenses.length > 0 && (
+      {filtered.length > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 text-xs text-fg-tertiary">
           <span className="font-medium text-fg">
             {tList("footerCount", { count: footer.count })}
@@ -446,7 +450,7 @@ export default function ExpensesListClient({
         <ProcessExpenseModal
           expense={processExpense}
           onClose={() => setProcessExpense(null)}
-          onDone={() => { setProcessExpense(null); fetchExpenses(); }}
+          onDone={() => { setProcessExpense(null); refresh(); }}
         />
       )}
       {lightboxImages && (

@@ -10,22 +10,8 @@ import { Prisma } from "@prisma/client";
 import { getCurrentCurrency } from "@/lib/get-org";
 import { formatAmount } from "@/lib/format-currency";
 import { BanknotesIcon } from "@heroicons/react/24/outline";
-import PaymentsTable from "./PaymentsTable";
-import PaymentsFilters from "./PaymentsFilters";
+import PaymentsView from "./PaymentsView";
 import type { PaymentRow } from "./columns";
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function startOfDay(d: Date) {
-  const r = new Date(d);
-  r.setHours(0, 0, 0, 0);
-  return r;
-}
-function endOfDay(d: Date) {
-  const r = new Date(d);
-  r.setHours(23, 59, 59, 999);
-  return r;
-}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -36,9 +22,6 @@ export default async function PaymentsListPage({
 }) {
   const access = await assertView("payments");
   const params = await searchParams;
-  const q        = params.q      ?? "";
-  const method   = params.method ?? "";
-  const period   = params.period ?? "all";
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -53,26 +36,9 @@ export default async function PaymentsListPage({
   const orgId = dbUser.organizationId;
 
   const currency = await getCurrentCurrency();
-  const t       = await getTranslations("payments");
+  const t = await getTranslations("payments");
   const tList = await getTranslations("payments.list");
 
-  // ── Date range for period filter ──────────────────────────────────────────
-  const now   = new Date();
-  const today = startOfDay(now);
-
-  const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - today.getDay()); // Sunday
-
-  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-
-  function periodRange(p: string): { gte?: Date; lte?: Date } {
-    if (p === "today") return { gte: today, lte: endOfDay(now) };
-    if (p === "week")  return { gte: weekStart, lte: endOfDay(now) };
-    if (p === "month") return { gte: monthStart, lte: endOfDay(now) };
-    return {};
-  }
-
-  // ── Tab counts ────────────────────────────────────────────────────────────
   // Building scope: a payment belongs to a building via its invoice or its
   // reservation's unit(s). Honor the sidebar-selected building; null = all.
   const propIds = await getEffectivePropertyIds(params.propertyId || (await getSelectedPropertyId()));
@@ -88,36 +54,13 @@ export default async function PaymentsListPage({
       }]
     : [];
 
-  const baseWhere: Prisma.PaymentWhereInput = {
-    organizationId: orgId,
-    ...(propScope.length ? { AND: propScope } : {}),
-  };
-  const [allCount, todayCount, weekCount, monthCount] = await Promise.all([
-    prisma.payment.count({ where: baseWhere }),
-    prisma.payment.count({ where: { ...baseWhere, date: periodRange("today") } }),
-    prisma.payment.count({ where: { ...baseWhere, date: periodRange("week") } }),
-    prisma.payment.count({ where: { ...baseWhere, date: periodRange("month") } }),
-  ]);
-
-  // ── Main query ────────────────────────────────────────────────────────────
-  const dateRange = periodRange(period);
   const where: Prisma.PaymentWhereInput = {
     organizationId: orgId,
     ...(propScope.length ? { AND: propScope } : {}),
-    ...(dateRange.gte || dateRange.lte ? { date: dateRange } : {}),
-    ...(method ? { method: method as Prisma.EnumPaymentMethodFilter } : {}),
-    ...(q
-      ? {
-          OR: [
-            { tenant: { firstName: { contains: q, mode: "insensitive" } } },
-            { tenant: { lastName:  { contains: q, mode: "insensitive" } } },
-            { paymentNumber: { contains: q, mode: "insensitive" } },
-            { reference:     { contains: q, mode: "insensitive" } },
-          ],
-        }
-      : {}),
   };
 
+  // Load ALL payments in scope in one query. Tabs / search / method filter and
+  // footer totals are all computed client-side over these rows — no refetch.
   const payments = await prisma.payment.findMany({
     where,
     include: {
@@ -128,19 +71,8 @@ export default async function PaymentsListPage({
       },
     },
     orderBy: { date: "desc" },
-    take: 200,
+    take: 5000,
   });
-
-  // ── Footer totals ─────────────────────────────────────────────────────────
-  const totals = { all: 0, CASH: 0, CARD: 0, BANK_TRANSFER: 0, CHEQUE: 0 };
-  for (const p of payments) {
-    const amt = Number(p.amount);
-    totals.all += amt;
-    if (p.method === "CASH")          totals.CASH          += amt;
-    if (p.method === "CARD")          totals.CARD          += amt;
-    if (p.method === "BANK_TRANSFER") totals.BANK_TRANSFER += amt;
-    if (p.method === "CHEQUE")        totals.CHEQUE        += amt;
-  }
 
   // Serialize prisma → plain PaymentRow for the client. Decimal → number,
   // Date → ISO, allocations pre-joined to a comma-separated string.
@@ -162,7 +94,7 @@ export default async function PaymentsListPage({
     appliedTo: p.allocations.map((a) => a.invoice.invoiceNumber).join(", "),
   }));
 
-  const hasActiveFilters = !!q || !!method || period !== "all";
+  const grandTotal = paymentRows.reduce((s, p) => s + p.amount, 0);
 
   return (
     <div className="mx-auto max-w-full px-4 sm:px-6 lg:px-8 py-8">
@@ -177,8 +109,8 @@ export default async function PaymentsListPage({
             <h1 className="text-2xl font-bold text-gray-900">{t("titleFull")}</h1>
             <p className="mt-0.5 text-sm text-gray-500">
               {tList("summary", {
-                count: payments.length,
-                total: formatAmount(totals.all, currency),
+                count: paymentRows.length,
+                total: formatAmount(grandTotal, currency),
               })}
             </p>
           </div>
@@ -193,48 +125,8 @@ export default async function PaymentsListPage({
         )}
       </div>
 
-      {/* ── Filters ── */}
-      <div className="mb-4">
-        <PaymentsFilters
-          currentPeriod={period}
-          currentQ={q}
-          currentMethod={method}
-          counts={{ all: allCount, today: todayCount, week: weekCount, month: monthCount }}
-        />
-      </div>
-
-      {/* ── Table ── */}
-      <PaymentsTable
-        payments={paymentRows}
-        currency={currency}
-        hasActiveFilters={hasActiveFilters}
-      />
-
-      {/* ── Footer totals (by method) ── */}
-      {payments.length > 0 && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 px-1 text-xs text-fg-tertiary">
-          <span className="font-medium text-fg">
-            {tList("totalsLabel", { count: payments.length })}{" "}
-            <strong className="text-success-700 tabular-nums ltr-numbers ms-2">
-              {formatAmount(totals.all, currency)}
-            </strong>
-          </span>
-          <div className="flex flex-wrap gap-3">
-            <span className="text-success-700 ltr-numbers">
-              {tList("cashTotal", { total: formatAmount(totals.CASH, currency) })}
-            </span>
-            <span className="text-brand-700 ltr-numbers">
-              {tList("cardTotal", { total: formatAmount(totals.CARD, currency) })}
-            </span>
-            <span className="text-fg-secondary ltr-numbers">
-              {tList("bankTotal", { total: formatAmount(totals.BANK_TRANSFER, currency) })}
-            </span>
-            <span className="text-warning-700 ltr-numbers">
-              {tList("chequeTotal", { total: formatAmount(totals.CHEQUE, currency) })}
-            </span>
-          </div>
-        </div>
-      )}
+      {/* ── Filters + table + footer (all client-side) ── */}
+      <PaymentsView payments={paymentRows} currency={currency} />
     </div>
   );
 }

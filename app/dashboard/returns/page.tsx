@@ -8,30 +8,10 @@ import { getTranslations } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { getCurrentCurrency } from "@/lib/get-org";
-import { formatCurrency } from "@/lib/format-currency";
-import ReturnsTable from "./ReturnsTable";
-import ReturnsFilters from "./ReturnsFilters";
+import ReturnsView from "./ReturnsView";
 import type { ReturnRow } from "./columns";
 
-type StatusFilter = "ALL" | "ACTIVE" | "REFUND_PENDING" | "REFUNDED" | "CANCELLED";
-
-const PAGE_SIZE = 20;
-
-function statusWhere(filter: StatusFilter): Prisma.ReturnWhereInput {
-  switch (filter) {
-    case "ACTIVE":         return { status: "active", refundStatus: "NOT_REQUIRED" };
-    case "REFUND_PENDING": return { status: "active", refundStatus: "PENDING" };
-    case "REFUNDED":       return { refundStatus: "COMPLETED" };
-    case "CANCELLED":      return { status: "cancelled" };
-    default:               return {};
-  }
-}
-
-export default async function ReturnsPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ [key: string]: string | undefined }>;
-}) {
+export default async function ReturnsPage() {
   await assertView("returns");
   let orgUser: Awaited<ReturnType<typeof requireOrgUser>>;
   try {
@@ -40,21 +20,16 @@ export default async function ReturnsPage({
     redirect("/login");
   }
 
-  const params = await searchParams;
-  const statusFilter = (params.status?.toUpperCase() as StatusFilter) || "ALL";
-  const search = params.search || "";
-  const page = Math.max(1, parseInt(params.page || "1", 10));
-  // Building view: explicit filter wins, else the sidebar-selected building.
-  const propertyId = params.propertyId || (await getSelectedPropertyId());
-
-  const currency = await getCurrentCurrency();
-  const t       = await getTranslations("returns");
-
-  // Limit to the user's accessible buildings (null = unrestricted), via the
-  // return's reservation → unit relation.
+  // Building scope: sidebar-selected building, limited to accessible buildings.
+  const propertyId = await getSelectedPropertyId();
   const propIds = await getEffectivePropertyIds(propertyId);
 
-  const baseWhere: Prisma.ReturnWhereInput = {
+  const currency = await getCurrentCurrency();
+  const t        = await getTranslations("returns");
+
+  // Load ALL returns in scope in ONE query. Tabs/filters/search all run
+  // client-side over these rows — no DB refetch on filter change.
+  const where: Prisma.ReturnWhereInput = {
     organizationId: orgUser.organizationId,
     ...(propIds && {
       reservation: {
@@ -64,38 +39,18 @@ export default async function ReturnsPage({
         ],
       },
     }),
-    ...(search && {
-      OR: [
-        { returnNumber: { contains: search, mode: "insensitive" } },
-        { tenant: { firstName: { contains: search, mode: "insensitive" } } },
-        { tenant: { lastName: { contains: search, mode: "insensitive" } } },
-        { reservation: { reservationNumber: { contains: search, mode: "insensitive" } } },
-      ],
-    }),
   };
 
-  const where: Prisma.ReturnWhereInput = { ...baseWhere, ...statusWhere(statusFilter) };
-
-  const [rows, total, cAll, cActive, cPending, cRefunded, cCancelled, sums] = await Promise.all([
-    prisma.return.findMany({
-      where,
-      include: {
-        tenant:      { select: { firstName: true, lastName: true, phone: true } },
-        reservation: { select: { reservationNumber: true } },
-        invoice:     { select: { invoiceNumber: true } },
-      },
-      orderBy: { createdAt: "desc" },
-      take: PAGE_SIZE,
-      skip: (page - 1) * PAGE_SIZE,
-    }),
-    prisma.return.count({ where }),
-    prisma.return.count({ where: { ...baseWhere, ...statusWhere("ALL") } }),
-    prisma.return.count({ where: { ...baseWhere, ...statusWhere("ACTIVE") } }),
-    prisma.return.count({ where: { ...baseWhere, ...statusWhere("REFUND_PENDING") } }),
-    prisma.return.count({ where: { ...baseWhere, ...statusWhere("REFUNDED") } }),
-    prisma.return.count({ where: { ...baseWhere, ...statusWhere("CANCELLED") } }),
-    prisma.return.aggregate({ where, _sum: { returnAmount: true, refundAmount: true } }),
-  ]);
+  const rows = await prisma.return.findMany({
+    where,
+    include: {
+      tenant:      { select: { firstName: true, lastName: true, phone: true } },
+      reservation: { select: { reservationNumber: true } },
+      invoice:     { select: { invoiceNumber: true } },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5000,
+  });
 
   const returnRows: ReturnRow[] = rows.map((r) => ({
     id:             r.id,
@@ -121,17 +76,6 @@ export default async function ReturnsPage({
     invoiceId:     r.invoiceId,
   }));
 
-  const sumReturn = Number(sums._sum.returnAmount ?? 0);
-  const sumRefund = Number(sums._sum.refundAmount ?? 0);
-
-  const tabs: { key: StatusFilter; count: number }[] = [
-    { key: "ALL",            count: cAll },
-    { key: "ACTIVE",         count: cActive },
-    { key: "REFUND_PENDING", count: cPending },
-    { key: "REFUNDED",       count: cRefunded },
-    { key: "CANCELLED",      count: cCancelled },
-  ];
-
   return (
     <div className="mx-auto max-w-full px-4 sm:px-6 lg:px-8 py-6 space-y-5">
       {/* Header */}
@@ -142,40 +86,13 @@ export default async function ReturnsPage({
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
-            <p className="text-sm text-gray-500">{t("recordsCount", { count: total })}</p>
+            <p className="text-sm text-gray-500">{t("recordsCount", { count: returnRows.length })}</p>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <ReturnsFilters
-        currentStatus={statusFilter}
-        currentSearch={search}
-        counts={tabs}
-      />
-
-      {/* Table */}
-      <ReturnsTable
-        returns={returnRows}
-        currency={currency}
-        pageIndex={page - 1}
-        pageSize={PAGE_SIZE}
-        totalCount={total}
-      />
-
-      {/* Footer totals */}
-      {total > 0 && (
-        <div className="flex flex-wrap items-center gap-4 px-4 py-3 text-xs text-fg-tertiary">
-          <span>
-            {t("footer.returned")}:{" "}
-            <strong className="text-fg ltr-numbers">{formatCurrency(sumReturn, currency)}</strong>
-          </span>
-          <span>
-            {t("footer.refunded")}:{" "}
-            <strong className="text-success-700 ltr-numbers">{formatCurrency(sumRefund, currency)}</strong>
-          </span>
-        </div>
-      )}
+      {/* Filters + table + footer (all client-side) */}
+      <ReturnsView returns={returnRows} currency={currency} />
     </div>
   );
 }

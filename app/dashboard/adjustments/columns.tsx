@@ -9,6 +9,7 @@ import { formatAmount } from "@/lib/format-currency";
 export interface AdjustmentRow {
   id: string;
   date: string;        // ISO
+  propertyId: string | null;
   building: string;
   amount: number;      // signed: + overage, − shortage
   description: string | null;

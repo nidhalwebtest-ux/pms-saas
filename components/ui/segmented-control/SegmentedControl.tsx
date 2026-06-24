@@ -196,7 +196,11 @@ export function SegmentedControl<V extends string = string>({
     .join(" ");
 
   const pillCls = [
-    "absolute top-0 start-0 pointer-events-none z-0",
+    // Physical left/top anchor on purpose: box.x/box.y come from offsetLeft/
+    // offsetTop and the transform below is physical (LTR) too. Using the logical
+    // `start-0` here breaks in RTL — the pill anchors right but translates left,
+    // landing it outside the control (e.g. over an adjacent button).
+    "absolute top-0 left-0 pointer-events-none z-0",
     "motion-safe:transition-[transform,width,height] motion-safe:duration-200 motion-safe:ease-[cubic-bezier(.4,0,.2,1)]",
     pillVariantClass[variant],
     // Pill radius matches the segment radius — easiest done via segment class

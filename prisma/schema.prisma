@@ -348,6 +348,9 @@ model Unit {
 
   basePrice   Decimal    @db.Decimal(10, 3)
   status      UnitStatus @default(AVAILABLE)
+  // When false the unit is retired: hidden from new reservations / availability
+  // and shown as "Inactive" in the units list. Existing reservations are unaffected.
+  isActive    Boolean    @default(true)
   photos      String[]   @default([])
 
   propertyId  String

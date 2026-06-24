@@ -109,7 +109,7 @@ export default async function TenantProfilePage({
   const canEditTenant = (await getSessionAccess())?.canEdit("tenants") ?? false;
 
   // Invoices + transaction counts for the shared TransactionsPanel.
-  const [tenantInvoices, resCount, invCount, payCount] = await Promise.all([
+  const [tenantInvoices, resCount, invCount, payCount, staysCount] = await Promise.all([
     prisma.invoice.findMany({
       where:   { tenantId: id, status: { not: "VOID" } },
       orderBy: { issueDate: "desc" },
@@ -118,7 +118,12 @@ export default async function TenantProfilePage({
     prisma.reservation.count({ where: { tenantId: id } }),
     prisma.invoice.count({ where: { tenantId: id, status: { not: "VOID" } } }),
     prisma.payment.count({ where: { tenantId: id } }),
+    // Actual stays = reservations that reached check-in (in-house or completed).
+    prisma.reservation.count({ where: { tenantId: id, status: { in: ["CHECKED_IN", "COMPLETED"] } } }),
   ]);
+
+  // The current in-house stay (for the header link).
+  const currentRes = tenant.reservations.find((r) => r.status === "CHECKED_IN") ?? null;
 
   // Tenant balance = total charged on non-cancelled invoices − total paid (net
   // of refunds). Allowed to go negative so customer credits (overpayments not
@@ -141,6 +146,9 @@ export default async function TenantProfilePage({
   const totalPaid     = Number(paidAgg._sum.amount ?? 0);
   const totalRefunded = Number(refundsAgg._sum.amount ?? 0);
   const openBalance   = Math.round((totalCharged - totalPaid + totalRefunded) * 1000) / 1000;
+  // Live "Total Spent" = net amount actually paid (refunds excluded). Replaces
+  // the stale denormalized Tenant.totalSpent column which was never populated.
+  const totalSpentLive = Math.max(0, Math.round((totalPaid - totalRefunded) * 1000) / 1000);
 
   const isIdExpired = tenant.idExpiryDate && new Date(tenant.idExpiryDate) < new Date();
 
@@ -319,6 +327,20 @@ export default async function TenantProfilePage({
       <>
 
       {/* ── KPI Row ── */}
+      {currentRes && (
+        <Link
+          href={`/dashboard/reservations/${currentRes.id}`}
+          className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-green-200 bg-green-50/70 px-4 py-3 transition-colors hover:bg-green-50"
+        >
+          <span className="inline-flex items-center gap-2 text-sm font-semibold text-green-800">
+            <span className="h-2 w-2 rounded-full bg-green-500" />
+            {t("currentlyStaying")}
+            {currentRes.reservationNumber ? <span className="font-normal text-green-700 ltr-numbers">· {currentRes.reservationNumber}</span> : null}
+          </span>
+          <span className="text-sm font-medium text-green-700">{t("viewReservation")} →</span>
+        </Link>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         <div className={`bg-white rounded-lg shadow-sm p-4 border-s-4 ${
           openBalance > 0 ? "border-red-400"
@@ -336,11 +358,11 @@ export default async function TenantProfilePage({
         </div>
         <div className="bg-white rounded-lg shadow-sm p-4 border-s-4 border-blue-400">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{tKpi("totalStays")}</p>
-          <p className="text-xl font-bold text-gray-900 mt-1 ltr-numbers">{tenant.totalStays ?? 0}</p>
+          <p className="text-xl font-bold text-gray-900 mt-1 ltr-numbers">{staysCount}</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm p-4 border-s-4 border-purple-400">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{tKpi("totalSpent")}</p>
-          <p className="text-xl font-bold text-gray-900 mt-1 ltr-numbers">{Number(tenant.totalSpent ?? 0).toFixed(3)} OMR</p>
+          <p className="text-xl font-bold text-gray-900 mt-1 ltr-numbers">{totalSpentLive.toFixed(3)} OMR</p>
         </div>
         <div className="bg-white rounded-lg shadow-sm p-4 border-s-4 border-gray-300">
           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">{tKpi("source")}</p>

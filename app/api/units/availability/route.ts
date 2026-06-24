@@ -56,9 +56,10 @@ export async function GET(req: NextRequest) {
   if (!property || property.organizationId !== orgId)
     return NextResponse.json({ error: "Property not found." }, { status: 404 });
 
-  // Fetch all units for the property
+  // Fetch all bookable units for the property (inactive units are retired and
+  // must not be selectable for new reservations).
   const units = await prisma.unit.findMany({
-    where: { propertyId },
+    where: { propertyId, isActive: true },
     include: {
       prices: {
         where:   { isActive: true },

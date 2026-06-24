@@ -15,7 +15,7 @@
  * shown distinctly (so staff act on it) but still blocks the unit from new bookings.
  */
 
-export type UnitDisplayStatus = "vacant" | "occupied" | "overstay" | "reserved" | "maintenance";
+export type UnitDisplayStatus = "vacant" | "occupied" | "overstay" | "reserved" | "maintenance" | "inactive";
 
 /** Display statuses where the unit is physically unavailable for a new check-in. */
 export const UNIT_BLOCKING_STATUSES: ReadonlySet<UnitDisplayStatus> = new Set([
@@ -32,8 +32,10 @@ export function getUnitDisplayStatus(
   unitStatus: string,
   activeReservations: { status: string; endDate?: Date | string | null }[],
   today: Date = new Date(),
-  opts: { showReserved?: boolean } = {},
+  opts: { showReserved?: boolean; isActive?: boolean } = {},
 ): UnitDisplayStatus {
+  // Retired units win over everything — they're out of service entirely.
+  if (opts.isActive === false) return "inactive";
   if (unitStatus === "MAINTENANCE") return "maintenance";
 
   const checkedIn = activeReservations.filter((r) => r.status === "CHECKED_IN");
@@ -74,4 +76,5 @@ export const UNIT_STATUS_CONFIG: Record<
   overstay:    { label: "Overstay",          badge: "bg-red-100 text-red-700",         dot: "bg-red-500"     },
   reserved:    { label: "Reserved",          badge: "bg-violet-100 text-violet-700",   dot: "bg-violet-500"  },
   maintenance: { label: "Under Maintenance", badge: "bg-amber-100 text-amber-700",     dot: "bg-amber-500"   },
+  inactive:    { label: "Inactive",          badge: "bg-gray-200 text-gray-600",       dot: "bg-gray-400"    },
 };

@@ -991,7 +991,8 @@
       "occupied": "Occupied",
       "reserved": "Reserved",
       "maintenance": "Under Maintenance",
-      "overstay": "Overstay"
+      "overstay": "Overstay",
+      "inactive": "Inactive"
     },
     "filters": {
       "searchPlaceholder": "Search by unit name or number…",
@@ -1015,7 +1016,8 @@
       "filters": "Filters",
       "clearSearch": "Clear search",
       "buildingLabel": "Building",
-      "scopedNote": "Scope is locked by the building selector in the header."
+      "scopedNote": "Scope is locked by the building selector in the header.",
+      "statusInactive": "Inactive"
     },
     "types": {
       "STUDIO": "Studio",
@@ -1068,7 +1070,7 @@
       "floorN": "Floor {n}",
       "bedsBathsShort": "{beds}b/{baths}ba",
       "currentlyOccupied": "Currently Occupied",
-      "viewReservation": "View Reservation",
+      "viewReservation": "View reservation",
       "upcomingReservations": "Upcoming Reservations",
       "confirmed": "Confirmed",
       "pending": "Pending",
@@ -1083,7 +1085,8 @@
       "txAmount": "Amount",
       "txMethod": "Method",
       "txReservation": "Reservation",
-      "noTransactions": "No payments recorded for this unit yet."
+      "noTransactions": "No payments recorded for this unit yet.",
+      "currentStay": "Current stay"
     },
     "newPage": {
       "title": "Add New Unit / Room",
@@ -1123,7 +1126,10 @@
       "saveChanges": "Save Changes",
       "createUnit": "Create Unit",
       "unitUpdated": "Unit updated!",
-      "unitCreated": "Unit created!"
+      "unitCreated": "Unit created!",
+      "activeBody": "Inactive units are retired — hidden from new reservations and availability. Existing reservations are unaffected.",
+      "activeOn": "Active",
+      "activeOff": "Inactive"
     },
     "bulk": {
       "title": "Bulk Unit Creation",
@@ -1273,7 +1279,9 @@
       "allTypes": "All Types",
       "allSources": "All Sources",
       "sourceLabel": "Source",
-      "clearAll": "Clear all"
+      "clearAll": "Clear all",
+      "statusStaying": "Currently staying",
+      "statusBalance": "With balance"
     },
     "types": {
       "individual": "Individual",
@@ -1351,7 +1359,8 @@
         "saved": "Saved",
         "cycleClassTitle": "Click to cycle classification",
         "firstNamePlaceholder": "First name",
-        "lastNamePlaceholder": "Last name"
+        "lastNamePlaceholder": "Last name",
+        "inHouse": "In house"
       },
       "card": {
         "stays": "Stays",
@@ -1433,7 +1442,9 @@
         "inProperty": "in {property}"
       },
       "tenantsList": "Tenants list",
-      "newReservation": "New reservation"
+      "newReservation": "New reservation",
+      "currentlyStaying": "Currently staying",
+      "viewReservation": "View reservation"
     },
     "ledger": {
       "summary": {

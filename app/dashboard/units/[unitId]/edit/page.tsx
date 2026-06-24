@@ -63,6 +63,7 @@ export default async function EditUnitPage({
           description: unit.description,
           amenities:   unit.amenities,
           status:      unit.status,
+          isActive:    unit.isActive,
           photos:      unit.photos,
         }}
       />

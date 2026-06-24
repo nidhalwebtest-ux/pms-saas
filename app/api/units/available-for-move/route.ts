@@ -90,6 +90,7 @@ export async function GET(req: NextRequest) {
     select: {
       id: true, name: true,
       units: {
+        where:  { isActive: true },
         select: { id: true, name: true, floor: true, unitType: true, status: true },
       },
     },

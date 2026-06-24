@@ -25,7 +25,7 @@ import {
 import type { SortingState } from "@tanstack/react-table";
 import { quickUpdateTenant } from "./actions";
 import type { TenantRow } from "./page";
-import { DataTable, NoTenantsFirstTime, SegmentedControl } from "@/components/ui";
+import { DataTable, FilterBar, NoTenantsFirstTime, SegmentedControl, type QuickFilter } from "@/components/ui";
 import { useCan } from "@/components/PermissionsProvider";
 import {
   Avatar,
@@ -45,6 +45,12 @@ const CLASS_BORDER: Record<string, string> = {
   blacklisted: "border-l-red-400",
   regular:     "border-l-blue-200",
 };
+
+const TENANT_TYPES = ["", "individual", "family", "corporate", "government"] as const;
+const SOURCE_VALUES = [
+  "", "walk_in", "referral", "online", "agent", "returning", "returning_guest", "corporate_contract",
+] as const;
+type TenantTab = "all" | "staying" | "balance" | "active" | "inactive";
 
 function exportCSV(rows: TenantRow[]) {
   const headers = [
@@ -406,6 +412,9 @@ export default function TenantsView({
   const tTable   = useTranslations("tenants.list.table");
   const tRow     = useTranslations("tenants.list.row");
   const tList    = useTranslations("tenants.list");
+  const tFilters = useTranslations("tenants.filters");
+  const tTypes   = useTranslations("tenants.types");
+  const tSrc     = useTranslations("tenants.sources");
   const router   = useRouter();
   const canEditTenant = useCan("tenants", "EDIT");
   const [viewMode,     setViewMode]     = useState<"table" | "card" | "summary">("table");
@@ -415,13 +424,50 @@ export default function TenantsView({
   const [editMode,     setEditMode]     = useState(false);
   const [inlineEditId, setInlineEditId] = useState<string | null>(null);
 
+  // ── Filter state (all client-side) ───────────────────────────────────────
+  const [search, setSearch]         = useState("");
+  const [tab, setTab]               = useState<TenantTab>("all");
+  const [tenantType, setTenantType] = useState("");
+  const [source, setSource]         = useState("");
+
+  const counts = useMemo(() => ({
+    all:      tenants.length,
+    staying:  tenants.filter((t) => t.currentStay != null).length,
+    balance:  tenants.filter((t) => parseFloat(t.openBalance) > 0).length,
+    active:   tenants.filter((t) => t.isActive).length,
+    inactive: tenants.filter((t) => !t.isActive).length,
+  }), [tenants]);
+
+  const filtered = useMemo(() => {
+    let rows = tenants;
+    if (tenantType) rows = rows.filter((t) => t.tenantType === tenantType);
+    if (source)     rows = rows.filter((t) => t.source === source);
+    switch (tab) {
+      case "staying":  rows = rows.filter((t) => t.currentStay != null); break;
+      case "balance":  rows = rows.filter((t) => parseFloat(t.openBalance) > 0); break;
+      case "active":   rows = rows.filter((t) => t.isActive); break;
+      case "inactive": rows = rows.filter((t) => !t.isActive); break;
+    }
+    const q = search.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter((t) =>
+        `${t.firstName} ${t.lastName}`.toLowerCase().includes(q) ||
+        t.phone.toLowerCase().includes(q) ||
+        (t.idNumber?.toLowerCase().includes(q) ?? false) ||
+        (t.email?.toLowerCase().includes(q) ?? false) ||
+        (t.nationality?.toLowerCase().includes(q) ?? false),
+      );
+    }
+    return rows;
+  }, [tenants, tenantType, source, tab, search]);
+
   // For card / summary views we still want the same default sort, but they
   // are not driven by TanStack — derive a comparator from the sorting state.
   const sorted = useMemo(() => {
     const sort = sorting[0];
-    if (!sort) return tenants;
+    if (!sort) return filtered;
     const dir = sort.desc ? -1 : 1;
-    return [...tenants].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       const av = (a as Record<string, unknown>)[sort.id];
       const bv = (b as Record<string, unknown>)[sort.id];
       if (typeof av === "string" && typeof bv === "string") {
@@ -432,7 +478,7 @@ export default function TenantsView({
       if (bv == null) return -1;
       return (av < bv ? -1 : av > bv ? 1 : 0) * dir;
     });
-  }, [tenants, sorting]);
+  }, [filtered, sorting]);
 
   const columns = useMemo(
     () => buildTenantColumns({ tTable, tRow }),
@@ -471,8 +517,45 @@ export default function TenantsView({
     summary: tBar("summaryViewTitle"),
   };
 
+  // ── Filter UI ─────────────────────────────────────────────────────────────
+  const tabLabel = (k: TenantTab) => {
+    switch (k) {
+      case "all":      return tFilters("statusAll");
+      case "staying":  return tFilters("statusStaying");
+      case "balance":  return tFilters("statusBalance");
+      case "active":   return tFilters("statusActive");
+      case "inactive": return tFilters("statusInactive");
+    }
+  };
+  const TABS: TenantTab[] = ["all", "staying", "balance", "active", "inactive"];
+  const quickFilters: QuickFilter[] = TABS.map((k) => ({ id: k, label: tabLabel(k)!, count: counts[k] }));
+  const typeLabel = (v: string) => { if (!v) return tFilters("allTypes"); try { return tTypes(v as never); } catch { return v; } };
+  const sourceLabel2 = (v: string) => { if (!v) return tFilters("allSources"); try { return tSrc(v as never); } catch { return v; } };
+
   return (
     <div className="space-y-3">
+
+      {/* ── Filters (client-side, instant) ─────────────────────── */}
+      <FilterBar
+        search={{ value: search, onChange: setSearch, placeholder: tFilters("searchPlaceholder") }}
+        quickFilters={quickFilters}
+        activeQuickFilter={tab}
+        onQuickFilterChange={(s) => setTab(s as TenantTab)}
+        filters={[
+          {
+            id: "tenantType", type: "select", label: tFilters("typeLabel"),
+            value: tenantType, allValue: "", onChange: setTenantType,
+            options: TENANT_TYPES.map((v) => ({ value: v, label: typeLabel(v) })),
+          },
+          {
+            id: "source", type: "select", label: tFilters("sourceLabel"),
+            value: source, allValue: "", onChange: setSource,
+            options: SOURCE_VALUES.map((v) => ({ value: v, label: sourceLabel2(v) })),
+          },
+        ]}
+        activeFiltersDisplay="chips"
+        onClearAll={() => { setTenantType(""); setSource(""); }}
+      />
 
       {/* ── Toolbar ─────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
@@ -531,7 +614,7 @@ export default function TenantsView({
       {viewMode === "table" && (
         <>
           <DataTable<TenantRow>
-            data={tenants}
+            data={filtered}
             columns={columns}
             mode="client"
             sorting={{ state: sorting, onChange: setSorting }}
@@ -542,6 +625,7 @@ export default function TenantsView({
                 <EditableRow tenant={row} onDone={() => setInlineEditId(null)} />
               ) : null
             }
+            hasActiveFilters={tab !== "all" || !!search || !!tenantType || !!source}
             emptyState={
               <NoTenantsFirstTime
                 onCreate={() => router.push("/dashboard/tenants/new")}
@@ -549,9 +633,9 @@ export default function TenantsView({
             }
             aria-label={tTable("name")}
           />
-          {tenants.length > 0 && (
+          {filtered.length > 0 && (
             <p className="px-4 text-xs text-fg-tertiary">
-              {tList("showing", { count: tenants.length })}
+              {tList("showing", { count: filtered.length })}
             </p>
           )}
         </>

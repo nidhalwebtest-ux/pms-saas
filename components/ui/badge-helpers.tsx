@@ -218,7 +218,7 @@ export function returnStatusKey(
  *  Unit statuses (per user decisions 2/3/4: spec colors win)
  * ------------------------------------------------------------------------- */
 
-export type UnitStatusKey = "vacant" | "occupied" | "overstay" | "reserved" | "maintenance";
+export type UnitStatusKey = "vacant" | "occupied" | "overstay" | "reserved" | "maintenance" | "inactive";
 
 export function getUnitStatusBadge(status: UnitStatusKey): BadgeVariantProps {
   switch (status) {
@@ -227,6 +227,7 @@ export function getUnitStatusBadge(status: UnitStatusKey): BadgeVariantProps {
     case "overstay":    return { tone: "danger",  appearance: "solid",  dot: true };
     case "reserved":    return { tone: "warning", appearance: "subtle", dot: true };
     case "maintenance": return { tone: "neutral", appearance: "subtle", dot: true };
+    case "inactive":    return { tone: "neutral", appearance: "subtle", dot: true };
   }
 }
 

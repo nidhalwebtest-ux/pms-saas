@@ -991,7 +991,8 @@
       "occupied": "مشغولة",
       "reserved": "محجوزة",
       "maintenance": "تحت الصيانة",
-      "overstay": "تجاوز المدة"
+      "overstay": "تجاوز المدة",
+      "inactive": "غير نشطة"
     },
     "filters": {
       "searchPlaceholder": "بحث باسم الوحدة أو رقمها…",
@@ -1015,7 +1016,8 @@
       "filters": "عوامل التصفية",
       "clearSearch": "مسح البحث",
       "buildingLabel": "المبنى",
-      "scopedNote": "النطاق مقفل حسب اختيار المبنى في الشريط العلوي."
+      "scopedNote": "النطاق مقفل حسب اختيار المبنى في الشريط العلوي.",
+      "statusInactive": "غير نشطة"
     },
     "types": {
       "STUDIO": "استوديو",
@@ -1083,7 +1085,8 @@
       "txAmount": "المبلغ",
       "txMethod": "الطريقة",
       "txReservation": "الحجز",
-      "noTransactions": "لا توجد دفعات مسجلة لهذه الوحدة بعد."
+      "noTransactions": "لا توجد دفعات مسجلة لهذه الوحدة بعد.",
+      "currentStay": "الإقامة الحالية"
     },
     "newPage": {
       "title": "إضافة وحدة / غرفة",
@@ -1123,7 +1126,10 @@
       "saveChanges": "حفظ التغييرات",
       "createUnit": "إنشاء الوحدة",
       "unitUpdated": "تم تحديث الوحدة!",
-      "unitCreated": "تم إنشاء الوحدة!"
+      "unitCreated": "تم إنشاء الوحدة!",
+      "activeBody": "الوحدات غير النشطة متوقّفة — لا تظهر في الحجوزات الجديدة أو التوافر. لا تتأثر الحجوزات الحالية.",
+      "activeOn": "نشطة",
+      "activeOff": "غير نشطة"
     },
     "bulk": {
       "title": "إنشاء وحدات متعددة",
@@ -1273,7 +1279,9 @@
       "allTypes": "كل الأنواع",
       "allSources": "كل المصادر",
       "sourceLabel": "المصدر",
-      "clearAll": "مسح الكل"
+      "clearAll": "مسح الكل",
+      "statusStaying": "مقيم حاليًا",
+      "statusBalance": "عليه رصيد"
     },
     "types": {
       "individual": "فرد",
@@ -1351,7 +1359,8 @@
         "saved": "تم الحفظ",
         "cycleClassTitle": "اضغط لتغيير التصنيف",
         "firstNamePlaceholder": "الاسم الأول",
-        "lastNamePlaceholder": "اسم العائلة"
+        "lastNamePlaceholder": "اسم العائلة",
+        "inHouse": "مقيم"
       },
       "card": {
         "stays": "إقامات",
@@ -1433,7 +1442,9 @@
         "inProperty": "في {property}"
       },
       "tenantsList": "قائمة المستأجرين",
-      "newReservation": "حجز جديد"
+      "newReservation": "حجز جديد",
+      "currentlyStaying": "مقيم حاليًا",
+      "viewReservation": "عرض الحجز"
     },
     "ledger": {
       "summary": {

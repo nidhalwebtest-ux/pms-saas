@@ -14,6 +14,7 @@ import {
   ChatBubbleLeftIcon,
   BuildingOffice2Icon,
   BoltIcon,
+  UserIcon,
   ListBulletIcon,
 } from "@heroicons/react/24/outline";
 import { getTranslations } from "next-intl/server";
@@ -67,7 +68,10 @@ export default async function UnitDetailPage({
         property:     { select: { id: true, name: true, organizationId: true } },
         reservations: {
           where:   { status: { in: ["PENDING", "CONFIRMED", "CHECKED_IN"] } },
-          select:  { status: true, endDate: true },
+          select:  {
+            id: true, reservationNumber: true, status: true, startDate: true, endDate: true,
+            tenant: { select: { id: true, firstName: true, lastName: true, phone: true } },
+          },
         },
       },
     }),
@@ -122,8 +126,22 @@ export default async function UnitDetailPage({
   if (acc && !acc.includes(unit.propertyId)) redirect("/dashboard/no-access");
   const canEditUnit = (await getSessionAccess())?.canEdit("units") ?? false;
 
-  const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations, new Date(), { showReserved });
+  const displayStatus = getUnitDisplayStatus(unit.status, unit.reservations, new Date(), { showReserved, isActive: unit.isActive });
   const cfg           = UNIT_STATUS_CONFIG[displayStatus];
+
+  // Current in-house stay (for the "Current stay" card) — the checked-in reservation.
+  const checkedInRes = unit.reservations.find((r) => r.status === "CHECKED_IN");
+  const currentStay = checkedInRes
+    ? {
+        reservationId: checkedInRes.id,
+        reservationNumber: checkedInRes.reservationNumber,
+        tenantId: checkedInRes.tenant.id,
+        tenantName: `${checkedInRes.tenant.firstName} ${checkedInRes.tenant.lastName}`.trim(),
+        tenantPhone: checkedInRes.tenant.phone,
+        startDate: checkedInRes.startDate.toISOString(),
+        endDate: checkedInRes.endDate.toISOString(),
+      }
+    : null;
 
   // Build the serialized transaction data for the shared panel.
   const unitNameFor = (r: (typeof txnReservations)[number]) =>
@@ -260,6 +278,31 @@ export default async function UnitDetailPage({
           </Link>
         </div>
       </div>
+
+      {/* ── Current stay (when occupied) ───────────────────────────────── */}
+      {currentStay && (
+        <Link
+          href={`/dashboard/reservations/${currentStay.reservationId}`}
+          className="flex items-center justify-between gap-4 rounded-xl border border-blue-200 bg-blue-50/60 px-5 py-4 transition-colors hover:bg-blue-50"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-100">
+              <UserIcon className="h-5 w-5 text-blue-700" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">{t("currentStay")}</p>
+              <p className="truncate text-sm font-bold text-gray-900">{currentStay.tenantName}</p>
+              <p className="text-xs text-gray-500 ltr-numbers">
+                {new Date(currentStay.startDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}
+                {" → "}
+                {new Date(currentStay.endDate).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}
+                {currentStay.reservationNumber ? <> · {currentStay.reservationNumber}</> : null}
+              </p>
+            </div>
+          </div>
+          <span className="flex-shrink-0 text-sm font-medium text-blue-600">{t("viewReservation")} →</span>
+        </Link>
+      )}
 
       {/* ── Main Grid ──────────────────────────────────────────────────── */}
       <div className="grid gap-6 lg:grid-cols-3">

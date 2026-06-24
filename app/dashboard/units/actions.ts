@@ -60,6 +60,7 @@ export async function createUnit(formData: FormData): Promise<ActionResponse> {
   const area = areaRaw ? parseFloat(areaRaw) : undefined;
   const description = (formData.get("description") as string)?.trim() || undefined;
   const status = (formData.get("status") as string) || "AVAILABLE";
+  const isActive = formData.get("active") !== "false";
   const photos = parsePhotos(formData);
   const amenities = parseAmenities(formData);
 
@@ -89,6 +90,7 @@ export async function createUnit(formData: FormData): Promise<ActionResponse> {
         description,
         amenities,
         status: status as any,
+        isActive,
         photos,
         propertyId,
       },
@@ -159,6 +161,7 @@ export async function updateUnit(formData: FormData): Promise<ActionResponse> {
   const area = areaRaw ? parseFloat(areaRaw) : null;
   const description = (formData.get("description") as string)?.trim() || null;
   const status = (formData.get("status") as string) || "AVAILABLE";
+  const isActive = formData.get("active") !== "false";
   const photos = parsePhotos(formData);
   const amenities = parseAmenities(formData);
 
@@ -185,7 +188,7 @@ export async function updateUnit(formData: FormData): Promise<ActionResponse> {
   try {
     await prisma.unit.update({
       where: { id },
-      data: { name, unitType, basePrice, floor, bedrooms, bathrooms, area, description, amenities, propertyId, status: status as any, photos },
+      data: { name, unitType, basePrice, floor, bedrooms, bathrooms, area, description, amenities, propertyId, status: status as any, isActive, photos },
     });
 
     revalidatePath("/dashboard/units");

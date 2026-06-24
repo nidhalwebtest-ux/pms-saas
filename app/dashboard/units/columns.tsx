@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { HomeModernIcon } from "@heroicons/react/24/outline";
+import { HomeModernIcon, UserIcon } from "@heroicons/react/24/outline";
 import {
   Badge,
   defineColumns,
@@ -49,7 +49,7 @@ export function UnitThumbnail({
  * ------------------------------------------------------------------------- */
 
 export function unitRowVariant(r: UnitRow): "inactive" | "default" {
-  return r.displayStatus === "maintenance" ? "inactive" : "default";
+  return r.displayStatus === "maintenance" || r.displayStatus === "inactive" ? "inactive" : "default";
 }
 
 /* ----------------------------------------------------------------------------
@@ -104,6 +104,16 @@ export function buildUnitColumns({ t }: UnitColumnsDeps) {
               {u.property.name}
               {desc}
             </div>
+            {u.currentStay && (
+              <Link
+                href={`/dashboard/reservations/${u.currentStay.reservationId}`}
+                className="mt-0.5 inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-700"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <UserIcon className="h-3 w-3" />
+                {u.currentStay.tenantName}
+              </Link>
+            )}
           </div>
         );
       },

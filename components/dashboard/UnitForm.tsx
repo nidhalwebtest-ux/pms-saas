@@ -49,6 +49,7 @@ interface Props {
     description: string | null;
     amenities: string[];
     status: string;
+    isActive?: boolean;
     photos: string[];
   } | null;
   defaultPropertyId?: string;
@@ -127,6 +128,7 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
   const [status,    setStatus]    = useState<"AVAILABLE" | "MAINTENANCE">(
     (initialData?.status as any) ?? "AVAILABLE",
   );
+  const [isActive,  setIsActive]  = useState<boolean>(initialData?.isActive ?? true);
   const [unitType,  setUnitType]  = useState(initialData?.unitType ?? "ONE_BR");
   const [bedrooms,  setBedrooms]  = useState(initialData?.bedrooms ?? 1);
   const [bathrooms, setBathrooms] = useState(initialData?.bathrooms ?? 1);
@@ -182,6 +184,7 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
     <form onSubmit={handleSubmit} className="space-y-5">
       {isEditMode && <input type="hidden" name="id" value={initialData.id} />}
       <input type="hidden" name="status" value={status} />
+      <input type="hidden" name="active" value={isActive ? "true" : "false"} />
 
       {/* ── 1. Basic Info ────────────────────────────────────────────── */}
       <Section icon={HomeModernIcon} title={t("unitDetails")}>
@@ -410,6 +413,33 @@ export default function UnitForm({ properties, initialData, defaultPropertyId }:
                 </span>
               </>
             )}
+          </div>
+        </div>
+
+        {/* Active / Inactive — retired units are hidden from new reservations */}
+        <div className="mt-5 border-t border-gray-100 pt-5">
+          <p className="mb-3 text-xs text-gray-500 leading-relaxed">
+            {t("activeBody")}
+          </p>
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isActive}
+              onClick={() => setIsActive((a) => !a)}
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                isActive ? "bg-green-500" : "bg-gray-400"
+              }`}
+            >
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+                  isActive ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+            <span className={`text-sm font-medium ${isActive ? "text-green-700" : "text-gray-600"}`}>
+              {isActive ? t("activeOn") : t("activeOff")}
+            </span>
           </div>
         </div>
       </Section>

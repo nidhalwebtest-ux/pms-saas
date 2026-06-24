@@ -18,7 +18,7 @@ import type { SortingState } from "@tanstack/react-table";
 import { UNIT_STATUS_CONFIG } from "@/lib/unit-status";
 import { quickUpdateUnit } from "./actions";
 import type { UnitRow } from "./page";
-import { DataTable, EmptyState, Badge, getUnitTypeBadge, type UnitTypeKey } from "@/components/ui";
+import { DataTable, EmptyState, Badge, FilterBar, getUnitTypeBadge, type QuickFilter, type UnitTypeKey } from "@/components/ui";
 import { SearchIllustration } from "@/components/ui/empty-state/illustrations";
 import { useCan } from "@/components/PermissionsProvider";
 import { UnitThumbnail, buildUnitColumns, unitRowVariant } from "./columns";
@@ -187,23 +187,74 @@ function EditableRow({ unit, onDone }: { unit: UnitRow; onDone: () => void }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
+const TYPE_OPTIONS = ["", "STUDIO", "ONE_BR", "TWO_BR", "THREE_BR", "SUITE"] as const;
+type StatusTab = "all" | "vacant" | "occupied" | "reserved" | "maintenance" | "inactive";
+
 export default function UnitsView({
   units,
-  statusFilter,
+  properties,
+  availableFloors,
+  scopedToBuilding,
+  showReserved,
 }: {
   units: UnitRow[];
-  statusFilter: string;
+  properties: { id: string; name: string }[];
+  availableFloors: number[];
+  scopedToBuilding: boolean;
+  showReserved: boolean;
 }) {
   const [sorting, setSorting] = useState<SortingState>([
     { id: "name", desc: false },
   ]);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Filter state — all client-side (no DB refetch on change).
+  const [search, setSearch]         = useState("");
+  const [status, setStatus]         = useState<StatusTab>("all");
+  const [unitType, setUnitType]     = useState("");
+  const [floor, setFloor]           = useState("");
+  const scopedDefault = scopedToBuilding ? properties[0]?.id ?? "" : "";
+  const [propertyId, setPropertyId] = useState(scopedDefault);
+
   const t        = useTranslations("units.list");
   const tFilters = useTranslations("units.filters");
+  const tTypes   = useTranslations("units.types");
   const router   = useRouter();
   const canEditUnit = useCan("units", "EDIT");
 
   const columns = useMemo(() => buildUnitColumns({ t }), [t]);
+
+  const counts = useMemo(() => ({
+    all:         units.length,
+    vacant:      units.filter((u) => u.displayStatus === "vacant").length,
+    occupied:    units.filter((u) => u.displayStatus === "occupied" || u.displayStatus === "overstay").length,
+    reserved:    units.filter((u) => u.displayStatus === "reserved").length,
+    maintenance: units.filter((u) => u.displayStatus === "maintenance").length,
+    inactive:    units.filter((u) => u.displayStatus === "inactive").length,
+  }), [units]);
+
+  const filtered = useMemo(() => {
+    let rows = units;
+    if (propertyId) rows = rows.filter((u) => u.propertyId === propertyId);
+    if (unitType)   rows = rows.filter((u) => u.unitType === unitType);
+    if (floor !== "") rows = rows.filter((u) => String(u.floor) === floor);
+    if (status !== "all") {
+      rows = rows.filter((u) =>
+        status === "occupied"
+          ? u.displayStatus === "occupied" || u.displayStatus === "overstay"
+          : u.displayStatus === status,
+      );
+    }
+    const q = search.trim().toLowerCase();
+    if (q) {
+      rows = rows.filter((u) =>
+        u.name.toLowerCase().includes(q) ||
+        u.property.name.toLowerCase().includes(q) ||
+        (u.currentStay?.tenantName.toLowerCase().includes(q) ?? false),
+      );
+    }
+    return rows;
+  }, [units, propertyId, unitType, floor, status, search]);
 
   const rowActions = useMemo(
     () => (u: UnitRow) => [
@@ -231,28 +282,81 @@ export default function UnitsView({
     [t, router, canEditUnit],
   );
 
-  const statusValue = (s: string) => {
-    if (s === "vacant")      return tFilters("statusVacant");
-    if (s === "occupied")    return tFilters("statusOccupied");
-    if (s === "reserved")    return tFilters("statusReserved");
-    if (s === "maintenance") return tFilters("statusMaintenance");
-    return s;
+  // ── Filter UI options ─────────────────────────────────────────────────────
+  const statusLabel = (v: StatusTab) => {
+    switch (v) {
+      case "all":         return tFilters("statusAll");
+      case "vacant":      return tFilters("statusVacant");
+      case "occupied":    return tFilters("statusOccupied");
+      case "reserved":    return tFilters("statusReserved");
+      case "maintenance": return tFilters("statusMaintenance");
+      case "inactive":    return tFilters("statusInactive");
+    }
   };
+  const visibleTabs: StatusTab[] = showReserved
+    ? ["all", "vacant", "occupied", "reserved", "maintenance", "inactive"]
+    : ["all", "vacant", "occupied", "maintenance", "inactive"];
+  const quickFilters: QuickFilter[] = visibleTabs.map((key) => ({
+    id: key,
+    label: statusLabel(key)!,
+    count: counts[key],
+  }));
+
+  const buildingOptions = scopedToBuilding
+    ? properties.map((p) => ({ value: p.id, label: p.name }))
+    : [{ value: "", label: tFilters("allProperties") }, ...properties.map((p) => ({ value: p.id, label: p.name }))];
+  const floorOptions = [
+    { value: "", label: tFilters("allFloors") },
+    ...availableFloors.map((f) => ({ value: String(f), label: f === 0 ? tFilters("groundFloor") : tFilters("floorN", { n: f }) })),
+  ];
+  const typeOptions = TYPE_OPTIONS.map((v) => ({
+    value: v,
+    label: v === "" ? tFilters("allTypes") : (() => { try { return tTypes(v as never); } catch { return v; } })(),
+  }));
+
+  const hasActiveFilters = status !== "all" || !!search || !!unitType || floor !== "" || (!scopedToBuilding && !!propertyId);
 
   return (
     <div className="space-y-3">
 
+      {/* ── Filters (client-side, instant) ─────────────────────── */}
+      <FilterBar
+        search={{ value: search, onChange: setSearch, placeholder: tFilters("searchPlaceholder") }}
+        quickFilters={quickFilters}
+        activeQuickFilter={status}
+        onQuickFilterChange={(s) => setStatus(s as StatusTab)}
+        filters={[
+          {
+            id: "property", type: "select", label: tFilters("buildingLabel"),
+            value: scopedToBuilding ? scopedDefault : propertyId, allValue: "",
+            disabled: scopedToBuilding,
+            helpText: scopedToBuilding ? tFilters("scopedNote") : undefined,
+            options: buildingOptions, onChange: setPropertyId,
+          },
+          ...(availableFloors.length > 0 ? [{
+            id: "floor" as const, type: "select" as const, label: tFilters("floorLabel"),
+            value: floor, allValue: "", options: floorOptions, onChange: setFloor,
+          }] : []),
+          {
+            id: "type", type: "select", label: tFilters("typeLabel"),
+            value: unitType, allValue: "", options: typeOptions, onChange: setUnitType,
+          },
+        ]}
+        activeFiltersDisplay="chips"
+        onClearAll={() => { setPropertyId(scopedDefault); setFloor(""); setUnitType(""); }}
+      />
+
       {/* ── Quick Actions toolbar ──────────────────────────────── */}
       <div className="flex items-center justify-between rounded-xl border border-border-subtle bg-subtle/40 px-4 py-2">
         <span className="text-xs text-fg-tertiary">
-          {t("unitsCount", { count: units.length })}
-          {statusFilter !== "all" && (
-            <> · {t("filteredBy", { value: statusValue(statusFilter) })}</>
+          {t("unitsCount", { count: filtered.length })}
+          {status !== "all" && (
+            <> · {t("filteredBy", { value: statusLabel(status)! })}</>
           )}
         </span>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => exportCSV(units)}
+            onClick={() => exportCSV(filtered)}
             className="flex items-center gap-1.5 rounded-lg border border-border-default bg-surface px-3 py-1.5 text-xs font-medium text-fg-secondary hover:bg-subtle hover:text-fg transition-colors"
           >
             <DocumentArrowDownIcon className="h-3.5 w-3.5" />
@@ -270,7 +374,7 @@ export default function UnitsView({
 
       {/* ── Table ───────────────────────────────────────────────── */}
       <DataTable<UnitRow>
-        data={units}
+        data={filtered}
         columns={columns}
         mode="client"
         sorting={{ state: sorting, onChange: setSorting }}
@@ -281,7 +385,7 @@ export default function UnitsView({
             <EditableRow unit={row} onDone={() => setEditingId(null)} />
           ) : null
         }
-        hasActiveFilters={statusFilter !== "all"}
+        hasActiveFilters={hasActiveFilters}
         emptyState={
           <EmptyState
             variant="exploratory"
@@ -293,9 +397,9 @@ export default function UnitsView({
       />
 
       {/* Footer */}
-      {units.length > 0 && (
+      {filtered.length > 0 && (
         <p className="px-4 text-xs text-fg-tertiary">
-          {t("showingCount", { count: units.length })}
+          {t("showingCount", { count: filtered.length })}
         </p>
       )}
     </div>

@@ -171,6 +171,7 @@ export function buildTenantColumns({ tTable, tRow }: TenantColumnsDeps) {
       meta: { mobile: "title" },
       cell: ({ row }) => {
         const r = row.original;
+        const balance = parseFloat(r.openBalance);
         return (
           <div className="min-w-0">
             <Link
@@ -180,6 +181,22 @@ export function buildTenantColumns({ tTable, tRow }: TenantColumnsDeps) {
               {r.firstName} {r.lastName}
             </Link>
             <div className="text-xs text-fg-tertiary">{r.nationality || "—"}</div>
+            <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+              {r.currentStay && (
+                <Link
+                  href={`/dashboard/reservations/${r.currentStay.reservationId}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 rounded-full bg-green-50 px-1.5 py-0.5 text-[10px] font-semibold text-green-700 hover:bg-green-100"
+                >
+                  {tRow("inHouse")}
+                </Link>
+              )}
+              {balance > 0 && (
+                <span className="inline-flex items-center rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-semibold text-red-700 ltr-numbers">
+                  {balance.toFixed(3)} OMR
+                </span>
+              )}
+            </div>
             <TagPills tags={r.tags} />
           </div>
         );

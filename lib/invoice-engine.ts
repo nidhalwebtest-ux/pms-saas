@@ -1702,9 +1702,10 @@ export async function getTenantFinancialSummary(
     }),
   ]);
 
-  // Totals
+  // Totals — DRAFT excluded too: a draft (un-issued monthly cycle) posts no
+  // revenue, so it must not contribute to charges/balance/outstanding.
   const nonCancelledInvoices = invoices.filter(
-    (inv) => !["CANCELLED", "VOID"].includes(inv.status),
+    (inv) => !["CANCELLED", "VOID", "DRAFT"].includes(inv.status),
   );
   const totalCharged = nonCancelledInvoices.reduce(
     (sum, inv) => roundOMR(sum + Number(inv.totalAmount)),
@@ -1740,7 +1741,7 @@ export async function getTenantFinancialSummary(
     ["CANCELLED", "VOID"].includes(inv.status),
   );
   const outstandingInvoicesList = nonCancelledInvoices.filter((inv) =>
-    ["ISSUED", "PARTIALLY_PAID", "DRAFT", "PENDING", "PARTIAL", "DUE"].includes(inv.status),
+    ["ISSUED", "PARTIALLY_PAID", "PENDING", "PARTIAL", "DUE"].includes(inv.status),
   );
   // Overdue = a *billed* invoice (DRAFT excluded — not yet issued, no revenue
   // posted) whose due date is strictly in the past, with a remaining balance.

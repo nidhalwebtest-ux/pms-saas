@@ -96,6 +96,10 @@ export async function GET(req: NextRequest) {
             where: { isMovedOut: { not: true } },
             select: { unitId: true, unit: { select: { id: true, name: true } } },
           },
+          invoices: {
+            where: { status: { notIn: ["CANCELLED", "VOID", "DRAFT"] } },
+            select: { balanceDue: true },
+          },
         },
       }),
 
@@ -137,6 +141,10 @@ export async function GET(req: NextRequest) {
             },
           },
           unit: { select: { name: true } },
+          invoices: {
+            where: { status: { notIn: ["CANCELLED", "VOID", "DRAFT"] } },
+            select: { balanceDue: true },
+          },
         },
       }),
 
@@ -237,7 +245,9 @@ export async function GET(req: NextRequest) {
       ),
     );
     const gt = Number(r.grandTotal);
-    const ap = Number(r.amountPaid);
+    // Outstanding = sum of issued (non-cancelled, non-draft) invoice balances.
+    const balance = r.invoices.reduce((s, inv) => s + Number(inv.balanceDue), 0);
+    const ap = gt - balance;
     return {
       id: r.id,
       reservationNumber: r.reservationNumber,
@@ -255,16 +265,19 @@ export async function GET(req: NextRequest) {
       nightsRemaining,
       grandTotal: gt,
       amountPaid: ap,
-      balance: gt - ap,
+      balance,
     };
   });
 
   // ── Outstanding balances ──────────────────────────────────────────────────
+  const balanceOf = (r: { invoices: { balanceDue: unknown }[] }) =>
+    r.invoices.reduce((s, inv) => s + Number(inv.balanceDue), 0);
   const outstandingBalances = balanceRes
-    .filter((r) => Number(r.grandTotal) - Number(r.amountPaid) > 0.001)
+    .filter((r) => balanceOf(r) > 0.001)
     .map((r) => {
       const gt = Number(r.grandTotal);
-      const ap = Number(r.amountPaid);
+      const balance = balanceOf(r);
+      const ap = gt - balance;
       return {
         id: r.id,
         reservationNumber: r.reservationNumber,
@@ -278,7 +291,7 @@ export async function GET(req: NextRequest) {
         endDate: r.endDate.toISOString(),
         grandTotal: gt,
         amountPaid: ap,
-        balance: gt - ap,
+        balance,
         daysPastCheckout:
           r.endDate < todayStart
             ? Math.floor(

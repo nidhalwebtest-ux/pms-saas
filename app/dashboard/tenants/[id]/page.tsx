@@ -20,6 +20,9 @@ import {
   getTenantClassBadge,
 } from "@/components/ui";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
+import { getSelectedPropertyId } from "@/lib/selected-property";
+import { getEffectivePropertyIds } from "@/lib/property-scope";
 import { getTranslations, getLocale } from "next-intl/server";
 import { format } from "date-fns";
 import { ar, enGB } from "date-fns/locale";
@@ -83,10 +86,27 @@ export default async function TenantProfilePage({
     select: { organizationId: true },
   });
 
+  // Scope everything on this page to the globally-selected building (property
+  // view). null = "All buildings" → no scoping. Reservations have no propertyId,
+  // so they're scoped via their unit(s); invoices by propertyId; payments via
+  // their reservation.
+  const propIds = await getEffectivePropertyIds(await getSelectedPropertyId());
+  const resScope: Prisma.ReservationWhereInput = propIds
+    ? {
+        OR: [
+          { unit: { propertyId: { in: propIds } } },
+          { reservationUnits: { some: { unit: { propertyId: { in: propIds } } } } },
+        ],
+      }
+    : {};
+  const invoiceScope: Prisma.InvoiceWhereInput = propIds ? { propertyId: { in: propIds } } : {};
+  const paymentScope: Prisma.PaymentWhereInput = propIds ? { reservation: resScope } : {};
+
   const tenant = await prisma.tenant.findUnique({
     where: { id },
     include: {
       reservations: {
+        where: resScope,
         include: {
           unit: { include: { property: { select: { name: true } } } },
           reservationUnits: { include: { unit: { select: { name: true } } } },
@@ -95,6 +115,7 @@ export default async function TenantProfilePage({
         take: 50,
       },
       payments: {
+        where: paymentScope,
         include: { reservation: { select: { id: true, reservationNumber: true } } },
         orderBy: { date: "desc" },
         take: 50,
@@ -111,15 +132,15 @@ export default async function TenantProfilePage({
   // Invoices + transaction counts for the shared TransactionsPanel.
   const [tenantInvoices, resCount, invCount, payCount, staysCount] = await Promise.all([
     prisma.invoice.findMany({
-      where:   { tenantId: id, status: { not: "VOID" } },
+      where:   { tenantId: id, status: { not: "VOID" }, ...invoiceScope },
       orderBy: { issueDate: "desc" },
       take: 50,
     }),
-    prisma.reservation.count({ where: { tenantId: id } }),
-    prisma.invoice.count({ where: { tenantId: id, status: { not: "VOID" } } }),
-    prisma.payment.count({ where: { tenantId: id } }),
+    prisma.reservation.count({ where: { tenantId: id, ...resScope } }),
+    prisma.invoice.count({ where: { tenantId: id, status: { not: "VOID" }, ...invoiceScope } }),
+    prisma.payment.count({ where: { tenantId: id, ...paymentScope } }),
     // Actual stays = reservations that reached check-in (in-house or completed).
-    prisma.reservation.count({ where: { tenantId: id, status: { in: ["CHECKED_IN", "COMPLETED"] } } }),
+    prisma.reservation.count({ where: { tenantId: id, status: { in: ["CHECKED_IN", "COMPLETED"] }, ...resScope } }),
   ]);
 
   // The current in-house stay (for the header link).
@@ -130,16 +151,17 @@ export default async function TenantProfilePage({
   // yet applied to a future invoice) display as e.g. "-10.000 OMR".
   const [chargedAgg, paidAgg] = await Promise.all([
     prisma.invoice.aggregate({
-      where:  { tenantId: id, status: { notIn: ["CANCELLED", "VOID"] } },
+      // DRAFT excluded — un-issued, posts no revenue.
+      where:  { tenantId: id, status: { notIn: ["CANCELLED", "VOID", "DRAFT"] }, ...invoiceScope },
       _sum:   { totalAmount: true },
     }),
     prisma.payment.aggregate({
-      where:  { tenantId: id, isRefund: false },
+      where:  { tenantId: id, isRefund: false, ...paymentScope },
       _sum:   { amount: true },
     }),
   ]);
   const refundsAgg = await prisma.payment.aggregate({
-    where:  { tenantId: id, isRefund: true },
+    where:  { tenantId: id, isRefund: true, ...paymentScope },
     _sum:   { amount: true },
   });
   const totalCharged  = Number(chargedAgg._sum.totalAmount ?? 0);

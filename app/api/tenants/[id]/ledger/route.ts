@@ -68,7 +68,8 @@ export async function GET(
     where: {
       tenantId,
       organizationId: orgUser.organizationId,
-      status: { notIn: ["CANCELLED", "VOID"] },
+      // DRAFT excluded — un-issued, no revenue posted (not part of the ledger).
+      status: { notIn: ["CANCELLED", "VOID", "DRAFT"] },
       ...invoiceDateFilter,
       ...reservationFilter,
     },

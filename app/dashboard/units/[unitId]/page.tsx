@@ -104,11 +104,11 @@ export default async function UnitDetailPage({
       take: 50,
     }),
 
-    // Payments follow the guest via the junction table (moved-out RUs excluded).
+    // Payments for any reservation on this unit — match the SAME way as the
+    // reservations/invoices above (legacy unitId FK OR the junction table), so
+    // older reservations that only use unitId still surface their payments.
     prisma.payment.findMany({
-      where: {
-        reservation: { reservationUnits: { some: { unitId, isMovedOut: { not: true } } } },
-      },
+      where: { reservation: reservationWhereForUnit },
       include: { reservation: { select: { id: true, reservationNumber: true } } },
       orderBy: { date: "desc" },
       take: 50,
@@ -116,7 +116,7 @@ export default async function UnitDetailPage({
 
     prisma.reservation.count({ where: reservationWhereForUnit }),
     prisma.invoice.count({ where: { reservation: reservationWhereForUnit, status: { not: "VOID" } } }),
-    prisma.payment.count({ where: { reservation: { reservationUnits: { some: { unitId, isMovedOut: { not: true } } } } } }),
+    prisma.payment.count({ where: { reservation: reservationWhereForUnit } }),
   ]);
 
   if (!unit || unit.property.organizationId !== dbUser.organizationId) notFound();

@@ -43,7 +43,7 @@ export async function GET(
       where: {
         tenantId,
         organizationId: orgUser.organizationId,
-        status: { notIn: ["CANCELLED", "VOID"] },
+        status: { notIn: ["CANCELLED", "VOID", "DRAFT"] },
       },
       select: {
         id: true,

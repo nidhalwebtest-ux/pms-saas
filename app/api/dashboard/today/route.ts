@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { Prisma } from "@prisma/client";
 import { tenantDisplayName } from "@/lib/tenant-display";
 
 async function getOrgId() {
@@ -55,7 +56,14 @@ const resSelect = {
     where: { isMovedOut: { not: true } },
     select: { unit: { select: { id: true, name: true } } },
   },
-};
+  // Real outstanding balance comes from the invoices, not the stale
+  // reservation.amountPaid (which invoice payments never update). Exclude
+  // cancelled/void and DRAFT (un-issued, no revenue posted).
+  invoices: {
+    where: { status: { notIn: ["CANCELLED", "VOID", "DRAFT"] } },
+    select: { balanceDue: true },
+  },
+} satisfies Prisma.ReservationSelect;
 
 function serializeRes(r: {
   id: string;
@@ -69,12 +77,15 @@ function serializeRes(r: {
   tenant: { id: string; firstName: string; lastName: string; phone: string | null; classification: string; tenantType: string | null; corporateName: string | null };
   unit: { id: string; name: string; property: { id: string; name: string } } | null;
   reservationUnits: { unit: { id: string; name: string } }[];
+  invoices: { balanceDue: unknown }[];
 }) {
   const unitNames =
     r.unit ? [r.unit.name] : r.reservationUnits.map((ru) => ru.unit.name);
   const propertyName = r.unit?.property?.name ?? "—";
   const gt = Number(r.grandTotal);
-  const ap = Number(r.amountPaid);
+  // Outstanding = sum of issued, non-cancelled invoice balances.
+  const balance = r.invoices.reduce((s, inv) => s + Number(inv.balanceDue), 0);
+  const ap = gt - balance;
   return {
     id: r.id,
     reservationNumber: r.reservationNumber,
@@ -84,7 +95,7 @@ function serializeRes(r: {
     totalNights: r.totalNights,
     grandTotal: gt,
     amountPaid: ap,
-    balance: gt - ap,
+    balance,
     tenant: {
       id: r.tenant.id,
       name: tenantDisplayName(r.tenant), // company name for corporate tenants (QA #25)

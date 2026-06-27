@@ -84,7 +84,7 @@ export default async function TenantsPage() {
     // Outstanding balance = sum of open invoice balanceDue, per tenant.
     prisma.invoice.groupBy({
       by: ["tenantId"],
-      where: { organizationId: orgId, status: { notIn: ["CANCELLED", "VOID"] }, balanceDue: { gt: 0 } },
+      where: { organizationId: orgId, status: { notIn: ["CANCELLED", "VOID", "DRAFT"] }, balanceDue: { gt: 0 } },
       _sum: { balanceDue: true },
     }),
     // The current in-house reservation per tenant (latest checked-in).

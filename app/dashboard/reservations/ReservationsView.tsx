@@ -205,7 +205,6 @@ function CheckOutModal({
   const t       = useTranslations("reservations.checkOutModal");
   const fmtDate = useFmtDate();
   const [loading,    setLoading]    = useState(false);
-  const [additionalAmt, setAdditionalAmt] = useState("");
   const [adjustCharges, setAdjustCharges] = useState(false);
 
   const endDay    = toLocalDay(res.endDate);
@@ -223,7 +222,6 @@ function CheckOutModal({
     try {
       const body: Record<string, unknown> = { forceWithBalance: true };
       if (adjustCharges) body.adjustCharges = true;
-      if (additionalAmt && Number(additionalAmt) > 0) body.additionalAmount = Number(additionalAmt);
 
       const r    = await fetch(`/api/reservations/${res.id}/check-out`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await r.json();
@@ -249,22 +247,12 @@ function CheckOutModal({
           />
         )}
 
-        {/* Overstay */}
+        {/* Overstay — informational only (no fee is charged on checkout) */}
         {isOverstay && (
           <Alert
             variant="error"
             title={t("overstayWarning", { count: extraNights })}
-            description={
-              <div className="space-y-2">
-                <p>{t("overstayPlanned", { date: fmtDate(res.endDate).text })}</p>
-                <label className="flex items-center gap-2">
-                  <input type="number" min="0" step="0.001" placeholder={t("extraChargePlaceholder")}
-                    className="w-36 rounded border border-error-200 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-error-500 ltr-numbers"
-                    value={additionalAmt} onChange={(e) => setAdditionalAmt(e.target.value)} />
-                  <span>{t("addOverstayCharge")}</span>
-                </label>
-              </div>
-            }
+            description={t("overstayPlanned", { date: fmtDate(res.endDate).text })}
           />
         )}
 

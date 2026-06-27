@@ -94,12 +94,8 @@ export async function PATCH(
       const reduction = body.additionalAmount ?? 0;
       adjustmentAmount = -Math.abs(reduction);
       adjustmentDescription = `Early checkout: ${actualNights} of ${plannedNights} nights — reduction of ${Math.abs(adjustmentAmount).toFixed(3)} OMR`;
-    } else if (actualNights > plannedNights) {
-      // Overstay — extra charges
-      const extra = body.additionalAmount ?? 0;
-      adjustmentAmount = extra;
-      adjustmentDescription = `Overstay: ${actualNights - plannedNights} extra night(s) — additional charge of ${extra.toFixed(3)} OMR`;
     }
+    // Overstay charges removed — checkout never adds an overstay/late fee.
   }
 
   const newGrandTotal = roundOMR(grandTotal + adjustmentAmount);

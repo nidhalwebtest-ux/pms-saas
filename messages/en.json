@@ -2307,7 +2307,8 @@
         "lockedHint": "Locked — based on check-in + months",
         "lockedHintNights": "Locked — based on check-in + nights",
         "nightsSummary": "{count, plural, one {# night} other {# nights}}",
-        "monthsSummary": "{count, plural, one {# calendar month} other {# calendar months}}"
+        "monthsSummary": "{count, plural, one {# calendar month} other {# calendar months}}",
+        "pastStartWarning": "Heads up: this reservation starts before today. Make sure this is intended."
       },
       "step3": {
         "title": "Select Units",

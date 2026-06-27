@@ -476,11 +476,12 @@ function CheckOutModal({ res, onSuccess, onClose }: {
   const nightlyRate = res.units.length > 0 ? (Number(res.units[0].subtotal) / Math.max(1, res.units[0].nights)) : 0;
   const estimatedAdjustment = Math.abs(extraDays) * nightlyRate;
 
-  const [adjustToggle, setAdjustToggle] = useState(isOverstay);
+  // Overstay no longer charges a fee — only the early-checkout reduction remains.
+  const [adjustToggle, setAdjustToggle] = useState(false);
   const [condition, setCondition] = useState({ inspected: false, keysReturned: false, noDamage: false });
   const [loading, setLoading] = useState(false);
 
-  const adjustmentAmt = adjustToggle ? (isEarly ? -estimatedAdjustment : estimatedAdjustment) : 0;
+  const adjustmentAmt = adjustToggle && isEarly ? -estimatedAdjustment : 0;
   const adjustedBalance = Math.max(0, Number(res.balanceDue) + adjustmentAmt).toFixed(3);
 
   async function handleConfirm() {
@@ -534,8 +535,8 @@ function CheckOutModal({ res, onSuccess, onClose }: {
           )}
         </div>
 
-        {/* Adjustment toggle */}
-        {(isEarly || isOverstay) && estimatedAdjustment > 0 && (
+        {/* Early-checkout reduction toggle (overstay no longer charges a fee) */}
+        {isEarly && estimatedAdjustment > 0 && (
           <div className="flex items-start gap-3 p-4 border border-gray-200 rounded-xl">
             <input
               type="checkbox" id="adjust" checked={adjustToggle}
@@ -543,14 +544,7 @@ function CheckOutModal({ res, onSuccess, onClose }: {
               className="mt-0.5 h-4 w-4 rounded text-blue-600"
             />
             <label htmlFor="adjust" className="text-sm text-gray-700 cursor-pointer">
-              {isEarly
-                ? t("earlyToggle", { amount: estimatedAdjustment.toFixed(3) })
-                : t("overstayToggle", {
-                    nights: Math.abs(extraDays),
-                    nightsLabel: td("nightsLabel"),
-                    rate: nightlyRate.toFixed(3),
-                    total: estimatedAdjustment.toFixed(3),
-                  })}
+              {t("earlyToggle", { amount: estimatedAdjustment.toFixed(3) })}
             </label>
           </div>
         )}
@@ -561,10 +555,10 @@ function CheckOutModal({ res, onSuccess, onClose }: {
             <span>{t("originalTotal")}</span>
             <span><span className="ltr-numbers">{res.grandTotal}</span> OMR</span>
           </div>
-          {adjustToggle && estimatedAdjustment > 0 && (
-            <div className={`flex justify-between ${isEarly ? "text-blue-600" : "text-red-600"}`}>
-              <span>{isEarly ? t("earlyReduction") : t("overstayCharges")}</span>
-              <span><span className="ltr-numbers">{isEarly ? "-" : "+"}{estimatedAdjustment.toFixed(3)}</span> OMR</span>
+          {adjustToggle && isEarly && estimatedAdjustment > 0 && (
+            <div className="flex justify-between text-blue-600">
+              <span>{t("earlyReduction")}</span>
+              <span><span className="ltr-numbers">-{estimatedAdjustment.toFixed(3)}</span> OMR</span>
             </div>
           )}
           <div className="flex justify-between text-gray-600 border-t pt-2">

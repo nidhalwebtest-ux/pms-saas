@@ -51,6 +51,7 @@ function resolvePrice(
     priority: number; isActive: boolean;
   }[],
   date: Date,
+  basePrice?: number | null,
 ): ApplicablePrice | null {
   const active = prices.filter((p) => p.isActive);
   const defaultPrice = active.find((p) => p.priceType === "DEFAULT");
@@ -69,7 +70,23 @@ function resolvePrice(
     .sort((a, b) => b.priority - a.priority);
 
   const applicable = seasonal[0] ?? defaultPrice ?? null;
-  if (!applicable) return null;
+  if (!applicable) {
+    // No configured DEFAULT/SEASONAL UnitPrice for this date → fall back to the
+    // unit's base (daily) price so a normally-created unit still prices its
+    // daily rate instead of 0.00. (Monthly rates must be configured per unit.)
+    if (basePrice != null && basePrice > 0) {
+      return {
+        priceId:     "base",
+        priceType:   "DEFAULT",
+        name:        null,
+        dailyRate:   basePrice,
+        weeklyRate:  null,
+        monthlyRate: basePrice,
+        priority:    0,
+      };
+    }
+    return null;
+  }
 
   return {
     priceId:     applicable.id,
@@ -92,8 +109,11 @@ export async function getUnitPriceForDate(
   unitId: string,
   date:   Date,
 ): Promise<ApplicablePrice | null> {
-  const prices = await prisma.unitPrice.findMany({ where: { unitId } });
-  return resolvePrice(prices, date);
+  const [prices, unit] = await Promise.all([
+    prisma.unitPrice.findMany({ where: { unitId } }),
+    prisma.unit.findUnique({ where: { id: unitId }, select: { basePrice: true } }),
+  ]);
+  return resolvePrice(prices, date, unit ? Number(unit.basePrice) : null);
 }
 
 /**
@@ -105,7 +125,11 @@ export async function getUnitPriceForRange(
   startDate: Date,
   endDate:   Date,
 ): Promise<RangePriceResult> {
-  const prices = await prisma.unitPrice.findMany({ where: { unitId } });
+  const [prices, unit] = await Promise.all([
+    prisma.unitPrice.findMany({ where: { unitId } }),
+    prisma.unit.findUnique({ where: { id: unitId }, select: { basePrice: true } }),
+  ]);
+  const basePrice = unit ? Number(unit.basePrice) : null;
 
   const breakdown: DayBreakdown[] = [];
   const cursor = new Date(startDate);
@@ -115,7 +139,7 @@ export async function getUnitPriceForRange(
   end.setHours(0, 0, 0, 0);
 
   while (cursor < end) {
-    const p = resolvePrice(prices, cursor);
+    const p = resolvePrice(prices, cursor, basePrice);
     breakdown.push({
       date:      cursor.toISOString().slice(0, 10),
       rate:      p?.dailyRate ?? 0,

@@ -2307,7 +2307,8 @@
         "lockedHint": "مقفل — استناداً إلى الوصول + الأشهر",
         "lockedHintNights": "مقفل — استناداً إلى الوصول + الليالي",
         "nightsSummary": "{count, plural, zero {لا ليالٍ} one {ليلة واحدة} two {ليلتان} few {# ليالٍ} many {# ليلة} other {# ليلة}}",
-        "monthsSummary": "{count, plural, zero {لا أشهر} one {شهر تقويمي واحد} two {شهران تقويميان} few {# أشهر تقويمية} many {# شهراً تقويمياً} other {# شهر تقويمي}}"
+        "monthsSummary": "{count, plural, zero {لا أشهر} one {شهر تقويمي واحد} two {شهران تقويميان} few {# أشهر تقويمية} many {# شهراً تقويمياً} other {# شهر تقويمي}}",
+        "pastStartWarning": "تنبيه: يبدأ هذا الحجز قبل تاريخ اليوم. تأكّد من أن ذلك مقصود."
       },
       "step3": {
         "title": "اختر الوحدات",

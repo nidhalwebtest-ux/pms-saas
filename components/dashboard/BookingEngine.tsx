@@ -17,6 +17,7 @@ import {
   PlusIcon,
   UserIcon,
   PencilSquareIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 import { CheckCircleIcon as CheckCircleSolid } from "@heroicons/react/24/solid";
 import {
@@ -266,6 +267,14 @@ export default function BookingEngine({
   }, [startDate, endDate]);
 
   const currentPeriod = rateType === "daily" ? nights : calMonths;
+
+  // Warn (but allow) when a NEW reservation's start date is before today.
+  const startInPast = useMemo(() => {
+    if (!startDate || editMode) return false;
+    const s = parseLocalDate(startDate); s.setHours(0, 0, 0, 0);
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return s < today;
+  }, [startDate, editMode]);
 
   // Selected unit objects (with custom subtotals applied)
   const selectedUnitObjects = useMemo(() => {
@@ -722,11 +731,11 @@ export default function BookingEngine({
               + a duration stepper (nights/months) + an auto-computed check-out.
               The daily-aware handlers already derive check-out from the count (QA #17). */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* No minDate: past start dates are allowed (warn-but-allow below). */}
             <DatePicker
               label={tStep2("checkInDate")}
               value={startDate ? parseLocalDate(startDate) : null}
               onValueChange={(d) => handleStartDateChange(d ? toDateInput(d) : "")}
-              minDate={new Date()}
               locale={dateFnsLocale}
               reserveMessageSpace={false}
             />
@@ -754,6 +763,14 @@ export default function BookingEngine({
               </p>
             </div>
           </div>
+
+          {/* Past start-date warning (allowed, but flagged) */}
+          {startInPast && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm text-amber-800 flex items-start gap-2">
+              <ExclamationTriangleIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <span>{tStep2("pastStartWarning")}</span>
+            </div>
+          )}
 
           {/* Duration summary chip */}
           {currentPeriod > 0 && startDate && endDate && (

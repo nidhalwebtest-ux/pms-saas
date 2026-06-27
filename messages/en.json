@@ -4821,6 +4821,12 @@
         "no_org": "No organization found",
         "unauthorized": "Please sign in",
         "generic": "Could not save. Please try again."
+      },
+      "pendingExpenses": {
+        "title": "Pending expenses to process",
+        "subtitle": "Approved expenses for this building not yet processed. Processing posts them to today's open drawer.",
+        "amount": "Amount",
+        "process": "Process"
       }
     },
     "returns": {

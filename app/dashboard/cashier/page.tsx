@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { getTranslations, getLocale } from "next-intl/server";
 import { format } from "date-fns";
 import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
-import { BanknotesIcon } from "@heroicons/react/24/outline";
+import { BanknotesIcon, ReceiptPercentIcon } from "@heroicons/react/24/outline";
 import { assertView } from "@/lib/access";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
@@ -83,6 +84,20 @@ export default async function CashierPage({
       depositBankAccount: { select: { bankName: true } },
     },
   });
+
+  // Approved expenses for this building NOT yet processed (any day). Surfaced so
+  // the cashier can process them — once processed they post to the current open
+  // day's drawer (never the old, already-locked day).
+  const pendingExpenses = await prisma.expense.findMany({
+    where: { organizationId: orgId, propertyId, status: "APPROVED" },
+    orderBy: { submittedAt: "asc" },
+    take: 50,
+    select: {
+      id: true, expenseNumber: true, description: true, amount: true,
+      submittedAt: true, category: { select: { name: true, nameAr: true } },
+    },
+  });
+  const pendingExpensesTotal = pendingExpenses.reduce((s, e) => s + Number(e.amount), 0);
 
   const canReconcile = access.canCreate("reconciliation");
   const canManage = access.canDelete("reconciliation"); // FULL → unlock / delete deposit
@@ -221,6 +236,51 @@ export default async function CashierPage({
           </table>
         </div>
       </div>
+
+      {/* Pending expenses awaiting processing (any day, this building) */}
+      {pendingExpenses.length > 0 && (
+        <div className="rounded-xl bg-white shadow-sm ring-1 ring-amber-200 overflow-hidden">
+          <div className="flex items-center justify-between gap-3 border-b border-amber-100 bg-amber-50 px-5 py-3">
+            <div className="flex items-center gap-2">
+              <ReceiptPercentIcon className="h-4 w-4 text-amber-600" />
+              <div>
+                <h3 className="text-sm font-semibold text-amber-800">{t("pendingExpenses.title")}</h3>
+                <p className="text-[11px] text-amber-600 mt-0.5">{t("pendingExpenses.subtitle")}</p>
+              </div>
+            </div>
+            <span className="text-sm font-bold text-amber-800 ltr-numbers">{money(pendingExpensesTotal)}</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-100 text-sm">
+              <thead className="bg-gray-50">
+                <tr className="text-xs uppercase tracking-wide text-gray-400">
+                  <th className="px-4 py-2 text-start">{t("col.date")}</th>
+                  <th className="px-4 py-2 text-start">{t("col.description")}</th>
+                  <th className="px-4 py-2 text-end">{t("pendingExpenses.amount")}</th>
+                  <th className="px-4 py-2 text-end"><span className="sr-only">{t("pendingExpenses.process")}</span></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {pendingExpenses.map((e) => (
+                  <tr key={e.id}>
+                    <td className="px-4 py-2.5 text-gray-500 ltr-numbers whitespace-nowrap">{format(new Date(e.submittedAt), "d MMM yyyy", { locale: dfLocale })}</td>
+                    <td className="px-4 py-2.5 text-gray-700">
+                      {e.description}
+                      <span className="ml-1.5 text-xs text-gray-400">· {(locale === "ar" && e.category.nameAr) || e.category.name}{e.expenseNumber ? ` · ${e.expenseNumber}` : ""}</span>
+                    </td>
+                    <td className="px-4 py-2.5 text-end text-gray-900 ltr-numbers">{money(Number(e.amount))}</td>
+                    <td className="px-4 py-2.5 text-end whitespace-nowrap">
+                      <Link href={`/dashboard/expenses/${e.id}`} className="text-xs font-medium text-blue-600 hover:text-blue-700">
+                        {t("pendingExpenses.process")} →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Reconcile & lock */}
       {(canReconcile || locked) && (

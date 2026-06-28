@@ -1917,7 +1917,11 @@
           "overdue": "Overdue",
           "pending": "Pending",
           "draft": "Draft"
-        }
+        },
+        "issue": "Issue",
+        "issuing": "Issuing…",
+        "issueSuccess": "Invoice issued",
+        "issueFailed": "Could not issue invoice"
       },
       "pricingBreakdown": {
         "title": "Pricing Breakdown",

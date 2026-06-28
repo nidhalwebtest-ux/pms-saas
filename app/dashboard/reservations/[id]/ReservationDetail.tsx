@@ -1774,6 +1774,7 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [activeInvoice, setActiveInvoice] = useState<InvoiceRow | null>(null);
   const [activeReturn, setActiveReturn] = useState<ReturnRow | null>(null);
+  const [issuingId, setIssuingId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     const r = await fetch(`/api/reservations/${id}`);
@@ -1788,6 +1789,23 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
   function afterAction() {
     setActiveModal(null);
     loadData();
+  }
+
+  async function handleIssueInvoice(invId: string) {
+    setIssuingId(invId);
+    try {
+      const r = await fetch(`/api/invoices/${invId}/issue`, { method: "PATCH" });
+      if (!r.ok) {
+        const data = await r.json().catch(() => ({}));
+        throw new Error(data.error || tInvoices("issueFailed"));
+      }
+      toast.success(tInvoices("issueSuccess"));
+      await loadData();
+    } catch (err: any) {
+      toast.error(err?.message || tInvoices("issueFailed"));
+    } finally {
+      setIssuingId(null);
+    }
   }
 
   if (loading) {
@@ -2226,13 +2244,25 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
                               </span>
                             </td>
                             <td className="py-2 text-end ps-1">
-                              {!isPaid && !isCancelled && (
-                                <button
-                                  onClick={() => setActiveInvoice(inv)}
-                                  className="text-xs text-blue-600 hover:underline font-medium"
-                                >
-                                  {tInvoices("pay")}
-                                </button>
+                              {isDraft ? (
+                                canGenInvoices && (
+                                  <button
+                                    onClick={() => handleIssueInvoice(inv.id)}
+                                    disabled={issuingId === inv.id}
+                                    className="text-xs text-indigo-600 hover:underline font-medium disabled:opacity-50"
+                                  >
+                                    {issuingId === inv.id ? tInvoices("issuing") : tInvoices("issue")}
+                                  </button>
+                                )
+                              ) : (
+                                !isPaid && !isCancelled && (
+                                  <button
+                                    onClick={() => setActiveInvoice(inv)}
+                                    className="text-xs text-blue-600 hover:underline font-medium"
+                                  >
+                                    {tInvoices("pay")}
+                                  </button>
+                                )
                               )}
                             </td>
                           </tr>

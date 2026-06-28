@@ -205,14 +205,13 @@ export function ReceptionistView({
       {subTab === "occupancy" && (
         <div className="space-y-5">
           {/* Unit count cards */}
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl bg-gray-50 p-4 lg:col-span-1">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-500">{tOcc("totalUnits")}</p>
               <p className="mt-1 text-3xl font-bold text-gray-900">{uc.total}</p>
               <p className="text-xs text-gray-400 mt-0.5">{tOcc("acrossBuildings")}</p>
             </div>
             <UnitCountCard label={tOcc("occupied")}    value={uc.occupied}    total={uc.total} color="text-red-600"    bg="bg-red-50"   pctLabel={tOcc("pctOfTotal", { pct: uc.total > 0 ? Math.round((uc.occupied / uc.total) * 100) : 0 })} />
-            <UnitCountCard label={tOcc("reserved")}    value={uc.reserved}    total={uc.total} color="text-blue-600"   bg="bg-blue-50"  pctLabel={tOcc("pctOfTotal", { pct: uc.total > 0 ? Math.round((uc.reserved / uc.total) * 100) : 0 })} />
             <UnitCountCard label={tOcc("vacant")}      value={uc.vacant}      total={uc.total} color="text-green-600"  bg="bg-green-50" pctLabel={tOcc("pctOfTotal", { pct: uc.total > 0 ? Math.round((uc.vacant / uc.total) * 100) : 0 })} />
             <UnitCountCard label={tOcc("maintenance")} value={uc.maintenance} total={uc.total} color="text-gray-500"   bg="bg-gray-100" pctLabel={tOcc("pctOfTotal", { pct: uc.total > 0 ? Math.round((uc.maintenance / uc.total) * 100) : 0 })} />
           </div>
@@ -244,7 +243,7 @@ export function ReceptionistView({
                 <table className="min-w-full divide-y divide-gray-100">
                   <thead>
                     <tr className="bg-gray-50">
-                      {(["building", "total", "occupied", "reserved", "vacant", "maint", "occupancy"] as const).map((k) => (
+                      {(["building", "total", "occupied", "vacant", "maint", "occupancy"] as const).map((k) => (
                         <th key={k} className="px-4 py-2.5 text-start text-xs font-semibold text-gray-500 uppercase tracking-wider">
                           {tOccTbl(k)}
                         </th>
@@ -257,7 +256,6 @@ export function ReceptionistView({
                         <td className="px-4 py-3 text-sm font-medium text-gray-900">{b.name}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">{b.total}</td>
                         <td className="px-4 py-3 text-sm font-semibold text-red-600">{b.occupied}</td>
-                        <td className="px-4 py-3 text-sm text-blue-600">{b.reserved}</td>
                         <td className="px-4 py-3 text-sm text-green-600">{b.vacant}</td>
                         <td className="px-4 py-3 text-sm text-gray-400">{b.maintenance}</td>
                         <td className="px-4 py-3">

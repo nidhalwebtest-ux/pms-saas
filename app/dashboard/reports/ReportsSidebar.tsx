@@ -5,17 +5,26 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { REPORT_GROUPS } from "./reports-config";
+import { reportKey, atLeast } from "@/lib/rbac";
+import { usePerms } from "@/components/PermissionsProvider";
 
 export default function ReportsSidebar() {
   const pathname = usePathname();
   const t = useTranslations("reports");
   const [q, setQ] = useState("");
+  const { perms, isOwner } = usePerms();
+
+  const canViewReport = (slug: string) =>
+    isOwner || atLeast(perms, reportKey(slug), "VIEW");
 
   const groups = REPORT_GROUPS.map((g) => ({
     ...g,
-    items: q.trim()
-      ? g.items.filter((i) => t(`items.${i.slug}`).toLowerCase().includes(q.trim().toLowerCase()))
-      : g.items,
+    items: g.items.filter(
+      (i) =>
+        canViewReport(i.slug) &&
+        (!q.trim() ||
+          t(`items.${i.slug}`).toLowerCase().includes(q.trim().toLowerCase())),
+    ),
   })).filter((g) => g.items.length > 0);
 
   return (

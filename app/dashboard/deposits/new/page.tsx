@@ -9,7 +9,7 @@ import { getSelectedPropertyId } from "@/lib/selected-property";
 import NewDepositForm from "./NewDepositForm";
 
 export default async function NewDepositPage() {
-  await requireAccess("reconciliation", "CREATE");
+  await requireAccess("depositCreate", "VIEW");
   const orgUser = await requireOrgUser();
   const orgId = orgUser.organizationId;
 

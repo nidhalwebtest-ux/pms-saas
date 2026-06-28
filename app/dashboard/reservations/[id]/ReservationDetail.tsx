@@ -1771,6 +1771,7 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
   const canManageRes     = useCan("reservations", "CREATE");
   const canRecordPayment = useCan("payments", "CREATE");
   const canGenInvoices   = useCan("invoices", "CREATE");
+  const canIssueInvoice  = useCan("invoiceIssue", "VIEW");
   const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [activeInvoice, setActiveInvoice] = useState<InvoiceRow | null>(null);
   const [activeReturn, setActiveReturn] = useState<ReturnRow | null>(null);
@@ -2245,7 +2246,7 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
                             </td>
                             <td className="py-2 text-end ps-1">
                               {isDraft ? (
-                                canGenInvoices && (
+                                canIssueInvoice && (
                                   <button
                                     onClick={() => handleIssueInvoice(inv.id)}
                                     disabled={issuingId === inv.id}

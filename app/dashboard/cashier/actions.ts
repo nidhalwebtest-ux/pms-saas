@@ -137,7 +137,7 @@ export async function createCashDeposit(fd: FormData): Promise<ActionResponse> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "unauthorized" };
-  if (!(await hasAccess("reconciliation", "CREATE"))) return { error: "forbidden" };
+  if (!(await hasAccess("depositCreate", "VIEW"))) return { error: "forbidden" };
 
   const access = await getSessionAccess();
   if (!access?.organizationId) return { error: "no_org" };
@@ -235,7 +235,7 @@ export async function deleteCashDeposit(transferGroupId: string): Promise<Action
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "unauthorized" };
-  if (!(await hasAccess("reconciliation", "FULL"))) return { error: "forbidden" };
+  if (!(await hasAccess("depositDelete", "VIEW"))) return { error: "forbidden" };
 
   const access = await getSessionAccess();
   if (!access?.organizationId) return { error: "no_org" };
@@ -281,7 +281,7 @@ export async function unlockCashierSession(sessionId: string): Promise<ActionRes
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "unauthorized" };
-  if (!(await hasAccess("reconciliation", "FULL"))) return { error: "forbidden" };
+  if (!(await hasAccess("cashUnlock", "VIEW"))) return { error: "forbidden" };
 
   const access = await getSessionAccess();
   if (!access?.organizationId) return { error: "no_org" };

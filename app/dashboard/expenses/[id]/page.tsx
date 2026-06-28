@@ -89,10 +89,10 @@ export default async function ExpenseDetailsPage({
   const isOwn = expense.submittedById === user.id;
   // Combine the role/status rules with the permission matrix (custom roles).
   const access = await getSessionAccess();
-  const canManageExpense = access?.can("expenses", "EDIT") ?? false;
   const canWriteExpense  = access?.canCreate("expenses") ?? false;
-  const canApprove = ["OWNER", "MANAGER"].includes(dbUser.role) && expense.status === "PENDING" && canManageExpense;
-  const canProcess = ["OWNER", "ACCOUNTANT"].includes(dbUser.role) && expense.status === "APPROVED" && canManageExpense;
+  // Approve/process are now matrix-driven via dedicated action permissions.
+  const canApprove = expense.status === "PENDING"  && (access?.can("expenseApprove", "VIEW") ?? false);
+  const canProcess = expense.status === "APPROVED" && (access?.can("expenseProcess", "VIEW") ?? false);
   const canEdit    = expense.status === "PENDING" && isOwn && canWriteExpense;
   const canDelete  = expense.status === "PENDING" && (isOwn || dbUser.role === "OWNER") && canWriteExpense;
 

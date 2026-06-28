@@ -10,14 +10,10 @@ export async function PATCH(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const __denied = await forbiddenIfNo("expenses", "EDIT");
+  const __denied = await forbiddenIfNo("expenseApprove", "VIEW");
   if (__denied) return __denied;
   let orgUser;
   try { orgUser = await requireOrgUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
-
-  if (!["OWNER", "MANAGER"].includes(orgUser.role ?? "")) {
-    return NextResponse.json({ error: "Only managers can approve expenses" }, { status: 403 });
-  }
 
   const { id } = await params;
 

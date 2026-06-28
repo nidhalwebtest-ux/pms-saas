@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
 import { NAV_ACCESS, type Role } from "@/lib/permissions";
-import { atLeast, type PermissionLevel } from "@/lib/rbac";
+import { atLeast, reportKey, type PermissionLevel } from "@/lib/rbac";
 import { usePerms } from "@/components/PermissionsProvider";
 import { REPORT_GROUPS } from "@/app/dashboard/reports/reports-config";
 
@@ -170,7 +170,6 @@ const CHILD_REQUIRES: Record<string, { entity: string; level: PermissionLevel }>
   "/dashboard/settings/returns":           { entity: "settingsReturns",      level: "VIEW" },
   "/dashboard/settings/units":             { entity: "settingsUnits",        level: "VIEW" },
   "/dashboard/settings/sales-targets":     { entity: "salesTargets",         level: "VIEW" },
-  "/dashboard/reports/target-vs-actual":   { entity: "salesTargets",         level: "VIEW" },
   "/dashboard/settings/banks":             { entity: "banks",                level: "VIEW" },
   "/dashboard/settings/expense-categories":{ entity: "expenseCategories",    level: "VIEW" },
 };
@@ -214,17 +213,40 @@ export default function Navigation({ role, navAccess }: { role: Role; navAccess?
     if (!req) return true;
     return isOwner || atLeast(perms, req.entity, req.level);
   };
+  // A report leaf (href "/dashboard/reports/<slug>") is gated by its own
+  // per-report permission key. Owner sees everything.
+  const reportItemVisible = (href: string) => {
+    const slug = href.replace("/dashboard/reports/", "");
+    return isOwner || atLeast(perms, reportKey(slug), "VIEW");
+  };
   const visible = navigationConfig
     .filter((item) =>
       navAccess && item.key in navAccess
         ? navAccess[item.key]
         : (NAV_ACCESS[item.key] ?? []).includes(role),
     )
-    .map((item) =>
-      item.children
-        ? { ...item, children: item.children.filter((c) => childVisible(c.href)) }
-        : item,
-    );
+    .map((item) => {
+      if (!item.children) return item;
+      // Reports: nested group → items. Filter leaf items by their own report
+      // key, then drop any group left with no visible items.
+      if (item.key === "reports") {
+        const children = item.children
+          .map((group) => ({
+            ...group,
+            children: (group.children ?? []).filter((leaf) =>
+              reportItemVisible(leaf.href),
+            ),
+          }))
+          .filter((group) => (group.children?.length ?? 0) > 0)
+          .map((group) => ({
+            ...group,
+            // Point the group header at its first still-visible report.
+            href: group.children![0].href,
+          }));
+        return { ...item, children };
+      }
+      return { ...item, children: item.children.filter((c) => childVisible(c.href)) };
+    });
 
   // Close everything when clicking outside the nav
   useEffect(() => {

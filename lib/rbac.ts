@@ -18,10 +18,48 @@ const RANK: Record<PermissionLevel, number> = { NONE: 0, VIEW: 1, CREATE: 2, EDI
 
 export type PermissionMap = Record<string, PermissionLevel>;
 
-export interface EntityDef { key: string }
+// `kind` controls how the entity renders in the role editor: "crud" → a
+// None/View/Create/Edit/Full selector; "toggle" → an on/off checkbox (used by
+// per-report and per-action permissions). `sub` groups toggles under a subheader.
+export interface EntityDef { key: string; kind?: "crud" | "toggle"; sub?: string }
 export interface PermissionGroup { key: string; entities: EntityDef[] }
 
-/** The full catalog of records/transactions/reports/setup, grouped for the UI. */
+// ── Per-report permission keys ────────────────────────────────────────────────
+// Each report is individually permissionable (a user may see Occupancy but not
+// Revenue). Keep these slugs in sync with app/dashboard/reports/reports-config.ts.
+export function reportKey(slug: string): string { return `report:${slug}`; }
+export function reportSlug(key: string): string | null {
+  return key.startsWith("report:") ? key.slice("report:".length) : null;
+}
+
+export const REPORT_GROUP_SLUGS: { group: string; slugs: string[] }[] = [
+  { group: "revenue",     slugs: ["revenue-by-building", "revenue-by-tenant", "revenue-by-unit-type", "revenue-by-source", "revenue-trend", "revenue-comparison"] },
+  { group: "occupancy",   slugs: ["occupancy-by-building", "occupancy-trend", "vacancy-analysis", "avg-length-of-stay", "khareef-performance"] },
+  { group: "financial",   slugs: ["aging-receivables", "outstanding-balances", "cash-flow", "pnl-by-building", "expense-breakdown"] },
+  { group: "operational", slugs: ["receptionist-performance", "tenant-reports", "maintenance", "booking-sources", "cancellation-analysis", "target-vs-actual"] },
+  { group: "tax",         slugs: ["vat-summary", "revenue-by-month", "annual-summary"] },
+];
+export const REPORT_ENTITY_KEYS: string[] = REPORT_GROUP_SLUGS.flatMap((g) => g.slugs.map(reportKey));
+
+// ── Granular action permission keys (non-CRUD; rendered as on/off toggles) ─────
+export const ACTION_GROUPS: { group: string; keys: string[] }[] = [
+  { group: "expenses",     keys: ["expenseApprove", "expenseProcess"] },
+  { group: "cashier",      keys: ["depositCreate", "depositDelete", "cashUnlock"] },
+  { group: "invoices",     keys: ["invoiceIssue", "invoiceCancel"] },
+  { group: "payments",     keys: ["paymentRefund"] },
+  { group: "reservations", keys: ["resCheckIn", "resCheckOut", "resCancel", "resNoShow"] },
+  { group: "returns",      keys: ["returnApprove"] },
+];
+export const ACTION_ENTITY_KEYS: string[] = ACTION_GROUPS.flatMap((g) => g.keys);
+
+const reportEntities: EntityDef[] = REPORT_GROUP_SLUGS.flatMap((g) =>
+  g.slugs.map((s) => ({ key: reportKey(s), kind: "toggle" as const, sub: g.group })),
+);
+const actionEntities: EntityDef[] = ACTION_GROUPS.flatMap((g) =>
+  g.keys.map((k) => ({ key: k, kind: "toggle" as const, sub: g.group })),
+);
+
+/** The full catalog of records/transactions/actions/reports/setup, grouped for the UI. */
 export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     key: "lists",
@@ -35,8 +73,12 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     ],
   },
   {
+    key: "actions",
+    entities: actionEntities,
+  },
+  {
     key: "reports",
-    entities: [{ key: "reports" }, { key: "salesTargets" }],
+    entities: [...reportEntities, { key: "salesTargets" }],
   },
   {
     key: "setup",
@@ -63,19 +105,48 @@ export const SYSTEM_ROLES: { key: SystemRoleKey; nameKey: string }[] = [
 const everything = (level: PermissionLevel): PermissionMap =>
   Object.fromEntries(ALL_ENTITY_KEYS.map((k) => [k, level]));
 
+/**
+ * Derive the per-report + per-action grants implied by a base CRUD matrix.
+ * Used to (a) seed the system-role defaults and (b) backfill existing roles so
+ * they keep their current behavior when these granular permissions are added.
+ * A granular permission is "on" (FULL) when the base matrix already authorized
+ * the corresponding action under the old coarse rules.
+ */
+export function deriveExtendedGrants(base: PermissionMap): PermissionMap {
+  const ON: PermissionLevel = "FULL", OFF: PermissionLevel = "NONE";
+  const out: PermissionMap = {};
+  const repOn = atLeast(base, "reports", "VIEW") ? ON : OFF;
+  for (const k of REPORT_ENTITY_KEYS) out[k] = repOn;
+  out.expenseApprove = atLeast(base, "expenses", "EDIT") ? ON : OFF;
+  out.expenseProcess = atLeast(base, "expenses", "EDIT") ? ON : OFF;
+  out.depositCreate  = atLeast(base, "reconciliation", "CREATE") ? ON : OFF;
+  out.depositDelete  = atLeast(base, "reconciliation", "FULL") ? ON : OFF;
+  out.cashUnlock     = atLeast(base, "reconciliation", "FULL") ? ON : OFF;
+  out.invoiceIssue   = atLeast(base, "invoices", "CREATE") ? ON : OFF;
+  out.invoiceCancel  = atLeast(base, "invoices", "CREATE") ? ON : OFF;
+  // Refund pay-out lives in the returns module (legacy gate: returns CREATE).
+  out.paymentRefund  = atLeast(base, "returns", "CREATE") ? ON : OFF;
+  out.resCheckIn     = atLeast(base, "reservations", "CREATE") ? ON : OFF;
+  out.resCheckOut    = atLeast(base, "reservations", "CREATE") ? ON : OFF;
+  out.resCancel      = atLeast(base, "reservations", "CREATE") ? ON : OFF;
+  out.resNoShow      = atLeast(base, "reservations", "CREATE") ? ON : OFF;
+  out.returnApprove  = atLeast(base, "returns", "CREATE") ? ON : OFF;
+  return out;
+}
+
+const withDerived = (base: PermissionMap): PermissionMap => ({ ...base, ...deriveExtendedGrants(base) });
+
 /** Default matrices for the seeded system roles — mirror the legacy access rules. */
 export const DEFAULT_MATRICES: Record<SystemRoleKey, PermissionMap> = {
-  // Org creator — full access to everything.
+  // Org creator — full access to everything (incl. all reports + actions).
   OWNER: everything("FULL"),
 
   // Admin — full operational + setup access.
-  MANAGER: {
-    ...everything("FULL"),
-  },
+  MANAGER: everything("FULL"),
 
   // Receptionist — front-desk: tenants & reservations, raise invoices/payments/
   // returns, submit expenses; read-only buildings/units; no reports/setup.
-  STAFF: {
+  STAFF: withDerived({
     buildings: "VIEW", units: "VIEW", tenants: "FULL",
     reservations: "FULL", invoices: "CREATE", payments: "CREATE",
     returns: "CREATE", expenses: "CREATE", reconciliation: "CREATE",
@@ -84,11 +155,11 @@ export const DEFAULT_MATRICES: Record<SystemRoleKey, PermissionMap> = {
     settingsReservations: "NONE", settingsPayments: "NONE",
     settingsReturns: "NONE", settingsUnits: "NONE",
     banks: "NONE", expenseCategories: "NONE",
-  },
+  }),
 
   // Accountant — finance: invoices/payments/returns + process expenses; no
   // tenants/reservations/properties management; no reports/setup.
-  ACCOUNTANT: {
+  ACCOUNTANT: withDerived({
     buildings: "NONE", units: "NONE", tenants: "VIEW",
     reservations: "VIEW", invoices: "EDIT", payments: "FULL",
     returns: "EDIT", expenses: "EDIT", reconciliation: "FULL",
@@ -97,7 +168,7 @@ export const DEFAULT_MATRICES: Record<SystemRoleKey, PermissionMap> = {
     settingsReservations: "NONE", settingsPayments: "NONE",
     settingsReturns: "NONE", settingsUnits: "NONE",
     banks: "NONE", expenseCategories: "NONE",
-  },
+  }),
 };
 
 /** Normalize a stored JSON map to a complete map (missing keys → NONE). */
@@ -109,6 +180,26 @@ export function normalizeMatrix(raw: unknown): PermissionMap {
     out[key] = (typeof v === "string" && (PERMISSION_LEVELS as readonly string[]).includes(v))
       ? (v as PermissionLevel)
       : "NONE";
+  }
+  return out;
+}
+
+/**
+ * Backfill helper: extend a stored matrix with derived report/action grants,
+ * preserving any explicitly-stored levels (incl. the legacy single `reports`
+ * key, read to seed the per-report toggles). Used by the one-time migration.
+ */
+export function extendStoredMatrix(raw: unknown): PermissionMap {
+  const map = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const base = normalizeMatrix(raw);
+  const legacyReports = typeof map.reports === "string" ? (map.reports as PermissionLevel) : "NONE";
+  const derived = deriveExtendedGrants({ ...base, reports: legacyReports });
+  const out: PermissionMap = { ...base };
+  for (const k of [...REPORT_ENTITY_KEYS, ...ACTION_ENTITY_KEYS]) {
+    const explicit = map[k];
+    out[k] = (typeof explicit === "string" && (PERMISSION_LEVELS as readonly string[]).includes(explicit))
+      ? (explicit as PermissionLevel)
+      : derived[k];
   }
   return out;
 }
@@ -158,7 +249,7 @@ export const NAV_ENTITY: Record<string, string[]> = {
   payments:     ["payments"],
   expenses:     ["expenses"],
   cashier:      ["reconciliation", "banks"],
-  reports:      ["reports"],
+  reports:      REPORT_ENTITY_KEYS,
   salesTargets: ["salesTargets"],
 };
 

@@ -4533,7 +4533,8 @@
         "lists": "القوائم",
         "transactions": "المعاملات",
         "reports": "التقارير",
-        "setup": "الإعداد"
+        "setup": "الإعداد",
+        "actions": "الإجراءات"
       },
       "entities": {
         "buildings": "المباني",
@@ -4573,6 +4574,31 @@
         "system_readonly": "لا يمكن تعديل الأدوار القياسية.",
         "role_in_use": "أعد تعيين الأعضاء قبل حذف هذا الدور.",
         "generic": "حدث خطأ ما. حاول مرة أخرى."
+      },
+      "allOn": "تفعيل الكل",
+      "allOff": "إلغاء الكل",
+      "actionGroups": {
+        "expenses": "المصروفات",
+        "cashier": "الصندوق والبنوك",
+        "invoices": "الفواتير",
+        "payments": "المدفوعات",
+        "reservations": "الحجوزات",
+        "returns": "المرتجعات"
+      },
+      "actions": {
+        "expenseApprove": "اعتماد / رفض المصروف",
+        "expenseProcess": "معالجة (صرف) المصروف",
+        "depositCreate": "إنشاء إيداع نقدي",
+        "depositDelete": "حذف إيداع نقدي",
+        "cashUnlock": "فتح يوم مقفل",
+        "invoiceIssue": "إصدار فاتورة",
+        "invoiceCancel": "إلغاء فاتورة",
+        "paymentRefund": "استرداد دفعة",
+        "resCheckIn": "تسجيل الوصول",
+        "resCheckOut": "تسجيل المغادرة",
+        "resCancel": "إلغاء الحجز",
+        "resNoShow": "تعيين كعدم حضور",
+        "returnApprove": "اعتماد مرتجع"
       }
     },
     "organization": {

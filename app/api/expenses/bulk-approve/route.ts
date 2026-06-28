@@ -7,14 +7,10 @@ import { prisma } from "@/lib/prisma";
  * POST /api/expenses/bulk-approve — approve multiple pending expenses at once.
  */
 export async function POST(req: NextRequest) {
-  const __denied = await forbiddenIfNo("expenses", "EDIT");
+  const __denied = await forbiddenIfNo("expenseApprove", "VIEW");
   if (__denied) return __denied;
   let orgUser;
   try { orgUser = await requireOrgUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
-
-  if (!["OWNER", "MANAGER"].includes(orgUser.role ?? "")) {
-    return NextResponse.json({ error: "Only managers can approve expenses" }, { status: 403 });
-  }
 
   const body = await req.json();
   const { expenseIds } = body;

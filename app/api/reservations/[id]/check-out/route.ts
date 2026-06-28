@@ -21,7 +21,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const __denied = await forbiddenIfNo("reservations", "CREATE");
+  const __denied = await forbiddenIfNo("resCheckOut", "VIEW");
   if (__denied) return __denied;
   const actor = await getActor();
   if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

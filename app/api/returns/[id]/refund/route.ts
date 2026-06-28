@@ -19,7 +19,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const __denied = await forbiddenIfNo("returns", "CREATE");
+  const __denied = await forbiddenIfNo("paymentRefund", "VIEW");
   if (__denied) return __denied;
   const actor = await getActor();
   if (!actor) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

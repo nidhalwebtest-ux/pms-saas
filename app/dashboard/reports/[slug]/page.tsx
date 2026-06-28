@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import { findReport, resolvePreset } from "../reports-config";
+import { reportKey } from "@/lib/rbac";
 import { getRevenueByBuilding } from "@/lib/reports/revenue-by-building";
 import { getRevenueByTenant } from "@/lib/reports/revenue-by-tenant";
 import { getRevenueByUnitType } from "@/lib/reports/revenue-by-unit-type";
@@ -94,6 +95,9 @@ export default async function ReportPage({
   const report = findReport(slug);
   if (!report) notFound();
 
+  const access = await getSessionAccess();
+  if (!access?.can(reportKey(slug), "VIEW")) return <AccessDenied />;
+
   if (!IMPLEMENTED.has(slug)) {
     return <ComingSoon slug={slug} />;
   }
@@ -135,8 +139,6 @@ export default async function ReportPage({
 
   // ── Target vs Actual (sales targets) ────────────────────────────────────
   if (slug === "target-vs-actual") {
-    const access = await getSessionAccess();
-    if (!access?.canView("salesTargets")) return <AccessDenied />;
     return (
       <main className="rpage">
         <div className="rhead"><div className="title-block"><h1>{report.label}</h1></div></div>

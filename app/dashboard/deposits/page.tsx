@@ -69,7 +69,7 @@ export default async function DepositsListPage() {
     reference: tr.reference,
   }));
 
-  const canManage = access.canDelete("reconciliation");
+  const canManage = access.can("depositDelete", "VIEW");
 
   return (
     <div className="mx-auto max-w-full px-4 sm:px-6 lg:px-8 py-8">
@@ -82,7 +82,7 @@ export default async function DepositsListPage() {
             <h1 className="text-2xl font-bold text-gray-900">{t("title")}</h1>
           </div>
         </div>
-        {access.canCreate("reconciliation") && (
+        {access.can("depositCreate", "VIEW") && (
           <Link
             href="/dashboard/deposits/new"
             className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"

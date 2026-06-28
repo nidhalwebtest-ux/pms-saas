@@ -17,23 +17,36 @@ const SYSTEM_ROLE_NAMES: Record<string, string> = {
 export async function ensureSystemRoles(organizationId: string): Promise<void> {
   const existing = await prisma.role.findMany({
     where: { organizationId, isSystem: true },
-    select: { key: true },
+    select: { id: true, key: true, permissions: true },
   });
-  const have = new Set(existing.map((r) => r.key));
-  const missing = SYSTEM_ROLES.filter((r) => !have.has(r.key));
-  if (missing.length === 0) return;
+  const byKey = new Map(existing.map((r) => [r.key, r]));
 
-  await prisma.$transaction(
-    missing.map((r) =>
-      prisma.role.create({
-        data: {
-          organizationId,
-          name: SYSTEM_ROLE_NAMES[r.key] ?? r.key,
-          key: r.key,
-          isSystem: true,
-          permissions: normalizeMatrix(DEFAULT_MATRICES[r.key]),
-        },
-      }),
-    ),
-  );
+  const creates: ReturnType<typeof prisma.role.create>[] = [];
+  const updates: ReturnType<typeof prisma.role.update>[] = [];
+
+  for (const r of SYSTEM_ROLES) {
+    const desired = normalizeMatrix(DEFAULT_MATRICES[r.key]);
+    const cur = byKey.get(r.key);
+    if (!cur) {
+      creates.push(
+        prisma.role.create({
+          data: {
+            organizationId,
+            name: SYSTEM_ROLE_NAMES[r.key] ?? r.key,
+            key: r.key,
+            isSystem: true,
+            permissions: desired,
+          },
+        }),
+      );
+    } else if (JSON.stringify(normalizeMatrix(cur.permissions)) !== JSON.stringify(desired)) {
+      // Self-heal: keep system-role matrices in sync with the current catalog so
+      // newly-added entities (e.g. reconciliation/banks/reports/actions) are
+      // granted to existing system roles instead of defaulting to NONE.
+      updates.push(prisma.role.update({ where: { id: cur.id }, data: { permissions: desired } }));
+    }
+  }
+
+  const ops = [...creates, ...updates];
+  if (ops.length) await prisma.$transaction(ops);
 }

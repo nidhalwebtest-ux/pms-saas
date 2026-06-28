@@ -99,8 +99,8 @@ export default async function CashierPage({
   });
   const pendingExpensesTotal = pendingExpenses.reduce((s, e) => s + Number(e.amount), 0);
 
-  const canReconcile = access.canCreate("reconciliation");
-  const canManage = access.canDelete("reconciliation"); // FULL → unlock / delete deposit
+  const canReconcile = access.canCreate("reconciliation"); // reconcile + lock the day
+  const canManage = access.can("cashUnlock", "VIEW");      // unlock a locked day / manage deposits
 
   // Current drawer balance (all-time) + recent deposits for this building.
   let drawerBalance = 0;

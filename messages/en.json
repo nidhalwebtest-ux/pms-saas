@@ -4533,7 +4533,8 @@
         "lists": "Lists",
         "transactions": "Transactions",
         "reports": "Reports",
-        "setup": "Setup"
+        "setup": "Setup",
+        "actions": "Actions"
       },
       "entities": {
         "buildings": "Buildings",
@@ -4573,6 +4574,31 @@
         "system_readonly": "Standard roles can't be edited.",
         "role_in_use": "Reassign members before deleting this role.",
         "generic": "Something went wrong. Please try again."
+      },
+      "allOn": "All on",
+      "allOff": "All off",
+      "actionGroups": {
+        "expenses": "Expenses",
+        "cashier": "Cashier & Bank",
+        "invoices": "Invoices",
+        "payments": "Payments",
+        "reservations": "Reservations",
+        "returns": "Returns"
+      },
+      "actions": {
+        "expenseApprove": "Approve / reject expense",
+        "expenseProcess": "Process (pay out) expense",
+        "depositCreate": "Create cash deposit",
+        "depositDelete": "Delete cash deposit",
+        "cashUnlock": "Unlock a locked day",
+        "invoiceIssue": "Issue invoice",
+        "invoiceCancel": "Cancel invoice",
+        "paymentRefund": "Refund payment",
+        "resCheckIn": "Check-in",
+        "resCheckOut": "Check-out",
+        "resCancel": "Cancel reservation",
+        "resNoShow": "Mark no-show",
+        "returnApprove": "Approve return"
       }
     },
     "organization": {

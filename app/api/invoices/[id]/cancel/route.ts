@@ -19,7 +19,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const __denied = await forbiddenIfNo("invoices", "CREATE");
+  const __denied = await forbiddenIfNo("invoiceCancel", "VIEW");
   if (__denied) return __denied;
   let orgUser;
   try {

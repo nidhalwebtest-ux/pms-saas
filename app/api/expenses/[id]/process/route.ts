@@ -12,14 +12,10 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const __denied = await forbiddenIfNo("expenses", "EDIT");
+  const __denied = await forbiddenIfNo("expenseProcess", "VIEW");
   if (__denied) return __denied;
   let orgUser;
   try { orgUser = await requireOrgUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
-
-  if (!["OWNER", "ACCOUNTANT"].includes(orgUser.role ?? "")) {
-    return NextResponse.json({ error: "Only accountants can process expenses" }, { status: 403 });
-  }
 
   const { id } = await params;
   const body = await req.json();

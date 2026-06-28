@@ -7,7 +7,8 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ArrowLeftIcon, LockClosedIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import {
-  PERMISSION_GROUPS, PERMISSION_LEVELS, type PermissionLevel, type PermissionMap,
+  PERMISSION_GROUPS, PERMISSION_LEVELS, reportSlug,
+  type PermissionLevel, type PermissionMap, type EntityDef,
 } from "@/lib/rbac";
 import { updateRole, duplicateRole } from "./actions";
 
@@ -18,7 +19,19 @@ interface RoleData {
 
 export default function RoleEditor({ role, startDuplicate }: { role: RoleData; startDuplicate?: boolean }) {
   const t = useTranslations("settings.rolePermissions");
+  const tReports = useTranslations("reports");
   const router = useRouter();
+
+  // Reports use their own i18n namespace; actions/CRUD live under rolePermissions.
+  const entityLabel = (e: EntityDef) => {
+    if (e.kind === "toggle") {
+      const slug = reportSlug(e.key);
+      return slug ? tReports(`items.${slug}`) : t(`actions.${e.key}`);
+    }
+    return t(`entities.${e.key}`);
+  };
+  const subLabel = (e: EntityDef) =>
+    reportSlug(e.key) ? tReports(`groups.${e.sub}`) : t(`actionGroups.${e.sub}`);
   const [pending, startTransition] = useTransition();
 
   const readOnly = role.isSystem;
@@ -164,11 +177,20 @@ export default function RoleEditor({ role, startDuplicate }: { role: RoleData; s
 
       {/* Permission matrix */}
       <div className="space-y-5">
-        {PERMISSION_GROUPS.map((g) => (
+        {PERMISSION_GROUPS.map((g) => {
+          const hasToggle = g.entities.some((e) => e.kind === "toggle");
+          return (
           <div key={g.key} className="rounded-xl bg-white shadow-sm ring-1 ring-gray-200 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-100">
               <h3 className="text-sm font-semibold text-gray-900">{t(`groups.${g.key}`)}</h3>
-              {!readOnly && (
+              {!readOnly && (hasToggle ? (
+                <div className="flex items-center gap-1.5">
+                  <button type="button" onClick={() => setGroupAll(g.key, "FULL")}
+                    className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50">{t("allOn")}</button>
+                  <button type="button" onClick={() => setGroupAll(g.key, "NONE")}
+                    className="rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50">{t("allOff")}</button>
+                </div>
+              ) : (
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-gray-400">{t("setAll")}</span>
                   <select
@@ -180,20 +202,44 @@ export default function RoleEditor({ role, startDuplicate }: { role: RoleData; s
                     {PERMISSION_LEVELS.map((lv) => <option key={lv} value={lv}>{t(`levels.${lv}`)}</option>)}
                   </select>
                 </div>
-              )}
-            </div>
-            <div className="divide-y divide-gray-100">
-              {g.entities.map((e) => (
-                <div key={e.key} className="flex items-center justify-between gap-4 px-5 py-2.5">
-                  <span className="text-sm text-gray-700">{t(`entities.${e.key}`)}</span>
-                  <div className="inline-flex rounded-lg ring-1 ring-gray-200 overflow-hidden divide-x divide-gray-200">
-                    {PERMISSION_LEVELS.map((lv) => levelBtn(e.key, lv))}
-                  </div>
-                </div>
               ))}
             </div>
+            <div className="divide-y divide-gray-100">
+              {g.entities.map((e, idx) => {
+                const prev = g.entities[idx - 1];
+                const prevSub = prev?.kind === "toggle" ? prev.sub : undefined;
+                const showSub = e.kind === "toggle" && !!e.sub && e.sub !== prevSub;
+                const on = matrix[e.key] !== "NONE";
+                return (
+                  <div key={e.key}>
+                    {showSub && (
+                      <div className="px-5 pt-3 pb-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                        {subLabel(e)}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-4 px-5 py-2.5">
+                      <span className="text-sm text-gray-700">{entityLabel(e)}</span>
+                      {e.kind === "toggle" ? (
+                        <button
+                          type="button" role="switch" aria-checked={on} disabled={readOnly}
+                          onClick={() => setLevel(e.key, on ? "NONE" : "FULL")}
+                          className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${on ? "bg-blue-600" : "bg-gray-200"} ${readOnly ? "cursor-not-allowed opacity-60" : ""}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? "translate-x-4 rtl:-translate-x-4" : "translate-x-0.5 rtl:-translate-x-0.5"}`} />
+                        </button>
+                      ) : (
+                        <div className="inline-flex rounded-lg ring-1 ring-gray-200 overflow-hidden divide-x divide-gray-200">
+                          {PERMISSION_LEVELS.map((lv) => levelBtn(e.key, lv))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Save bar (custom only) */}

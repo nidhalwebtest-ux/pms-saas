@@ -1,6 +1,9 @@
 import { NextRequest } from "next/server";
+import { Prisma } from "@prisma/client";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { getSelectedPropertyId } from "@/lib/selected-property";
+import { getEffectivePropertyIds } from "@/lib/property-scope";
 
 function roundOMR(n: number): number {
   return Math.round(n * 1000) / 1000;
@@ -37,6 +40,19 @@ export async function GET(
 
   const tenantName = `${tenant.firstName} ${tenant.lastName}`.replace(/[^a-zA-Z0-9 ]/g, "");
 
+  // Scope to the globally-selected building (matches the on-screen ledger).
+  const propIds = await getEffectivePropertyIds(await getSelectedPropertyId());
+  const resScope: Prisma.ReservationWhereInput = propIds
+    ? {
+        OR: [
+          { unit: { propertyId: { in: propIds } } },
+          { reservationUnits: { some: { unit: { propertyId: { in: propIds } } } } },
+        ],
+      }
+    : {};
+  const invoicePropScope: Prisma.InvoiceWhereInput = propIds ? { propertyId: { in: propIds } } : {};
+  const txnResScope = propIds ? { reservation: resScope } : {};
+
   // Fetch all data (same as ledger endpoint, no date filtering for export)
   const [invoices, payments, refunds, returns] = await Promise.all([
     prisma.invoice.findMany({
@@ -44,6 +60,7 @@ export async function GET(
         tenantId,
         organizationId: orgUser.organizationId,
         status: { notIn: ["CANCELLED", "VOID", "DRAFT"] },
+        ...invoicePropScope,
       },
       select: {
         id: true,
@@ -62,6 +79,7 @@ export async function GET(
         tenantId,
         organizationId: orgUser.organizationId,
         isRefund: false,
+        ...txnResScope,
       },
       select: {
         id: true,
@@ -78,6 +96,7 @@ export async function GET(
         tenantId,
         organizationId: orgUser.organizationId,
         isRefund: true,
+        ...txnResScope,
       },
       select: {
         id: true,
@@ -94,6 +113,7 @@ export async function GET(
         tenantId,
         organizationId: orgUser.organizationId,
         status: "active",
+        ...txnResScope,
       },
       select: {
         id: true,

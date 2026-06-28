@@ -1,7 +1,10 @@
 import { NextRequest } from "next/server";
+import { Prisma } from "@prisma/client";
 import { getTranslations } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { getSelectedPropertyId } from "@/lib/selected-property";
+import { getEffectivePropertyIds } from "@/lib/property-scope";
 import { getPdfLocaleContext } from "@/lib/pdf-i18n";
 import { htmlToPdf } from "@/lib/pdf/render";
 import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
@@ -44,6 +47,19 @@ export async function GET(
   });
   const brand = await getPdfBranding(orgUser.organizationId);
 
+  // Scope to the globally-selected building (matches the on-screen ledger).
+  const propIds = await getEffectivePropertyIds(await getSelectedPropertyId());
+  const resScope: Prisma.ReservationWhereInput = propIds
+    ? {
+        OR: [
+          { unit: { propertyId: { in: propIds } } },
+          { reservationUnits: { some: { unit: { propertyId: { in: propIds } } } } },
+        ],
+      }
+    : {};
+  const invoicePropScope: Prisma.InvoiceWhereInput = propIds ? { propertyId: { in: propIds } } : {};
+  const txnResScope = propIds ? { reservation: resScope } : {};
+
   // Date filters
   const dateGte = dateFrom ? new Date(dateFrom) : undefined;
   const dateLte = dateTo   ? new Date(new Date(dateTo).setHours(23, 59, 59, 999)) : undefined;
@@ -54,6 +70,7 @@ export async function GET(
         tenantId,
         organizationId: orgUser.organizationId,
         status: { notIn: ["CANCELLED", "VOID", "DRAFT"] },
+        ...invoicePropScope,
         ...(dateGte || dateLte ? { issueDate: { ...(dateGte ? { gte: dateGte } : {}), ...(dateLte ? { lte: dateLte } : {}) } } : {}),
       },
       select: {
@@ -68,6 +85,7 @@ export async function GET(
         tenantId,
         organizationId: orgUser.organizationId,
         isRefund: false,
+        ...txnResScope,
         ...(dateGte || dateLte ? { date: { ...(dateGte ? { gte: dateGte } : {}), ...(dateLte ? { lte: dateLte } : {}) } } : {}),
       },
       select: { id: true, paymentNumber: true, amount: true, date: true, method: true, reference: true },
@@ -78,6 +96,7 @@ export async function GET(
         tenantId,
         organizationId: orgUser.organizationId,
         isRefund: true,
+        ...txnResScope,
         ...(dateGte || dateLte ? { date: { ...(dateGte ? { gte: dateGte } : {}), ...(dateLte ? { lte: dateLte } : {}) } } : {}),
       },
       select: { id: true, paymentNumber: true, amount: true, date: true, method: true, reference: true },
@@ -88,6 +107,7 @@ export async function GET(
         tenantId,
         organizationId: orgUser.organizationId,
         status: "active",
+        ...txnResScope,
         ...(dateGte || dateLte ? { createdAt: { ...(dateGte ? { gte: dateGte } : {}), ...(dateLte ? { lte: dateLte } : {}) } } : {}),
       },
       select: { id: true, returnNumber: true, returnAmount: true, createdAt: true },

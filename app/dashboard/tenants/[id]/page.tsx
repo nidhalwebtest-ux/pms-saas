@@ -164,10 +164,17 @@ export default async function TenantProfilePage({
     where:  { tenantId: id, isRefund: true, ...paymentScope },
     _sum:   { amount: true },
   });
+  // Return credit notes reduce what the tenant owes (credit-note model) — must be
+  // subtracted from the balance, exactly like the Financial Ledger does.
+  const creditedAgg = await prisma.return.aggregate({
+    where:  { tenantId: id, status: "active", ...(propIds ? { reservation: resScope } : {}) },
+    _sum:   { returnAmount: true },
+  });
   const totalCharged  = Number(chargedAgg._sum.totalAmount ?? 0);
   const totalPaid     = Number(paidAgg._sum.amount ?? 0);
   const totalRefunded = Number(refundsAgg._sum.amount ?? 0);
-  const openBalance   = Math.round((totalCharged - totalPaid + totalRefunded) * 1000) / 1000;
+  const totalCredited = Number(creditedAgg._sum.returnAmount ?? 0);
+  const openBalance   = Math.round((totalCharged - totalCredited - totalPaid + totalRefunded) * 1000) / 1000;
   // Live "Total Spent" = net amount actually paid (refunds excluded). Replaces
   // the stale denormalized Tenant.totalSpent column which was never populated.
   const totalSpentLive = Math.max(0, Math.round((totalPaid - totalRefunded) * 1000) / 1000);

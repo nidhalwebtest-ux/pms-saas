@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { getSelectedPropertyId } from "@/lib/selected-property";
+import { getEffectivePropertyIds } from "@/lib/property-scope";
 
 function ser(obj: unknown): unknown {
   return JSON.parse(
@@ -43,6 +46,21 @@ export async function GET(
     return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
   }
 
+  // Scope to the globally-selected building (property view), matching the tenant
+  // overview. null = "All buildings" → no scoping. Invoices scope by propertyId;
+  // payments/refunds/returns scope via their reservation's unit(s).
+  const propIds = await getEffectivePropertyIds(await getSelectedPropertyId());
+  const resScope: Prisma.ReservationWhereInput = propIds
+    ? {
+        OR: [
+          { unit: { propertyId: { in: propIds } } },
+          { reservationUnits: { some: { unit: { propertyId: { in: propIds } } } } },
+        ],
+      }
+    : {};
+  const invoicePropScope: Prisma.InvoiceWhereInput = propIds ? { propertyId: { in: propIds } } : {};
+  const txnResScope = propIds ? { reservation: resScope } : {};
+
   // Build date filter for invoices
   const invoiceDateFilter: Record<string, unknown> = {};
   if (dateFrom || dateTo) {
@@ -70,6 +88,7 @@ export async function GET(
       organizationId: orgUser.organizationId,
       // DRAFT excluded — un-issued, no revenue posted (not part of the ledger).
       status: { notIn: ["CANCELLED", "VOID", "DRAFT"] },
+      ...invoicePropScope,
       ...invoiceDateFilter,
       ...reservationFilter,
     },
@@ -93,6 +112,7 @@ export async function GET(
       tenantId,
       organizationId: orgUser.organizationId,
       isRefund: false,
+      ...txnResScope,
       ...paymentDateFilter,
       ...reservationFilter,
     },
@@ -113,6 +133,7 @@ export async function GET(
       tenantId,
       organizationId: orgUser.organizationId,
       isRefund: true,
+      ...txnResScope,
       ...paymentDateFilter,
       ...reservationFilter,
     },
@@ -140,6 +161,7 @@ export async function GET(
       tenantId,
       organizationId: orgUser.organizationId,
       status: "active",
+      ...txnResScope,
       ...returnDateFilter,
       ...reservationFilter,
     },

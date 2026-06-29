@@ -5807,6 +5807,7 @@
       "ledger": "Hello {name}, here is your account statement from {org}.",
       "reservation": "Hello {name}, here is your reservation confirmation {number} from {org}.",
       "return": "Hello {name}, here is your return / credit note {number} ({amount} OMR) from {org}."
-    }
+    },
+    "downloadPhrase": "Download the document from the link:"
   }
 }

@@ -1366,3 +1366,22 @@ model CrmSettings {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 }
+
+// ── Document share links (short public PDF URLs) ──────────────────────────────
+
+model ShareLink {
+  id             String    @id @default(uuid())
+  code           String    @unique // short, unguessable (e.g. "qbcde7K")
+
+  organizationId String
+  docType        String    // invoice | receipt | ledger | reservation | return
+  docId          String
+  prop           String?   // building scope captured at share time (ledger)
+
+  createdById    String?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([organizationId])
+  @@index([docType, docId])
+}

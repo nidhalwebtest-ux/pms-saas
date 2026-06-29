@@ -3,17 +3,19 @@ import { getTranslations } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPropertyId } from "@/lib/selected-property";
-import { signShareToken, type ShareDocType } from "@/lib/share-token";
-
-const PDF_PATH: Record<ShareDocType, (id: string) => string> = {
-  invoice:     (id) => `/api/invoices/${id}/pdf`,
-  receipt:     (id) => `/api/payments/${id}/receipt-pdf`,
-  ledger:      (id) => `/api/tenants/${id}/ledger/export-pdf`,
-  reservation: (id) => `/api/reservations/${id}/pdf`,
-  return:      (id) => `/api/returns/${id}/pdf`,
-};
+import { PDF_PATH, shortCode, type ShareDocType } from "@/lib/share-token";
 
 const fmt = (n: unknown) => Number(n ?? 0).toFixed(3);
+
+/** Reserve a unique short code (retry on the rare collision). */
+async function uniqueCode(): Promise<string> {
+  for (let i = 0; i < 6; i++) {
+    const code = shortCode(7);
+    const taken = await prisma.shareLink.findUnique({ where: { code }, select: { id: true } });
+    if (!taken) return code;
+  }
+  return shortCode(10);
+}
 
 /**
  * POST /api/share/mint  { type, id }
@@ -105,10 +107,17 @@ export async function POST(req: NextRequest) {
     prop = (await getSelectedPropertyId()) ?? undefined;
   }
 
-  const token = signShareToken({ t: type, id, org, prop });
+  // Create a short, durable public link (binaya.app/<code>) that redirects to
+  // the document. The actual access token is minted fresh+short-lived on each
+  // visit by the /[code] route, so the long token never appears in the message.
+  const code = await uniqueCode();
+  await prisma.shareLink.create({
+    data: { code, organizationId: org, docType: type, docId: id, prop: prop ?? null, createdById: orgUser.userId },
+  });
+
   const origin = new URL(req.url).origin;
   const pdfUrl = PDF_PATH[type](id);
-  const shareUrl = `${origin}${pdfUrl}?t=${token}`;
+  const shareUrl = `${origin}/${code}`;
   const tenantPhone = tenant?.whatsappNumber || tenant?.phone || null;
 
   return NextResponse.json({

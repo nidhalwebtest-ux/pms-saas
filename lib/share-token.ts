@@ -87,3 +87,23 @@ export function verifyShareFromRequest(
   const token = new URL(req.url).searchParams.get("t");
   return verifyShareToken(token, { t, id });
 }
+
+/** Maps a document type → its authenticated PDF route path. */
+export const PDF_PATH: Record<ShareDocType, (id: string) => string> = {
+  invoice:     (id) => `/api/invoices/${id}/pdf`,
+  receipt:     (id) => `/api/payments/${id}/receipt-pdf`,
+  ledger:      (id) => `/api/tenants/${id}/ledger/export-pdf`,
+  reservation: (id) => `/api/reservations/${id}/pdf`,
+  return:      (id) => `/api/returns/${id}/pdf`,
+};
+
+// Unambiguous base-56 alphabet (no 0/O/1/I/l) for short, copy-friendly codes.
+const CODE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+
+/** Generate a short, unguessable share code. */
+export function shortCode(len = 7): string {
+  const bytes = crypto.randomBytes(len);
+  let out = "";
+  for (let i = 0; i < len; i++) out += CODE_ALPHABET[bytes[i] % CODE_ALPHABET.length];
+  return out;
+}

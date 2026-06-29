@@ -88,7 +88,7 @@ export default function ShareButton({
     }
     // Desktop / no file-share: open the tenant's chat with a ready message + link.
     const phone = (data.tenantPhone || "").replace(/\D/g, "");
-    const text = encodeURIComponent(`${data.message}\n${data.shareUrl}`);
+    const text = encodeURIComponent(`${data.message}\n\n${t("downloadPhrase")}\n${data.shareUrl}`);
     const url = phone
       ? `https://wa.me/${phone}?text=${text}`
       : `https://api.whatsapp.com/send?text=${text}`;
@@ -99,7 +99,7 @@ export default function ShareButton({
   function onEmail() {
     if (!data) return;
     const subject = encodeURIComponent(t("emailSubject", { title: data.title }));
-    const bodyText = encodeURIComponent(`${data.message}\n\n${data.shareUrl}`);
+    const bodyText = encodeURIComponent(`${data.message}\n\n${t("downloadPhrase")}\n${data.shareUrl}`);
     window.location.href = `mailto:${data.tenantEmail ?? ""}?subject=${subject}&body=${bodyText}`;
     setOpen(false);
   }

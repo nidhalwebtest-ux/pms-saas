@@ -5807,6 +5807,7 @@
       "ledger": "مرحباً {name}، إليك كشف حسابك من {org}.",
       "reservation": "مرحباً {name}، إليك تأكيد حجزك {number} من {org}.",
       "return": "مرحباً {name}، إليك إشعار المرتجع / الدائن {number} ({amount} ريال عماني) من {org}."
-    }
+    },
+    "downloadPhrase": "حمّل المستند من الرابط:"
   }
 }

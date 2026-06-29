@@ -1,5 +1,6 @@
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/utils/supabase/server";
+import { getSessionUser } from "@/lib/current-user";
 
 /**
  * Per-user building (property) scoping.
@@ -27,18 +28,13 @@ export function canAccessProperty(accessible: string[] | null, propertyId: strin
   return !!propertyId && accessible.includes(propertyId);
 }
 
-/** Accessible property ids for the CURRENT session (null = unrestricted/owner). */
-export async function getSessionAccessibleProperties(): Promise<string[] | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { organizationId: true, role: true },
-  });
+/** Accessible property ids for the CURRENT session (null = unrestricted/owner).
+ *  Cached per request — called by getEffectivePropertyIds on most list pages. */
+export const getSessionAccessibleProperties = cache(async (): Promise<string[] | null> => {
+  const dbUser = await getSessionUser();
   if (!dbUser?.organizationId || dbUser.role === "OWNER") return null;
-  return getAccessiblePropertyIds(user.id, dbUser.organizationId);
-}
+  return getAccessiblePropertyIds(dbUser.id, dbUser.organizationId);
+});
 
 /**
  * Resolve the effective set of property ids a list query should be limited to,

@@ -1,6 +1,5 @@
 import { cache } from "react";
-import { createClient } from "@/utils/supabase/server";
-import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/current-user";
 
 export type OrgSummary = {
   id: string;
@@ -10,22 +9,11 @@ export type OrgSummary = {
 };
 
 /**
- * Resolve the current user's organization summary. Cached per request via
- * React.cache so multiple server components can call this without duplicate
- * DB hits.
+ * Resolve the current user's organization summary. Shares the request-cached
+ * session user, so this adds no extra getUser/DB hits.
  */
 export const getCurrentOrg = cache(async (): Promise<OrgSummary | null> => {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const dbUser = await prisma.user.findUnique({
-    where:  { id: user.id },
-    select: {
-      organization: {
-        select: { id: true, name: true, currency: true, logo: true },
-      },
-    },
-  });
+  const dbUser = await getSessionUser();
   return dbUser?.organization ?? null;
 });
 

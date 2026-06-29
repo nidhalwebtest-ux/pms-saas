@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { getAuthUser, getSessionUser } from "@/lib/current-user";
 import Header from "@/components/dashboard/Header";
 import Navigation from "@/components/dashboard/Navigation";
 import InactivityGuard from "@/components/dashboard/InactivityGuard";
@@ -22,20 +22,10 @@ export default async function DashboardLayout({
   children: React.ReactNode;
   modal:    React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) redirect("/login");
+  const authUser = await getAuthUser();
+  if (!authUser) redirect("/login");
 
-  const dbUser = await prisma.user.findUnique({
-    where:  { id: user.id },
-    select: {
-      organizationId: true,
-      role: true,
-      firstName: true,
-      assignedRole: { select: { key: true, name: true, permissions: true } },
-      organization: { select: { currency: true } },
-    },
-  });
+  const dbUser = await getSessionUser();
   if (!dbUser?.organizationId) redirect("/onboarding");
 
   const role = (dbUser.role ?? "STAFF") as Role;
@@ -50,7 +40,7 @@ export default async function DashboardLayout({
   const isSuperAdmin = !!(await getSuperAdmin());
 
   // Per-user building scope: null = unrestricted (all org). Owner is always unrestricted.
-  const accessible = access.isOwner ? null : await getAccessiblePropertyIds(user.id, dbUser.organizationId);
+  const accessible = access.isOwner ? null : await getAccessiblePropertyIds(dbUser.id, dbUser.organizationId);
 
   // Fetch non-archived properties for the header scope selector, limited to the
   // user's accessible buildings.
@@ -89,7 +79,7 @@ export default async function DashboardLayout({
 
         <div className="bg-white shadow-sm ring-1 ring-gray-900/5 z-10 relative">
           <Header
-            userEmail={user.email}
+            userEmail={authUser.email}
             userName={dbUser.firstName}
             role={role}
             roleName={dbUser.assignedRole?.name ?? null}

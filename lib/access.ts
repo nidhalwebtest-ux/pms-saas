@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
-import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/current-user";
 import { resolvePermissions, atLeast, type PermissionMap, type PermissionLevel } from "@/lib/rbac";
 
 /**
@@ -25,18 +24,7 @@ export interface SessionAccess {
 }
 
 export async function getSessionAccess(): Promise<SessionAccess | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: {
-      organizationId: true,
-      role: true,
-      assignedRole: { select: { key: true, permissions: true } },
-    },
-  });
+  const dbUser = await getSessionUser();
   if (!dbUser?.organizationId) return null;
 
   const enumRole = dbUser.role ?? "STAFF";
@@ -44,7 +32,7 @@ export async function getSessionAccess(): Promise<SessionAccess | null> {
   const can = (entity: string, level: PermissionLevel) => isOwner || atLeast(perms, entity, level);
 
   return {
-    userId: user.id,
+    userId: dbUser.id,
     organizationId: dbUser.organizationId,
     role: enumRole,
     roleKey,

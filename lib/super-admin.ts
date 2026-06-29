@@ -1,4 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
+import { getAuthUser } from "@/lib/current-user";
 
 /**
  * Founder / super-admin gate for the internal admin area (app/(admin)/*).
@@ -32,10 +32,7 @@ export interface SuperAdmin {
  * not on the allowlist (or nobody is signed in).
  */
 export async function getSuperAdmin(): Promise<SuperAdmin | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user?.email) return null;
 
   const allowed = superAdminEmails();

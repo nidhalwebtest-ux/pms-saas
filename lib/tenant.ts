@@ -3,8 +3,8 @@
  * Every server action that touches org-owned data should call requireOrgUser().
  */
 
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getSessionUser } from "@/lib/current-user";
 
 export interface OrgUser {
   userId: string;
@@ -15,24 +15,14 @@ export interface OrgUser {
 /**
  * Returns the authenticated user's id and organizationId.
  * Throws an object `{ error: string }` if the user is not authenticated
- * or does not belong to an organization yet.
+ * or does not belong to an organization yet. Auth is resolved once per request
+ * (React.cache) so repeated calls within a render are free.
  */
 export async function requireOrgUser(): Promise<OrgUser> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) throw { error: "Unauthorized" };
-
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { organizationId: true, role: true },
-  });
-
-  if (!dbUser?.organizationId) throw { error: "No organization found" };
-
-  return { userId: user.id, organizationId: dbUser.organizationId, role: dbUser.role };
+  const dbUser = await getSessionUser();
+  if (!dbUser) throw { error: "Unauthorized" };
+  if (!dbUser.organizationId) throw { error: "No organization found" };
+  return { userId: dbUser.id, organizationId: dbUser.organizationId, role: dbUser.role ?? undefined };
 }
 
 /**

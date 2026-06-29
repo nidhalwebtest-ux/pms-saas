@@ -5,6 +5,7 @@ import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import { getEffectivePropertyIds } from "@/lib/property-scope";
+import { verifyShareFromRequest } from "@/lib/share-token";
 import { getPdfLocaleContext } from "@/lib/pdf-i18n";
 import { htmlToPdf } from "@/lib/pdf/render";
 import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
@@ -22,11 +23,18 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  let orgUser;
-  try { orgUser = await requireOrgUser(); }
-  catch { return new Response("Unauthorized", { status: 401 }); }
-
   const { id: tenantId } = await params;
+
+  // Access via a signed public share link (?t=) OR an authenticated session.
+  const share = verifyShareFromRequest(req, "ledger", tenantId);
+  let organizationId: string;
+  if (share) {
+    organizationId = share.org;
+  } else {
+    try { organizationId = (await requireOrgUser()).organizationId; }
+    catch { return new Response("Unauthorized", { status: 401 }); }
+  }
+
   const sp = new URL(req.url).searchParams;
   const dateFrom      = sp.get("dateFrom") ?? "";
   const dateTo        = sp.get("dateTo")   ?? "";
@@ -38,17 +46,20 @@ export async function GET(
       phone: true, email: true, idType: true, idNumber: true,
     },
   });
-  if (!tenant || tenant.organizationId !== orgUser.organizationId)
+  if (!tenant || tenant.organizationId !== organizationId)
     return new Response("Tenant not found", { status: 404 });
 
   const org = await prisma.organization.findUnique({
-    where:  { id: orgUser.organizationId },
+    where:  { id: organizationId },
     select: { name: true, phone: true, city: true },
   });
-  const brand = await getPdfBranding(orgUser.organizationId);
+  const brand = await getPdfBranding(organizationId);
 
-  // Scope to the globally-selected building (matches the on-screen ledger).
-  const propIds = await getEffectivePropertyIds(await getSelectedPropertyId());
+  // Scope to the selected building (matches the on-screen ledger). Public share
+  // links carry the building captured at share time; sessions use the cookie.
+  const propIds = share
+    ? (share.prop ? [share.prop] : null)
+    : await getEffectivePropertyIds(await getSelectedPropertyId());
   const resScope: Prisma.ReservationWhereInput = propIds
     ? {
         OR: [
@@ -68,7 +79,7 @@ export async function GET(
     prisma.invoice.findMany({
       where: {
         tenantId,
-        organizationId: orgUser.organizationId,
+        organizationId: organizationId,
         status: { notIn: ["CANCELLED", "VOID", "DRAFT"] },
         ...invoicePropScope,
         ...(dateGte || dateLte ? { issueDate: { ...(dateGte ? { gte: dateGte } : {}), ...(dateLte ? { lte: dateLte } : {}) } } : {}),
@@ -83,7 +94,7 @@ export async function GET(
     prisma.payment.findMany({
       where: {
         tenantId,
-        organizationId: orgUser.organizationId,
+        organizationId: organizationId,
         isRefund: false,
         ...txnResScope,
         ...(dateGte || dateLte ? { date: { ...(dateGte ? { gte: dateGte } : {}), ...(dateLte ? { lte: dateLte } : {}) } } : {}),
@@ -94,7 +105,7 @@ export async function GET(
     prisma.payment.findMany({
       where: {
         tenantId,
-        organizationId: orgUser.organizationId,
+        organizationId: organizationId,
         isRefund: true,
         ...txnResScope,
         ...(dateGte || dateLte ? { date: { ...(dateGte ? { gte: dateGte } : {}), ...(dateLte ? { lte: dateLte } : {}) } } : {}),
@@ -105,7 +116,7 @@ export async function GET(
     prisma.return.findMany({
       where: {
         tenantId,
-        organizationId: orgUser.organizationId,
+        organizationId: organizationId,
         status: "active",
         ...txnResScope,
         ...(dateGte || dateLte ? { createdAt: { ...(dateGte ? { gte: dateGte } : {}), ...(dateLte ? { lte: dateLte } : {}) } } : {}),

@@ -4,6 +4,7 @@ import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
 import { getTranslations, getLocale } from "next-intl/server";
 import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
+import { verifyShareFromRequest } from "@/lib/share-token";
 import { htmlToPdf } from "@/lib/pdf/render";
 import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
 import { getPdfBranding, brandRootCss, logoHtml, footerLine } from "@/lib/pdf/branding";
@@ -24,17 +25,20 @@ const esc = (s: unknown) =>
   String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  let orgUser: Awaited<ReturnType<typeof requireOrgUser>>;
-  try {
-    orgUser = await requireOrgUser();
-  } catch {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
   const { id } = await params;
+
+  // Access via a signed public share link (?t=) OR an authenticated session.
+  const share = verifyShareFromRequest(req, "invoice", id);
+  let organizationId: string;
+  if (share) {
+    organizationId = share.org;
+  } else {
+    try { organizationId = (await requireOrgUser()).organizationId; }
+    catch { return new Response("Unauthorized", { status: 401 }); }
+  }
 
   const invoice = await prisma.invoice.findUnique({
     where: { id },
@@ -53,7 +57,7 @@ export async function GET(
     },
   });
 
-  if (!invoice || invoice.organizationId !== orgUser.organizationId) {
+  if (!invoice || invoice.organizationId !== organizationId) {
     return new Response("Invoice not found", { status: 404 });
   }
 

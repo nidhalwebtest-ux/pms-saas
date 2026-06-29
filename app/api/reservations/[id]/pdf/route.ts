@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { verifyShareFromRequest } from "@/lib/share-token";
 import { getDisplayStatus, type StoredStatus } from "@/lib/reservation-status";
 import { DISPLAY_STATUS_KEY, getPdfLocaleContext } from "@/lib/pdf-i18n";
 import { htmlToPdf } from "@/lib/pdf/render";
@@ -24,13 +25,25 @@ async function getActor() {
 }
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const actor = await getActor();
-  if (!actor) return NextResponse.redirect("/login");
-
   const { id } = await params;
+
+  // Access via a signed public share link (?t=) OR an authenticated session.
+  const share = verifyShareFromRequest(req, "reservation", id);
+  let organizationId: string;
+  let organization: NonNullable<Awaited<ReturnType<typeof getActor>>>["organization"] | null;
+  if (share) {
+    organizationId = share.org;
+    organization = await prisma.organization.findUnique({ where: { id: share.org } });
+    if (!organization) return new Response("Unauthorized", { status: 401 });
+  } else {
+    const actor = await getActor();
+    if (!actor) return NextResponse.redirect("/login");
+    organizationId = actor.organizationId!;
+    organization = actor.organization;
+  }
 
   const r = await prisma.reservation.findUnique({
     where: { id },
@@ -47,12 +60,12 @@ export async function GET(
     },
   });
 
-  if (!r || r.tenant.organizationId !== actor.organizationId) {
+  if (!r || r.tenant.organizationId !== organizationId) {
     return new Response("Reservation not found", { status: 404 });
   }
 
-  const org = actor.organization;
-  const brand = await getPdfBranding(actor.organizationId);
+  const org = organization;
+  const brand = await getPdfBranding(organizationId);
   const ds  = getDisplayStatus(r.status as StoredStatus, r.startDate, r.endDate);
 
   // ── i18n ──────────────────────────────────────────────────────────────────

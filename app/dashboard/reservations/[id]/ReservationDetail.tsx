@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useTranslations, useLocale } from "next-intl";
 import { useCan } from "@/components/PermissionsProvider";
 import BankSelect from "@/components/dashboard/BankSelect";
+import ShareButton from "@/components/dashboard/ShareButton";
 import { methodNeedsBank, methodRequiresBank } from "@/lib/banks";
 import { format as fmtDateFns } from "date-fns";
 import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
@@ -1643,6 +1644,7 @@ function ActionButtons({ ds, onAction, reservationId, rateType, allowEarlyCheckI
           <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
             {t("print")}
           </Button>
+          <ShareButton type="reservation" id={reservationId} />
           <button onClick={() => onAction("cancel")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-300 bg-white text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
             <XMarkIcon className="h-4 w-4" /> {t("cancel")}
           </button>
@@ -1664,6 +1666,7 @@ function ActionButtons({ ds, onAction, reservationId, rateType, allowEarlyCheckI
           <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
             {t("print")}
           </Button>
+          <ShareButton type="reservation" id={reservationId} />
           <button onClick={() => onAction("cancel")} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-300 bg-white text-sm font-medium text-red-600 hover:bg-red-50">
             <XMarkIcon className="h-4 w-4" /> {t("cancel")}
           </button>
@@ -1693,6 +1696,7 @@ function ActionButtons({ ds, onAction, reservationId, rateType, allowEarlyCheckI
           <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
             {t("print")}
           </Button>
+          <ShareButton type="reservation" id={reservationId} />
         </>
       );
     case "Overstay":
@@ -1707,6 +1711,7 @@ function ActionButtons({ ds, onAction, reservationId, rateType, allowEarlyCheckI
           <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
             {t("print")}
           </Button>
+          <ShareButton type="reservation" id={reservationId} />
         </>
       );
     case "Checked Out":
@@ -1715,13 +1720,17 @@ function ActionButtons({ ds, onAction, reservationId, rateType, allowEarlyCheckI
           <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
             {t("print")}
           </Button>
+          <ShareButton type="reservation" id={reservationId} />
         </>
       );
     default:
       return (
-        <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
-          {t("print")}
-        </Button>
+        <>
+          <Button variant="secondary" onClick={openPrint} leftIcon={<PrinterIcon className="h-4 w-4" />}>
+            {t("print")}
+          </Button>
+          <ShareButton type="reservation" id={reservationId} />
+        </>
       );
   }
 }

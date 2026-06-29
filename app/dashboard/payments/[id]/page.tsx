@@ -20,6 +20,7 @@ import {
   resolveInvoiceBadge,
   type PaymentMethodKey,
 } from "@/components/ui";
+import ShareButton from "@/components/dashboard/ShareButton";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -152,6 +153,7 @@ export default async function PaymentDetailPage({
             <PrinterIcon className="h-4 w-4" />
             {tRoot("printReceipt")}
           </a>
+          <ShareButton type="receipt" id={id} />
           <Link
             href={`/dashboard/tenants/${payment.tenant.id}`}
             className="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50"

@@ -23,6 +23,7 @@ import {
   returnStatusKey,
 } from "@/components/ui";
 import ReturnActions from "./ReturnActions";
+import ShareButton from "@/components/dashboard/ShareButton";
 
 export default async function ReturnDetailPage({
   params,
@@ -124,6 +125,7 @@ export default async function ReturnDetailPage({
             <PrinterIcon className="h-4 w-4" />
             {tPrint("downloadPdf")}
           </a>
+          <ShareButton type="return" id={ret.id} />
           <Link
             href="/dashboard/returns"
             className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"

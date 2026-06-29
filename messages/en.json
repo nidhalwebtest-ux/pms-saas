@@ -5785,5 +5785,28 @@
       "unmapped": "{n} without a location",
       "noArea": "No area"
     }
+  },
+  "share": {
+    "button": "Share",
+    "title": "Share document",
+    "whatsapp": "WhatsApp",
+    "whatsappDesc": "Send to the tenant on WhatsApp",
+    "email": "Email",
+    "emailDesc": "Open your email with the document link",
+    "copyLink": "Copy link",
+    "copyDesc": "Copy a secure link to the PDF",
+    "copied": "Link copied",
+    "download": "Download",
+    "downloadDesc": "Save the PDF",
+    "loading": "Preparing…",
+    "error": "Could not prepare the document",
+    "emailSubject": "{title}",
+    "messages": {
+      "invoice": "Hello {name}, here is your invoice {number} ({amount} OMR) from {org}.",
+      "receipt": "Hello {name}, here is your payment receipt {number} ({amount} OMR) from {org}. Thank you.",
+      "ledger": "Hello {name}, here is your account statement from {org}.",
+      "reservation": "Hello {name}, here is your reservation confirmation {number} from {org}.",
+      "return": "Hello {name}, here is your return / credit note {number} ({amount} OMR) from {org}."
+    }
   }
 }

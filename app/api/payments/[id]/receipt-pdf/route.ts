@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { verifyShareFromRequest } from "@/lib/share-token";
 import { getPdfLocaleContext } from "@/lib/pdf-i18n";
 import { htmlToPdf } from "@/lib/pdf/render";
 import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
@@ -148,13 +149,21 @@ export function amountToWordsAr(amount: number): string {
 // ── GET handler ───────────────────────────────────────────────────────────────
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const actor = await getActor();
-  if (!actor) return new Response("Unauthorized", { status: 401 });
-
   const { id } = await params;
+
+  // Access via a signed public share link (?t=) OR an authenticated session.
+  const share = verifyShareFromRequest(req, "receipt", id);
+  let organizationId: string;
+  if (share) {
+    organizationId = share.org;
+  } else {
+    const actor = await getActor();
+    if (!actor) return new Response("Unauthorized", { status: 401 });
+    organizationId = actor.organizationId!;
+  }
 
   const [payment, org] = await Promise.all([
     prisma.payment.findUnique({
@@ -195,16 +204,16 @@ export async function GET(
         },
       },
     }),
-    actor.organizationId
+    organizationId
       ? prisma.organization.findUnique({
-          where: { id: actor.organizationId },
+          where: { id: organizationId },
           select: { name: true, phone: true, address: true, city: true, logo: true },
         })
       : Promise.resolve(null),
   ]);
 
   if (!payment) return new Response("Payment not found", { status: 404 });
-  if (payment.tenant.organizationId !== actor.organizationId) {
+  if (payment.tenant.organizationId !== organizationId) {
     return new Response("Unauthorized", { status: 403 });
   }
   const amount = Number(payment.amount);

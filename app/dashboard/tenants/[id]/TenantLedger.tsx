@@ -18,6 +18,7 @@ import {
   XMarkIcon,
   ReceiptRefundIcon,
 } from "@heroicons/react/24/outline";
+import ShareButton from "@/components/dashboard/ShareButton";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -334,6 +335,7 @@ export default function TenantLedger({ tenantId, tenantName }: Props) {
             <PrinterIcon className="h-3.5 w-3.5" />
             {tAct("pdf")}
           </a>
+          <ShareButton type="ledger" id={tenantId} />
           <Link
             href={`/dashboard/payments/new?tenantId=${tenantId}`}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors shadow-sm"

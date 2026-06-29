@@ -12,6 +12,7 @@ import {
 } from "@heroicons/react/24/outline";
 import { Button, Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui";
 import BankSelect from "@/components/dashboard/BankSelect";
+import ShareButton from "@/components/dashboard/ShareButton";
 import { methodNeedsBank, methodRequiresBank } from "@/lib/banks";
 
 interface Props {
@@ -137,6 +138,7 @@ export default function InvoiceActions({ invoiceId, status, balanceDue, openPaym
             {t("printPdf")}
           </a>
         )}
+        {!isCancelled && <ShareButton type="invoice" id={invoiceId} />}
       </div>
 
       {/* Payment modal */}

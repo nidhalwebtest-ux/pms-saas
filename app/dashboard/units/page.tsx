@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { assertView } from "@/lib/access";
-import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
 import { HomeModernIcon, PlusIcon, Squares2X2Icon } from "@heroicons/react/24/outline";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
@@ -40,27 +38,23 @@ export type UnitRow = {
 };
 
 export default async function UnitsPage() {
+  // assertView already resolves+caches the session and guarantees an org.
   const access = await assertView("units");
+  const orgId = access.organizationId;
 
-  const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) redirect("/login");
-
-  const dbUser = await prisma.user.findUnique({
-    where:  { id: user.id },
-    select: { organizationId: true, organization: { select: { showReservedStatus: true } } },
-  });
-  if (!dbUser?.organizationId) redirect("/onboarding");
-  const showReserved = dbUser.organization?.showReservedStatus ?? false;
-
-  const [allProperties, selectedPropertyId] = await Promise.all([
+  const [allProperties, selectedPropertyId, orgPrefs] = await Promise.all([
     prisma.property.findMany({
-      where:   { organizationId: dbUser.organizationId },
+      where:   { organizationId: orgId },
       select:  { id: true, name: true },
       orderBy: { name: "asc" },
     }),
     getSelectedPropertyId(),
+    prisma.organization.findUnique({
+      where:  { id: orgId },
+      select: { showReservedStatus: true },
+    }),
   ]);
+  const showReserved = orgPrefs?.showReservedStatus ?? false;
 
   // When the global property selector picks a specific building, the units
   // list is restricted to that building's units. The filter dropdown reflects
@@ -76,7 +70,7 @@ export default async function UnitsPage() {
   // ── FETCH all units in scope (one query; filtering is client-side) ─────────
   const rawUnits = await prisma.unit.findMany({
     where: {
-      property: { organizationId: dbUser.organizationId },
+      property: { organizationId: orgId },
       ...(propIds ? { propertyId: { in: propIds } } : {}),
     },
     include: {

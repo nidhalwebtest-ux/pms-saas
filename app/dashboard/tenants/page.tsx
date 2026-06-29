@@ -1,6 +1,4 @@
-import { redirect } from "next/navigation";
 import { assertView } from "@/lib/access";
-import { createClient } from "@/utils/supabase/server";
 import { Prisma } from "@prisma/client";
 import { UserGroupIcon, PlusIcon } from "@heroicons/react/24/outline";
 import { prisma } from "@/lib/prisma";
@@ -35,20 +33,11 @@ export type TenantRow = {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default async function TenantsPage() {
+  // assertView already resolves+caches the session and guarantees an org.
   const access = await assertView("tenants");
+  const orgId = access.organizationId;
 
   const t = await getTranslations("tenants");
-
-  const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) redirect("/login");
-
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { organizationId: true },
-  });
-  if (!dbUser?.organizationId) redirect("/onboarding");
-  const orgId = dbUser.organizationId;
 
   // Load all tenants once (org-scoped) + live aggregates. All filtering/tabs
   // happen client-side over these rows — no DB refetch on search/tab change.

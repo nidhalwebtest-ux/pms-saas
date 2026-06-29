@@ -1,6 +1,5 @@
-import { createClient } from "@/utils/supabase/server";
-import { notFound, redirect } from "next/navigation";
-import { getSessionAccess, assertView } from "@/lib/access";
+import { notFound } from "next/navigation";
+import { assertView } from "@/lib/access";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -27,7 +26,7 @@ import { getTranslations, getLocale } from "next-intl/server";
 import { format } from "date-fns";
 import { ar, enGB } from "date-fns/locale";
 import TenantLedger from "./TenantLedger";
-import TenantDetailTabs from "./TenantDetailTabs";
+import TenantTabs from "./TenantTabs";
 import TransactionsPanel from "@/components/dashboard/transactions/TransactionsPanel";
 import type { TransactionData } from "@/components/dashboard/transactions/TransactionSections";
 import { getDisplayStatus, type StoredStatus } from "@/lib/reservation-status";
@@ -76,15 +75,9 @@ export default async function TenantProfilePage({
     try { return fn(key as never); } catch { return key; }
   };
 
-  await assertView("tenants");
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { organizationId: true },
-  });
+  // assertView already resolves+caches the session and guarantees an org.
+  const access = await assertView("tenants");
+  const orgId = access.organizationId;
 
   // Scope everything on this page to the globally-selected building (property
   // view). null = "All buildings" → no scoping. Reservations have no propertyId,
@@ -123,11 +116,11 @@ export default async function TenantProfilePage({
     },
   });
 
-  if (!tenant || tenant.organizationId !== dbUser?.organizationId) {
+  if (!tenant || tenant.organizationId !== orgId) {
     return notFound();
   }
 
-  const canEditTenant = (await getSessionAccess())?.canEdit("tenants") ?? false;
+  const canEditTenant = access.canEdit("tenants");
 
   // Invoices + transaction counts for the shared TransactionsPanel.
   const [tenantInvoices, resCount, invCount, payCount, staysCount] = await Promise.all([
@@ -335,25 +328,18 @@ export default async function TenantProfilePage({
         </div>
       )}
 
-      {/* ── Tab navigation ── */}
-      <div className="mb-6">
-        <TenantDetailTabs
-          currentTab={tab}
-          labels={{ overview: tTabs("overview"), ledger: tTabs("ledger") }}
-        />
-      </div>
-
-      {/* ── Financial Ledger tab ── */}
-      {tab === "ledger" && (
-        <TenantLedger
-          tenantId={id}
-          tenantName={`${tenant.firstName} ${tenant.lastName}`}
-        />
-      )}
-
-      {/* ── Overview tab ── */}
-      {tab !== "ledger" && (
-      <>
+      {/* ── Tabs (client-side: switching does not re-run the server page) ── */}
+      <TenantTabs
+        initialTab={tab === "ledger" ? "ledger" : "overview"}
+        labels={{ overview: tTabs("overview"), ledger: tTabs("ledger") }}
+        ledger={
+          <TenantLedger
+            tenantId={id}
+            tenantName={`${tenant.firstName} ${tenant.lastName}`}
+          />
+        }
+        overview={
+        <>
 
       {/* ── KPI Row ── */}
       {currentRes && (
@@ -531,8 +517,9 @@ export default async function TenantProfilePage({
         </div>
       </div>
 
-      </> // end overview tab
-      )}
+        </>
+        }
+      />
 
     </div>
   );

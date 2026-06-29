@@ -41,8 +41,16 @@ export async function GET(req: NextRequest) {
   if (!orgId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const propertyId =
-    new URL(req.url).searchParams.get("propertyId") ?? "";
+  const sp = new URL(req.url).searchParams;
+  const propertyId = sp.get("propertyId") ?? "";
+  // Dashboard "highlights" renders only the building comparison; skip the heavy
+  // findMany/groupBy queries that feed the hidden charts/aging/performance.
+  const highlights = sp.get("variant") === "highlights";
+  type AllocRow = { amount: Prisma.Decimal; payment: { date: Date } };
+  type ExpRow = { amount: Prisma.Decimal; category: { name: string } | null };
+  type AgingRow = { balanceDue: Prisma.Decimal; dueDate: Date };
+  type PerfActRow = { performedById: string | null; action: string; _count: { id: number } };
+  type PerfUserRow = { id: string; firstName: string; lastName: string; role: string | null };
 
   const now = new Date();
   const todayStart  = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -136,23 +144,23 @@ export async function GET(req: NextRequest) {
       select: { balanceDue: true },
     }),
     // Daily revenue trend: sum allocations applied in the last 30 days,
-    // keyed by the parent payment's date.
-    prisma.paymentAllocation.findMany({
+    // keyed by the parent payment's date. (hidden in highlights)
+    highlights ? ([] as AllocRow[]) : prisma.paymentAllocation.findMany({
       where: { ...allocBase, payment: { date: { gte: thirtyAgo } } },
       select: { amount: true, payment: { select: { date: true } } },
     }),
-    // All expenses this month (for category breakdown)
-    prisma.expense.findMany({
+    // All expenses this month (for category breakdown). (hidden in highlights)
+    highlights ? ([] as ExpRow[]) : prisma.expense.findMany({
       where: { ...expBase, submittedAt: { gte: monthStart } },
       select: { amount: true, category: { select: { name: true } } },
     }),
-    // Aging receivables — driven by invoice.balanceDue + invoice.dueDate.
-    prisma.invoice.findMany({
+    // Aging receivables — driven by invoice.balanceDue + invoice.dueDate. (hidden in highlights)
+    highlights ? ([] as AgingRow[]) : prisma.invoice.findMany({
       where: { ...invoiceBase, balanceDue: { gt: 0 } },
       select: { balanceDue: true, dueDate: true },
     }),
-    // Receptionist performance: group by user + action this month
-    prisma.reservationActivity.groupBy({
+    // Receptionist performance: group by user + action this month. (hidden in highlights)
+    highlights ? ([] as PerfActRow[]) : prisma.reservationActivity.groupBy({
       by: ["performedById", "action"],
       where: {
         organizationId: orgId,
@@ -161,7 +169,7 @@ export async function GET(req: NextRequest) {
       },
       _count: { id: true },
     }),
-    prisma.user.findMany({
+    highlights ? ([] as PerfUserRow[]) : prisma.user.findMany({
       where: { organizationId: orgId },
       select: { id: true, firstName: true, lastName: true, role: true },
     }),
@@ -174,8 +182,8 @@ export async function GET(req: NextRequest) {
       select: { id: true, name: true },
       orderBy: { name: "asc" },
     }),
-    // 6-month revenue trend — allocations applied to non-cancelled invoices.
-    prisma.paymentAllocation.findMany({
+    // 6-month revenue trend — allocations applied to non-cancelled invoices. (hidden in highlights)
+    highlights ? ([] as AllocRow[]) : prisma.paymentAllocation.findMany({
       where: { ...allocBase, payment: { date: { gte: sixMonthsAgo } } },
       select: { amount: true, payment: { select: { date: true } } },
     }),

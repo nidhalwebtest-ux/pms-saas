@@ -1,22 +1,12 @@
-import { redirect } from "next/navigation";
 import { assertView } from "@/lib/access";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import ReservationsView from "./ReservationsView";
 
 export default async function ReservationsPage() {
-  await assertView("reservations");
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
-  const dbUser = await prisma.user.findUnique({
-    where:  { id: user.id },
-    select: { organizationId: true },
-  });
-  if (!dbUser?.organizationId) redirect("/onboarding");
+  // assertView already resolves+caches the session and guarantees an org.
+  const { organizationId } = await assertView("reservations");
 
   // Restrict the building dropdown to the user's accessible buildings.
   const accessible = await getSessionAccessibleProperties();
@@ -24,7 +14,7 @@ export default async function ReservationsPage() {
   const [allProperties, org, selectedPropertyId] = await Promise.all([
     prisma.property.findMany({
       where:   {
-        organizationId: dbUser.organizationId,
+        organizationId,
         isArchived: false,
         ...(accessible ? { id: { in: accessible } } : {}),
       },
@@ -32,7 +22,7 @@ export default async function ReservationsPage() {
       orderBy: { name: "asc" },
     }),
     prisma.organization.findUnique({
-      where:  { id: dbUser.organizationId },
+      where:  { id: organizationId },
       select: { allowEarlyCheckIn: true },
     }),
     getSelectedPropertyId(),

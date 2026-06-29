@@ -315,7 +315,12 @@ export function ManagerView({
 
   const fetchData = useCallback(async () => {
     try {
-      const params = propertyId ? `?propertyId=${propertyId}` : "";
+      const qs = new URLSearchParams();
+      if (propertyId) qs.set("propertyId", propertyId);
+      // Highlights only renders the building comparison — tell the API to skip
+      // the heavy queries that feed the hidden charts/KPIs/performance sections.
+      if (variant === "highlights") qs.set("variant", "highlights");
+      const params = qs.toString() ? `?${qs.toString()}` : "";
       const res = await fetch(`/api/dashboard/manager${params}`);
       if (!res.ok) throw new Error("Failed to load");
       setData(await res.json());
@@ -325,7 +330,7 @@ export function ManagerView({
     } finally {
       setLoading(false);
     }
-  }, [propertyId, t]);
+  }, [propertyId, variant, t]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

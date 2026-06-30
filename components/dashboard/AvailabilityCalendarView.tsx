@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import "@/styles/calendar.css";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import {
@@ -49,8 +50,8 @@ type PopTarget =
 const isWeekendDay = (d: Date) => d.getDay() === 5 || d.getDay() === 6;
 
 export default function AvailabilityCalendarView({
-  properties, defaultPropertyId,
-}: { properties: Property[]; defaultPropertyId?: string }) {
+  properties, defaultPropertyId, onClose,
+}: { properties: Property[]; defaultPropertyId?: string; onClose?: () => void }) {
   const router = useRouter();
   const locale = useLocale();
   const isRtl = locale === "ar";
@@ -82,6 +83,16 @@ export default function AvailabilityCalendarView({
     on(); m.addEventListener("change", on);
     return () => m.removeEventListener("change", on);
   }, []);
+
+  // Full-screen modal: close on Escape + lock body scroll while open.
+  useEffect(() => {
+    if (!onClose) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+  }, [onClose]);
 
   const fmtOMR = useCallback((n: number) => {
     const s = Number(n).toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
@@ -157,7 +168,7 @@ export default function AvailabilityCalendarView({
   const stats = data?.stats;
 
   return (
-    <div className="bcal" dir={isRtl ? "rtl" : "ltr"}>
+    <div className={`bcal ${onClose ? "fullscreen" : ""}`} dir={isRtl ? "rtl" : "ltr"}>
       {/* ── Header ── */}
       <div className="bcal-head">
         <div className="b-ico"><BuildingOffice2Icon /></div>
@@ -171,6 +182,11 @@ export default function AvailabilityCalendarView({
         </div>
         <div className="b-spacer" />
         <div className="live"><i />{t("live")}</div>
+        {onClose && (
+          <button type="button" className="btn-ghost" title={t("close")} onClick={onClose} style={{ marginInlineStart: 8 }}>
+            <XMarkIcon style={{ width: 18, height: 18 }} />
+          </button>
+        )}
       </div>
 
       {/* ── Summary ── */}

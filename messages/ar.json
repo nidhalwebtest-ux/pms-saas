@@ -399,7 +399,8 @@
     "paymentSettings": "إعدادات المدفوعات",
     "bankAccounts": "الحسابات البنكية",
     "returnSettings": "إعدادات المرتجعات",
-    "unitSettings": "إعدادات الوحدات"
+    "unitSettings": "إعدادات الوحدات",
+    "availabilityCalendar": "تقويم التوفّر"
   },
   "dashboard": {
     "goodMorning": "صباح الخير، {name}",
@@ -5809,5 +5810,68 @@
       "return": "مرحباً {name}، إليك إشعار المرتجع / الدائن {number} ({amount} ريال عماني) من {org}."
     },
     "downloadPhrase": "حمّل المستند من الرابط:"
+  },
+  "availabilityCalendar": {
+    "title": "تقويم التوفّر",
+    "nights": "{n} ليلة",
+    "units": "{n} وحدة",
+    "live": "مباشر",
+    "loadFailed": "تعذّر تحميل التقويم",
+    "errorTitle": "تعذّر التحميل",
+    "emptyTitle": "لا توجد وحدات لعرضها",
+    "emptyBody": "لا توجد وحدات تطابق النطاق أو المبنى المحدد. جرّب توسيع نطاق التاريخ أو اختيار مبنى آخر.",
+    "unitColumn": "الوحدة",
+    "floor": "الطابق {n}",
+    "maintenance": "صيانة",
+    "stats": {
+      "booked": "ليالٍ محجوزة",
+      "vacant": "شاغرة",
+      "checkins": "تسجيل دخول",
+      "maintenance": "صيانة",
+      "potential": "الإيرادات المحتملة · وحدات شاغرة"
+    },
+    "filter": {
+      "range": "نطاق",
+      "d7": "٧ أيام",
+      "d14": "١٤ يوم",
+      "d30": "٣٠ يوم",
+      "thisMonth": "هذا الشهر",
+      "nextMonth": "الشهر القادم",
+      "khareef": "موسم الخريف",
+      "season": "موسم",
+      "custom": "مخصص",
+      "from": "من",
+      "to": "إلى",
+      "names": "إظهار أسماء الضيوف",
+      "density": "كثافة العرض",
+      "refresh": "تحديث"
+    },
+    "legend": {
+      "vacant": "شاغرة",
+      "booked": "محجوزة",
+      "checkin": "تسجيل دخول",
+      "turnover": "يوم تبديل",
+      "turnoverSub": "مغادرة + وصول",
+      "maintenance": "صيانة"
+    },
+    "pop": {
+      "vacantTitle": "وحدة شاغرة",
+      "date": "التاريخ",
+      "potentialNight": "إيراد محتمل/ليلة",
+      "blocked": "محجوبة",
+      "closedForBookings": "مغلقة للحجز",
+      "turnoverTitle": "يوم تبديل",
+      "checkout": "مغادرة",
+      "checkin": "وصول",
+      "housekeeping": "نافذة التنظيف",
+      "arrivingToday": "وصول اليوم",
+      "checkinBadge": "تسجيل دخول",
+      "pending": "قيد الانتظار",
+      "confirmed": "مؤكد",
+      "nights": "ليالٍ",
+      "clickToOpen": "اضغط للفتح",
+      "openCta": "فتح الحجز",
+      "createCta": "حجز جديد"
+    }
   }
 }

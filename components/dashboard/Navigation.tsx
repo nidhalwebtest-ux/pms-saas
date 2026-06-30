@@ -60,9 +60,11 @@ const navigationConfig: NavItem[] = [
     key:      "reservations",
     labelKey: "reservations",
     href:     "/dashboard/reservations",
+    activePatterns: ["/dashboard/calendar"],
     children: [
-      { labelKey: "reservationList", href: "/dashboard/reservations" },
-      { labelKey: "newReservation",  href: "/dashboard/reservations/new" },
+      { labelKey: "reservationList",      href: "/dashboard/reservations" },
+      { labelKey: "newReservation",       href: "/dashboard/reservations/new" },
+      { labelKey: "availabilityCalendar", href: "/dashboard/calendar" },
     ],
   },
   { key: "invoices",     labelKey: "invoices",     href: "/dashboard/invoices" },

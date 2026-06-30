@@ -399,7 +399,8 @@
     "paymentSettings": "Payment Settings",
     "bankAccounts": "Bank Accounts",
     "returnSettings": "Return Settings",
-    "unitSettings": "Unit Settings"
+    "unitSettings": "Unit Settings",
+    "availabilityCalendar": "Availability Calendar"
   },
   "dashboard": {
     "goodMorning": "Good morning, {name}",
@@ -5809,5 +5810,68 @@
       "return": "Hello {name}, here is your return / credit note {number} ({amount} OMR) from {org}."
     },
     "downloadPhrase": "Download the document from the link:"
+  },
+  "availabilityCalendar": {
+    "title": "Availability Calendar",
+    "nights": "{n} nights",
+    "units": "{n} units",
+    "live": "Live",
+    "loadFailed": "Could not load the calendar",
+    "errorTitle": "Couldn’t load",
+    "emptyTitle": "No units to show",
+    "emptyBody": "No units match the selected range or building. Try widening the date range or choosing another building.",
+    "unitColumn": "Unit",
+    "floor": "Floor {n}",
+    "maintenance": "Maintenance",
+    "stats": {
+      "booked": "Booked nights",
+      "vacant": "Vacant",
+      "checkins": "Check-ins",
+      "maintenance": "Maintenance",
+      "potential": "Potential revenue · vacant units"
+    },
+    "filter": {
+      "range": "Range",
+      "d7": "7 days",
+      "d14": "14 days",
+      "d30": "30 days",
+      "thisMonth": "This month",
+      "nextMonth": "Next month",
+      "khareef": "Khareef season",
+      "season": "Season",
+      "custom": "Custom",
+      "from": "From",
+      "to": "To",
+      "names": "Toggle guest names",
+      "density": "Toggle density",
+      "refresh": "Refresh"
+    },
+    "legend": {
+      "vacant": "Vacant",
+      "booked": "Booked",
+      "checkin": "Check-in",
+      "turnover": "Turnover",
+      "turnoverSub": "out + in",
+      "maintenance": "Maintenance"
+    },
+    "pop": {
+      "vacantTitle": "Vacant unit",
+      "date": "Date",
+      "potentialNight": "Potential / night",
+      "blocked": "Blocked",
+      "closedForBookings": "Closed for bookings",
+      "turnoverTitle": "Turnover day",
+      "checkout": "Check-out",
+      "checkin": "Check-in",
+      "housekeeping": "Housekeeping window",
+      "arrivingToday": "Arriving today",
+      "checkinBadge": "Check-in",
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "nights": "nights",
+      "clickToOpen": "Click to open",
+      "openCta": "Open reservation",
+      "createCta": "New reservation"
+    }
   }
 }

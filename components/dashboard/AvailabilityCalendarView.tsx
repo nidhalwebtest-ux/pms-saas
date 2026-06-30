@@ -42,7 +42,7 @@ interface CalData {
 interface Property { id: string; name: string }
 
 type PopTarget =
-  | { kind: "vacant"; unit: UnitData; date: string }
+  | { kind: "vacant"; unit: UnitData; date: string; col: number }
   | { kind: "booking"; unit: UnitData; res: SegRes; isCheckin: boolean; col: number }
   | { kind: "split"; unit: UnitData; out: SegRes; in: SegRes; date: string }
   | { kind: "maint"; unit: UnitData; date: string };
@@ -76,6 +76,10 @@ export default function AvailabilityCalendarView({
   const [pop, setPop] = useState<{ target: PopTarget; x: number; y: number; flip: boolean } | null>(null);
   const [sheet, setSheet] = useState<PopTarget | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  // Quick-create: click a vacant cell to set check-in, click another to set
+  // check-out → a "New reservation" confirm dialog appears.
+  const [pendingStart, setPendingStart] = useState<{ unitId: string; col: number } | null>(null);
+  const [draft, setDraft] = useState<{ unit: UnitData; startCol: number; endCol: number } | null>(null);
 
   useEffect(() => {
     const m = window.matchMedia("(max-width: 640px)");
@@ -84,15 +88,23 @@ export default function AvailabilityCalendarView({
     return () => m.removeEventListener("change", on);
   }, []);
 
-  // Full-screen modal: close on Escape + lock body scroll while open.
+  // Escape clears a pending selection / draft first, then closes the modal.
+  // When used as a modal, also lock body scroll.
   useEffect(() => {
-    if (!onClose) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (draft) { setDraft(null); return; }
+      if (pendingStart) { setPendingStart(null); return; }
+      onClose?.();
+    };
     document.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
-  }, [onClose]);
+    if (onClose) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => { document.removeEventListener("keydown", onKey); document.body.style.overflow = prev; };
+    }
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose, draft, pendingStart]);
 
   const fmtOMR = useCallback((n: number) => {
     const s = Number(n).toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 });
@@ -147,6 +159,40 @@ export default function AvailabilityCalendarView({
   const todayCol = useMemo(() => days.findIndex((x) => x.today), [days]);
   const rangeNights = startDate && endDate ? differenceInDays(parseISO(endDate), parseISO(startDate)) : 0;
 
+  // Per-unit set of occupied columns (to validate a vacant-range selection).
+  const occMap = useMemo(() => {
+    const m = new Map<string, Set<number>>();
+    data?.units.forEach((u) => {
+      const s = new Set<number>();
+      u.segments.forEach((seg) => {
+        if (seg.kind === "arr" || seg.kind === "split") s.add(seg.col);
+        else if (seg.kind === "body" || seg.kind === "maint") for (let c = seg.from; c <= seg.to; c++) s.add(c);
+      });
+      m.set(u.id, s);
+    });
+    return m;
+  }, [data]);
+
+  function selectVacant(unit: UnitData, col: number) {
+    if (pendingStart && pendingStart.unitId === unit.id) {
+      const lo = Math.min(pendingStart.col, col), hi = Math.max(pendingStart.col, col);
+      const occ = occMap.get(unit.id);
+      let ok = true;
+      for (let c = lo; c <= hi; c++) if (occ?.has(c)) { ok = false; break; }
+      if (ok) { setDraft({ unit, startCol: lo, endCol: hi }); setPendingStart(null); }
+      else setPendingStart({ unitId: unit.id, col }); // crossed a booking → restart
+    } else {
+      setPendingStart({ unitId: unit.id, col });
+    }
+  }
+  function createFromDraft() {
+    if (!draft) return;
+    const sd = days[draft.startCol].ds;
+    const ed = format(addDays(parseISO(days[draft.endCol].ds), 1), "yyyy-MM-dd");
+    setDraft(null);
+    router.push(`/dashboard/reservations/new?unitId=${draft.unit.id}&startDate=${sd}&endDate=${ed}`);
+  }
+
   // ── Interaction ────────────────────────────────────────────────────────────
   function onEnter(e: React.MouseEvent, target: PopTarget) {
     if (isMobile) return;
@@ -157,6 +203,7 @@ export default function AvailabilityCalendarView({
   function onLeave() { if (!isMobile) setPop(null); }
   function activate(target: PopTarget) {
     if (isMobile) { setSheet(target); return; }
+    if (target.kind === "vacant") { selectVacant(target.unit, target.col); return; }
     navigate(target);
   }
   function navigate(target: PopTarget) {
@@ -164,8 +211,6 @@ export default function AvailabilityCalendarView({
     else if (target.kind === "split") router.push(`/dashboard/reservations/${target.in.id}`);
     else if (target.kind === "vacant") router.push(`/dashboard/reservations/new?unitId=${target.unit.id}&startDate=${target.date}`);
   }
-
-  const stats = data?.stats;
 
   return (
     <div className={`bcal ${onClose ? "fullscreen" : ""}`} dir={isRtl ? "rtl" : "ltr"}>
@@ -189,26 +234,9 @@ export default function AvailabilityCalendarView({
         )}
       </div>
 
-      {/* ── Summary ── */}
-      {stats && (
-        <div className="bcal-summary">
-          <Stat dot="dot-confirmed" val={stats.bookedNights} pct={stats.bookedPct} lbl={t("stats.booked")} />
-          <Stat dot="dot-vacant" val={stats.vacant} pct={stats.vacantPct} lbl={t("stats.vacant")} />
-          <Stat dot="dot-checkin" val={stats.checkins} lbl={t("stats.checkins")} />
-          <Stat dot="dot-maint" val={stats.maintenance} lbl={t("stats.maintenance")} />
-          <div className="stat-rev">
-            <div className="r-lbl">{t("stats.potential")}</div>
-            <div className="r-val">
-              {!isRtl && <span className="cur">OMR</span>}
-              <span>{Number(stats.potentialRevenue).toLocaleString("en-US", { minimumFractionDigits: 3, maximumFractionDigits: 3 })}</span>
-              {isRtl && <span className="cur">ر.ع.</span>}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── Filter bar ── */}
+      {/* ── Filter bar (two rows) ── */}
       <div className="bcal-filter">
+        <div className="bcal-filter-row">
         <div className="fzone">
           <span className="fz-lbl">{t("filter.range")}</span>
           <div className="sc" role="radiogroup">
@@ -241,21 +269,28 @@ export default function AvailabilityCalendarView({
             </label>
           </div>
         </div>
+        </div>
 
-        <div className="fzone" style={{ marginInlineStart: "auto" }}>
-          <button type="button" className={`btn-ghost ${showNames ? "on" : ""}`} title={t("filter.names")} onClick={() => setShowNames((v) => !v)}><TagIcon /></button>
-          <button type="button" className={`btn-ghost ${density === "compact" ? "on" : ""}`} title={t("filter.density")} onClick={() => setDensity((d) => (d === "compact" ? "comfortable" : "compact"))}><Squares2X2Icon /></button>
+        <div className="bcal-filter-row">
           {properties.length > 1 && (
-            <div className="selector">
-              <span className="savatar"><BuildingOffice2Icon /></span>
-              <span className="sname">{properties.find((p) => p.id === propertyId)?.name ?? ""}</span>
-              <span className="schev"><ChevronDownIcon /></span>
-              <select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>
-                {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
+            <div className="fzone">
+              <span className="fz-lbl">{t("filter.building")}</span>
+              <div className="selector">
+                <span className="savatar"><BuildingOffice2Icon /></span>
+                <span className="sname">{properties.find((p) => p.id === propertyId)?.name ?? ""}</span>
+                <span className="schev"><ChevronDownIcon /></span>
+                <select value={propertyId} onChange={(e) => setPropertyId(e.target.value)}>
+                  {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
             </div>
           )}
-          <button type="button" className={`btn-refresh ${spin ? "spin" : ""}`} title={t("filter.refresh")} onClick={refresh}><ArrowPathIcon /></button>
+          <div className="fzone" style={{ marginInlineStart: "auto" }}>
+            <span className="fz-lbl">{t("filter.view")}</span>
+            <button type="button" className={`btn-ghost ${showNames ? "on" : ""}`} title={t("filter.names")} onClick={() => setShowNames((v) => !v)}><TagIcon /></button>
+            <button type="button" className={`btn-ghost ${density === "compact" ? "on" : ""}`} title={t("filter.density")} onClick={() => setDensity((d) => (d === "compact" ? "comfortable" : "compact"))}><Squares2X2Icon /></button>
+            <button type="button" className={`btn-refresh ${spin ? "spin" : ""}`} title={t("filter.refresh")} onClick={refresh}><ArrowPathIcon /></button>
+          </div>
         </div>
       </div>
 
@@ -299,7 +334,9 @@ export default function AvailabilityCalendarView({
             {data.units.map((u, ui) => (
               <Row key={u.id} u={u} ui={ui} days={days} density={density} showNames={showNames}
                    unitTypeLabel={unitTypeLabel} t={t}
-                   onEnter={onEnter} onLeave={onLeave} activate={activate} />
+                   onEnter={onEnter} onLeave={onLeave} activate={activate}
+                   selStart={pendingStart?.unitId === u.id ? pendingStart.col : null}
+                   selRange={draft && draft.unit.id === u.id ? [draft.startCol, draft.endCol] : null} />
             ))}
           </div>
         )}
@@ -339,20 +376,53 @@ export default function AvailabilityCalendarView({
           </div>
         </div>
       )}
+
+      {/* ── Quick-create: "pick check-out" hint ── */}
+      {pendingStart && !draft && (
+        <div className="bcal-hint"><CalendarDaysIcon style={{ width: 14, height: 14 }} />{t("create.pickCheckout")}</div>
+      )}
+
+      {/* ── Quick-create confirm dialog ── */}
+      {draft && (
+        <div className="bcal-create-backdrop" onClick={() => setDraft(null)}>
+          <div className="bcal-create" dir={isRtl ? "rtl" : "ltr"} onClick={(e) => e.stopPropagation()}>
+            <div className="bcal-pop" style={{ position: "static", width: "auto", border: 0, boxShadow: "none", pointerEvents: "auto" }}>
+              <div className="pop-head">
+                <div className="pop-av" style={{ background: "var(--brand-100)", color: "var(--brand-700)" }}><PlusIcon style={{ width: 17, height: 17 }} /></div>
+                <div className="pop-id"><div className="pop-name">{t("create.title")}</div><div className="pop-ref">{draft.unit.name} · {unitTypeLabel(draft.unit.unitType)}</div></div>
+              </div>
+              <div className="pop-dates">
+                <div className="leg"><div className="k">{t("pop.checkin")}</div><div className="v ltr-numbers">{format(parseISO(days[draft.startCol].ds), "d MMM", { locale: dfLocale })}</div></div>
+                <div className="nights"><span className="nn ltr-numbers">{draft.endCol - draft.startCol + 1}</span><span className="nl">{t("pop.nights")}</span></div>
+                <div className="arr"><ArrowLongRightIcon /></div>
+                <div className="leg" style={{ textAlign: "end" }}><div className="k">{t("pop.checkout")}</div><div className="v ltr-numbers">{format(addDays(parseISO(days[draft.endCol].ds), 1), "d MMM yyyy", { locale: dfLocale })}</div></div>
+              </div>
+              <div className="pop-foot vacant-pop">
+                <div className="meta">{t("create.estimated")}</div>
+                <div className="rate"><div className="rv ltr-numbers" style={{ color: "var(--brand-600)" }}>{fmtOMR(draft.unit.defaultDailyRate * (draft.endCol - draft.startCol + 1))}</div></div>
+              </div>
+            </div>
+            <div className="cr-actions">
+              <button type="button" className="cr-btn cr-secondary" onClick={() => setDraft(null)}>{t("create.cancel")}</button>
+              <button type="button" className="cr-btn cr-primary" onClick={createFromDraft}>{t("create.cta")}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Row ──────────────────────────────────────────────────────────────────────
-type DayMeta = { ds: string; weekend: boolean };
 function Row({
-  u, ui, days, density, showNames, unitTypeLabel, t, onEnter, onLeave, activate,
+  u, ui, days, density, showNames, unitTypeLabel, t, onEnter, onLeave, activate, selStart, selRange,
 }: {
   u: UnitData; ui: number; days: { ds: string; weekend: boolean }[];
   density: string; showNames: boolean; unitTypeLabel: (x: string) => string;
   t: ReturnType<typeof useTranslations>;
   onEnter: (e: React.MouseEvent, target: PopTarget) => void;
   onLeave: () => void; activate: (target: PopTarget) => void;
+  selStart: number | null; selRange: [number, number] | null;
 }) {
   const occupied = new Set<number>();
   u.segments.forEach((s) => {
@@ -379,11 +449,12 @@ function Row({
       {/* background cells (vacant + grid) */}
       {days.map((d, c) => {
         if (occupied.has(c)) return <div key={d.ds} className={`bc ${d.weekend ? "weekend" : ""}`} style={{ gridRow: ui + 2, gridColumn: c + 2, cursor: "default" }} />;
+        const sel = selStart === c ? " sel-start" : (selRange && c >= selRange[0] && c <= selRange[1] ? " sel" : "");
         return (
-          <div key={d.ds} className={`bc ${d.weekend ? "weekend" : ""}`} style={{ gridRow: ui + 2, gridColumn: c + 2 }}
-            onMouseEnter={(e) => onEnter(e, { kind: "vacant", unit: u, date: d.ds })}
+          <div key={d.ds} className={`bc ${d.weekend ? "weekend" : ""}${sel}`} style={{ gridRow: ui + 2, gridColumn: c + 2 }}
+            onMouseEnter={(e) => onEnter(e, { kind: "vacant", unit: u, date: d.ds, col: c })}
             onMouseLeave={onLeave}
-            onClick={() => activate({ kind: "vacant", unit: u, date: d.ds })}>
+            onClick={() => activate({ kind: "vacant", unit: u, date: d.ds, col: c })}>
             <span className="vac-plus"><PlusIcon /></span>
           </div>
         );
@@ -536,14 +607,6 @@ function PopBody({
 }
 
 // ── Small bits ───────────────────────────────────────────────────────────────
-function Stat({ dot, val, pct, lbl }: { dot: string; val: number; pct?: number; lbl: string }) {
-  return (
-    <div className="stat">
-      <div className="s-top"><span className={`s-dot ${dot}`} /><span className="s-val ltr-numbers">{val}</span>{pct != null && <span className="s-pct ltr-numbers">{pct}%</span>}</div>
-      <div className="s-lbl">{lbl}</div>
-    </div>
-  );
-}
 function Legend({ sw, lbl, sub }: { sw: string; lbl: string; sub?: string }) {
   return <div className="lg"><span className={`sw ${sw}`} /><span>{lbl}</span>{sub && <span className="lgsub">{sub}</span>}</div>;
 }

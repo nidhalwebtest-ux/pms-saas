@@ -5844,7 +5844,9 @@
       "to": "To",
       "names": "Toggle guest names",
       "density": "Toggle density",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "building": "Building",
+      "view": "View"
     },
     "legend": {
       "vacant": "Vacant",
@@ -5873,6 +5875,13 @@
       "openCta": "Open reservation",
       "createCta": "New reservation"
     },
-    "close": "Close"
+    "close": "Close",
+    "create": {
+      "title": "New reservation",
+      "cta": "Create reservation",
+      "cancel": "Cancel",
+      "estimated": "Estimated",
+      "pickCheckout": "Now pick the check-out day"
+    }
   }
 }

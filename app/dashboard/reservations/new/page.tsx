@@ -11,7 +11,7 @@ import Link from "next/link";
 export default async function NewReservationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ unitId?: string; tenantId?: string }>;
+  searchParams: Promise<{ unitId?: string; tenantId?: string; startDate?: string; endDate?: string }>;
 }) {
   await assertCan("reservations", "CREATE");
   const supabase = await createClient();
@@ -38,7 +38,9 @@ export default async function NewReservationPage({
   // Pre-selection from query params (e.g. coming from a unit detail or tenant
   // detail page). Both are validated against the org so we never leak a tenant
   // or unit from another company through a URL guess.
-  const { unitId, tenantId } = await searchParams;
+  const { unitId, tenantId, startDate, endDate } = await searchParams;
+  // Basic YYYY-MM-DD guard for calendar quick-create prefill.
+  const dateOk = (s?: string) => !!s && /^\d{4}-\d{2}-\d{2}$/.test(s);
 
   const [defaultTenant, defaultUnit, selectedPropertyId] = await Promise.all([
     tenantId
@@ -102,6 +104,8 @@ export default async function NewReservationPage({
         defaultTenant={defaultTenant}
         defaultPropertyId={defaultPropertyId}
         defaultUnitId={defaultUnit?.id}
+        defaultStartDate={dateOk(startDate) ? startDate : undefined}
+        defaultEndDate={dateOk(endDate) ? endDate : undefined}
       />
     </div>
   );

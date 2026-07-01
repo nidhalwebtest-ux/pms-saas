@@ -23,6 +23,9 @@ export async function GET(req: NextRequest) {
   const classification = searchParams.get("classification") || "";
   const tenantType     = searchParams.get("tenantType") || "";
   const source         = searchParams.get("source") || "";
+  // Opt-in higher cap so forms can preload the full list for client-side search.
+  const limitRaw = parseInt(searchParams.get("limit") || "", 10);
+  const take = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 2000) : 200;
 
   const tenants = await prisma.tenant.findMany({
     where: {
@@ -48,7 +51,7 @@ export async function GET(req: NextRequest) {
       createdAt: true, tags: true,
     },
     orderBy: { createdAt: "desc" },
-    take: 200,
+    take,
   });
 
   return NextResponse.json({ tenants });

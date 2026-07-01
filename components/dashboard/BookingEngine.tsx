@@ -223,6 +223,32 @@ export default function BookingEngine({
   // /api/tenants search never matches on id). See QA issue #16.
   const tenantCache = useRef<Map<string, TenantResult>>(new Map());
 
+  // Preload the full tenant list once so the picker filters client-side (fast,
+  // and shows every customer when the search box is empty).
+  const [allTenants, setAllTenants] = useState<TenantResult[]>([]);
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/tenants?limit=2000`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!alive) return;
+        const ts: TenantResult[] = d.tenants ?? [];
+        ts.forEach((tn) => tenantCache.current.set(tn.id, tn));
+        setAllTenants(ts);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  const tenantOptions = useMemo(
+    () => allTenants.map((tn) => ({
+      value: tn.id,
+      label: `${tn.firstName} ${tn.lastName}`,
+      description: `${tn.phone}${tn.nationality ? ` · ${tn.nationality}` : ""}`,
+      raw: tn,
+    })),
+    [allTenants],
+  );
+
   // ── Step 2: Dates ─────────────────────────────────────────────────────────
   const [propertyId, setPropertyId] = useState(defaultPropertyId ?? properties[0]?.id ?? "");
   const [startDate,  setStartDate]  = useState(defaultStartDate ?? "");
@@ -441,8 +467,13 @@ export default function BookingEngine({
     return false;
   }
 
+  // Guard against a fast double-click on "Next" advancing two steps at once
+  // (the functional setStep would otherwise run twice before a re-render).
+  const advancingRef = useRef(false);
+  useEffect(() => { advancingRef.current = false; }, [step]);
   async function advance() {
-    if (!canAdvance()) return;
+    if (advancingRef.current || !canAdvance()) return;
+    advancingRef.current = true;
     if (step === 2) await fetchUnits();
     setStep((s) => s + 1);
   }
@@ -584,23 +615,7 @@ export default function BookingEngine({
               <SearchableSelect
                 label={tStep1("searchPlaceholder")}
                 placeholder={tStep1("searchPlaceholder")}
-                debounceMs={350}
-                loadOptions={async (q) => {
-                  if (!q.trim()) return [];
-                  const res = await fetch(`/api/tenants?q=${encodeURIComponent(q)}`);
-                  const data = await res.json();
-                  const tenants: TenantResult[] = data.tenants ?? [];
-                  // Remember every tenant we've seen so onValueChange can
-                  // resolve the full record without another fetch.
-                  tenants.forEach((tn) => tenantCache.current.set(tn.id, tn));
-                  return tenants.map((tn) => ({
-                    value: tn.id,
-                    label: `${tn.firstName} ${tn.lastName}`,
-                    description: `${tn.phone}${tn.nationality ? ` · ${tn.nationality}` : ""}`,
-                    // attach raw data so renderOption + onValueChange can re-hydrate
-                    raw: tn,
-                  } as SearchableSelectOption & { raw: TenantResult }));
-                }}
+                options={tenantOptions}
                 onCreate={() => setShowAddTenant(true)}
                 emptyText={tStep1("noTenantsFound")}
                 value={selectedTenant?.id ?? null}

@@ -22,8 +22,9 @@ interface SegRes {
   status: string; rateAmount: number; startDate: string; endDate: string;
 }
 type Seg =
-  | { kind: "arr"; col: number; solo: boolean; res: SegRes }
-  | { kind: "body"; from: number; to: number; flatStart: boolean; res: SegRes }
+  | { kind: "arr"; col: number; res: SegRes }
+  | { kind: "checkout"; col: number; res: SegRes }
+  | { kind: "body"; from: number; to: number; flatStart: boolean; flatEnd: boolean; res: SegRes }
   | { kind: "split"; col: number; out: SegRes; in: SegRes }
   | { kind: "maint"; from: number; to: number };
 interface UnitData {
@@ -466,18 +467,32 @@ function Row({
       {/* segments */}
       {u.segments.map((s, si) => {
         if (s.kind === "arr") {
+          // Check-in day = half-cell: morning free (transparent), night booked.
+          const c = s.res.status === "CHECKED_IN" ? "var(--st-occ)" : "var(--st-checkin)";
           return (
-            <div key={si} className={`seg seg-arr ${s.solo ? "solo" : ""} ${s.res.status === "CHECKED_IN" ? "occ" : ""}`} style={{ gridRow: ui + 2, gridColumn: `${s.col + 2} / ${s.col + 3}` }}
+            <div key={si} className="seg-split half" style={{ gridRow: ui + 2, gridColumn: `${s.col + 2} / ${s.col + 3}` }}
               onMouseEnter={(e) => onEnter(e, { kind: "booking", unit: u, res: s.res, isCheckin: true, col: s.col })}
               onMouseLeave={onLeave}
               onClick={() => activate({ kind: "booking", unit: u, res: s.res, isCheckin: true, col: s.col })}>
-              <span className="chev"><ArrowRightOnRectangleIcon /></span>
+              <span className="tri-in" style={{ background: c }} />
+              <span className="in-i"><ArrowRightOnRectangleIcon /></span>
+            </div>
+          );
+        }
+        if (s.kind === "checkout") {
+          // Check-out day = half-cell overlay: morning booked, night free (still
+          // selectable — pointer-events pass through to the vacant cell below).
+          const c = s.res.status === "CHECKED_IN" ? "var(--st-occ)" : "var(--st-checkin)";
+          return (
+            <div key={si} className="seg-split half checkout" style={{ gridRow: ui + 2, gridColumn: `${s.col + 2} / ${s.col + 3}`, pointerEvents: "none" }}>
+              <span className="tri-out" style={{ background: c }} />
+              <span className="out-i"><ArrowLeftOnRectangleIcon /></span>
             </div>
           );
         }
         if (s.kind === "body") {
           return (
-            <div key={si} className={`seg seg-body ${s.flatStart ? "" : "solo"} ${showNames ? "named" : ""} ${s.res.status === "CHECKED_IN" ? "occ" : ""}`} style={{ gridRow: ui + 2, gridColumn: `${s.from + 2} / ${s.to + 3}` }}
+            <div key={si} className={`seg seg-body ${s.flatStart ? "fstart" : ""} ${s.flatEnd ? "fend" : ""} ${showNames ? "named" : ""} ${s.res.status === "CHECKED_IN" ? "occ" : ""}`} style={{ gridRow: ui + 2, gridColumn: `${s.from + 2} / ${s.to + 3}` }}
               onMouseEnter={(e) => onEnter(e, { kind: "booking", unit: u, res: s.res, isCheckin: false, col: s.from })}
               onMouseLeave={onLeave}
               onClick={() => activate({ kind: "booking", unit: u, res: s.res, isCheckin: false, col: s.from })}>

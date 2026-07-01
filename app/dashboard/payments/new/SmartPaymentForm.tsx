@@ -126,7 +126,7 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
   const [tenantQuery, setTenantQuery]     = useState("");
   const [tenantResults, setTenantResults] = useState<TenantResult[]>([]);
   const [selectedTenant, setSelectedTenant] = useState<TenantResult | null>(null);
-  const searchTimeout                     = useRef<ReturnType<typeof setTimeout>>();
+  const [allTenants, setAllTenants]       = useState<TenantResult[]>([]);
 
   // Invoices
   const [invoices, setInvoices]           = useState<Invoice[]>([]);
@@ -222,18 +222,24 @@ export default function SmartPaymentForm({ preselectedTenantId, preselectedInvoi
     if (total > 0) setAmount(total.toFixed(3));
   }, [selectedInvoiceIds, invoices, selectedTenant]);
 
-  // ── Tenant search (debounced) ─────────────────────────────────────────────
+  // ── Tenant search — preload all once, then filter client-side (fast; shows
+  //    every customer when the box is empty) ─────────────────────────────────
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/tenants?limit=2000`)
+      .then((r) => r.json())
+      .then((d) => { if (!alive) return; const ts: TenantResult[] = d.tenants ?? []; setAllTenants(ts); setTenantResults(ts.slice(0, 100)); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
   function onTenantQueryChange(val: string) {
     setTenantQuery(val);
-    clearTimeout(searchTimeout.current);
-    if (val.trim().length < 2) { setTenantResults([]); return; }
-    searchTimeout.current = setTimeout(async () => {
-      try {
-        const res  = await fetch(`/api/tenants?search=${encodeURIComponent(val)}&limit=10`);
-        const data = await res.json();
-        setTenantResults(data.tenants ?? []);
-      } catch { /* ignore */ }
-    }, 300);
+    const q = val.trim().toLowerCase();
+    const list = q
+      ? allTenants.filter((t) => `${t.firstName} ${t.lastName} ${t.phone ?? ""}`.toLowerCase().includes(q))
+      : allTenants;
+    setTenantResults(list.slice(0, 100));
   }
 
   function pickTenant(t: TenantResult | null) {

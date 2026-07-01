@@ -161,8 +161,9 @@ export async function GET(req: Request) {
     const isMaint = unit.status === "MAINTENANCE";
 
     type Seg =
-      | { kind: "arr"; col: number; solo: boolean; res: ReturnType<typeof serializeRes> }
-      | { kind: "body"; from: number; to: number; flatStart: boolean; res: ReturnType<typeof serializeRes> }
+      | { kind: "arr"; col: number; res: ReturnType<typeof serializeRes> }
+      | { kind: "checkout"; col: number; res: ReturnType<typeof serializeRes> }
+      | { kind: "body"; from: number; to: number; flatStart: boolean; flatEnd: boolean; res: ReturnType<typeof serializeRes> }
       | { kind: "split"; col: number; out: ReturnType<typeof serializeRes>; in: ReturnType<typeof serializeRes> }
       | { kind: "maint"; from: number; to: number };
 
@@ -191,21 +192,30 @@ export async function GET(req: Request) {
       let end = col;
       while (end + 1 < days && occ[end + 1] === r) { end++; booked++; bookedNights++; }
       const startsInWindow = col > 0 || r.startDate >= dayDates[0];
+      // Something (a check-out day or a turnover) follows within the window →
+      // the body connects to it (flat trailing end).
+      const hasAfter = end + 1 < days;
 
       if (prev && prev !== r) {
         // True turnover: prev checked out this morning, r checks in this afternoon.
         segments.push({ kind: "split", col, out: serializeRes(prev), in: serializeRes(r) });
         checkins++;
-        if (end >= col + 1) segments.push({ kind: "body", from: col + 1, to: end, flatStart: false, res: serializeRes(r) });
+        if (end >= col + 1) segments.push({ kind: "body", from: col + 1, to: end, flatStart: false, flatEnd: hasAfter, res: serializeRes(r) });
       } else if (!startsInWindow) {
         // Ongoing from before the window — no check-in cell.
-        segments.push({ kind: "body", from: col, to: end, flatStart: false, res: serializeRes(r) });
+        segments.push({ kind: "body", from: col, to: end, flatStart: false, flatEnd: hasAfter, res: serializeRes(r) });
       } else {
-        // Normal check-in.
-        const solo = end === col;
-        segments.push({ kind: "arr", col, solo, res: serializeRes(r) });
+        // Normal check-in (rendered as a half-day cell: morning free, night booked).
+        segments.push({ kind: "arr", col, res: serializeRes(r) });
         checkins++;
-        if (end >= col + 1) segments.push({ kind: "body", from: col + 1, to: end, flatStart: true, res: serializeRes(r) });
+        if (end >= col + 1) segments.push({ kind: "body", from: col + 1, to: end, flatStart: true, flatEnd: hasAfter, res: serializeRes(r) });
+      }
+
+      // Check-out day: if the next night is free (no turnover), show the morning
+      // as an occupied half-cell on that day — which is still bookable as a new
+      // check-in, so the user can see exactly which half is taken.
+      if (hasAfter && occ[end + 1] === null) {
+        segments.push({ kind: "checkout", col: end + 1, res: serializeRes(r) });
       }
       col = end + 1;
     }

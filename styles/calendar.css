@@ -5,13 +5,16 @@
    scoped under .bcal so nothing leaks. RTL flips via a single dir attr. */
 
 .bcal {
-  /* status palette — booked/occupied = red (per request); check-in teal, maint amber */
-  --st-confirmed: oklch(0.585 0.205 25);
-  --st-confirmed-2: oklch(0.50 0.195 25);
-  --st-confirmed-ink: #fff;
+  /* status palette — occupied (checked-in) = RED; upcoming (confirmed/pending)
+     + check-in = teal/blue; maintenance = amber. Color-blind safe. */
   --st-checkin: oklch(0.70 0.115 200);
   --st-checkin-deep: oklch(0.52 0.105 205);
   --st-checkin-ink: oklch(0.24 0.06 220);
+  --st-confirmed: var(--st-checkin);
+  --st-confirmed-2: var(--st-checkin-deep);
+  --st-confirmed-ink: var(--st-checkin-ink);
+  --st-occ: oklch(0.585 0.205 25);
+  --st-occ-2: oklch(0.50 0.195 25);
   --st-maint: oklch(0.86 0.085 80);
   --st-maint-stripe: oklch(0.78 0.135 72);
   --st-maint-ink: oklch(0.46 0.12 60);
@@ -117,10 +120,11 @@
 .bcal .lg { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; color: var(--gray-700); }
 .bcal .lg .sw { width: 18px; height: 14px; border-radius: 4px; flex-shrink: 0; box-shadow: inset 0 0 0 1px oklch(0 0 0 / 0.06); }
 .bcal .sw-vacant { background: var(--st-vacant); box-shadow: inset 0 0 0 1px var(--gray-300); }
-.bcal .sw-confirmed { background: var(--st-confirmed); }
+.bcal .sw-confirmed { background: var(--st-checkin); }
+.bcal .sw-occ { background: var(--st-occ); }
 .bcal .sw-checkin { background: var(--st-checkin); }
-.bcal .sw-split { background: linear-gradient(135deg, var(--st-confirmed) 0 48%, #fff 48% 52%, var(--st-checkin) 52% 100%); }
-[dir="rtl"] .bcal .sw-split { background: linear-gradient(225deg, var(--st-confirmed) 0 48%, #fff 48% 52%, var(--st-checkin) 52% 100%); }
+.bcal .sw-split { background: linear-gradient(135deg, var(--st-occ) 0 48%, #fff 48% 52%, var(--st-checkin) 52% 100%); }
+[dir="rtl"] .bcal .sw-split { background: linear-gradient(225deg, var(--st-occ) 0 48%, #fff 48% 52%, var(--st-checkin) 52% 100%); }
 .bcal .sw-maint { background: repeating-linear-gradient(45deg, var(--st-maint) 0 4px, var(--st-maint-stripe) 4px 8px); }
 .bcal .lg .lgsub { color: var(--gray-400); font-size: 11px; }
 
@@ -160,7 +164,7 @@
 .bcal-grid.compact .rc { padding: 0 12px; gap: 8px; }
 .bcal-grid.compact .rc .u-occ { display: none; }
 
-.bcal .bc { border-inline-end: 1px solid var(--gray-100); border-bottom: 1px solid var(--gray-100); background: var(--st-vacant); position: relative; cursor: pointer; }
+.bcal .bc { border-inline-end: 1px solid var(--gray-200); border-bottom: 1px solid var(--gray-200); background: var(--st-vacant); position: relative; cursor: pointer; }
 .bcal .bc.weekend { background: var(--st-weekend); }
 .bcal .bc:hover { background: var(--brand-50); box-shadow: inset 0 0 0 1px var(--brand-200); }
 .bcal .bc .vac-plus { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; color: var(--brand-400); }
@@ -182,10 +186,12 @@
 .bcal .seg-arr.solo { border-radius: 8px; margin-inline-end: 3px; }
 .bcal .seg-arr .chev { display: grid; place-items: center; }
 .bcal .seg-arr .chev svg { width: 14px; height: 14px; }
+.bcal .seg-arr.occ { background: var(--st-occ); color: #fff; box-shadow: inset 0 0 0 1px oklch(0.5 0.19 25 / 0.3); }
 .bcal .seg-body { background: linear-gradient(180deg, var(--st-confirmed) 0%, var(--st-confirmed-2) 100%); color: var(--st-confirmed-ink); border-start-end-radius: 8px; border-end-end-radius: 8px; margin-inline-end: 3px; padding-inline: 9px; overflow: hidden; box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.12); }
 .bcal .seg-body.solo { border-radius: 8px; margin-inline-start: 3px; }
 .bcal .seg-body .lbl { font-size: 11.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: opacity 120ms; }
 .bcal .seg-body.named .lbl { opacity: 1; }
+.bcal .seg-body.occ { background: linear-gradient(180deg, var(--st-occ), var(--st-occ-2)); color: #fff; }
 .bcal .seg-maint { margin-inline: 3px; border-radius: 8px; background: repeating-linear-gradient(45deg, var(--st-maint) 0 6px, var(--st-maint-stripe) 6px 12px); box-shadow: inset 0 0 0 1px oklch(0.6 0.12 70 / 0.25); display: flex; align-items: center; gap: 6px; padding-inline: 10px; color: var(--st-maint-ink); }
 .bcal .seg-maint .mico { display: grid; place-items: center; flex-shrink: 0; }
 .bcal .seg-maint .mico svg { width: 14px; height: 14px; }
@@ -195,6 +201,8 @@
 .bcal-grid.compact .seg-split { margin: 4px 2px; }
 .bcal .seg-split .tri-in { position: absolute; inset: 0; background: var(--st-checkin); clip-path: polygon(100% 0, 100% 100%, 0 100%); }
 [dir="rtl"] .bcal .seg-split .tri-in { clip-path: polygon(0 0, 100% 100%, 0 100%); }
+.bcal .seg-split.out-occ { background: var(--st-occ); }
+.bcal .seg-split .tri-in.in-occ { background: var(--st-occ); }
 .bcal .seg-split .divider { position: absolute; inset: 0; background: linear-gradient(135deg, transparent 0 47.5%, var(--gray-0) 47.5% 52.5%, transparent 52.5% 100%); }
 [dir="rtl"] .bcal .seg-split .divider { background: linear-gradient(225deg, transparent 0 47.5%, var(--gray-0) 47.5% 52.5%, transparent 52.5% 100%); }
 .bcal .seg-split .out-i, .bcal .seg-split .in-i { position: absolute; display: grid; place-items: center; width: 13px; height: 13px; color: #fff; }

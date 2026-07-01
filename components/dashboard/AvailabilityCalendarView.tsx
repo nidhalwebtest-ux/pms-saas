@@ -191,6 +191,7 @@ export default function AvailabilityCalendarView({
     const ed = format(addDays(parseISO(days[draft.endCol].ds), 1), "yyyy-MM-dd");
     setDraft(null);
     router.push(`/dashboard/reservations/new?unitId=${draft.unit.id}&startDate=${sd}&endDate=${ed}`);
+    onClose?.(); // close the calendar modal so the reservation form is visible
   }
 
   // ── Interaction ────────────────────────────────────────────────────────────
@@ -202,14 +203,16 @@ export default function AvailabilityCalendarView({
   }
   function onLeave() { if (!isMobile) setPop(null); }
   function activate(target: PopTarget) {
-    if (isMobile) { setSheet(target); return; }
+    // Vacant → quick-create selection on BOTH desktop and mobile.
     if (target.kind === "vacant") { selectVacant(target.unit, target.col); return; }
+    if (isMobile) { setSheet(target); return; }
     navigate(target);
   }
   function navigate(target: PopTarget) {
     if (target.kind === "booking") router.push(`/dashboard/reservations/${target.res.id}`);
     else if (target.kind === "split") router.push(`/dashboard/reservations/${target.in.id}`);
     else if (target.kind === "vacant") router.push(`/dashboard/reservations/new?unitId=${target.unit.id}&startDate=${target.date}`);
+    onClose?.(); // opening a reservation closes the calendar modal
   }
 
   return (
@@ -298,7 +301,7 @@ export default function AvailabilityCalendarView({
       <div className="bcal-legend">
         <Legend sw="sw-vacant" lbl={t("legend.vacant")} />
         <Legend sw="sw-confirmed" lbl={t("legend.booked")} />
-        <Legend sw="sw-checkin" lbl={t("legend.checkin")} />
+        <Legend sw="sw-occ" lbl={t("legend.checkedIn")} />
         <Legend sw="sw-split" lbl={t("legend.turnover")} sub={t("legend.turnoverSub")} />
         <Legend sw="sw-maint" lbl={t("legend.maintenance")} />
       </div>
@@ -464,7 +467,7 @@ function Row({
       {u.segments.map((s, si) => {
         if (s.kind === "arr") {
           return (
-            <div key={si} className={`seg seg-arr ${s.solo ? "solo" : ""}`} style={{ gridRow: ui + 2, gridColumn: `${s.col + 2} / ${s.col + 3}` }}
+            <div key={si} className={`seg seg-arr ${s.solo ? "solo" : ""} ${s.res.status === "CHECKED_IN" ? "occ" : ""}`} style={{ gridRow: ui + 2, gridColumn: `${s.col + 2} / ${s.col + 3}` }}
               onMouseEnter={(e) => onEnter(e, { kind: "booking", unit: u, res: s.res, isCheckin: true, col: s.col })}
               onMouseLeave={onLeave}
               onClick={() => activate({ kind: "booking", unit: u, res: s.res, isCheckin: true, col: s.col })}>
@@ -474,7 +477,7 @@ function Row({
         }
         if (s.kind === "body") {
           return (
-            <div key={si} className={`seg seg-body ${s.flatStart ? "" : "solo"} ${showNames ? "named" : ""}`} style={{ gridRow: ui + 2, gridColumn: `${s.from + 2} / ${s.to + 3}` }}
+            <div key={si} className={`seg seg-body ${s.flatStart ? "" : "solo"} ${showNames ? "named" : ""} ${s.res.status === "CHECKED_IN" ? "occ" : ""}`} style={{ gridRow: ui + 2, gridColumn: `${s.from + 2} / ${s.to + 3}` }}
               onMouseEnter={(e) => onEnter(e, { kind: "booking", unit: u, res: s.res, isCheckin: false, col: s.from })}
               onMouseLeave={onLeave}
               onClick={() => activate({ kind: "booking", unit: u, res: s.res, isCheckin: false, col: s.from })}>
@@ -484,11 +487,11 @@ function Row({
         }
         if (s.kind === "split") {
           return (
-            <div key={si} className="seg-split" style={{ gridRow: ui + 2, gridColumn: `${s.col + 2} / ${s.col + 3}` }}
+            <div key={si} className={`seg-split ${s.out.status === "CHECKED_IN" ? "out-occ" : ""}`} style={{ gridRow: ui + 2, gridColumn: `${s.col + 2} / ${s.col + 3}` }}
               onMouseEnter={(e) => onEnter(e, { kind: "split", unit: u, out: s.out, in: s.in, date: days[s.col]?.ds ?? "" })}
               onMouseLeave={onLeave}
               onClick={() => activate({ kind: "split", unit: u, out: s.out, in: s.in, date: days[s.col]?.ds ?? "" })}>
-              <span className="tri-in" /><span className="divider" />
+              <span className={`tri-in ${s.in.status === "CHECKED_IN" ? "in-occ" : ""}`} /><span className="divider" />
               <span className="out-i"><ArrowLeftOnRectangleIcon /></span>
               <span className="in-i"><ArrowRightOnRectangleIcon /></span>
             </div>

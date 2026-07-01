@@ -5854,7 +5854,8 @@
       "checkin": "تسجيل دخول",
       "turnover": "يوم تبديل",
       "turnoverSub": "مغادرة + وصول",
-      "maintenance": "صيانة"
+      "maintenance": "صيانة",
+      "checkedIn": "قيد الإقامة"
     },
     "pop": {
       "vacantTitle": "وحدة شاغرة",

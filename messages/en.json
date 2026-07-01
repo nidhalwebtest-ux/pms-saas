@@ -5854,7 +5854,8 @@
       "checkin": "Check-in",
       "turnover": "Turnover",
       "turnoverSub": "out + in",
-      "maintenance": "Maintenance"
+      "maintenance": "Maintenance",
+      "checkedIn": "Checked-in"
     },
     "pop": {
       "vacantTitle": "Vacant unit",

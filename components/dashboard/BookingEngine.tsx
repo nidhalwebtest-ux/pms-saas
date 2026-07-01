@@ -254,7 +254,16 @@ export default function BookingEngine({
   const [startDate,  setStartDate]  = useState(defaultStartDate ?? "");
   const [endDate,    setEndDate]    = useState(defaultEndDate ?? "");
   const [rateType,   setRateType]   = useState<"daily" | "monthly">(defaultRateType ?? "daily");
-  const [period,     setPeriod]     = useState(defaultPeriod ?? 1); // nights OR months
+  const [period,     setPeriod]     = useState(() => {
+    if (defaultPeriod != null) return defaultPeriod;
+    // Derive nights/months from prefilled dates (e.g. calendar quick-create).
+    if (defaultStartDate && defaultEndDate) {
+      const s = parseLocalDate(defaultStartDate), e = parseLocalDate(defaultEndDate);
+      const n = (defaultRateType ?? "daily") === "monthly" ? countCalendarMonths(s, e) : calculateNights(s, e);
+      return n > 0 ? n : 1;
+    }
+    return 1;
+  }); // nights OR months
 
   // ── Step 3: Units ─────────────────────────────────────────────────────────
   const [units,         setUnits]         = useState<UnitOption[]>([]);

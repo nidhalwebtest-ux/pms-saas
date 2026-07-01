@@ -187,9 +187,7 @@
 .bcal .seg-arr .chev { display: grid; place-items: center; }
 .bcal .seg-arr .chev svg { width: 14px; height: 14px; }
 .bcal .seg-arr.occ { background: var(--st-occ); color: #fff; box-shadow: inset 0 0 0 1px oklch(0.5 0.19 25 / 0.3); }
-.bcal .seg-body { background: linear-gradient(180deg, var(--st-confirmed) 0%, var(--st-confirmed-2) 100%); color: var(--st-confirmed-ink); border-radius: 8px; margin-inline: 3px; padding-inline: 9px; overflow: hidden; box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.12); }
-.bcal .seg-body.fstart { border-start-start-radius: 0; border-end-start-radius: 0; margin-inline-start: 0; }
-.bcal .seg-body.fend { border-start-end-radius: 0; border-end-end-radius: 0; margin-inline-end: 0; }
+.bcal .seg-body { background: linear-gradient(180deg, var(--st-confirmed) 0%, var(--st-confirmed-2) 100%); color: var(--st-confirmed-ink); border-radius: 0; margin-inline: 0; padding-inline: 9px; overflow: hidden; box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.12); }
 .bcal .seg-body .lbl { font-size: 11.5px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0; transition: opacity 120ms; }
 .bcal .seg-body.named .lbl { opacity: 1; }
 .bcal .seg-body.occ { background: linear-gradient(180deg, var(--st-occ), var(--st-occ-2)); color: #fff; }
@@ -198,17 +196,22 @@
 .bcal .seg-maint .mico svg { width: 14px; height: 14px; }
 .bcal .seg-maint .lbl { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.bcal .seg-split { margin: 5px 2px; border-radius: 8px; overflow: hidden; position: relative; cursor: pointer; z-index: 2; background: var(--st-confirmed); }
-.bcal-grid.compact .seg-split { margin: 4px 2px; }
+.bcal .seg-split { margin: 5px 0; border-radius: 0; overflow: hidden; position: relative; cursor: pointer; z-index: 2; background: var(--st-confirmed); }
+.bcal-grid.compact .seg-split { margin: 4px 0; }
 .bcal .seg-split .tri-in { position: absolute; inset: 0; background: var(--st-checkin); clip-path: polygon(100% 0, 100% 100%, 0 100%); }
 [dir="rtl"] .bcal .seg-split .tri-in { clip-path: polygon(0 0, 100% 100%, 0 100%); }
 .bcal .seg-split.out-occ { background: var(--st-occ); }
 .bcal .seg-split .tri-in.in-occ { background: var(--st-occ); }
-/* half-cells: check-in (tri-in) / check-out (tri-out) on a transparent base */
-.bcal .seg-split.half { background: transparent; }
-.bcal .seg-split .tri-out { position: absolute; inset: 0; clip-path: polygon(0 0, 100% 0, 0 100%); }
-[dir="rtl"] .bcal .seg-split .tri-out { clip-path: polygon(0 0, 100% 0, 100% 100%); }
-.bcal .seg-split.checkout { z-index: 3; }
+/* Half-day cells: check-in books the SECOND half, check-out the FIRST half.
+   Rendered as a full-height vertical half-fill so the colour is continuous with
+   the body bar; the icon sits centred in the booked half. */
+.bcal .seg-half { position: relative; z-index: 2; margin: 5px 0; cursor: pointer; }
+.bcal-grid.compact .seg-half { margin: 4px 0; }
+.bcal .seg-half.checkout { z-index: 3; cursor: default; }
+.bcal .seg-half .fill { position: absolute; inset-block: 0; display: grid; place-items: center; color: #fff; }
+.bcal .seg-half .fill svg { width: 14px; height: 14px; }
+.bcal .seg-half.checkin .fill { inset-inline-start: 50%; inset-inline-end: 0; }
+.bcal .seg-half.checkout .fill { inset-inline-start: 0; inset-inline-end: 50%; }
 .bcal .seg-split .divider { position: absolute; inset: 0; background: linear-gradient(135deg, transparent 0 47.5%, var(--gray-0) 47.5% 52.5%, transparent 52.5% 100%); }
 [dir="rtl"] .bcal .seg-split .divider { background: linear-gradient(225deg, transparent 0 47.5%, var(--gray-0) 47.5% 52.5%, transparent 52.5% 100%); }
 .bcal .seg-split .out-i, .bcal .seg-split .in-i { position: absolute; display: grid; place-items: center; width: 13px; height: 13px; color: #fff; }

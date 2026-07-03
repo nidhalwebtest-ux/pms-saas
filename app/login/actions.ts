@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { headers, cookies } from "next/headers";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { sendVerificationEmail } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 import { LOCALE_COOKIE } from "@/i18n/config";
 import { setAuthFlash } from "@/lib/auth-flash";
@@ -145,9 +144,8 @@ export async function login(formData: FormData) {
 
 export async function signup(formData: FormData) {
   const adminClient = createAdminClient();
-  const origin      = await getOrigin();
 
-  const email    = (formData.get("email")    as string | null)?.trim() ?? "";
+  const email    = (formData.get("email")    as string | null)?.trim().toLowerCase() ?? "";
   const password = (formData.get("password") as string | null) ?? "";
 
   if (!email || !password) {
@@ -155,19 +153,16 @@ export async function signup(formData: FormData) {
     redirect("/login");
   }
 
-  // Use admin generateLink — this creates the user AND returns the verification
-  // URL in ONE call, without triggering Supabase's own email sending.
-  // (calling signUp() first then generateLink() creates two tokens and the
-  //  first one — sent by Supabase — immediately expires when the second is made)
-  const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
-    type: "signup",
+  // Email verification is DISABLED: create the account already-confirmed so no
+  // verification email is sent and it's usable immediately.
+  const { error: createError } = await adminClient.auth.admin.createUser({
     email,
     password,
-    options: { redirectTo: `${origin}/auth/callback` },
+    email_confirm: true,
   });
 
-  if (linkError) {
-    const msg = linkError.message.toLowerCase();
+  if (createError) {
+    const msg = createError.message.toLowerCase();
     if (
       msg.includes("already registered") ||
       msg.includes("already exists") ||
@@ -176,35 +171,22 @@ export async function signup(formData: FormData) {
       await setAuthFlash({ error: "email_exists" });
       redirect("/login");
     }
-    console.error("[signup] generateLink error:", linkError.message);
+    console.error("[signup] createUser error:", createError.message);
     await setAuthFlash({ error: "server_error" });
     redirect("/login");
   }
 
-  if (!linkData?.properties?.action_link) {
+  // Sign the new user straight in → they land on onboarding, no verify step.
+  const supabase = await createClient();
+  const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+  if (signInError) {
+    // Account created but auto-login failed — let them sign in manually.
     await setAuthFlash({ error: "server_error" });
     redirect("/login");
   }
 
-  // Send the single, valid verification link via Resend REST API — no SMTP.
-  // If sending fails (most often: using onboarding@resend.dev to a non-owner
-  // address, or an unverified domain), surface a warning to the user via the
-  // flash cookie so they know to check spam, contact support, or use the
-  // resend page once their address is allow-listed.
-  let emailDelivered = true;
-  try {
-    await sendVerificationEmail(email, linkData.properties.action_link);
-  } catch (err) {
-    emailDelivered = false;
-    const detail = err instanceof Error ? err.message : String(err);
-    console.error("[signup] Resend send failed:", detail);
-  }
-
-  if (!emailDelivered) {
-    await setAuthFlash({ warn: "email_send_failed" });
-  }
-
-  redirect(`/verify-email?email=${encodeURIComponent(email)}`);
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
 }
 
 // ─── Logout ───────────────────────────────────────────────────────────────────

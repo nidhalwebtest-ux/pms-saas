@@ -8,6 +8,7 @@ import FeatureReservations from "@/components/marketing/sections/FeatureReservat
 import FeatureFinance from "@/components/marketing/sections/FeatureFinance";
 import FeatureReports from "@/components/marketing/sections/FeatureReports";
 import FeatureExpenses from "@/components/marketing/sections/FeatureExpenses";
+import ImpactSection from "@/components/marketing/sections/ImpactSection";
 import BuiltForOmanSection from "@/components/marketing/sections/BuiltForOmanSection";
 import HowItWorksSection from "@/components/marketing/sections/HowItWorksSection";
 import TestimonialsSection from "@/components/marketing/sections/TestimonialsSection";
@@ -38,6 +39,7 @@ export default function MarketingHomePage() {
         <FeatureFinance />
         <FeatureReports />
         <FeatureExpenses />
+        <ImpactSection />
         <BuiltForOmanSection />
         <HowItWorksSection />
         <TestimonialsSection />

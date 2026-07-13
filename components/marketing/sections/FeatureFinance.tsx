@@ -2,20 +2,21 @@ import { getTranslations } from "next-intl/server";
 import FeatureBlock from "./FeatureBlock";
 import { InvoiceMock } from "../mocks";
 
+type Feature = { eyebrow: string; title: string; sub: string; bullets: string[] };
+
 export default async function FeatureFinance() {
-  const t = await getTranslations("marketing.featureFinance");
+  const t = await getTranslations("marketing");
+  const f = (t.raw("features") as Feature[])[1];
   return (
     <FeatureBlock
       id="finance"
       screenLabel="Feature · Finance"
       flip
       tinted
-      eyebrow={t("eyebrow")}
-      title={t("title")}
-      description={t("description")}
-      bullets={[t("b1"), t("b2"), t("b3"), t("b4"), t("b5")]}
-      linkLabel={t("linkLabel")}
-      linkHref="#finance"
+      eyebrow={f.eyebrow}
+      title={f.title}
+      description={f.sub}
+      bullets={f.bullets}
       visual={<InvoiceMock />}
     />
   );

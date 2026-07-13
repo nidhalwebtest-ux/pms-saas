@@ -1,52 +1,39 @@
-import { ArrowRight } from "lucide-react";
+import { Star } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import Container, { SectionHead } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
-import { ButtonLink } from "../ui/MarketingButton";
+
+type Item = { q: string; n: string; r: string };
 
 export default async function TestimonialsSection() {
   const t = await getTranslations("marketing.testimonials");
-  const TESTIMONIALS = [
-    { quote: t("t1Quote"), initials: "AB", name: t("t1Name"), meta: t("t1Meta"), avatarCls: "bg-brand-100 text-brand-700" },
-    { quote: t("t2Quote"), initials: "RA", name: t("t2Name"), meta: t("t2Meta"), avatarCls: "bg-[oklch(0.92_0.05_175)] text-khareef-700" },
-    { quote: t("t3Quote"), initials: "SK", name: t("t3Name"), meta: t("t3Meta"), avatarCls: "bg-[oklch(0.95_0.04_80)] text-warning-700" },
-  ];
+  const items = t.raw("items") as Item[];
   return (
-    <section data-screen-label="Testimonials" className="bg-gray-50 py-16 md:py-24">
+    <section data-screen-label="Testimonials" className="border-b border-gray-200 bg-gray-50 py-16 md:py-24">
       <Container>
-        <SectionHead
-          eyebrow={t("eyebrow")}
-          title={t("title")}
-          description={t("description")}
-        />
-        <div className="grid gap-6 md:grid-cols-3">
-          {TESTIMONIALS.map((tq, i) => (
-            <Reveal key={tq.name} delay={i * 100}>
-              <article className="flex h-full flex-col gap-5 rounded-lg border border-gray-200 bg-white p-7 transition-all duration-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-lg">
-                <p className="m-0 flex-1 text-base leading-[1.55] text-gray-800 text-pretty">
-                  <span className="mb-1 block font-serif text-[40px] leading-none text-brand-300 rtl:rtl-mirror">
-                    &ldquo;
+        <SectionHead eyebrow={t("eyebrow")} title={t("title")} />
+        <div className="grid gap-[18px] md:grid-cols-3">
+          {items.map((c, i) => (
+            <Reveal key={c.n} delay={i * 100}>
+              <article className="flex h-full flex-col gap-[18px] rounded-[18px] border border-gray-200 bg-white p-7">
+                <div className="flex gap-[3px]">
+                  {Array.from({ length: 5 }).map((_, s) => (
+                    <Star key={s} className="h-[18px] w-[18px] fill-[#f5a623] text-[#f5a623]" strokeWidth={0} />
+                  ))}
+                </div>
+                <p className="m-0 flex-1 text-[16px] font-medium leading-[1.6] text-gray-900 text-pretty">{c.q}</p>
+                <div className="mt-auto flex items-center gap-3">
+                  <span className="grid h-[42px] w-[42px] flex-none place-items-center rounded-full bg-brand-500 text-[16px] font-bold text-white">
+                    {c.n.trim().charAt(0)}
                   </span>
-                  {tq.quote}
-                </p>
-                <div className="flex items-center gap-3 border-t border-gray-200 pt-4">
-                  <div className={`grid h-10 w-10 flex-shrink-0 place-items-center rounded-full text-sm font-semibold ${tq.avatarCls}`}>
-                    {tq.initials}
-                  </div>
                   <div>
-                    <strong className="block text-sm font-semibold text-gray-900">{tq.name}</strong>
-                    <span className="font-mono text-[12.5px] text-gray-500">{tq.meta}</span>
+                    <div className="text-[14.5px] font-bold text-gray-900">{c.n}</div>
+                    <div className="text-[13px] text-gray-400">{c.r}</div>
                   </div>
                 </div>
               </article>
             </Reveal>
           ))}
-        </div>
-        <div className="mt-10 text-center">
-          <ButtonLink href="#pricing">
-            {t("readMore")}
-            <ArrowRight className="h-3 w-3 rtl:rotate-180" strokeWidth={2} />
-          </ButtonLink>
         </div>
       </Container>
     </section>

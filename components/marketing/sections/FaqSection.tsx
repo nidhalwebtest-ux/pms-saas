@@ -5,47 +5,38 @@ import { ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Container, { SectionHead } from "../ui/Container";
 
+type Item = { q: string; a: string };
+
 export default function FaqSection() {
   const t = useTranslations("marketing.faq");
-  const QA = [
-    { q: t("q1"), a: t("a1") },
-    { q: t("q2"), a: t("a2") },
-    { q: t("q3"), a: t("a3") },
-    { q: t("q4"), a: t("a4") },
-  ];
+  const items = t.raw("items") as Item[];
   const [open, setOpen] = useState<number | null>(0);
   return (
-    <section id="faq" data-screen-label="FAQ" className="bg-gray-50 py-16 md:py-24">
-      <Container className="max-w-[800px]">
-        <SectionHead
-          eyebrow={t("eyebrow")}
-          title={t("title")}
-          description={t("description")}
-        />
-        <ul className="m-0 list-none divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white p-0">
-          {QA.map((item, i) => {
+    <section id="faq" data-screen-label="FAQ" className="border-b border-gray-200 bg-white py-16 md:py-24">
+      <Container className="max-w-[760px]">
+        <SectionHead eyebrow={t("eyebrow")} title={t("title")} />
+        <ul className="m-0 flex list-none flex-col gap-3 p-0">
+          {items.map((item, i) => {
             const isOpen = open === i;
             return (
-              <li key={item.q}>
+              <li
+                key={item.q}
+                className={["overflow-hidden rounded-[14px] border border-gray-200", isOpen ? "bg-gray-50" : "bg-white"].join(" ")}
+              >
                 <button
                   type="button"
                   onClick={() => setOpen(isOpen ? null : i)}
                   aria-expanded={isOpen}
-                  className="flex w-full items-center justify-between gap-4 px-6 py-5 text-start text-[15px] font-medium text-gray-900 hover:bg-gray-50"
+                  className="flex w-full items-center justify-between gap-4 px-[22px] py-[19px] text-start text-[16.5px] font-semibold text-gray-900"
                 >
                   {item.q}
                   <ChevronDown
-                    className={[
-                      "h-4 w-4 text-gray-500 transition-transform",
-                      isOpen ? "rotate-180" : "",
-                    ].join(" ")}
-                    strokeWidth={1.75}
+                    className={["h-5 w-5 flex-none text-brand-500 transition-transform", isOpen ? "rotate-180" : ""].join(" ")}
+                    strokeWidth={2.2}
                   />
                 </button>
                 {isOpen && (
-                  <div className="px-6 pb-5 text-[14.5px] leading-[1.6] text-gray-600">
-                    {item.a}
-                  </div>
+                  <p className="m-0 px-[22px] pb-5 text-[15.5px] leading-[1.65] text-gray-600">{item.a}</p>
                 )}
               </li>
             );

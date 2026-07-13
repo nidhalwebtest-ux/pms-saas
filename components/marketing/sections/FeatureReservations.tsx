@@ -2,18 +2,19 @@ import { getTranslations } from "next-intl/server";
 import FeatureBlock from "./FeatureBlock";
 import { ReservationMock } from "../mocks";
 
+type Feature = { eyebrow: string; title: string; sub: string; bullets: string[] };
+
 export default async function FeatureReservations() {
-  const t = await getTranslations("marketing.featureReservations");
+  const t = await getTranslations("marketing");
+  const f = (t.raw("features") as Feature[])[0];
   return (
     <FeatureBlock
-      id="reservations"
+      id="features"
       screenLabel="Feature · Reservations"
-      eyebrow={t("eyebrow")}
-      title={t("title")}
-      description={t("description")}
-      bullets={[t("b1"), t("b2"), t("b3"), t("b4"), t("b5")]}
-      linkLabel={t("linkLabel")}
-      linkHref="#reservations"
+      eyebrow={f.eyebrow}
+      title={f.title}
+      description={f.sub}
+      bullets={f.bullets}
       visual={<ReservationMock />}
     />
   );

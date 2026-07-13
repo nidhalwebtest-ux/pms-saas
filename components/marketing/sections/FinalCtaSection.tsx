@@ -1,51 +1,34 @@
-import { ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import Container from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 import { MarketingButton } from "../ui/MarketingButton";
 
 export default async function FinalCtaSection() {
-  const t = await getTranslations("marketing.finalCta");
-  const PERKS = [t("perk1"), t("perk2"), t("perk3"), t("perk4")];
+  const t = await getTranslations("marketing.finalcta");
+  const tHero = await getTranslations("marketing.hero");
   return (
     <section
       data-screen-label="Final CTA"
-      className="final-cta-bg relative overflow-hidden py-20 md:py-28"
+      className="text-white"
+      style={{ background: "linear-gradient(135deg,#124b82,#185FA5 55%,#2a7bc4)" }}
     >
-      <Container className="relative z-10">
+      <Container className="max-w-[820px] py-20 text-center md:py-28">
         <Reveal>
-          <div className="mx-auto max-w-[760px] text-center">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-500/20 bg-white/80 px-3 py-1 font-mono text-[11px] font-medium uppercase tracking-[0.08em] text-brand-700 shadow-sm backdrop-blur">
-              <Sparkles className="h-3 w-3 fill-brand-500 text-brand-500" strokeWidth={0} />
-              {t("badge")}
-            </span>
-            <h2 className="mx-auto mt-4 mb-5 max-w-[640px] text-[36px] font-semibold leading-[1.05] tracking-[-0.025em] text-balance md:text-[54px]">
-              {t("headline1")}
-              <br />
-              {t("headline2")}
-            </h2>
-            <p className="mx-auto mb-9 max-w-[560px] text-lg text-gray-600 text-pretty">
-              {t("description")}
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <MarketingButton href="/login?mode=signup" variant="primary" size="xl">
-                {t("ctaTrial")}
-                <ArrowRight className="h-3.5 w-3.5 rtl:rotate-180" strokeWidth={1.75} />
-              </MarketingButton>
-              <MarketingButton href="/contact" variant="secondary" size="xl">
-                {t("ctaDemo")}
-              </MarketingButton>
-            </div>
-
-            <ul className="mx-auto mt-8 flex max-w-[640px] flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[13.5px] text-gray-600">
-              {PERKS.map((p) => (
-                <li key={p} className="inline-flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-success-600" strokeWidth={2} />
-                  {p}
-                </li>
-              ))}
-            </ul>
+          <h2 className="m-0 text-[30px] font-bold leading-[1.12] tracking-[-0.025em] text-balance md:text-[50px]">
+            {t("title")}
+          </h2>
+          <p className="mx-auto mt-[18px] max-w-[520px] text-[16px] leading-[1.6] text-[#dbe9f7] md:text-[20px]">
+            {t("sub")}
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <MarketingButton href="/login?mode=signup" variant="secondary" size="xl">
+              {t("cta1")}
+            </MarketingButton>
+            <MarketingButton href="/contact" variant="ghost" size="xl">
+              {t("cta2")}
+            </MarketingButton>
           </div>
+          <p className="mt-5 text-[14px] text-[#c4dcf3]">{tHero("note")}</p>
         </Reveal>
       </Container>
     </section>

@@ -1,108 +1,73 @@
+import { Check } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import Container, { SectionHead } from "../ui/Container";
 import { Reveal } from "../ui/Reveal";
 import { MarketingButton } from "../ui/MarketingButton";
 
+type Tier = {
+  name: string; desc: string; price: string; per: string; cta: string;
+  features: string[]; featured: boolean; badge: string;
+};
+
 export default async function PricingSection() {
   const t = await getTranslations("marketing.pricing");
-
-  type Tier = {
-    name: string;
-    tagline: string;
-    amount: string;
-    per: string;
-    cta: string;
-    ctaVariant: "primary" | "secondary";
-    featured?: boolean;
-    badge?: string;
-    sectionLabel?: string;
-    features: string[];
-  };
-
-  const TIERS: Tier[] = [
-    {
-      name:    t("freeName"),
-      tagline: t("freeTagline"),
-      amount:  "0",
-      per:     t("perForever"),
-      cta:     t("freeCta"),
-      ctaVariant: "secondary",
-      features: [t("freeF1"), t("freeF2"), t("freeF3"), t("freeF4"), t("freeF5"), t("freeF6")],
-    },
-    {
-      name:    t("proName"),
-      tagline: t("proTagline"),
-      amount:  "25",
-      per:     t("perMonth"),
-      cta:     t("proCta"),
-      ctaVariant: "primary",
-      featured: true,
-      badge:   t("badgePopular"),
-      sectionLabel: t("featuresHeader", { tier: t("freeName") }),
-      features: [t("proF1"), t("proF2"), t("proF3"), t("proF4"), t("proF5"), t("proF6")],
-    },
-    {
-      name:    t("bizName"),
-      tagline: t("bizTagline"),
-      amount:  "75",
-      per:     t("perMonth"),
-      cta:     t("bizCta"),
-      ctaVariant: "secondary",
-      sectionLabel: t("featuresHeader", { tier: t("proName") }),
-      features: [t("bizF1"), t("bizF2"), t("bizF3"), t("bizF4"), t("bizF5"), t("bizF6")],
-    },
-  ];
+  const tiers = t.raw("tiers") as Tier[];
+  const unit = t("unit");
+  const noUnit = new Set(["Custom", "حسب الطلب"]);
 
   return (
-    <section id="pricing" data-screen-label="Pricing" className="py-16 md:py-24">
-      <Container>
-        <SectionHead
-          eyebrow={t("eyebrow")}
-          title={t("title")}
-          description={t("description")}
-        />
-        <div className="grid items-stretch gap-5 md:grid-cols-3">
-          {TIERS.map((tier, i) => (
-            <Reveal key={tier.name} delay={i * 100}>
+    <section id="pricing" data-screen-label="Pricing" className="border-b border-gray-200 bg-white py-16 md:py-24">
+      <Container className="max-w-[1120px]">
+        <SectionHead eyebrow={t("eyebrow")} title={t("title")} description={t("sub")} />
+        <div className="grid items-start gap-5 md:grid-cols-3">
+          {tiers.map((p, i) => (
+            <Reveal key={p.name} delay={i * 100}>
               <article
                 className={[
-                  "relative flex h-full flex-col rounded-lg border bg-white p-8 transition-all duration-300",
-                  tier.featured
-                    ? "border-brand-500 shadow-[0_0_0_1px_var(--brand-500),0_12px_32px_-12px_oklch(0.46_0.17_258/0.3)] md:-translate-y-2 bg-gradient-to-b from-white to-[oklch(0.99_0.005_258)] hover:-translate-y-3 hover:shadow-2xl"
-                    : "border-gray-200 hover:-translate-y-1 hover:border-brand-200 hover:shadow-lg",
+                  "relative flex h-full flex-col rounded-[20px] border p-7 transition-transform duration-300",
+                  p.featured
+                    ? "border-brand-700 bg-gradient-to-b from-brand-500 to-brand-700 text-white shadow-[0_26px_54px_-22px_rgba(24,95,165,.5)] md:-mt-2"
+                    : "border-gray-200 bg-white shadow-[0_14px_32px_-22px_rgba(15,39,64,.2)] hover:-translate-y-1",
                 ].join(" ")}
               >
-                {tier.badge && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-500 px-3 py-1 font-mono text-[11px] font-semibold uppercase tracking-[0.06em] text-white">
-                    {tier.badge}
+                {p.badge && (
+                  <span className="absolute -top-3 start-6 rounded-full bg-brand-500 px-3 py-[5px] text-[12px] font-bold text-white shadow-sm">
+                    {p.badge}
                   </span>
                 )}
-                <div className="mb-1.5 text-[15px] font-semibold text-gray-900">{tier.name}</div>
-                <p className="m-0 mb-6 text-sm text-gray-600">{tier.tagline}</p>
-                <div className="mb-1 flex items-baseline gap-1.5">
-                  <span className="text-[44px] font-semibold leading-none tracking-[-0.03em] tabular-nums ltr-num">
-                    {tier.amount}
-                  </span>
-                  <span className="font-mono text-sm uppercase text-gray-500">OMR</span>
-                  <span className="text-sm text-gray-500">{tier.per}</span>
+                <div className={["text-[16px] font-bold", p.featured ? "text-white" : "text-gray-900"].join(" ")}>
+                  {p.name}
                 </div>
-                <div className="mt-5 mb-6">
-                  <MarketingButton href="/login?mode=signup" variant={tier.ctaVariant} size="lg" fullWidth>
-                    {tier.cta}
+                <p className={["mb-[18px] mt-1.5 min-h-[20px] text-[13.5px]", p.featured ? "text-[#c4dcf3]" : "text-gray-400"].join(" ")}>
+                  {p.desc}
+                </p>
+                <div className="flex items-baseline gap-1.5">
+                  <span className={["font-mono text-[38px] font-semibold", p.featured ? "text-white" : "text-gray-900"].join(" ")} dir="ltr">
+                    {p.price}
+                  </span>
+                  <span className={["text-[13px]", p.featured ? "text-[#c4dcf3]" : "text-gray-400"].join(" ")}>
+                    {noUnit.has(p.price) ? "" : unit}{p.per}
+                  </span>
+                </div>
+                <div className="mt-[22px]">
+                  <MarketingButton
+                    href="/login?mode=signup"
+                    variant={p.featured ? "secondary" : "primary"}
+                    size="lg"
+                    fullWidth
+                  >
+                    {p.cta}
                   </MarketingButton>
                 </div>
-                <ul className="m-0 grid list-none gap-2.5 p-0">
-                  {tier.sectionLabel && (
-                    <li className="mt-2 border-t border-gray-200 pt-3.5 font-mono text-[11px] uppercase tracking-[0.06em] text-gray-500">
-                      {tier.sectionLabel}
-                    </li>
-                  )}
-                  {tier.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-sm text-gray-700">
-                      <span className="mt-px grid h-[18px] w-[18px] flex-shrink-0 place-items-center rounded-full bg-success-50 text-[12px] font-bold text-success-700">
-                        ✓
-                      </span>
-                      {f}
+                <div className={["my-[22px] h-px", p.featured ? "bg-white/20" : "bg-gray-200"].join(" ")} />
+                <ul className="m-0 grid list-none gap-3 p-0">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex items-start gap-2.5">
+                      <Check
+                        className={["mt-px h-[18px] w-[18px] flex-none", p.featured ? "text-brand-300" : "text-brand-500"].join(" ")}
+                        strokeWidth={2.4}
+                      />
+                      <span className={["text-[14.5px]", p.featured ? "text-[#eaf3fc]" : "text-gray-600"].join(" ")}>{f}</span>
                     </li>
                   ))}
                 </ul>

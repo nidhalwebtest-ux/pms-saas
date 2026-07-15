@@ -1,4 +1,66 @@
 {
+  "search": {
+    "open": "Search",
+    "placeholder": "Search buildings, tenants, reservations…",
+    "title": "Search",
+    "close": "Close",
+    "prompt": "Search across buildings, units, tenants, reservations, invoices, payments and expenses.",
+    "noResults": "No results for “{query}”",
+    "noResultsHint": "Check the spelling or try a different keyword.",
+    "hintNavigate": "navigate",
+    "hintOpen": "open",
+    "hintClose": "close",
+    "groups": {
+      "reservation": "Reservations",
+      "tenant": "Tenants",
+      "invoice": "Invoices",
+      "payment": "Payments",
+      "expense": "Expenses",
+      "unit": "Units",
+      "building": "Buildings"
+    },
+    "badges": {
+      "reservation": {
+        "PENDING": "Pending",
+        "CONFIRMED": "Confirmed",
+        "CHECKED_IN": "Checked In",
+        "CHECKED_OUT": "Checked Out",
+        "COMPLETED": "Completed",
+        "CANCELLED": "Cancelled",
+        "NO_SHOW": "No Show"
+      },
+      "invoice": {
+        "DRAFT": "Draft",
+        "PENDING": "Pending",
+        "ISSUED": "Issued",
+        "PARTIALLY_PAID": "Partially Paid",
+        "PAID": "Paid",
+        "RETURNED": "Returned",
+        "CANCELLED": "Cancelled",
+        "OVERDUE": "Overdue"
+      },
+      "expense": {
+        "PENDING": "Pending",
+        "APPROVED": "Approved",
+        "REJECTED": "Rejected",
+        "PROCESSED": "Processed"
+      },
+      "payment": {
+        "CASH": "Cash",
+        "CARD": "Card",
+        "BANK_TRANSFER": "Bank Transfer",
+        "CHEQUE": "Cheque",
+        "ONLINE": "Online",
+        "OTHER": "Other"
+      },
+      "unit": {
+        "AVAILABLE": "Available",
+        "OCCUPIED": "Occupied",
+        "MAINTENANCE": "Maintenance",
+        "RESERVED": "Reserved"
+      }
+    }
+  },
   "phoneInput": {
     "searchCountry": "Search country…",
     "noMatches": "No matches"

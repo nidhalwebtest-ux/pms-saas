@@ -1,4 +1,66 @@
 {
+  "search": {
+    "open": "بحث",
+    "placeholder": "ابحث عن المباني، المستأجرين، الحجوزات…",
+    "title": "بحث",
+    "close": "إغلاق",
+    "prompt": "ابحث في المباني والوحدات والمستأجرين والحجوزات والفواتير والمدفوعات والمصروفات.",
+    "noResults": "لا نتائج لـ “{query}”",
+    "noResultsHint": "تحقق من الإملاء أو جرّب كلمة مختلفة.",
+    "hintNavigate": "للتنقل",
+    "hintOpen": "للفتح",
+    "hintClose": "للإغلاق",
+    "groups": {
+      "reservation": "الحجوزات",
+      "tenant": "المستأجرون",
+      "invoice": "الفواتير",
+      "payment": "المدفوعات",
+      "expense": "المصروفات",
+      "unit": "الوحدات",
+      "building": "المباني"
+    },
+    "badges": {
+      "reservation": {
+        "PENDING": "قيد الانتظار",
+        "CONFIRMED": "مؤكد",
+        "CHECKED_IN": "تم تسجيل الدخول",
+        "CHECKED_OUT": "تم تسجيل الخروج",
+        "COMPLETED": "مكتمل",
+        "CANCELLED": "ملغى",
+        "NO_SHOW": "لم يحضر"
+      },
+      "invoice": {
+        "DRAFT": "مسودة",
+        "PENDING": "قيد الانتظار",
+        "ISSUED": "صادرة",
+        "PARTIALLY_PAID": "مدفوعة جزئياً",
+        "PAID": "مدفوعة",
+        "RETURNED": "مرتجعة",
+        "CANCELLED": "ملغاة",
+        "OVERDUE": "متأخرة"
+      },
+      "expense": {
+        "PENDING": "قيد الانتظار",
+        "APPROVED": "معتمد",
+        "REJECTED": "مرفوض",
+        "PROCESSED": "تمت المعالجة"
+      },
+      "payment": {
+        "CASH": "نقداً",
+        "CARD": "بطاقة",
+        "BANK_TRANSFER": "تحويل بنكي",
+        "CHEQUE": "شيك",
+        "ONLINE": "إلكتروني",
+        "OTHER": "أخرى"
+      },
+      "unit": {
+        "AVAILABLE": "متاحة",
+        "OCCUPIED": "مشغولة",
+        "MAINTENANCE": "صيانة",
+        "RESERVED": "محجوزة"
+      }
+    }
+  },
   "phoneInput": {
     "searchCountry": "ابحث عن دولة…",
     "noMatches": "لا توجد نتائج"

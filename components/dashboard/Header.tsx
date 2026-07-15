@@ -4,6 +4,7 @@ import { logout } from "@/app/login/actions";
 import { type Role } from "@/lib/permissions";
 import { Badge, getUserRoleBadge } from "@/components/ui";
 import PropertySelector from "./PropertySelector";
+import GlobalSearch from "./GlobalSearch";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface Props {
@@ -29,7 +30,7 @@ export default async function Header({ userEmail, userName, role, roleName, isCu
     <div className="flex h-16 items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6 lg:px-8 border-b border-gray-200 min-w-0">
 
       {/* ── Start: Logo + Property selector ───────────────────────── */}
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-initial">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         {/* Binaya logo — mark on mobile, full wordmark on md+ */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/brand/binaya-mark.svg" alt="Binaya" className="h-7 w-7 md:hidden flex-shrink-0" />
@@ -48,6 +49,11 @@ export default async function Header({ userEmail, userName, role, roleName, isCu
             />
           </div>
         )}
+      </div>
+
+      {/* ── Middle: global command-palette search ─────────────── */}
+      <div className="flex flex-1 justify-center px-1 sm:px-4">
+        <GlobalSearch />
       </div>
 
       {/* ── End: notifications + language + user + logout ─────── */}

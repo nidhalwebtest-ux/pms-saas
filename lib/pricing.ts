@@ -43,6 +43,18 @@ export interface DayBreakdown {
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
+/**
+ * Format a Date as YYYY-MM-DD from its LOCAL calendar day. The pricing loop
+ * normalises each night's cursor to local midnight (setHours) and resolvePrice
+ * compares in local time, so the label must use the local day too. Using
+ * toISOString() here reprints the instant in UTC, which shifts the date back a
+ * day in positive-offset timezones (e.g. Gulf +4) — the source of the off-by-one
+ * segment dates. (No effect on UTC servers, where local == UTC.)
+ */
+function toLocalDateString(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function resolvePrice(
   prices: {
     id: string; priceType: string; name: string | null;
@@ -141,7 +153,7 @@ export async function getUnitPriceForRange(
   while (cursor < end) {
     const p = resolvePrice(prices, cursor, basePrice);
     breakdown.push({
-      date:      cursor.toISOString().slice(0, 10),
+      date:      toLocalDateString(cursor),
       rate:      p?.dailyRate ?? 0,
       priceName: p?.name ?? null,
       priceType: p?.priceType ?? "DEFAULT",

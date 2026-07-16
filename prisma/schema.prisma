@@ -144,6 +144,22 @@ enum ExpenseStatus {
   PROCESSED
 }
 
+// ── Organization Websites (public booking sites) ────────────────────────────
+/// Lifecycle of a tenant's public booking website (one per org, V1).
+enum SiteStatus {
+  DRAFT       // configured but not live; not resolvable on its subdomain
+  PUBLISHED   // live and publicly resolvable
+  DISABLED    // taken offline by the operator; subdomain shows "site not found"
+}
+
+/// Lifecycle of a booking request submitted from a public website.
+enum BookingRequestStatus {
+  PENDING     // awaiting operator review in the Website Requests inbox
+  CONFIRMED   // operator confirmed → a real Reservation was created
+  REJECTED    // operator declined
+  EXPIRED     // auto-expired after the pending window (48h)
+}
+
 // 3. Organization
 model Organization {
   id                 String   @id @default(uuid())
@@ -233,6 +249,9 @@ model Organization {
   reservations       Reservation[]
   bankAccounts       BankAccount[]
   cashierSessions    CashierSession[]
+
+  website                OrgWebsite?
+  websiteBookingRequests WebsiteBookingRequest[]
 }
 
 // 4. Users
@@ -318,6 +337,13 @@ model Property {
   totalFloors    Int?
   description    String?
 
+  /// Public booking-site content (Settings → Website / building editor). Kept
+  /// separate from the internal `description` so nothing internal ever leaks to
+  /// the public site. Bilingual; `amenities` is building-level (units have their own).
+  publicDescriptionEn String?
+  publicDescriptionAr String?
+  amenities           String[] @default([])
+
   address        String?
   city           String       @default("Salalah")
   governorate    String       @default("Dhofar")
@@ -331,6 +357,7 @@ model Property {
   invoices       Invoice[]
   cashierSessions CashierSession[]
   cashDrawers    BankAccount[] @relation("PropertyCashDrawers")
+  websiteBookingRequests WebsiteBookingRequest[]
 
   createdAt      DateTime @default(now())
 }
@@ -345,6 +372,14 @@ model Unit {
   area        Float?
   description String?
   amenities   String[] @default([])
+
+  /// Public booking-site content (kept separate from internal `description`).
+  /// Bilingual; `amenitiesAr` parallels `amenities` for Arabic labels. `maxGuests`
+  /// is the advertised sleeping capacity (distinct from bed count).
+  publicDescriptionEn String?
+  publicDescriptionAr String?
+  amenitiesAr         String[] @default([])
+  maxGuests           Int?
 
   basePrice   Decimal    @db.Decimal(10, 3)
   status      UnitStatus @default(AVAILABLE)
@@ -361,6 +396,7 @@ model Unit {
   prices           UnitPrice[]
   notes            UnitNote[]
   lineItems        InvoiceLineItem[]
+  websiteBookingRequests WebsiteBookingRequest[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -1384,4 +1420,104 @@ model ShareLink {
 
   @@index([organizationId])
   @@index([docType, docId])
+}
+
+// ── Organization Websites (public booking sites) ──────────────────────────────
+
+/// One public booking website per organization (V1). Powers {slug}.binaya.app.
+/// All content here is PUBLIC by design — never store internal/financial data.
+model OrgWebsite {
+  id             String   @id @default(uuid())
+
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  /// Subdomain label: 3–40 chars, lowercase [a-z0-9-], not a reserved word.
+  slug           String     @unique
+  status         SiteStatus @default(DRAFT)
+  /// Visual theme: template_1 (Coastal) | template_2 (Classic) | template_3 (Modern).
+  templateKey    String     @default("template_1")
+
+  // ── Branding ──
+  logoUrl        String?
+  primaryColor   String   @default("#185FA5")
+  accentColor    String   @default("#85B7EB")
+
+  // ── Content (bilingual) ──
+  siteNameEn String?
+  siteNameAr String?
+  taglineEn  String?
+  taglineAr  String?
+  aboutEn    String?  @db.Text
+  aboutAr    String?  @db.Text
+
+  // ── Contact ── (whatsappNumber is required at publish time; nullable so drafts save)
+  whatsappNumber String?
+  phone          String?
+  email          String?
+  addressEn      String?
+  addressAr      String?
+  googleMapsUrl  String?
+  instagramUrl   String?
+
+  // ── SEO ──
+  metaDescriptionEn String?
+  metaDescriptionAr String?
+  ogImageUrl        String?
+
+  // ── Settings ──
+  defaultLanguage      String  @default("ar")  // ar | en
+  showPrices           Boolean @default(true)
+  khareefBannerEnabled Boolean @default(false)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  publishedAt DateTime?
+
+  bookingRequests WebsiteBookingRequest[]
+}
+
+/// A booking enquiry submitted from a public website. Reviewed in the PMS
+/// "Website Requests" inbox; on confirm a real Reservation is created.
+model WebsiteBookingRequest {
+  id             String   @id @default(uuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  orgWebsiteId   String?
+  orgWebsite     OrgWebsite?  @relation(fields: [orgWebsiteId], references: [id], onDelete: SetNull)
+
+  unitId     String
+  unit       Unit     @relation(fields: [unitId], references: [id])
+  buildingId String
+  building   Property @relation(fields: [buildingId], references: [id])
+
+  // ── Guest ──
+  guestName   String
+  guestPhone  String
+  guestEmail  String?
+
+  // ── Stay ──
+  checkIn     DateTime
+  checkOut    DateTime
+  guestsCount Int      @default(1)
+  notes       String?
+
+  // ── Quote snapshot (price shown to the guest at submit time) ──
+  quotedTotal    Decimal @db.Decimal(10, 3)
+  quotedSegments Json?   // seasonal breakdown, mirrors ReservationUnit.pricingSegments
+
+  status        BookingRequestStatus @default(PENDING)
+  source        String               @default("website")
+  /// Set when the request is confirmed and a Reservation is created from it.
+  reservationId String?
+  /// Pending requests auto-expire at this time (created_at + 48h).
+  expiresAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([status, expiresAt])
 }

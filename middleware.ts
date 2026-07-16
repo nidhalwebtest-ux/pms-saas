@@ -14,8 +14,9 @@ function isPassthrough(path: string): boolean {
     path.startsWith("/fonts") ||
     path.startsWith("/brand") ||
     path === "/favicon.ico" ||
-    path === "/robots.txt" ||
-    path === "/sitemap.xml"
+    path === "/robots.txt"
+    // NOTE: /sitemap.xml is intentionally NOT passthrough — it rewrites to the
+    // per-tenant sitemap route (app/(public-site)/sites/[slug]/sitemap.xml).
   );
 }
 

@@ -1,73 +1,98 @@
 import { notFound } from "next/navigation";
-import { getSiteBySlug, getBuildings } from "@/lib/public-site/data";
+import Image from "next/image";
+import Link from "next/link";
+import { SparklesIcon } from "@heroicons/react/24/solid";
+import { getCachedSite, resolveLang } from "@/lib/public-site/render";
+import { getDict } from "@/lib/public-site/i18n";
+import { getBuildings } from "@/lib/public-site/data";
+import SearchBar from "./_components/SearchBar";
+import BuildingCard from "./_components/BuildingCard";
 
-/**
- * Phase-2 placeholder home — proves subdomain resolution, the data layer, and
- * brand theming end-to-end. Phase 4 replaces this with the real Template 1
- * (Coastal) home page. Kept intentionally minimal.
- */
+export const revalidate = 120;
 
-export const revalidate = 60; // ISR; tag-based revalidation added with the wizard
-
-export default async function SiteHome({ params }: { params: Promise<{ slug: string }> }) {
+export default async function Home({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const site = await getSiteBySlug(slug);
+  const site = await getCachedSite(slug);
   if (!site) notFound();
+  const lang = await resolveLang(site);
+  const dict = getDict(lang);
+  const ar = lang === "ar";
 
-  const ar = site.defaultLanguage === "ar";
   const name = (ar ? site.siteNameAr : site.siteNameEn) || site.orgName;
   const tagline = ar ? site.taglineAr : site.taglineEn;
+  const about = ar ? site.aboutAr : site.aboutEn;
   const buildings = await getBuildings(site.organizationId);
+  const heroPhoto = buildings.find((b) => b.photos[0])?.photos[0] ?? null;
 
   return (
-    <main className="mx-auto max-w-4xl px-6 py-16">
-      <header className="border-b pb-8" style={{ borderColor: "color-mix(in srgb, var(--site-primary) 20%, transparent)" }}>
-        <div className="flex items-center gap-4">
-          {site.logoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={site.logoUrl} alt={name} className="h-12 w-12 rounded-lg object-contain" />
+    <main>
+      {/* ── Hero ── */}
+      <section className="relative">
+        <div className="relative h-[78vh] min-h-[520px] w-full overflow-hidden">
+          {heroPhoto ? (
+            <Image src={heroPhoto} alt={name} fill priority sizes="100vw" className="object-cover" />
           ) : (
-            <div
-              className="flex h-12 w-12 items-center justify-center rounded-lg text-lg font-bold text-white"
-              style={{ background: "var(--site-primary)" }}
-            >
-              {name.charAt(0)}
-            </div>
+            <div className="h-full w-full" style={{ background: "linear-gradient(150deg, var(--site-primary), color-mix(in srgb, var(--site-accent) 70%, var(--site-primary)))" }} />
           )}
-          <div>
-            <h1 className="text-2xl font-bold" style={{ color: "var(--site-primary)" }}>{name}</h1>
-            {tagline && <p className="text-slate-500">{tagline}</p>}
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/10 to-black/50" />
+
+          <div className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center">
+            <h1 className="max-w-3xl text-4xl font-extrabold tracking-tight text-white drop-shadow-md sm:text-5xl md:text-6xl">{name}</h1>
+            {tagline && <p className="mt-4 max-w-xl text-lg text-white/90 drop-shadow sm:text-xl">{tagline}</p>}
           </div>
         </div>
-      </header>
 
-      <section className="mt-8">
-        <div className="mb-4 flex items-center gap-2">
-          <span
-            className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold text-white"
-            style={{ background: "var(--site-accent)" }}
-          >
-            {ar ? "المباني" : "Buildings"} · {buildings.length}
-          </span>
-          <span className="text-xs text-slate-400">Phase 2 preview — template UI arrives in Phase 4</span>
+        {/* Search bar overlapping the hero */}
+        <div className="mx-auto -mt-12 max-w-4xl px-4 sm:px-6">
+          <SearchBar />
         </div>
+      </section>
 
+      {/* ── Khareef banner ── */}
+      {site.khareefBannerEnabled && (
+        <section className="mx-auto max-w-6xl px-4 pt-12 sm:px-6">
+          <div className="flex flex-col items-start gap-2 rounded-2xl p-6 text-white sm:flex-row sm:items-center sm:justify-between"
+               style={{ background: "linear-gradient(120deg, var(--site-primary), var(--site-accent))" }}>
+            <div className="flex items-center gap-3">
+              <SparklesIcon className="h-8 w-8 flex-shrink-0" />
+              <div>
+                <h2 className="text-lg font-bold">{dict.sections.khareefTitle}</h2>
+                <p className="text-sm text-white/90">{dict.sections.khareefSubtitle}</p>
+              </div>
+            </div>
+            <Link href="/buildings" className="rounded-full bg-white/95 px-5 py-2 text-sm font-semibold text-slate-900 transition hover:bg-white">
+              {dict.sections.exploreStays}
+            </Link>
+          </div>
+        </section>
+      )}
+
+      {/* ── Featured buildings ── */}
+      <section className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+        <div className="mb-6 flex items-end justify-between">
+          <h2 className="text-2xl font-bold text-slate-900">{dict.sections.featured}</h2>
+          <Link href="/buildings" className="text-sm font-semibold" style={{ color: "var(--site-primary)" }}>
+            {dict.common.allStays} →
+          </Link>
+        </div>
         {buildings.length === 0 ? (
-          <p className="text-slate-500">{ar ? "لا توجد مبانٍ متاحة بعد." : "No buildings published yet."}</p>
+          <p className="text-slate-500">{dict.building.noUnits}</p>
         ) : (
-          <ul className="grid gap-4 sm:grid-cols-2">
-            {buildings.map((b) => (
-              <li key={b.id} className="rounded-xl border p-4 transition hover:shadow-md">
-                <div className="text-sm font-semibold text-slate-900">{b.name}</div>
-                <div className="text-xs text-slate-500">{[b.city, b.governorate].filter(Boolean).join(", ")}</div>
-                <div className="mt-2 text-xs" style={{ color: "var(--site-primary)" }}>
-                  {b.unitCount} {ar ? "وحدة" : "units"}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {buildings.slice(0, 6).map((b) => <BuildingCard key={b.id} building={b} />)}
+          </div>
         )}
       </section>
+
+      {/* ── About ── */}
+      {about && (
+        <section className="border-t border-slate-100 bg-slate-50/60">
+          <div className="mx-auto max-w-3xl px-4 py-14 text-center sm:px-6">
+            <h2 className="text-2xl font-bold text-slate-900">{dict.sections.about}</h2>
+            <p className="mt-4 whitespace-pre-line leading-relaxed text-slate-600">{about}</p>
+          </div>
+        </section>
+      )}
     </main>
   );
 }

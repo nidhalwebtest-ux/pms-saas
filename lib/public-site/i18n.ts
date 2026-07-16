@@ -23,6 +23,13 @@ const en = {
     featured: "Featured stays", about: "About us",
     khareefTitle: "Khareef season is here", khareefSubtitle: "Cool, green and misty — book your Salalah escape.",
     contactTitle: "Get in touch", exploreStays: "Explore stays",
+    featuredEyebrow: "Where to stay", aboutEyebrow: "Our story", stayCount: "{count} places to stay",
+  },
+  highlights: {
+    location: { t: "Prime locations", d: "Minutes from the beach & the Khareef greenery" },
+    booking: { t: "Effortless booking", d: "Reserve in seconds, confirm on WhatsApp" },
+    price: { t: "Honest prices", d: "Transparent seasonal rates, no surprises" },
+    care: { t: "Local hospitality", d: "A warm Omani welcome, every stay" },
   },
   search: {
     title: "Available for your dates", resultsFor: "{count} stays available",
@@ -65,6 +72,13 @@ const ar: typeof en = {
     featured: "إقامات مميزة", about: "من نحن",
     khareefTitle: "موسم الخريف هنا", khareefSubtitle: "أجواء باردة وخضرة وضباب — احجز إقامتك في صلالة.",
     contactTitle: "تواصل معنا", exploreStays: "استكشف الإقامات",
+    featuredEyebrow: "أين تقيم", aboutEyebrow: "قصتنا", stayCount: "{count} أماكن للإقامة",
+  },
+  highlights: {
+    location: { t: "مواقع مميزة", d: "دقائق من الشاطئ وخضرة الخريف" },
+    booking: { t: "حجز سهل", d: "احجز في ثوانٍ وأكّد عبر واتساب" },
+    price: { t: "أسعار واضحة", d: "أسعار موسمية شفافة بلا مفاجآت" },
+    care: { t: "ضيافة محلية", d: "ترحيب عُماني دافئ في كل إقامة" },
   },
   search: {
     title: "المتاح لتواريخك", resultsFor: "{count} إقامة متاحة",

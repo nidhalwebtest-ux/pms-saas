@@ -77,7 +77,7 @@ export default async function UnitDetail({
           <Link href={`/buildings/${unit.buildingId}`} className="text-sm font-medium hover:underline" style={{ color: "var(--site-primary)" }}>
             {fill(dict.unit.inBuilding, { name: unit.buildingName })}
           </Link>
-          <h1 className="mt-1 text-3xl font-bold text-slate-900">{unit.name}</h1>
+          <h1 className="mt-1 text-3xl font-semibold text-slate-900 font-[family-name:var(--font-display)] sm:text-4xl">{unit.name}</h1>
 
           <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-600">
             <span className="inline-flex items-center gap-1.5"><HomeIcon className="h-5 w-5 text-slate-400" /> {unit.bedrooms} {dict.common.bedrooms} · {unit.bathrooms} {dict.common.bathrooms}</span>

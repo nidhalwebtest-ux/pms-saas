@@ -19,7 +19,7 @@ export default function SiteHeader({ logoUrl }: { logoUrl: string | null }) {
               {siteName.charAt(0)}
             </span>
           )}
-          <span className="truncate text-base font-bold" style={{ color: "var(--site-primary)" }}>{siteName}</span>
+          <span className="truncate text-lg font-semibold font-[family-name:var(--font-display)]" style={{ color: "var(--site-primary)" }}>{siteName}</span>
         </Link>
 
         <nav className="flex items-center gap-1 sm:gap-2">

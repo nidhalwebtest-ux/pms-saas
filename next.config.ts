@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
         hostname: "*.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      // Curated demo imagery for public booking sites (orgs upload their own).
+      { protocol: "https", hostname: "images.unsplash.com" },
     ],
   },
 };

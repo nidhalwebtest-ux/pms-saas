@@ -12,7 +12,7 @@ export default function Photo({
   return (
     <div className={`relative ${ratio} w-full overflow-hidden ${rounded} bg-slate-100`}>
       {src ? (
-        <Image src={src} alt={alt} fill sizes={sizes} className="object-cover" />
+        <Image src={src} alt={alt} fill sizes={sizes} className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]" />
       ) : (
         <div
           className="flex h-full w-full items-center justify-center"

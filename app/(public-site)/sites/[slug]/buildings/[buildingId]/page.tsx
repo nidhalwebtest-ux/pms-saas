@@ -52,7 +52,7 @@ export default async function BuildingDetail({ params }: { params: Promise<Param
       )}
 
       <div className="mt-6">
-        <h1 className="text-3xl font-bold text-slate-900">{building.name}</h1>
+        <h1 className="text-3xl font-semibold text-slate-900 font-[family-name:var(--font-display)] sm:text-4xl">{building.name}</h1>
         {place && <p className="mt-1 inline-flex items-center gap-1 text-slate-500"><MapPinIcon className="h-4 w-4" /> {place}</p>}
         {desc && <p className="mt-4 max-w-3xl whitespace-pre-line leading-relaxed text-slate-600">{desc}</p>}
 
@@ -77,7 +77,7 @@ export default async function BuildingDetail({ params }: { params: Promise<Param
 
       {/* Units */}
       <section className="mt-10">
-        <h2 className="mb-5 text-2xl font-bold text-slate-900">{dict.building.unitsHere}</h2>
+        <h2 className="mb-5 text-2xl font-semibold text-slate-900 font-[family-name:var(--font-display)] sm:text-3xl">{dict.building.unitsHere}</h2>
         {units.length === 0 ? (
           <p className="text-slate-500">{dict.building.noUnits}</p>
         ) : (

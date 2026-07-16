@@ -45,7 +45,7 @@ export default async function BookPage({
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-      <h1 className="text-2xl font-bold text-slate-900">{dict.booking.title}</h1>
+      <h1 className="text-2xl font-semibold text-slate-900 font-[family-name:var(--font-display)] sm:text-3xl">{dict.booking.title}</h1>
 
       {!available ? (
         <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">

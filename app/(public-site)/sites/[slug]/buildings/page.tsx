@@ -24,7 +24,7 @@ export default async function BuildingsList({ params }: { params: Promise<{ slug
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-      <h1 className="text-3xl font-bold text-slate-900">{dict.nav.buildings}</h1>
+      <h1 className="text-3xl font-semibold text-slate-900 font-[family-name:var(--font-display)] sm:text-4xl">{dict.nav.buildings}</h1>
       <p className="mt-1 text-slate-500">{buildings.length} {dict.common.allStays.toLowerCase()}</p>
 
       {buildings.length === 0 ? (

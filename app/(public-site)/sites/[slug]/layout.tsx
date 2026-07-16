@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { Fraunces, Tajawal } from "next/font/google";
 import { getCachedSite, resolveLang, dirFor } from "@/lib/public-site/render";
+
+// Editorial display faces for the public site (headings only) — a warm serif for
+// Latin, a refined Arabic face, combined so each script picks the right glyphs.
+const displayLatin = Fraunces({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-display-latin", display: "swap" });
+const displayArabic = Tajawal({ subsets: ["arabic"], weight: ["500", "700"], variable: "--font-display-ar", display: "swap" });
 import { getDict } from "@/lib/public-site/i18n";
 import { SiteProvider, type SiteContext } from "@/lib/public-site/context";
 import SiteHeader from "./_components/SiteHeader";
@@ -50,8 +56,12 @@ export default async function PublicSiteLayout({ children, params }: { children:
     <div
       dir={dir}
       data-template={site.templateKey}
-      style={{ "--site-primary": site.primaryColor, "--site-accent": site.accentColor } as React.CSSProperties}
-      className="flex min-h-screen flex-col bg-white text-slate-900 antialiased"
+      style={{
+        "--site-primary": site.primaryColor,
+        "--site-accent": site.accentColor,
+        "--font-display": "var(--font-display-latin), var(--font-display-ar), Georgia, serif",
+      } as React.CSSProperties}
+      className={`${displayLatin.variable} ${displayArabic.variable} flex min-h-screen flex-col bg-white text-slate-900 antialiased`}
     >
       <SiteProvider value={ctx}>
         <SiteHeader logoUrl={site.logoUrl ?? site.orgLogo} />

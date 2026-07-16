@@ -463,7 +463,8 @@
     "returnSettings": "إعدادات المرتجعات",
     "unitSettings": "إعدادات الوحدات",
     "availabilityCalendar": "تقويم التوفّر",
-    "websiteSettings": "الموقع"
+    "websiteSettings": "الموقع",
+    "websiteRequests": "طلبات الموقع"
   },
   "dashboard": {
     "goodMorning": "صباح الخير، {name}",
@@ -6393,6 +6394,34 @@
       "cancel": "إلغاء",
       "estimated": "تقديري",
       "pickCheckout": "اختر الآن يوم المغادرة"
+    }
+  },
+  "websiteRequests": {
+    "title": "طلبات الموقع",
+    "subtitle": "طلبات الحجز من موقعك العام.",
+    "empty": "لا توجد طلبات حجز بعد.",
+    "pendingCount": "{count} قيد الانتظار",
+    "guestsWord": "ضيوف",
+    "nightsWord": "ليالٍ",
+    "confirm": "تأكيد الحجز",
+    "reject": "رفض",
+    "viewReservation": "عرض الحجز",
+    "whatsapp": "واتساب",
+    "confirmedToast": "تم إنشاء الحجز {num}.",
+    "conflictToast": "تم حجز هذه الوحدة للتو.",
+    "errorToast": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+    "rejectedToast": "تم رفض الطلب.",
+    "conflictTitle": "لم يعد متاحًا",
+    "conflictBy": "محجوز بواسطة {guest} ({ref})",
+    "alternatives": "بدائل متاحة",
+    "status": {
+      "PENDING": "قيد الانتظار",
+      "CONFIRMED": "مؤكد",
+      "REJECTED": "مرفوض",
+      "EXPIRED": "منتهي"
+    },
+    "wa": {
+      "greeting": "مرحبًا {name}، بخصوص طلب حجزك:"
     }
   }
 }

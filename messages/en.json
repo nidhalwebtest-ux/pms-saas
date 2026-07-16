@@ -463,7 +463,8 @@
     "returnSettings": "Return Settings",
     "unitSettings": "Unit Settings",
     "availabilityCalendar": "Availability Calendar",
-    "websiteSettings": "Website"
+    "websiteSettings": "Website",
+    "websiteRequests": "Website Requests"
   },
   "dashboard": {
     "goodMorning": "Good morning, {name}",
@@ -6393,6 +6394,34 @@
       "cancel": "Cancel",
       "estimated": "Estimated",
       "pickCheckout": "Now pick the check-out day"
+    }
+  },
+  "websiteRequests": {
+    "title": "Website Requests",
+    "subtitle": "Booking requests from your public website.",
+    "empty": "No booking requests yet.",
+    "pendingCount": "{count} pending",
+    "guestsWord": "guests",
+    "nightsWord": "nights",
+    "confirm": "Confirm booking",
+    "reject": "Reject",
+    "viewReservation": "View reservation",
+    "whatsapp": "WhatsApp",
+    "confirmedToast": "Reservation {num} created.",
+    "conflictToast": "That unit was just booked.",
+    "errorToast": "Something went wrong. Please try again.",
+    "rejectedToast": "Request rejected.",
+    "conflictTitle": "No longer available",
+    "conflictBy": "Booked by {guest} ({ref})",
+    "alternatives": "Available alternatives",
+    "status": {
+      "PENDING": "Pending",
+      "CONFIRMED": "Confirmed",
+      "REJECTED": "Rejected",
+      "EXPIRED": "Expired"
+    },
+    "wa": {
+      "greeting": "Hi {name}, about your booking request:"
     }
   }
 }

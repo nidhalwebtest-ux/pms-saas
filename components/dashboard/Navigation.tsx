@@ -67,6 +67,7 @@ const navigationConfig: NavItem[] = [
   },
   { key: "invoices",     labelKey: "invoices",     href: "/dashboard/invoices" },
   { key: "returns",      labelKey: "returns",      href: "/dashboard/returns" },
+  { key: "websiteRequests", labelKey: "websiteRequests", href: "/dashboard/website-requests" },
   {
     key:      "cashier",
     labelKey: "cashier",
@@ -178,7 +179,7 @@ const CHILD_REQUIRES: Record<string, { entity: string; level: PermissionLevel }>
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function Navigation({ role, navAccess }: { role: Role; navAccess?: Record<string, boolean> }) {
+export default function Navigation({ role, navAccess, websiteRequestCount = 0 }: { role: Role; navAccess?: Record<string, boolean>; websiteRequestCount?: number }) {
   const pathname = usePathname();
   const { perms, isOwner } = usePerms();
   const navRef   = useRef<HTMLElement>(null);
@@ -321,6 +322,7 @@ export default function Navigation({ role, navAccess }: { role: Role; navAccess?
             );
 
             if (!item.children) {
+              const badge = item.key === "websiteRequests" && websiteRequestCount > 0 ? websiteRequestCount : null;
               return (
                 <Link
                   key={item.key}
@@ -329,6 +331,11 @@ export default function Navigation({ role, navAccess }: { role: Role; navAccess?
                   className={baseTabCls}
                 >
                   {t(item.labelKey)}
+                  {badge !== null && (
+                    <span className="ms-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs font-semibold text-white">
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  )}
                 </Link>
               );
             }

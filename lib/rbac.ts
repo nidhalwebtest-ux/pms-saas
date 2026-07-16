@@ -245,6 +245,7 @@ export const NAV_ENTITY: Record<string, string[]> = {
   properties:   ["buildings", "units"],
   tenants:      ["tenants"],
   reservations: ["reservations"],
+  websiteRequests: ["reservations"],
   invoices:     ["invoices"],
   returns:      ["returns"],
   payments:     ["payments"],

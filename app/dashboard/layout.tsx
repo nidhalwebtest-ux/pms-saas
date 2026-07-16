@@ -57,6 +57,17 @@ export default async function DashboardLayout({
     getSelectedPropertyId(),
   ]);
 
+  // Pending website booking-request count for the nav badge (only when visible).
+  const websiteRequestCount = navAccess.websiteRequests
+    ? await prisma.websiteBookingRequest.count({
+        where: {
+          organizationId: dbUser.organizationId,
+          status: "PENDING",
+          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+        },
+      })
+    : 0;
+
   // Ignore a selected building the user can no longer access (falls back to "All").
   const selectedPropertyId =
     accessible && rawSelectedPropertyId && !accessible.includes(rawSelectedPropertyId)
@@ -87,7 +98,7 @@ export default async function DashboardLayout({
             properties={properties}
             selectedPropertyId={selectedPropertyId}
           />
-          <Navigation role={role} navAccess={navAccess} />
+          <Navigation role={role} navAccess={navAccess} websiteRequestCount={websiteRequestCount} />
         </div>
 
         <main className="py-6 sm:py-10">

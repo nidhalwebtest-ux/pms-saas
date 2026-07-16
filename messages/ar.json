@@ -462,7 +462,8 @@
     "bankAccounts": "الحسابات البنكية",
     "returnSettings": "إعدادات المرتجعات",
     "unitSettings": "إعدادات الوحدات",
-    "availabilityCalendar": "تقويم التوفّر"
+    "availabilityCalendar": "تقويم التوفّر",
+    "websiteSettings": "الموقع"
   },
   "dashboard": {
     "goodMorning": "صباح الخير، {name}",
@@ -4974,6 +4975,149 @@
       "saving": "جارٍ الحفظ…",
       "revert": "تجاهل التغييرات",
       "savedToast": "تم حفظ إعدادات الوحدات."
+    },
+    "website": {
+      "title": "موقع الحجز",
+      "subtitle": "أطلق موقع الحجز العام الخاص بك على عنوان binaya.app.",
+      "steps": {
+        "basics": "الأساسيات",
+        "contact": "التواصل والمحتوى",
+        "templates": "القالب",
+        "review": "المراجعة والإطلاق"
+      },
+      "nav": {
+        "back": "رجوع",
+        "next": "متابعة",
+        "cancel": "إلغاء",
+        "saveDraft": "حفظ كمسودة",
+        "launch": "إطلاق موقعي"
+      },
+      "draftSaved": "تم حفظ المسودة.",
+      "yes": "نعم",
+      "no": "لا",
+      "lang": {
+        "ar": "العربية",
+        "en": "English"
+      },
+      "fields": {
+        "siteNameEn": "اسم الموقع (إنجليزي)",
+        "siteNameAr": "اسم الموقع (عربي)",
+        "subdomain": "اختر عنوان موقعك",
+        "logo": "الشعار",
+        "presets": "ألوان جاهزة",
+        "primaryColor": "أساسي",
+        "accentColor": "مميز",
+        "defaultLanguage": "اللغة الافتراضية",
+        "defaultLanguageHint": "اللغة التي يُفتح بها موقعك. يمكن للزوار التبديل.",
+        "whatsapp": "رقم واتساب",
+        "whatsappHint": "يتواصل معك الضيوف هنا — مطلوب.",
+        "phone": "الهاتف",
+        "email": "البريد الإلكتروني",
+        "instagram": "إنستغرام",
+        "addressEn": "العنوان (إنجليزي)",
+        "addressAr": "العنوان (عربي)",
+        "googleMaps": "رابط خرائط جوجل",
+        "taglineEn": "الشعار النصي (إنجليزي)",
+        "taglineAr": "الشعار النصي (عربي)",
+        "aboutEn": "نبذة (إنجليزي)",
+        "aboutAr": "نبذة (عربي)",
+        "showPrices": "إظهار الأسعار",
+        "showPricesHint": "عرض الأسعار اليومية وعروض الأسعار على الموقع.",
+        "khareefBanner": "لافتة الخريف",
+        "khareefBannerHint": "إظهار لافتة موسم الخريف على الصفحة الرئيسية."
+      },
+      "slug": {
+        "available": "{host} متاح",
+        "taken": "هذا العنوان محجوز بالفعل.",
+        "reserved": "هذه الكلمة محجوزة.",
+        "invalid": "استخدم 3–40 حرفًا صغيرًا أو أرقامًا أو شرطات.",
+        "hint": "أحرف إنجليزية صغيرة وأرقام وشرطات."
+      },
+      "upload": {
+        "cta": "رفع صورة",
+        "change": "تغيير الصورة",
+        "remove": "إزالة",
+        "done": "تم رفع الصورة.",
+        "failed": "فشل الرفع.",
+        "tooLarge": "يجب أن تكون الصورة أقل من 5 ميغابايت.",
+        "notImage": "يرجى اختيار ملف صورة.",
+        "logoHint": "PNG أو JPG أو SVG. المربّع أفضل."
+      },
+      "presets": {
+        "coastal": "ساحلي",
+        "binaya": "بناية",
+        "emerald": "زمردي",
+        "desert": "صحراوي",
+        "midnight": "ليلي",
+        "rose": "وردي"
+      },
+      "templates": {
+        "intro": "اختر المظهر — يُطبَّق شعارك وألوانك مباشرة.",
+        "label": "القالب",
+        "template_1": {
+          "name": "ساحلي",
+          "desc": "فاتح، منعش، يبرز الصور"
+        },
+        "template_2": {
+          "name": "كلاسيكي",
+          "desc": "أنيق، خطوط راقية، طابع فندقي"
+        },
+        "template_3": {
+          "name": "عصري",
+          "desc": "جريء، واجهة داكنة، بسيط"
+        }
+      },
+      "preview": {
+        "yourHotel": "فندقك",
+        "tagline": "إقامتك في صلالة",
+        "searchCta": "ابحث عن التواريخ"
+      },
+      "review": {
+        "previewNote": "هكذا ستبدو صفحتك الرئيسية.",
+        "name": "الاسم"
+      },
+      "launch": {
+        "provisioning": "جارٍ إطلاق موقعك",
+        "provisioningSub": "لن يستغرق الأمر سوى لحظة…",
+        "steps": {
+          "reserve": "حجز نطاقك",
+          "brand": "تطبيق هويتك",
+          "publish": "نشر مبانيك",
+          "live": "الانتقال للبث المباشر"
+        },
+        "liveTitle": "أصبح موقعك مباشرًا! 🎉",
+        "liveSub": "موقع الحجز الخاص بك متصل الآن.",
+        "domainPending": "يكمل النطاق الإعداد — قد يستغرق بضع دقائق ليصبح مباشرًا.",
+        "open": "فتح",
+        "copy": "نسخ الرابط",
+        "copied": "تم نسخ الرابط",
+        "whatsapp": "مشاركة",
+        "shareMsg": "تفضّل بزيارة موقع الحجز الخاص بنا: {url}",
+        "goDashboard": "الذهاب إلى لوحة الموقع",
+        "errorTitle": "حدث خطأ ما",
+        "errorSub": "تعذّر نشر موقعك. يرجى المحاولة مرة أخرى.",
+        "errorBack": "رجوع"
+      },
+      "dash": {
+        "statusLive": "مباشر",
+        "statusOffline": "غير متصل",
+        "liveDesc": "موقعك عام ويستقبل الحجوزات.",
+        "offlineDesc": "موقعك مخفي عن الزوار.",
+        "goLive": "بث مباشر",
+        "takeOffline": "إيقاف مؤقت",
+        "yourUrl": "عنوان موقعك",
+        "edit": "تعديل الموقع",
+        "requests": "طلبات الحجز",
+        "published": "المباني المنشورة",
+        "comingSoon": "قريبًا",
+        "buildingsUnits": "{units} وحدة",
+        "previewNote": "معاينة مباشرة لموقعك.",
+        "enabledToast": "موقعك مباشر الآن.",
+        "disabledToast": "موقعك غير متصل الآن."
+      },
+      "errors": {
+        "generic": "حدث خطأ ما. يرجى المحاولة مرة أخرى."
+      }
     }
   },
   "photoUpload": {

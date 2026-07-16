@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma";
 export type UploadMediaResult = { ok: true; url: string } | { ok: false; error: string };
 
 /** Folders the uploader is allowed to write to (under the public pms-media bucket). */
-const ALLOWED_PREFIXES = ["units/", "properties/", "tenants/", "expenses/"];
+const ALLOWED_PREFIXES = ["units/", "properties/", "tenants/", "expenses/", "sites/"];
 
 /**
  * Upload an image to the `pms-media` bucket SERVER-SIDE via the service-role

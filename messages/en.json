@@ -462,7 +462,8 @@
     "bankAccounts": "Bank Accounts",
     "returnSettings": "Return Settings",
     "unitSettings": "Unit Settings",
-    "availabilityCalendar": "Availability Calendar"
+    "availabilityCalendar": "Availability Calendar",
+    "websiteSettings": "Website"
   },
   "dashboard": {
     "goodMorning": "Good morning, {name}",
@@ -4974,6 +4975,149 @@
       "saving": "Saving…",
       "revert": "Discard changes",
       "savedToast": "Unit settings saved."
+    },
+    "website": {
+      "title": "Booking Website",
+      "subtitle": "Launch your public booking site on a binaya.app address.",
+      "steps": {
+        "basics": "Basics",
+        "contact": "Contact & content",
+        "templates": "Template",
+        "review": "Review & launch"
+      },
+      "nav": {
+        "back": "Back",
+        "next": "Continue",
+        "cancel": "Cancel",
+        "saveDraft": "Save draft",
+        "launch": "Launch my website"
+      },
+      "draftSaved": "Draft saved.",
+      "yes": "Yes",
+      "no": "No",
+      "lang": {
+        "ar": "العربية",
+        "en": "English"
+      },
+      "fields": {
+        "siteNameEn": "Site name (English)",
+        "siteNameAr": "Site name (Arabic)",
+        "subdomain": "Choose your web address",
+        "logo": "Logo",
+        "presets": "Colour presets",
+        "primaryColor": "Primary",
+        "accentColor": "Accent",
+        "defaultLanguage": "Default language",
+        "defaultLanguageHint": "The language your site opens in. Visitors can switch.",
+        "whatsapp": "WhatsApp number",
+        "whatsappHint": "Guests contact you here — required.",
+        "phone": "Phone",
+        "email": "Email",
+        "instagram": "Instagram",
+        "addressEn": "Address (English)",
+        "addressAr": "Address (Arabic)",
+        "googleMaps": "Google Maps link",
+        "taglineEn": "Tagline (English)",
+        "taglineAr": "Tagline (Arabic)",
+        "aboutEn": "About (English)",
+        "aboutAr": "About (Arabic)",
+        "showPrices": "Show prices",
+        "showPricesHint": "Display nightly rates and quotes on the site.",
+        "khareefBanner": "Khareef banner",
+        "khareefBannerHint": "Show a seasonal Khareef highlight on the home page."
+      },
+      "slug": {
+        "available": "{host} is available",
+        "taken": "That address is already taken.",
+        "reserved": "That word is reserved.",
+        "invalid": "Use 3–40 lowercase letters, numbers or hyphens.",
+        "hint": "Lowercase letters, numbers and hyphens."
+      },
+      "upload": {
+        "cta": "Upload image",
+        "change": "Change image",
+        "remove": "Remove",
+        "done": "Image uploaded.",
+        "failed": "Upload failed.",
+        "tooLarge": "Image must be under 5 MB.",
+        "notImage": "Please choose an image file.",
+        "logoHint": "PNG, JPG or SVG. Square works best."
+      },
+      "presets": {
+        "coastal": "Coastal",
+        "binaya": "Binaya",
+        "emerald": "Emerald",
+        "desert": "Desert",
+        "midnight": "Midnight",
+        "rose": "Rose"
+      },
+      "templates": {
+        "intro": "Pick a look — your logo and colours are applied live.",
+        "label": "Template",
+        "template_1": {
+          "name": "Coastal",
+          "desc": "Light, airy, image-forward"
+        },
+        "template_2": {
+          "name": "Classic",
+          "desc": "Elegant, serif, hotel-like"
+        },
+        "template_3": {
+          "name": "Modern",
+          "desc": "Bold, dark hero, minimal"
+        }
+      },
+      "preview": {
+        "yourHotel": "Your Hotel",
+        "tagline": "Your stay in Salalah",
+        "searchCta": "Search dates"
+      },
+      "review": {
+        "previewNote": "This is how your home page will look.",
+        "name": "Name"
+      },
+      "launch": {
+        "provisioning": "Launching your website",
+        "provisioningSub": "This only takes a moment…",
+        "steps": {
+          "reserve": "Reserving your domain",
+          "brand": "Applying your brand",
+          "publish": "Publishing your buildings",
+          "live": "Going live"
+        },
+        "liveTitle": "You're live! 🎉",
+        "liveSub": "Your booking website is now online.",
+        "domainPending": "Domain is finishing setup — it may take a few minutes to go live.",
+        "open": "Open",
+        "copy": "Copy link",
+        "copied": "Link copied",
+        "whatsapp": "Share",
+        "shareMsg": "Check out our booking site: {url}",
+        "goDashboard": "Go to website dashboard",
+        "errorTitle": "Something went wrong",
+        "errorSub": "We couldn't publish your site. Please try again.",
+        "errorBack": "Back"
+      },
+      "dash": {
+        "statusLive": "Live",
+        "statusOffline": "Offline",
+        "liveDesc": "Your site is public and accepting bookings.",
+        "offlineDesc": "Your site is hidden from visitors.",
+        "goLive": "Go live",
+        "takeOffline": "Take offline",
+        "yourUrl": "Your website address",
+        "edit": "Edit website",
+        "requests": "Booking requests",
+        "published": "Published buildings",
+        "comingSoon": "Coming soon",
+        "buildingsUnits": "{units} units",
+        "previewNote": "Live preview of your site.",
+        "enabledToast": "Your website is live.",
+        "disabledToast": "Your website is now offline."
+      },
+      "errors": {
+        "generic": "Something went wrong. Please try again."
+      }
     }
   },
   "photoUpload": {

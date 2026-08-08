@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   UsersIcon,
   BuildingOffice2Icon,
@@ -8,6 +9,7 @@ import {
   BanknotesIcon,
   ReceiptPercentIcon,
   BuildingOfficeIcon,
+  ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 import { getTranslations } from "next-intl/server";
 import { redirect } from "next/navigation";
@@ -90,17 +92,31 @@ export default async function AdminOrganizationsPage() {
       ) : (
         <div className="space-y-4">
           {orgs.map((o) => (
-            <div key={o.id} className="rounded-2xl border border-border-default bg-surface p-4 sm:p-5">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-500 text-white">
-                  <BuildingOfficeIcon className="h-5 w-5" />
-                </span>
-                <div className="min-w-0">
-                  <h3 className="truncate text-sm font-bold text-fg">{o.name}</h3>
-                  <p className="text-xs text-fg-tertiary">
-                    {o.city} · {t("since", { date: fmtDate(o.createdAt.toISOString()) })}
-                  </p>
-                </div>
+            <div key={o.id} className="rounded-2xl border border-border-default bg-surface p-4 transition-all hover:border-brand-300 sm:p-5">
+              <div className="flex items-center justify-between gap-3">
+                <Link
+                  href={`/admin/organizations/${o.id}`}
+                  className="group flex items-center gap-x-3 min-w-0 flex-1"
+                >
+                  <span className="inline-flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-brand-500 text-white shadow-sm transition-transform group-hover:scale-105">
+                    <BuildingOfficeIcon className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <h3 className="truncate text-base font-bold text-fg group-hover:text-brand-600">
+                      {o.name}
+                    </h3>
+                    <p className="text-xs text-fg-tertiary">
+                      {o.city} · {t("since", { date: fmtDate(o.createdAt.toISOString()) })}
+                    </p>
+                  </div>
+                </Link>
+                <Link
+                  href={`/admin/organizations/${o.id}`}
+                  className="inline-flex items-center gap-1 rounded-lg border border-border-default bg-canvas px-3 py-1.5 text-xs font-medium text-fg-secondary transition-colors hover:bg-surface hover:text-brand-600"
+                >
+                  <span>{t("viewDetails", { defaultValue: "View details" })}</span>
+                  <ChevronRightIcon className="h-3.5 w-3.5 rtl:rotate-180" />
+                </Link>
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
@@ -123,3 +139,4 @@ export default async function AdminOrganizationsPage() {
     </div>
   );
 }
+

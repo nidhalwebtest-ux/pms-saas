@@ -1,77 +1,125 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Sparkles, Gift, Zap } from "lucide-react";
+import { useLocale } from "next-intl";
+import { Check, Zap, Gift } from "lucide-react";
 import Container from "./ui/Container";
 import { MarketingButton } from "./ui/MarketingButton";
 
 export default function PricingClientSection() {
+  const locale = useLocale();
+  const isAr = locale === "ar";
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("yearly");
+
+  const text = {
+    badge: isAr ? "خطط الأسعار والاشتراكات" : "Pricing & Plans",
+    title: isAr ? "اختر الخطة المناسبة لحجم محفظتك العقارية" : "Choose the ideal plan for your property portfolio",
+    sub: isAr
+      ? "خطط مرنة مصممة خصيصًا لمديري الأملاك والعقارات في صلالة وعُمان. يمكنك التغيير أو الترقية في أي وقت."
+      : "Flexible plans tailored for property managers in Salalah & Oman. Upgrade or change anytime.",
+    monthly: isAr ? "الدفع الشهري" : "Monthly Billing",
+    yearly: isAr ? "الدفع السنوي" : "Yearly Billing",
+    saveBadge: isAr ? "وفر حتى 20%" : "Save up to 20%",
+    perMonth: isAr ? "ريال عُماني / شهريًا" : "OMR / month",
+    billedYearly: isAr ? "فوتِر سنويًا" : "Billed Yearly",
+  };
 
   const plans = [
     {
       id: "starter",
-      name: "الخطة الأولى (المبتدئ)",
-      desc: "مثالية للمباني الفردية وإدارة العقارات الصغيرة",
+      name: isAr ? "الخطة الأولى (المبتدئ)" : "Starter Plan",
+      desc: isAr ? "مثالية للمباني الفردية وإدارة العقارات الصغيرة" : "Ideal for single buildings and smaller property portfolios",
       monthlyPrice: 15,
       yearlyPrice: 10,
-      highlightBadge: "تجربة مجانية لمدة شهريْن 🎁",
+      highlightBadge: isAr ? "تجربة مجانية لمدة شهريْن 🎁" : "2 Months Free Trial 🎁",
       highlightBadgeBg: "bg-[#1f9d64] text-white",
-      trialNote: "يمكن تجربة هذه الخطة مجانًا لمدة شهريْن كاملين بدون بطاقة ائتمان",
+      trialNote: isAr
+        ? "يمكن تجربة هذه الخطة مجانًا لمدة شهريْن كاملين بدون بطاقة ائتمان"
+        : "Try this plan completely free for 2 full months — no credit card required",
       featured: false,
-      ctaText: "تجربة مجانية لمدة شهريْن",
+      ctaText: isAr ? "تجربة مجانية لمدة شهريْن" : "Start 2 Months Free Trial",
       ctaHref: "/login?mode=signup&plan=starter",
-      features: [
-        "مبنى واحد (1 Building)",
-        "من 1 إلى 20 وحدة (1-20 Units)",
-        "مستخدمان اثنان (2 Users)",
-        "مستأجرون غير محدودين (Unlimited Tenants)",
-        "حجوزات غير محدودة (Unlimited Reservations)",
-        "مدفوعات وفواتير غير محدودة",
-        "مصروفات وتقارير غير محدودة",
-      ],
+      features: isAr
+        ? [
+            "مبنى واحد",
+            "من 1 إلى 20 وحدة",
+            "مستخدمان اثنان",
+            "مستأجرون غير محدودين",
+            "حجوزات غير محدودة",
+            "مدفوعات وفواتير غير محدودة",
+            "مصروفات وتقارير غير محدودة",
+          ]
+        : [
+            "1 Building",
+            "1 to 20 Units",
+            "2 Users",
+            "Unlimited Tenants",
+            "Unlimited Reservations",
+            "Unlimited Payments & Invoices",
+            "Unlimited Expenses & Reports",
+          ],
     },
     {
       id: "growth",
-      name: "الخطة الثانية (النمو الاحترافي)",
-      desc: "الخطة الأكثر شعبية لمؤسسات إدارة العقارات المتنامية",
+      name: isAr ? "الخطة الثانية (النمو الاحترافي)" : "Pro / Growth Plan",
+      desc: isAr ? "الخطة الأكثر شعبية لمؤسسات إدارة العقارات المتنامية" : "Most popular plan for growing property portfolios",
       monthlyPrice: 30,
       yearlyPrice: 25,
-      highlightBadge: "الأكثر شعبية ⭐",
+      highlightBadge: isAr ? "الأكثر شعبية ⭐" : "Most Popular ⭐",
       highlightBadgeBg: "bg-brand-500 text-white",
       featured: true,
-      ctaText: "ابدأ الخطة الاحترافية",
+      ctaText: isAr ? "ابدأ الخطة الاحترافية" : "Choose Pro Plan",
       ctaHref: "/login?mode=signup&plan=pro",
-      features: [
-        "5 مبانٍ (5 Buildings)",
-        "وحدات غير محدودة (Unlimited Units)",
-        "5 مستخدمين (5 Users)",
-        "مستأجرون غير محدودين",
-        "حجوزات ومدفوعات غير محدودة",
-        "مصروفات وتقارير غير محدودة",
-        "موقع حجز إلكتروني خاص (Booking Website)",
-      ],
+      features: isAr
+        ? [
+            "5 مبانٍ",
+            "وحدات غير محدودة",
+            "5 مستخدمين",
+            "مستأجرون غير محدودين",
+            "حجوزات ومدفوعات غير محدودة",
+            "مصروفات وتقارير غير محدودة",
+            "موقع حجز إلكتروني خاص",
+          ]
+        : [
+            "5 Buildings",
+            "Unlimited Units",
+            "5 Users",
+            "Unlimited Tenants",
+            "Unlimited Reservations & Payments",
+            "Unlimited Expenses & Reports",
+            "Public Booking Website",
+          ],
     },
     {
       id: "ultimate",
-      name: "الخطة الثالثة (الشاملة / المؤسسات)",
-      desc: "حل متكامل مع الذكاء الاصطناعي وربط الواتساب والدفع الإلكتروني",
+      name: isAr ? "الخطة الثالثة (الشاملة / المؤسسات)" : "Ultimate Enterprise Plan",
+      desc: isAr ? "حل متكامل مع الذكاء الاصطناعي وربط الواتساب والدفع الإلكتروني" : "Full enterprise solution with AI assistant, WhatsApp, and online payments",
       monthlyPrice: 75,
       yearlyPrice: 60,
-      highlightBadge: "الذكاء الاصطناعي والواتساب 🤖",
+      highlightBadge: isAr ? "الذكاء الاصطناعي والواتساب 🤖" : "AI & WhatsApp Integration 🤖",
       highlightBadgeBg: "bg-indigo-600 text-white",
       featured: false,
-      ctaText: "اشترك في الخطة الشاملة",
+      ctaText: isAr ? "اشترك في الخطة الشاملة" : "Get Ultimate Plan",
       ctaHref: "/login?mode=signup&plan=ultimate",
-      features: [
-        "مبانٍ غير محدودة (Unlimited Buildings)",
-        "مستخدمون غير محدودين (Unlimited Users)",
-        "مستأجرون وحجوزات ومدفوعات ومصروفات غير محدودة",
-        "موقع حجز إلكتروني مع دفع إلكتروني (Online Payments)",
-        "مساعد الذكاء الاصطناعي (AI Assistant)",
-        "ربط الواتساب المباشر (WhatsApp Integration)",
-        "روبوت محادثة ذكي للموقع والواتساب (AI Chatbot)",
-      ],
+      features: isAr
+        ? [
+            "مبانٍ غير محدودة",
+            "مستخدمون غير محدودين",
+            "مستأجرون وحجوزات ومدفوعات ومصروفات غير محدودة",
+            "موقع حجز إلكتروني مع دفع إلكتروني",
+            "مساعد الذكاء الاصطناعي",
+            "ربط الواتساب المباشر",
+            "روبوت محادثة ذكي للموقع والواتساب",
+          ]
+        : [
+            "Unlimited Buildings",
+            "Unlimited Users",
+            "Unlimited Tenants, Reservations, Payments & Expenses",
+            "Public Booking Website with Online Payments",
+            "AI Assistant",
+            "Direct WhatsApp Integration",
+            "AI Chatbot for Website & WhatsApp",
+          ],
     },
   ];
 
@@ -82,13 +130,13 @@ export default function PricingClientSection() {
         <div className="text-center max-w-3xl mx-auto mb-12">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3.5 py-1 text-xs font-bold uppercase tracking-wider text-brand-600">
             <Zap className="h-3.5 w-3.5" />
-            <span>خطط الأسعار والاشتراكات</span>
+            <span>{text.badge}</span>
           </span>
           <h2 className="mt-4 text-3xl font-bold tracking-tight text-gray-900 md:text-4xl">
-            اختر الخطة المناسبة لحجم محفظتك العقارية
+            {text.title}
           </h2>
           <p className="mt-3 text-lg text-gray-600">
-            خطط مرنة مصممة خصيصًا لمديري الأملاك والعقارات في صلالة وعُمان. يمكنك التغيير أو الترقية في أي وقت.
+            {text.sub}
           </p>
 
           {/* Billing Cycle Toggle */}
@@ -101,7 +149,7 @@ export default function PricingClientSection() {
                   : "text-gray-500 hover:text-gray-900"
               }`}
             >
-              الدفع الشهري
+              {text.monthly}
             </button>
             <button
               onClick={() => setBillingCycle("yearly")}
@@ -111,9 +159,9 @@ export default function PricingClientSection() {
                   : "text-gray-500 hover:text-gray-900"
               }`}
             >
-              <span>الدفع السنوي</span>
+              <span>{text.yearly}</span>
               <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[11px] font-black text-gray-900 uppercase">
-                وفر حتى 20%
+                {text.saveBadge}
               </span>
             </button>
           </div>
@@ -167,13 +215,13 @@ export default function PricingClientSection() {
                       {price}
                     </span>
                     <span className={`text-sm font-semibold ${p.featured ? "text-brand-200" : "text-gray-500"}`}>
-                      ريال عُماني / شهريًا
+                      {text.perMonth}
                     </span>
                     {billingCycle === "yearly" && (
                       <span className={`ms-auto text-[11px] font-bold rounded-md px-2 py-0.5 ${
                         p.featured ? "bg-white/20 text-white" : "bg-emerald-100 text-emerald-800"
                       }`}>
-                        فوتِر سنويًا
+                        {text.billedYearly}
                       </span>
                     )}
                   </div>

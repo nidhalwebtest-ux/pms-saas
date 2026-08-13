@@ -2,17 +2,28 @@
 
 import { useState, useRef } from "react";
 import { Play, Pause, Volume2, VolumeX, Maximize, Sparkles } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function HeroVideoPlayer({
-  videoTitle = "شاهد العرض التوضيحي لنظام بناية",
-  videoSub = "نظام إدارة الأملاك الأول في صلالة وعُمان",
+  videoTitle,
+  videoSub,
 }: {
   videoTitle?: string;
   videoSub?: string;
 }) {
+  const t = useTranslations("marketing.hero");
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  // Audio enabled by default as requested by user
+  const [isMuted, setIsMuted] = useState(false);
+
+  const displayTitle = videoTitle && !videoTitle.startsWith("marketing.")
+    ? videoTitle
+    : t("videoTitle", { defaultValue: "شاهد كيف يعمل نظام بناية" });
+
+  const displaySub = videoSub && !videoSub.startsWith("marketing.")
+    ? videoSub
+    : t("videoSub", { defaultValue: "انقر لتشغيل فيديو العرض التوضيحي للنظام" });
 
   const togglePlay = () => {
     if (!videoRef.current) return;
@@ -61,7 +72,7 @@ export default function HeroVideoPlayer({
             <button
               onClick={toggleMute}
               className="rounded-lg bg-white/10 p-1.5 text-gray-300 transition hover:bg-white/20 hover:text-white"
-              title={isMuted ? "تشغيل الصوت" : "كتم الصوت"}
+              title={isMuted ? "Unmute" : "Mute"}
               aria-label="Toggle mute"
             >
               {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -69,7 +80,7 @@ export default function HeroVideoPlayer({
             <button
               onClick={toggleFullScreen}
               className="rounded-lg bg-white/10 p-1.5 text-gray-300 transition hover:bg-white/20 hover:text-white"
-              title="ملء الشاشة"
+              title="Full screen"
               aria-label="Full screen"
             >
               <Maximize className="h-4 w-4" />
@@ -90,7 +101,7 @@ export default function HeroVideoPlayer({
             onPause={() => setIsPlaying(false)}
           />
 
-          {/* Big Center Play/Pause Button Overlay */}
+          {/* Center Play Button Overlay (Smaller, compact design) */}
           {!isPlaying && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] transition-all duration-300">
               <button
@@ -98,23 +109,23 @@ export default function HeroVideoPlayer({
                   e.stopPropagation();
                   togglePlay();
                 }}
-                className="group/btn relative flex h-20 w-20 items-center justify-center rounded-full bg-brand-500 text-white shadow-2xl transition-transform duration-300 hover:scale-110 active:scale-95"
+                className="group/btn relative flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-white shadow-xl transition-transform duration-300 hover:scale-110 active:scale-95"
                 aria-label="Play demo video"
               >
-                <span className="absolute -inset-2 animate-ping rounded-full bg-brand-500/40 opacity-75" />
-                <Play className="h-9 w-9 text-white ms-1" fill="currentColor" />
+                <span className="absolute -inset-1.5 animate-ping rounded-full bg-brand-500/40 opacity-75" />
+                <Play className="h-6 w-6 text-white ms-0.5" fill="currentColor" />
               </button>
-              <p className="mt-4 text-sm font-bold text-white tracking-wide shadow-sm">
-                {videoTitle}
+              <p className="mt-3 text-sm font-bold text-white tracking-wide shadow-sm px-4 text-center">
+                {displayTitle}
               </p>
-              <p className="mt-1 text-xs text-gray-300">
-                {videoSub}
+              <p className="mt-1 text-xs text-gray-300 px-4 text-center">
+                {displaySub}
               </p>
             </div>
           )}
         </div>
 
-        {/* Bottom Floating Info Badge */}
+        {/* Bottom Info Bar */}
         <div className="flex items-center justify-between border-t border-white/10 bg-gray-900/90 px-4 py-2 text-xs text-gray-300">
           <div className="flex items-center gap-2">
             <button
@@ -122,7 +133,7 @@ export default function HeroVideoPlayer({
               className="flex items-center gap-1.5 rounded-md bg-brand-500/20 px-2.5 py-1 text-brand-300 hover:bg-brand-500/30 transition-colors font-medium"
             >
               {isPlaying ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-              <span>{isPlaying ? "إيقاف مؤقت" : "تشغيل العرض"}</span>
+              <span>{isPlaying ? "Pause" : "Play"}</span>
             </button>
           </div>
           <span className="text-gray-400 font-mono text-[11px]">HD 1080p · Binaya PMS</span>

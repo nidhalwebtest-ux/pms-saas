@@ -33,14 +33,15 @@ export default async function HeroSection() {
               {t("cta1")}
               <ArrowRight className="h-4 w-4 rtl:rotate-180" strokeWidth={1.75} />
             </MarketingButton>
-            <MarketingButton href="#pricing" variant="secondary" size="xl">
-              {t("cta2")}
-            </MarketingButton>
+            <a
+              href="https://wa.me/96898590405"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-6 py-3.5 text-base font-bold text-gray-900 shadow-sm transition-all hover:bg-gray-50 hover:border-gray-400 active:scale-95"
+            >
+              <span>{t("cta2")}</span>
+            </a>
           </div>
-          <p className="mt-[18px] flex items-center gap-2 text-[14px] text-gray-500">
-            <Check className="h-4 w-4 text-[#1f9d64]" strokeWidth={2.4} />
-            {t("note")}
-          </p>
         </div>
 
         {/* Video Player Container */}

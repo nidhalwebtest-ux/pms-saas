@@ -7,7 +7,7 @@ export default function FloatingWhatsApp() {
   const locale = useLocale();
   const isAr = locale === "ar";
 
-  const whatsappUrl = "https://wa.me/96898590405?text=" + encodeURIComponent(
+  const whatsappUrl = "https://wa.me/96877804803?text=" + encodeURIComponent(
     isAr ? "مرحبًا بناية، أود الاستفسار عن نظام إدارة الأملاك." : "Hello Binaya, I would like to inquire about Binaya PMS."
   );
 

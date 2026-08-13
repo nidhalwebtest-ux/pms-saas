@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Sans_Arabic, IBM_Plex_Mono } from "next/font/google";
+import Script from "next/script";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import "@/styles/globals.css";
@@ -53,6 +54,25 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} dir={dir} className={`${sans.variable} ${arabic.variable} ${mono.variable}`}>
+      <head>
+        {/* Google Analytics (gtag.js) */}
+        <Script
+          strategy="afterInteractive"
+          src="https://www.googletagmanager.com/gtag/js?id=G-MK5E9PV4X7"
+        />
+        <Script
+          id="google-analytics"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-MK5E9PV4X7');
+            `,
+          }}
+        />
+      </head>
       <body className={`antialiased ${locale === "ar" ? "font-arabic" : ""}`}>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ConfirmDialogProvider>

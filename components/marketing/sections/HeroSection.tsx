@@ -34,7 +34,7 @@ export default async function HeroSection() {
               <ArrowRight className="h-4 w-4 rtl:rotate-180" strokeWidth={1.75} />
             </MarketingButton>
             <a
-              href="https://wa.me/96898590405"
+              href="https://wa.me/96877804803"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-6 py-3.5 text-base font-bold text-gray-900 shadow-sm transition-all hover:bg-gray-50 hover:border-gray-400 active:scale-95"

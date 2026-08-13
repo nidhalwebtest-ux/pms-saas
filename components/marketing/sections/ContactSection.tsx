@@ -18,7 +18,7 @@ export default function ContactSection() {
     setSubmitted(true);
   };
 
-  const whatsappUrl = "https://wa.me/96898590405?text=" + encodeURIComponent(
+  const whatsappUrl = "https://wa.me/96877804803?text=" + encodeURIComponent(
     isAr ? "مرحبًا بناية، أود التحدث مع فريق المبيعات والاستفسار عن النظام." : "Hello Binaya, I would like to speak with sales about Binaya PMS."
   );
 
@@ -56,14 +56,14 @@ export default function ContactSection() {
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-gray-500">{isAr ? "محادثات الواتساب الفورية" : "WhatsApp Direct Chat"}</h3>
-                <p className="text-lg font-bold text-gray-900 dir-ltr">+968 9859 0405</p>
+                <p className="text-lg font-bold text-gray-900 dir-ltr">+968 7780 4803</p>
                 <p className="text-xs text-[#25D366] font-medium mt-0.5">{isAr ? "انقر للمحادثات المباشرة ←" : "Click to chat now →"}</p>
               </div>
             </a>
 
             {/* Phone Card */}
             <a
-              href="tel:+96898590405"
+              href="tel:+96877804803"
               className="group flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition-all duration-300 hover:border-brand-500 hover:shadow-md"
             >
               <div className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-500 group-hover:text-white">
@@ -71,7 +71,7 @@ export default function ContactSection() {
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-gray-500">{isAr ? "الاتصال المباشر" : "Direct Phone Call"}</h3>
-                <p className="text-lg font-bold text-gray-900 dir-ltr">+968 9859 0405</p>
+                <p className="text-lg font-bold text-gray-900 dir-ltr">+968 7780 4803</p>
                 <p className="text-xs text-brand-600 font-medium mt-0.5">{isAr ? "متاح طوال أيام الأسبوع" : "Available 7 days a week"}</p>
               </div>
             </a>
@@ -133,7 +133,7 @@ export default function ContactSection() {
                     <input
                       type="tel"
                       required
-                      placeholder={isAr ? "مثال: +968 9859 0405" : "e.g. +968 9859 0405"}
+                      placeholder={isAr ? "مثال: +968 7780 4803" : "e.g. +968 7780 4803"}
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                       className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"

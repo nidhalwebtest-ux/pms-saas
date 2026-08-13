@@ -99,7 +99,7 @@ export default function MarketingHomePage() {
       "@type": "Organization",
       name: "Binaya PMS",
       url: "https://www.binaya.app",
-      telephone: "+96898590405",
+      telephone: "+96877804803",
       address: {
         "@type": "PostalAddress",
         addressLocality: "Salalah",

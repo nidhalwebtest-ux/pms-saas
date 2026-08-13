@@ -2,10 +2,9 @@ import { ArrowRight, Check, PlayCircle } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import Container from "../ui/Container";
 import { MarketingButton } from "../ui/MarketingButton";
-import { HeroDashboardMock } from "../mocks";
+import HeroVideoPlayer from "../HeroVideoPlayer";
 
-/* Hero — headline + product dashboard mock with a floating "payment received"
-   card. Background matches the redesign's soft radial wash. */
+/* Hero — headline + creative software video player container for Binaya_Demo.mp4 */
 export default async function HeroSection() {
   const t = await getTranslations("marketing.hero");
   return (
@@ -34,8 +33,7 @@ export default async function HeroSection() {
               {t("cta1")}
               <ArrowRight className="h-4 w-4 rtl:rotate-180" strokeWidth={1.75} />
             </MarketingButton>
-            <MarketingButton href="#how" variant="secondary" size="xl">
-              <PlayCircle className="h-[18px] w-[18px]" strokeWidth={1.75} />
+            <MarketingButton href="#pricing" variant="secondary" size="xl">
               {t("cta2")}
             </MarketingButton>
           </div>
@@ -45,22 +43,15 @@ export default async function HeroSection() {
           </p>
         </div>
 
-        {/* Product mock + floating card */}
+        {/* Video Player Container */}
         <div className="relative">
-          <div className="overflow-hidden rounded-[18px] border border-gray-200 bg-white shadow-[0_30px_60px_-24px_rgba(15,39,64,.28)]">
-            <HeroDashboardMock />
-          </div>
-          <div className="absolute -bottom-4 -end-3.5 hidden items-center gap-[11px] rounded-[14px] border border-gray-200 bg-white px-[15px] py-3 shadow-[0_16px_34px_-14px_rgba(15,39,64,.3)] sm:flex">
-            <span className="grid h-[38px] w-[38px] place-items-center rounded-[10px] bg-[#eafaf1]">
-              <Check className="h-5 w-5 text-[#1f9d64]" strokeWidth={2.6} />
-            </span>
-            <div>
-              <div className="text-[13px] font-bold text-gray-900">{t("floatTitle")}</div>
-              <div className="text-[11.5px] text-gray-400" dir="ltr">{t("floatSub")}</div>
-            </div>
-          </div>
+          <HeroVideoPlayer
+            videoTitle={t("videoTitle", { defaultValue: "شاهد كيف يعمل نظام بناية في دقيقة واحدة" })}
+            videoSub={t("videoSub", { defaultValue: "انقر لتشغيل فيديو العرض التوضيحي للنظام" })}
+          />
         </div>
       </Container>
     </section>
   );
 }
+

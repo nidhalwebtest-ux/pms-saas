@@ -464,7 +464,8 @@
     "unitSettings": "Unit Settings",
     "availabilityCalendar": "Availability Calendar",
     "websiteSettings": "Website",
-    "websiteRequests": "Website Requests"
+    "websiteRequests": "Website Requests",
+    "dataImport": "Data Import"
   },
   "dashboard": {
     "goodMorning": "Good morning, {name}",
@@ -520,6 +521,20 @@
         "overstays": "Overstays",
         "noArrivals": "No arrivals scheduled for today",
         "noCheckouts": "No checkouts scheduled for today"
+      },
+      "tabs": {
+        "ariaLabel": "Guest queues",
+        "inHouse": "In House",
+        "outstanding": "Outstanding",
+        "toIssue": "Invoices to Issue",
+        "noOverstays": "No overstays — all clear",
+        "noInHouse": "No guests currently in house",
+        "noOutstanding": "No outstanding balances",
+        "noToIssue": "No invoices waiting to be issued",
+        "issue": "Issue",
+        "issuing": "Issuing…",
+        "issueSuccess": "Invoice issued",
+        "issueFailed": "Failed to issue invoice"
       },
       "guest": {
         "vipBadge": "VIP ⭐",
@@ -6425,6 +6440,181 @@
     },
     "wa": {
       "greeting": "Hi {name}, about your booking request:"
+    }
+  },
+  "dataImport": {
+    "title": "Data Import",
+    "subtitle": "Bring your buildings, units, tenants, reservations and expenses in from a spreadsheet.",
+    "steps": {
+      "choose": "Choose",
+      "upload": "Upload",
+      "map": "Map fields",
+      "validate": "Validate",
+      "run": "Run"
+    },
+    "back": "Back",
+    "cancel": "Cancel",
+    "next": "Continue",
+    "history": "Import history",
+    "recordTypes": {
+      "BUILDINGS": "Buildings",
+      "UNITS": "Units",
+      "TENANTS": "Tenants",
+      "RESERVATIONS": "Reservations",
+      "EXPENSES": "Expenses"
+    },
+    "recordTypeDescriptions": {
+      "BUILDINGS": "Properties you manage — towers, compounds, standalone buildings.",
+      "UNITS": "Rooms or apartments inside a building, with pricing.",
+      "TENANTS": "Guest and tenant contact records.",
+      "RESERVATIONS": "Bookings linking a tenant to one or more units.",
+      "EXPENSES": "Costs recorded against a building."
+    },
+    "step1": {
+      "title": "What do you want to import?",
+      "subtitle": "Import in this order — later steps depend on earlier ones existing first.",
+      "currentCount": "{count, plural, =0 {No records yet} one {# record in the system} other {# records in the system}}",
+      "downloadTemplate": "Download template",
+      "templateEn": "English headers",
+      "templateAr": "Arabic headers",
+      "dependencyWarning": "Import {dependency} first — {recordType} rows reference them and won't resolve otherwise.",
+      "select": "Select",
+      "recentJobs": "Recent imports",
+      "viewHistory": "View all import history"
+    },
+    "step2": {
+      "title": "Upload your file",
+      "subtitle": "Drag and drop a .csv or .xlsx file, or browse to select one.",
+      "dropHint": "Drag a file here, or click to browse",
+      "formatHint": "CSV or Excel (.xlsx), up to 5 MB / 5,000 rows",
+      "uploading": "Reading your file…",
+      "preview": "Preview — first 5 rows",
+      "rowsFound": "{count} rows found",
+      "encodingDetected": "Detected encoding: {encoding}",
+      "encodingOverride": "Not reading right? Try a different encoding",
+      "errors": {
+        "TOO_LARGE": "That file is larger than 5 MB. Split it into smaller files and import them one at a time.",
+        "TOO_MANY_ROWS": "That file has {actual} rows — the limit is {maxRows} per import. Split it into smaller files.",
+        "EMPTY_FILE": "That file appears to be empty.",
+        "NO_HEADERS": "Couldn't find a header row. Make sure the first row has column names.",
+        "UNSUPPORTED_FORMAT": "That file type isn't supported — use .csv or .xlsx.",
+        "PARSE_FAILED": "Couldn't read that file: {message}"
+      }
+    },
+    "step3": {
+      "title": "Map your columns",
+      "subtitle": "Match each system field to a column from your file.",
+      "systemField": "System field",
+      "yourColumn": "Your column",
+      "required": "Required",
+      "matched": "Matched",
+      "needsAttention": "Needs your review",
+      "notInFile": "Not in your file",
+      "unmappedColumns": "Columns from your file that won't be imported",
+      "unmappedColumnsHint": "These columns don't match a system field and will be ignored.",
+      "livePreview": "Preview — how these rows will be imported",
+      "options": "Import options",
+      "duplicateHandling": "If a row matches an existing record",
+      "duplicateHandlingHint": "Buildings are matched by name. \"Update existing\" isn't available yet for this record type — duplicates are skipped either way until it ships.",
+      "duplicateSkip": "Skip it",
+      "duplicateSkipDesc": "Leave the existing record untouched, don't import this row.",
+      "duplicateUpdate": "Update existing",
+      "duplicateUpdateDesc": "Overwrite the existing record's fields with this row.",
+      "duplicateCreate": "Create anyway",
+      "duplicateCreateDesc": "Import as a new, separate record even if one looks the same.",
+      "dateFormat": "Date format in your file",
+      "dateFormatHint": "Guessing wrong will silently swap day and month — check a date column in the preview above.",
+      "dateAuto": "Auto-detect",
+      "dateDMY": "DD/MM/YYYY (31/12/2026)",
+      "dateMDY": "MM/DD/YYYY (12/31/2026)",
+      "selectColumn": "— Not mapped —"
+    },
+    "step4": {
+      "title": "Validate",
+      "subtitle": "Checking every row before anything is saved.",
+      "validating": "Validating your file…",
+      "readySummary": "{valid} rows ready · {errors} rows have errors",
+      "allReady": "All {count} rows are ready to import.",
+      "downloadErrors": "Download error rows",
+      "proceedValid": "Import the {count} valid rows",
+      "proceedAll": "Start import",
+      "fixAndRetry": "Fix your file and re-upload to try again",
+      "errorsTable": {
+        "row": "Row",
+        "field": "Field",
+        "problem": "Problem",
+        "filterAll": "All errors",
+        "empty": "No errors — nice."
+      }
+    },
+    "step5": {
+      "title": "Importing…",
+      "subtitle": "You can close this tab — progress is saved and you can come back to it from Import History.",
+      "cancelRun": "Cancel import",
+      "cancelConfirmTitle": "Cancel this import?",
+      "cancelConfirmBody": "Rows already imported will stay. Rows not yet processed will be left out — you can start a new import for them later.",
+      "cancelConfirmAction": "Yes, cancel",
+      "cancelling": "Cancelling…"
+    },
+    "result": {
+      "title": "Import complete",
+      "titleWithErrors": "Import finished with some errors",
+      "titleCancelled": "Import cancelled",
+      "summary": "{success} of {total} rows imported in {duration}",
+      "downloadFailedRows": "Download failed rows",
+      "reimport": "Re-import fixed rows",
+      "viewRecords": "View imported {recordType}",
+      "startAnother": "Start another import",
+      "backToHistory": "Back to import history"
+    },
+    "history": {
+      "title": "Import history",
+      "subtitle": "Past imports for this organization.",
+      "empty": "No imports yet.",
+      "columns": {
+        "date": "Date",
+        "recordType": "Type",
+        "file": "File",
+        "counts": "Rows",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "downloadOriginal": "Original file",
+      "downloadErrors": "Error file",
+      "undo": "Undo",
+      "undoNotAvailable": "Not available",
+      "reimport": "Re-import failed rows",
+      "reimportOf": "Re-import of {jobId}",
+      "status": {
+        "PENDING": "Pending",
+        "VALIDATING": "Validating",
+        "READY": "Ready",
+        "RUNNING": "Running",
+        "COMPLETED": "Completed",
+        "COMPLETED_WITH_ERRORS": "Completed with errors",
+        "FAILED": "Failed",
+        "CANCELLED": "Cancelled"
+      }
+    },
+    "undo": {
+      "confirmTitle": "Undo this import?",
+      "confirmBody": "This will permanently delete {count} record(s) created by this import.",
+      "confirmAction": "Delete {count} records",
+      "blockedTitle": "Some records couldn't be deleted",
+      "blockedBody": "{blocked} of {total} records have dependent data (e.g. reservations) and were kept. {deleted} were deleted.",
+      "successToast": "{count} records deleted.",
+      "noneEligible": "This import didn't create any records that can still be undone."
+    },
+    "fields": {
+      "buildings": {
+        "name": "Building name",
+        "type": "Type",
+        "city": "City",
+        "governorate": "Governorate",
+        "address": "Address",
+        "totalFloors": "Total floors",
+        "description": "Description"
+      }
     }
   }
 }

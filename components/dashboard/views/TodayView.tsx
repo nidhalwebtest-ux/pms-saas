@@ -9,8 +9,10 @@ import {
   HomeModernIcon,
   ArrowUpIcon,
   ArrowDownIcon,
+  DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { useFormatCurrency } from "@/lib/org-context";
+import { useTabParam } from "@/hooks/useTabParam";
 import {
   Alert,
   Badge,
@@ -21,8 +23,13 @@ import {
   SkeletonLine,
   SkeletonRectangle,
   SkeletonText,
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
   getTenantClassBadge,
 } from "@/components/ui";
+import { toast } from "sonner";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -39,6 +46,18 @@ interface ReservationRow {
   tenant: { id: string; name: string; phone: string | null; classification: string };
   unitNames: string[];
   propertyName: string;
+}
+
+interface DraftInvoiceRow {
+  id: string;
+  invoiceNumber: string | null;
+  amount: number;
+  periodStart: string | null;
+  periodEnd: string | null;
+  propertyName: string;
+  tenant: { id: string; name: string; phone: string | null; classification: string };
+  reservationId: string | null;
+  reservationNumber: string | null;
 }
 
 interface ActivityItem {
@@ -58,11 +77,21 @@ interface TodayData {
   overdueArrivals: ReservationRow[];
   departures: ReservationRow[];
   overstays: ReservationRow[];
-  inHouseCount: number;
+  inHouse: ReservationRow[];
+  outstanding: ReservationRow[];
+  invoicesToIssue: DraftInvoiceRow[];
   paymentsToday: Record<string, number> & { total: number };
   expensesToday: { total: number; count: number };
   recentActivities: ActivityItem[];
 }
+
+type FocusTab =
+  | "arrivals"
+  | "departures"
+  | "overstays"
+  | "inHouse"
+  | "outstanding"
+  | "toIssue";
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -98,7 +127,12 @@ function StatCard({
   );
 }
 
-function GuestRow({ res, type }: { res: ReservationRow; type: "arrival" | "departure" | "overstay" }) {
+function GuestRow({
+  res, type,
+}: {
+  res: ReservationRow;
+  type: "arrival" | "departure" | "overstay" | "inHouse" | "outstanding";
+}) {
   const t = useTranslations("dashboard.today.guest");
   const omr = useFormatCurrency();
   const isOverdue = type === "arrival" && new Date(res.startDate) < new Date(new Date().setHours(0,0,0,0));
@@ -108,6 +142,8 @@ function GuestRow({ res, type }: { res: ReservationRow; type: "arrival" | "depar
   const daysPastEnd = type === "overstay"
     ? Math.floor((Date.now() - new Date(res.endDate).getTime()) / 86400000)
     : 0;
+  const showBalance = type === "departure" || type === "overstay" || type === "inHouse" || type === "outstanding";
+  const showCollect = showBalance && res.balance > 0.001;
 
   return (
     <li className={`px-4 py-3 transition-colors ${
@@ -150,13 +186,13 @@ function GuestRow({ res, type }: { res: ReservationRow; type: "arrival" | "depar
           </p>
         </div>
         <div className="flex-shrink-0 text-end space-y-1">
-          {(type === "departure" || type === "overstay") && (
+          {showBalance && (
             <div className={`text-sm font-semibold ${res.balance > 0.001 ? "text-red-600" : "text-green-600"}`}>
               {res.balance > 0.001 ? t("balanceWarn", { amount: omr(res.balance) }) : t("balancePaid")}
             </div>
           )}
           <div className="flex gap-1.5 justify-end">
-            {(type === "departure" || type === "overstay") && res.balance > 0.001 && (
+            {showCollect && (
               <Link href={`/dashboard/payments/new?reservationId=${res.id}`} className="inline-flex">
                 <Button variant="primary" size="sm" tabIndex={-1}>
                   {t("collect")}
@@ -175,43 +211,98 @@ function GuestRow({ res, type }: { res: ReservationRow; type: "arrival" | "depar
   );
 }
 
-function SectionCard({
-  title, count, color, children, emptyText,
+function DraftInvoiceRowItem({
+  inv, onIssued,
 }: {
-  title: string;
-  count: number;
-  color: string;
-  children: React.ReactNode;
-  emptyText: string;
+  inv: DraftInvoiceRow;
+  onIssued: (id: string) => void;
 }) {
+  const t = useTranslations("dashboard.today.guest");
+  const tIssue = useTranslations("dashboard.today.toIssue");
+  const omr = useFormatCurrency();
+  const [issuing, setIssuing] = useState(false);
+
+  async function handleIssue() {
+    setIssuing(true);
+    try {
+      const res = await fetch(`/api/invoices/${inv.id}/issue`, { method: "PATCH" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || tIssue("issueFailed"));
+      }
+      toast.success(tIssue("issueSuccess"));
+      onIssued(inv.id);
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : tIssue("issueFailed"));
+    } finally {
+      setIssuing(false);
+    }
+  }
+
   return (
-    <div className="overflow-hidden rounded-xl bg-surface border border-border-subtle">
-      <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-3">
-        <span className={`h-2.5 w-2.5 rounded-full ${color}`} />
-        <h3 className="text-sm font-semibold text-fg">{title}</h3>
-        <Badge tone="neutral" size="sm" className="ms-1">
-          {count}
-        </Badge>
+    <li className="px-4 py-3 transition-colors hover:bg-gray-50">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-gray-900 truncate">
+              {inv.tenant.name}
+            </span>
+            {inv.tenant.classification === "vip" && (
+              <Badge {...getTenantClassBadge("vip")} size="sm">
+                {t("vipBadge")}
+              </Badge>
+            )}
+          </div>
+          <p className="mt-0.5 text-xs text-gray-500">
+            {inv.tenant.phone && <span className="me-2 ltr-numbers">{inv.tenant.phone}</span>}
+            {inv.propertyName}
+          </p>
+          <p className="mt-0.5 text-xs text-gray-400">
+            {inv.invoiceNumber ?? "—"}
+            {inv.reservationNumber && (
+              <>
+                {" · "}
+                {inv.reservationNumber}
+              </>
+            )}
+          </p>
+        </div>
+        <div className="flex-shrink-0 text-end space-y-1">
+          <div className="text-sm font-semibold text-gray-900">{omr(inv.amount)}</div>
+          <div className="flex gap-1.5 justify-end">
+            <Button variant="primary" size="sm" onClick={handleIssue} disabled={issuing}>
+              {issuing ? tIssue("issuing") : tIssue("issue")}
+            </Button>
+            {inv.reservationId && (
+              <Link href={`/dashboard/reservations/${inv.reservationId}`} className="inline-flex">
+                <Button variant="secondary" size="sm" tabIndex={-1}>
+                  {t("view")}
+                </Button>
+              </Link>
+            )}
+          </div>
+        </div>
       </div>
-      {count === 0 ? (
-        <EmptyState
-          inline
-          variant="positive"
-          size="sm"
-          illustration={<CheckCircleIcon className="h-6 w-6" />}
-          title={emptyText}
-        />
-      ) : (
-        <ul className="divide-y divide-border-subtle">{children}</ul>
-      )}
-    </div>
+    </li>
+  );
+}
+
+function TabEmptyState({ text }: { text: string }) {
+  return (
+    <EmptyState
+      inline
+      variant="positive"
+      size="sm"
+      illustration={<CheckCircleIcon className="h-6 w-6" />}
+      title={text}
+    />
   );
 }
 
 /* ============================================================================
- *  Skeleton — mirrors the real grid (4 stat tiles, 2-col guest sections,
- *  2-col financial + activity). Announce as a single live region via the
- *  outer SkeletonCard so screen readers receive one update on first load.
+ *  Skeleton — mirrors the real grid (4 stat tiles, tabbed panel, 2-col
+ *  financial + activity). Announce as a single live region via the outer
+ *  SkeletonCard so screen readers receive one update on first load.
  * ========================================================================= */
 
 function TodayViewSkeleton({ ariaLabel }: { ariaLabel: string }) {
@@ -229,28 +320,25 @@ function TodayViewSkeleton({ ariaLabel }: { ariaLabel: string }) {
           ))}
         </div>
 
-        {/* Guest section columns */}
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <SkeletonCard key={i} padding={16} announce={false}>
-              <div className="flex items-center gap-2">
-                <SkeletonCircle size={10} />
-                <SkeletonLine width={140} size="sm" />
+        {/* Tabbed panel */}
+        <SkeletonCard padding={16} announce={false}>
+          <div className="flex gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <SkeletonLine key={i} width={90} size="sm" />
+            ))}
+          </div>
+          <div className="mt-4 space-y-3">
+            {Array.from({ length: 4 }).map((_, j) => (
+              <div key={j} className="flex items-center gap-3">
+                <SkeletonCircle size={32} />
+                <div className="flex-1">
+                  <SkeletonLine width="60%" size="sm" />
+                  <SkeletonLine width="40%" size="sm" className="mt-1.5" />
+                </div>
               </div>
-              <div className="mt-4 space-y-3">
-                {Array.from({ length: 3 }).map((_, j) => (
-                  <div key={j} className="flex items-center gap-3">
-                    <SkeletonCircle size={32} />
-                    <div className="flex-1">
-                      <SkeletonLine width="60%" size="sm" />
-                      <SkeletonLine width="40%" size="sm" className="mt-1.5" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </SkeletonCard>
-          ))}
-        </div>
+            ))}
+          </div>
+        </SkeletonCard>
 
         {/* Financial + activity columns */}
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
@@ -276,11 +364,13 @@ function TodayViewSkeleton({ ariaLabel }: { ariaLabel: string }) {
 export function TodayView({ propertyId }: { propertyId: string }) {
   const t       = useTranslations("dashboard.today");
   const tStats  = useTranslations("dashboard.today.stats");
+  const tTabs   = useTranslations("dashboard.today.tabs");
   const tSec    = useTranslations("dashboard.today.sections");
 
   const [data, setData]       = useState<TodayData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
+  const [focusTab, setFocusTab] = useTabParam("focus", "arrivals");
 
   const fetchData = useCallback(async () => {
     try {
@@ -302,6 +392,13 @@ export function TodayView({ propertyId }: { propertyId: string }) {
     return () => clearInterval(id);
   }, [fetchData]);
 
+  // Dismiss an issued invoice from the list immediately, no full refetch needed.
+  const handleInvoiceIssued = useCallback((id: string) => {
+    setData((prev) =>
+      prev ? { ...prev, invoicesToIssue: prev.invoicesToIssue.filter((i) => i.id !== id) } : prev,
+    );
+  }, []);
+
   if (loading) return <TodayViewSkeleton ariaLabel={t("loadingData")} />;
   if (error || !data)
     return (
@@ -317,6 +414,15 @@ export function TodayView({ propertyId }: { propertyId: string }) {
     );
 
   const allArrivals = [...data.overdueArrivals, ...data.arrivals];
+
+  const tabCounts: Record<FocusTab, number> = {
+    arrivals: allArrivals.length,
+    departures: data.departures.length,
+    overstays: data.overstays.length,
+    inHouse: data.inHouse.length,
+    outstanding: data.outstanding.length,
+    toIssue: data.invoicesToIssue.length,
+  };
 
   return (
     <div className="space-y-5">
@@ -348,59 +454,123 @@ export function TodayView({ propertyId }: { propertyId: string }) {
         />
         <StatCard
           label={tStats("inHouse")}
-          value={data.inHouseCount}
+          value={data.inHouse.length}
           sub={tStats("currentlyStaying")}
           color="bg-green-600"
           icon={HomeModernIcon}
         />
       </div>
 
-      {/* ── Arrivals & Departures columns ── */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {/* Arrivals */}
-        <SectionCard
-          title={tSec("arrivingToday")}
-          count={allArrivals.length}
-          color="bg-blue-500"
-          emptyText={tSec("noArrivals")}
-        >
-          {allArrivals.map((res) => (
-            <GuestRow
-              key={res.id}
-              res={res}
-              type={new Date(res.startDate) < new Date(new Date().setHours(0,0,0,0)) ? "arrival" : "arrival"}
-            />
-          ))}
-        </SectionCard>
-
-        {/* Departures + Overstays */}
-        <div className="space-y-4">
-          <SectionCard
-            title={tSec("checkingOutToday")}
-            count={data.departures.length}
-            color="bg-orange-500"
-            emptyText={tSec("noCheckouts")}
-          >
-            {data.departures.map((res) => (
-              <GuestRow key={res.id} res={res} type="departure" />
-            ))}
-          </SectionCard>
-
-          {data.overstays.length > 0 && (
-            <SectionCard
-              title={tSec("overstays")}
-              count={data.overstays.length}
-              color="bg-red-500"
-              emptyText=""
+      {/* ── Guest queues: one tabbed panel instead of a wide 2-col grid ── */}
+      <div className="rounded-xl bg-surface border border-border-subtle overflow-hidden">
+        <Tabs value={focusTab} onValueChange={(v) => setFocusTab(v as FocusTab)}>
+          <TabsList variant="underline" size="md" ariaLabel={tTabs("ariaLabel")} className="px-2">
+            <TabsTrigger value="arrivals" count={tabCounts.arrivals}>
+              {tSec("arrivingToday")}
+            </TabsTrigger>
+            <TabsTrigger value="departures" count={tabCounts.departures}>
+              {tSec("checkingOutToday")}
+            </TabsTrigger>
+            <TabsTrigger
+              value="overstays"
+              count={tabCounts.overstays}
+              countVariant={tabCounts.overstays > 0 ? "destructive" : "neutral"}
             >
-              {data.overstays.map((res) => (
-                <GuestRow key={res.id} res={res} type="overstay" />
-              ))}
-            </SectionCard>
-          )}
-        </div>
-      </div>
+              {tSec("overstays")}
+            </TabsTrigger>
+            <TabsTrigger value="inHouse" count={tabCounts.inHouse}>
+              {tTabs("inHouse")}
+            </TabsTrigger>
+            <TabsTrigger
+              value="outstanding"
+              count={tabCounts.outstanding}
+              countVariant={tabCounts.outstanding > 0 ? "warning" : "neutral"}
+            >
+              {tTabs("outstanding")}
+            </TabsTrigger>
+            <TabsTrigger
+              value="toIssue"
+              icon={<DocumentTextIcon />}
+              count={tabCounts.toIssue}
+              countVariant={tabCounts.toIssue > 0 ? "warning" : "neutral"}
+            >
+              {tTabs("toIssue")}
+            </TabsTrigger>
+          </TabsList>
 
+          <TabsContent value="arrivals">
+            {allArrivals.length === 0 ? (
+              <TabEmptyState text={tSec("noArrivals")} />
+            ) : (
+              <ul className="divide-y divide-border-subtle max-h-[28rem] overflow-y-auto">
+                {allArrivals.map((res) => (
+                  <GuestRow key={res.id} res={res} type="arrival" />
+                ))}
+              </ul>
+            )}
+          </TabsContent>
+
+          <TabsContent value="departures">
+            {data.departures.length === 0 ? (
+              <TabEmptyState text={tSec("noCheckouts")} />
+            ) : (
+              <ul className="divide-y divide-border-subtle max-h-[28rem] overflow-y-auto">
+                {data.departures.map((res) => (
+                  <GuestRow key={res.id} res={res} type="departure" />
+                ))}
+              </ul>
+            )}
+          </TabsContent>
+
+          <TabsContent value="overstays">
+            {data.overstays.length === 0 ? (
+              <TabEmptyState text={tTabs("noOverstays")} />
+            ) : (
+              <ul className="divide-y divide-border-subtle max-h-[28rem] overflow-y-auto">
+                {data.overstays.map((res) => (
+                  <GuestRow key={res.id} res={res} type="overstay" />
+                ))}
+              </ul>
+            )}
+          </TabsContent>
+
+          <TabsContent value="inHouse">
+            {data.inHouse.length === 0 ? (
+              <TabEmptyState text={tTabs("noInHouse")} />
+            ) : (
+              <ul className="divide-y divide-border-subtle max-h-[28rem] overflow-y-auto">
+                {data.inHouse.map((res) => (
+                  <GuestRow key={res.id} res={res} type="inHouse" />
+                ))}
+              </ul>
+            )}
+          </TabsContent>
+
+          <TabsContent value="outstanding">
+            {data.outstanding.length === 0 ? (
+              <TabEmptyState text={tTabs("noOutstanding")} />
+            ) : (
+              <ul className="divide-y divide-border-subtle max-h-[28rem] overflow-y-auto">
+                {data.outstanding.map((res) => (
+                  <GuestRow key={res.id} res={res} type="outstanding" />
+                ))}
+              </ul>
+            )}
+          </TabsContent>
+
+          <TabsContent value="toIssue">
+            {data.invoicesToIssue.length === 0 ? (
+              <TabEmptyState text={tTabs("noToIssue")} />
+            ) : (
+              <ul className="divide-y divide-border-subtle max-h-[28rem] overflow-y-auto">
+                {data.invoicesToIssue.map((inv) => (
+                  <DraftInvoiceRowItem key={inv.id} inv={inv} onIssued={handleInvoiceIssued} />
+                ))}
+              </ul>
+            )}
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

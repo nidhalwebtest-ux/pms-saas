@@ -131,6 +131,19 @@ const config: Config = {
         "border-subtle": "var(--border-subtle)",
         "border-default": "var(--border-default)",
         "border-strong": "var(--border-strong)",
+        // Navbar-only dark chrome (top utility row + main nav row).
+        navbar: {
+          bg: "var(--navbar-bg)",
+          fg: "var(--navbar-fg)",
+          "fg-muted": "var(--navbar-fg-muted)",
+          "fg-subtle": "var(--navbar-fg-subtle)",
+          active: "var(--navbar-active)",
+          "hover-bg": "var(--navbar-hover-bg)",
+          border: "var(--navbar-border)",
+          "input-bg": "var(--navbar-input-bg)",
+          "input-bg-focus": "var(--navbar-input-bg-focus)",
+          "avatar-bg": "var(--navbar-avatar-bg)",
+        },
       },
 
       fontFamily: {
@@ -202,6 +215,8 @@ const config: Config = {
         // Marketing — primary CTA elevation + hover lift
         brand: "var(--shadow-brand)",
         "brand-hover": "var(--shadow-brand-hover)",
+        // Soft separation below the dark navbar into the light content area.
+        navbar: "var(--shadow-navbar)",
       },
 
       transitionDuration: {

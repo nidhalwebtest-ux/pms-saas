@@ -137,6 +137,7 @@ const navigationConfig: NavItem[] = [
       { labelKey: "unitSettings", href: "/dashboard/settings/units" },
       { labelKey: "websiteSettings", href: "/dashboard/settings/website" },
       { labelKey: "salesTargets", href: "/dashboard/settings/sales-targets" },
+      { labelKey: "dataImport", href: "/dashboard/settings/data-import" },
     ],
   },
 ];
@@ -175,6 +176,7 @@ const CHILD_REQUIRES: Record<string, { entity: string; level: PermissionLevel }>
   "/dashboard/settings/sales-targets":     { entity: "salesTargets",         level: "VIEW" },
   "/dashboard/settings/banks":             { entity: "banks",                level: "VIEW" },
   "/dashboard/settings/expense-categories":{ entity: "expenseCategories",    level: "VIEW" },
+  "/dashboard/settings/data-import":       { entity: "dataImport",           level: "VIEW" },
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -298,7 +300,7 @@ export default function Navigation({ role, navAccess, websiteRequestCount = 0 }:
   return (
     <nav
       ref={navRef}
-      className="relative border-b border-gray-200 bg-gray-50"
+      className="relative bg-navbar-bg"
       onMouseLeave={handleClose}
     >
       {/* ── Scrollable tab row ───────────────────────────────────────────────
@@ -315,10 +317,10 @@ export default function Navigation({ role, navAccess, websiteRequestCount = 0 }:
               );
 
             const baseTabCls = cn(
-              "inline-flex items-center gap-1 border-b-2 px-3 py-4 text-sm font-medium whitespace-nowrap transition-colors",
+              "inline-flex items-center gap-1 border-b-2 px-3 py-4 text-sm whitespace-nowrap transition-colors rounded-t-md",
               isActive
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700",
+                ? "border-navbar-active text-navbar-fg font-semibold"
+                : "border-transparent text-navbar-fg-muted font-medium hover:text-navbar-fg hover:bg-navbar-hover-bg",
             );
 
             if (!item.children) {
@@ -332,7 +334,7 @@ export default function Navigation({ role, navAccess, websiteRequestCount = 0 }:
                 >
                   {t(item.labelKey)}
                   {badge !== null && (
-                    <span className="ms-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-blue-600 px-1.5 text-xs font-semibold text-white">
+                    <span className="ms-1 inline-flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-navbar-active px-1.5 text-xs font-semibold text-navbar-bg">
                       {badge > 99 ? "99+" : badge}
                     </span>
                   )}

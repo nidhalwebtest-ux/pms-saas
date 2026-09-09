@@ -27,14 +27,12 @@ export default function PropertySelector({ properties, currentPropertyId }: Prop
 
   return (
     <div
-      className={`flex items-center gap-1.5 rounded-lg border px-2 sm:px-2.5 py-1.5 text-sm transition-all min-w-0 ${
-        isFiltered
-          ? "border-blue-300 bg-blue-50 text-blue-700"
-          : "border-gray-200 bg-gray-50 text-gray-600 hover:border-gray-300"
+      className={`flex items-center gap-1.5 rounded-lg border border-navbar-border bg-navbar-input-bg px-2 sm:px-2.5 py-1.5 text-sm transition-all min-w-0 hover:bg-navbar-input-bg-focus ${
+        isFiltered ? "text-navbar-fg" : "text-navbar-fg-muted"
       } ${isPending ? "opacity-60 pointer-events-none" : ""}`}
     >
       <BuildingOffice2Icon
-        className={`h-4 w-4 flex-shrink-0 ${isFiltered ? "text-blue-500" : "text-gray-400"}`}
+        className={`h-4 w-4 flex-shrink-0 ${isFiltered ? "text-navbar-active" : "text-navbar-fg-subtle"}`}
       />
       <select
         value={currentPropertyId}
@@ -49,7 +47,7 @@ export default function PropertySelector({ properties, currentPropertyId }: Prop
           </option>
         ))}
       </select>
-      <ChevronDownIcon className="h-3 w-3 flex-shrink-0 text-gray-400 pointer-events-none" />
+      <ChevronDownIcon className="h-3 w-3 flex-shrink-0 text-navbar-fg-subtle pointer-events-none" />
     </div>
   );
 }

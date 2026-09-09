@@ -7,7 +7,7 @@ import { LanguageIcon } from "@heroicons/react/24/outline";
 import { ChevronDownIcon } from "@heroicons/react/20/solid";
 import { locales, type Locale } from "@/i18n/config";
 
-type Variant = "toggle" | "dropdown";
+type Variant = "toggle" | "dropdown" | "navbar";
 
 interface Props {
   variant?: Variant;
@@ -64,6 +64,33 @@ export default function LanguageSwitcher({ variant = "dropdown", className = "" 
             </button>
           );
         })}
+      </div>
+    );
+  }
+
+  // navbar variant — same interaction as dropdown, but tuned for the dark
+  // navy bar: muted-white icon/text, full white on hover. The native <select>
+  // popup itself is OS-rendered (light), same as the dropdown variant.
+  if (variant === "navbar") {
+    return (
+      <div className={`group relative inline-flex items-center gap-1 flex-shrink-0 ${className}`}>
+        <LanguageIcon className="h-4 w-4 text-navbar-fg-muted group-hover:text-navbar-fg transition-colors hidden sm:block" aria-hidden="true" />
+        <span className="text-xs font-medium text-navbar-fg-muted group-hover:text-navbar-fg transition-colors pointer-events-none">
+          <span className="sm:hidden">{LABELS[locale].short}</span>
+          <span className="hidden sm:inline">{LABELS[locale].long}</span>
+        </span>
+        <ChevronDownIcon className="h-3.5 w-3.5 text-navbar-fg-muted group-hover:text-navbar-fg transition-colors pointer-events-none" aria-hidden="true" />
+        <select
+          value={locale}
+          disabled={pending}
+          onChange={(e) => setLocale(e.target.value as Locale)}
+          className="absolute inset-0 w-full cursor-pointer opacity-0"
+          aria-label="Language"
+        >
+          {locales.map((l) => (
+            <option key={l} value={l}>{LABELS[l].long}</option>
+          ))}
+        </select>
       </div>
     );
   }

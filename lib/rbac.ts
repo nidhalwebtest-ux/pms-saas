@@ -87,7 +87,7 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
       { key: "settingsReservations" }, { key: "settingsPayments" },
       { key: "settingsReturns" }, { key: "settingsUnits" },
       { key: "settingsWebsite" },
-      { key: "banks" }, { key: "expenseCategories" },
+      { key: "banks" }, { key: "expenseCategories" }, { key: "dataImport" },
     ],
   },
 ];
@@ -155,7 +155,7 @@ export const DEFAULT_MATRICES: Record<SystemRoleKey, PermissionMap> = {
     organization: "NONE", team: "NONE", roles: "NONE",
     settingsReservations: "NONE", settingsPayments: "NONE",
     settingsReturns: "NONE", settingsUnits: "NONE", settingsWebsite: "NONE",
-    banks: "NONE", expenseCategories: "NONE",
+    banks: "NONE", expenseCategories: "NONE", dataImport: "NONE",
   }),
 
   // Accountant — finance: invoices/payments/returns + process expenses; no
@@ -168,7 +168,7 @@ export const DEFAULT_MATRICES: Record<SystemRoleKey, PermissionMap> = {
     organization: "NONE", team: "NONE", roles: "NONE",
     settingsReservations: "NONE", settingsPayments: "NONE",
     settingsReturns: "NONE", settingsUnits: "NONE", settingsWebsite: "NONE",
-    banks: "NONE", expenseCategories: "NONE",
+    banks: "NONE", expenseCategories: "NONE", dataImport: "NONE",
   }),
 };
 

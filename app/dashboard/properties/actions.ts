@@ -41,6 +41,44 @@ function parsePhotos(formData: FormData): string[] {
 
 // ─── CREATE ───────────────────────────────────────────────────────────────────
 
+export interface CreatePropertyInput {
+  name: string;
+  type: string;
+  address?: string;
+  city?: string;
+  governorate?: string;
+  totalFloors?: number;
+  description?: string;
+  isActive?: boolean;
+  photos?: string[];
+}
+
+/**
+ * Typed core shared by the form action (below) and the CSV/Excel import
+ * adapter (lib/import/adapters/buildings.ts) — same validation, same write
+ * path, so imported buildings behave identically to ones created via the UI.
+ */
+export async function createPropertyCore(
+  input: CreatePropertyInput,
+  organizationId: string,
+): Promise<{ id: string }> {
+  const property = await prisma.property.create({
+    data: {
+      name:          input.name,
+      type:          input.type as any,
+      address:       input.address,
+      city:          input.city ?? "Salalah",
+      governorate:   input.governorate ?? "Dhofar",
+      totalFloors:   input.totalFloors,
+      description:   input.description,
+      isActive:      input.isActive ?? true,
+      photos:        input.photos ?? [],
+      organizationId,
+    },
+  });
+  return { id: property.id };
+}
+
 export async function createProperty(formData: FormData): Promise<ActionResponse> {
   const tErr = await getTranslations("buildings.errors");
   const organizationId = await getOrgId();
@@ -63,9 +101,10 @@ export async function createProperty(formData: FormData): Promise<ActionResponse
   if (!name || !type) return { error: tErr("nameTypeRequired") };
 
   try {
-    const property = await prisma.property.create({
-      data: { name, type: type as any, address, city, governorate, totalFloors, description, isActive, photos, organizationId },
-    });
+    const property = await createPropertyCore(
+      { name, type, address, city, governorate, totalFloors, description, isActive, photos },
+      organizationId,
+    );
 
     revalidatePath("/dashboard/properties");
     return { success: true, id: property.id };

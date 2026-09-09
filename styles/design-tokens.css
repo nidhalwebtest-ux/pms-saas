@@ -204,6 +204,24 @@
   --skeleton-radius-lg:   8px;
   --skeleton-radius-pill: 999px;
   --skeleton-duration:    1.4s;
+
+  /* ── Navbar · dark navy chrome (top utility row + main nav row) ──
+     Deep navy anchor to match the logo/marketing brand. Contrast-checked
+     against WCAG AA (4.5:1) at every opacity used below — all pass with
+     margin (white @ 60% on navy = 6.58:1, well above 4.5:1). Dropdown
+     PANELS opened from the nav stay on the light surface tokens above —
+     these tokens are for the bar itself only. */
+  --navbar-bg:             #0C2238;
+  --navbar-fg:             #ffffff;                 /* full white — active items, avatar initial, name */
+  --navbar-fg-muted:       oklch(1 0 0 / 0.85);      /* default nav item / icon text */
+  --navbar-fg-subtle:      oklch(1 0 0 / 0.65);      /* placeholders, secondary icons */
+  --navbar-active:         var(--brand-accent);      /* #85B7EB — active underline + accents */
+  --navbar-hover-bg:       oklch(1 0 0 / 0.08);
+  --navbar-border:         oklch(1 0 0 / 0.20);
+  --navbar-input-bg:       oklch(1 0 0 / 0.12);
+  --navbar-input-bg-focus: oklch(1 0 0 / 0.18);
+  --navbar-avatar-bg:      var(--brand-accent);      /* #85B7EB fill, dark text for contrast */
+  --shadow-navbar:         0 4px 12px oklch(0.155 0.009 258 / 0.10);
 }
 
 /* ── Reduced-motion override ──────────────────────────────── */

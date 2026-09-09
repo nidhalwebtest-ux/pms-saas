@@ -65,6 +65,57 @@ const resSelect = {
   },
 } satisfies Prisma.ReservationSelect;
 
+const draftInvoiceSelect = {
+  id: true,
+  invoiceNumber: true,
+  totalAmount: true,
+  periodStart: true,
+  periodEnd: true,
+  property: { select: { id: true, name: true } },
+  tenant: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      classification: true,
+      tenantType: true,
+      corporateName: true,
+    },
+  },
+  reservation: {
+    select: { id: true, reservationNumber: true },
+  },
+} satisfies Prisma.InvoiceSelect;
+
+function serializeDraftInvoice(inv: {
+  id: string;
+  invoiceNumber: string | null;
+  totalAmount: unknown;
+  periodStart: Date | null;
+  periodEnd: Date | null;
+  property: { id: string; name: string } | null;
+  tenant: { id: string; firstName: string; lastName: string; phone: string | null; classification: string; tenantType: string | null; corporateName: string | null };
+  reservation: { id: string; reservationNumber: string | null } | null;
+}) {
+  return {
+    id: inv.id,
+    invoiceNumber: inv.invoiceNumber,
+    amount: Number(inv.totalAmount),
+    periodStart: inv.periodStart ? inv.periodStart.toISOString() : null,
+    periodEnd: inv.periodEnd ? inv.periodEnd.toISOString() : null,
+    propertyName: inv.property?.name ?? "—",
+    tenant: {
+      id: inv.tenant.id,
+      name: tenantDisplayName(inv.tenant),
+      phone: inv.tenant.phone ?? null,
+      classification: inv.tenant.classification,
+    },
+    reservationId: inv.reservation?.id ?? null,
+    reservationNumber: inv.reservation?.reservationNumber ?? null,
+  };
+}
+
 function serializeRes(r: {
   id: string;
   reservationNumber: string | null;
@@ -130,7 +181,9 @@ export async function GET(req: NextRequest) {
     overdueArrivals,
     departures,
     overstays,
-    inHouseCount,
+    inHouse,
+    outstanding,
+    invoicesToIssue,
     paymentsRaw,
     expensesTodayAgg,
     recentActivities,
@@ -179,9 +232,38 @@ export async function GET(req: NextRequest) {
       orderBy: { endDate: "asc" },
     }),
 
-    // Total in house
-    prisma.reservation.count({
+    // In house: currently checked in
+    prisma.reservation.findMany({
       where: { ...baseFilter, status: "CHECKED_IN" },
+      select: resSelect,
+      orderBy: { endDate: "asc" },
+    }),
+
+    // Outstanding: has a non-cancelled, non-draft, non-fully-paid invoice balance
+    prisma.reservation.findMany({
+      where: {
+        ...baseFilter,
+        status: { in: ["CONFIRMED", "CHECKED_IN", "COMPLETED"] },
+        invoices: {
+          some: {
+            status: { notIn: ["CANCELLED", "VOID", "DRAFT"] },
+            balanceDue: { gt: 0 },
+          },
+        },
+      },
+      select: resSelect,
+      orderBy: { endDate: "asc" },
+    }),
+
+    // Invoices to issue: DRAFT invoices waiting on a receptionist to issue them
+    prisma.invoice.findMany({
+      where: {
+        organizationId: orgId,
+        status: "DRAFT",
+        ...(propertyId ? { propertyId } : {}),
+      },
+      select: draftInvoiceSelect,
+      orderBy: { periodStart: "asc" },
     }),
 
     // Today's payments
@@ -238,7 +320,9 @@ export async function GET(req: NextRequest) {
     overdueArrivals: overdueArrivals.map(serializeRes),
     departures: departures.map(serializeRes),
     overstays: overstays.map(serializeRes),
-    inHouseCount,
+    inHouse: inHouse.map(serializeRes),
+    outstanding: outstanding.map(serializeRes),
+    invoicesToIssue: invoicesToIssue.map(serializeDraftInvoice),
     paymentsToday: { ...paymentsByMethod, total: totalPayments },
     expensesToday: {
       total: Number(expensesTodayAgg._sum?.amount ?? 0),

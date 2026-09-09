@@ -208,13 +208,13 @@ export default function GlobalSearch() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label={t("open")}
-        className="group flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-gray-500 transition-colors hover:border-gray-300 hover:bg-white sm:min-w-[220px] lg:min-w-[280px]"
+        className="group flex items-center gap-2 rounded-lg border border-navbar-border bg-navbar-input-bg px-2.5 py-1.5 text-navbar-fg-subtle transition-colors hover:bg-navbar-input-bg-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navbar-active sm:min-w-[220px] lg:min-w-[280px]"
       >
         <Search className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
-        <span className="hidden flex-1 text-start text-sm text-gray-400 sm:inline">
+        <span className="hidden flex-1 text-start text-sm text-navbar-fg-subtle sm:inline">
           {t("placeholder")}
         </span>
-        <kbd className="ms-auto hidden items-center rounded border border-gray-200 bg-white px-1.5 py-0.5 font-mono text-[11px] font-medium text-gray-400 sm:inline-flex">
+        <kbd className="ms-auto hidden items-center rounded border border-navbar-border bg-navbar-hover-bg px-1.5 py-0.5 font-mono text-[11px] font-medium text-navbar-fg-muted sm:inline-flex">
           {kbd}
         </kbd>
       </button>

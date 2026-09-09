@@ -252,6 +252,8 @@ model Organization {
 
   website                OrgWebsite?
   websiteBookingRequests WebsiteBookingRequest[]
+
+  importJobs             ImportJob[]
 }
 
 // 4. Users
@@ -306,6 +308,7 @@ model User {
   reviewedExpenses              Expense[]       @relation("ExpenseReviewedBy")
   processedExpenses             Expense[]       @relation("ExpenseProcessedBy")
   cashierSessions               CashierSession[] @relation("CashierSessions")
+  importJobs                    ImportJob[]      @relation("ImportJobCreatedBy")
 
   createdAt      DateTime     @default(now())
 }
@@ -1223,6 +1226,102 @@ model Role {
 
   @@unique([organizationId, name])
   @@index([organizationId])
+}
+
+// ── Data Import (CSV/Excel onboarding import) ─────────────────────────────────
+//
+// One ImportJob = one file, one record type, one run. ImportJobRow keeps a row
+// per line of the source file (raw_data preserved so the error CSV can be
+// regenerated exactly, and so a job can be inspected/audited after the fact).
+// A re-import of a job's failed rows creates a NEW ImportJob with
+// parentJobId set — jobs are never mutated/rerun in place.
+
+enum ImportRecordType {
+  BUILDINGS
+  UNITS
+  TENANTS
+  RESERVATIONS
+  EXPENSES
+}
+
+enum ImportJobStatus {
+  PENDING              // created, file not yet parsed
+  VALIDATING           // dry-run validation in progress
+  READY                // validated, waiting for the user to press Run
+  RUNNING               // batches actively processing
+  COMPLETED            // finished, zero error rows
+  COMPLETED_WITH_ERRORS // finished, some rows failed
+  FAILED               // aborted before completion (e.g. parse error)
+  CANCELLED            // user-cancelled mid-run; already-imported rows stand
+}
+
+enum ImportRowStatus {
+  PENDING
+  SUCCESS
+  ERROR
+  SKIPPED
+}
+
+model ImportJob {
+  id             String           @id @default(uuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdById    String?
+  createdBy      User?            @relation("ImportJobCreatedBy", fields: [createdById], references: [id])
+
+  recordType     ImportRecordType
+  status         ImportJobStatus  @default(PENDING)
+
+  originalFilename String
+  storagePath      String         // source file, org-scoped path in pms-media
+  errorFilePath    String?        // generated error CSV, set once available
+
+  totalRows      Int              @default(0)
+  processedRows  Int              @default(0)
+  successRows    Int              @default(0)
+  errorRows      Int              @default(0)
+
+  /// { systemField: csvColumnHeader | null } — the confirmed Step 3 mapping.
+  fieldMapping   Json             @default("{}")
+  /// { duplicateHandling: "skip"|"update"|"create", dateFormat: "auto"|"DMY"|"MDY", encoding: string }
+  options        Json             @default("{}")
+
+  /// Set when this job re-imports a previous job's failed rows.
+  parentJobId    String?
+  parentJob      ImportJob?       @relation("ImportJobReimport", fields: [parentJobId], references: [id])
+  reimportedBy   ImportJob[]      @relation("ImportJobReimport")
+
+  rows           ImportJobRow[]
+
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, recordType])
+}
+
+model ImportJobRow {
+  id        String          @id @default(uuid())
+  jobId     String
+  job       ImportJob       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  rowNumber Int             // 1-based, matches the source file's data rows (header excluded)
+  rawData   Json            // original CSV cell values for this row, keyed by header
+
+  status    ImportRowStatus @default(PENDING)
+  errorMessage String?      // human-readable, already localized at write time
+
+  /// The entity created by this row, if successful — enables undo.
+  createdEntityId String?
+
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([jobId, status])
+  @@index([jobId, rowNumber])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

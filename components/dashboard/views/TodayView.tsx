@@ -27,6 +27,7 @@ import {
   TabsList,
   TabsTrigger,
   TabsContent,
+  FilterBarSearch,
   getTenantClassBadge,
 } from "@/components/ui";
 import { toast } from "sonner";
@@ -287,6 +288,26 @@ function DraftInvoiceRowItem({
   );
 }
 
+function matchesReservation(res: ReservationRow, q: string): boolean {
+  return (
+    res.tenant.name.toLowerCase().includes(q) ||
+    (res.tenant.phone ?? "").toLowerCase().includes(q) ||
+    (res.reservationNumber ?? "").toLowerCase().includes(q) ||
+    res.unitNames.some((u) => u.toLowerCase().includes(q)) ||
+    res.propertyName.toLowerCase().includes(q)
+  );
+}
+
+function matchesDraftInvoice(inv: DraftInvoiceRow, q: string): boolean {
+  return (
+    inv.tenant.name.toLowerCase().includes(q) ||
+    (inv.tenant.phone ?? "").toLowerCase().includes(q) ||
+    (inv.invoiceNumber ?? "").toLowerCase().includes(q) ||
+    (inv.reservationNumber ?? "").toLowerCase().includes(q) ||
+    inv.propertyName.toLowerCase().includes(q)
+  );
+}
+
 function TabEmptyState({ text }: { text: string }) {
   return (
     <EmptyState
@@ -371,6 +392,7 @@ export function TodayView({ propertyId }: { propertyId: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
   const [focusTab, setFocusTab] = useTabParam("focus", "arrivals");
+  const [search, setSearch]   = useState("");
 
   const fetchData = useCallback(async () => {
     try {
@@ -424,6 +446,25 @@ export function TodayView({ propertyId }: { propertyId: string }) {
     toIssue: data.invoicesToIssue.length,
   };
 
+  // Instant client-side filtering — all tabs' data is already loaded, so
+  // searching never triggers a network call.
+  const q = search.trim().toLowerCase();
+  const filteredArrivals    = q ? allArrivals.filter((r) => matchesReservation(r, q)) : allArrivals;
+  const filteredDepartures  = q ? data.departures.filter((r) => matchesReservation(r, q)) : data.departures;
+  const filteredOverstays   = q ? data.overstays.filter((r) => matchesReservation(r, q)) : data.overstays;
+  const filteredInHouse     = q ? data.inHouse.filter((r) => matchesReservation(r, q)) : data.inHouse;
+  const filteredOutstanding = q ? data.outstanding.filter((r) => matchesReservation(r, q)) : data.outstanding;
+  const filteredToIssue     = q ? data.invoicesToIssue.filter((i) => matchesDraftInvoice(i, q)) : data.invoicesToIssue;
+
+  const tabMatchCounts: Record<FocusTab, number> = {
+    arrivals: filteredArrivals.length,
+    departures: filteredDepartures.length,
+    overstays: filteredOverstays.length,
+    inHouse: filteredInHouse.length,
+    outstanding: filteredOutstanding.length,
+    toIssue: filteredToIssue.length,
+  };
+
   return (
     <div className="space-y-5">
       {/* ── Stat cards ── */}
@@ -464,46 +505,57 @@ export function TodayView({ propertyId }: { propertyId: string }) {
       {/* ── Guest queues: one tabbed panel instead of a wide 2-col grid ── */}
       <div className="rounded-xl bg-surface border border-border-subtle overflow-hidden">
         <Tabs value={focusTab} onValueChange={(v) => setFocusTab(v as FocusTab)}>
-          <TabsList variant="underline" size="md" ariaLabel={tTabs("ariaLabel")} className="px-2">
-            <TabsTrigger value="arrivals" count={tabCounts.arrivals}>
-              {tSec("arrivingToday")}
-            </TabsTrigger>
-            <TabsTrigger value="departures" count={tabCounts.departures}>
-              {tSec("checkingOutToday")}
-            </TabsTrigger>
-            <TabsTrigger
-              value="overstays"
-              count={tabCounts.overstays}
-              countVariant={tabCounts.overstays > 0 ? "destructive" : "neutral"}
-            >
-              {tSec("overstays")}
-            </TabsTrigger>
-            <TabsTrigger value="inHouse" count={tabCounts.inHouse}>
-              {tTabs("inHouse")}
-            </TabsTrigger>
-            <TabsTrigger
-              value="outstanding"
-              count={tabCounts.outstanding}
-              countVariant={tabCounts.outstanding > 0 ? "warning" : "neutral"}
-            >
-              {tTabs("outstanding")}
-            </TabsTrigger>
-            <TabsTrigger
-              value="toIssue"
-              icon={<DocumentTextIcon />}
-              count={tabCounts.toIssue}
-              countVariant={tabCounts.toIssue > 0 ? "warning" : "neutral"}
-            >
-              {tTabs("toIssue")}
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center gap-3 px-2 pt-2">
+            <TabsList variant="underline" size="md" ariaLabel={tTabs("ariaLabel")} className="flex-1 min-w-0">
+              <TabsTrigger value="arrivals" count={q ? tabMatchCounts.arrivals : tabCounts.arrivals}>
+                {tSec("arrivingToday")}
+              </TabsTrigger>
+              <TabsTrigger value="departures" count={q ? tabMatchCounts.departures : tabCounts.departures}>
+                {tSec("checkingOutToday")}
+              </TabsTrigger>
+              <TabsTrigger
+                value="overstays"
+                count={q ? tabMatchCounts.overstays : tabCounts.overstays}
+                countVariant={tabCounts.overstays > 0 ? "destructive" : "neutral"}
+              >
+                {tSec("overstays")}
+              </TabsTrigger>
+              <TabsTrigger value="inHouse" count={q ? tabMatchCounts.inHouse : tabCounts.inHouse}>
+                {tTabs("inHouse")}
+              </TabsTrigger>
+              <TabsTrigger
+                value="outstanding"
+                count={q ? tabMatchCounts.outstanding : tabCounts.outstanding}
+                countVariant={tabCounts.outstanding > 0 ? "warning" : "neutral"}
+              >
+                {tTabs("outstanding")}
+              </TabsTrigger>
+              <TabsTrigger
+                value="toIssue"
+                icon={<DocumentTextIcon />}
+                count={q ? tabMatchCounts.toIssue : tabCounts.toIssue}
+                countVariant={tabCounts.toIssue > 0 ? "warning" : "neutral"}
+              >
+                {tTabs("toIssue")}
+              </TabsTrigger>
+            </TabsList>
+            <FilterBarSearch
+              search={{
+                value: search,
+                onChange: setSearch,
+                placeholder: tTabs("searchPlaceholder"),
+                debounceMs: 0,
+              }}
+              className="max-w-[260px]"
+            />
+          </div>
 
           <TabsContent value="arrivals">
-            {allArrivals.length === 0 ? (
-              <TabEmptyState text={tSec("noArrivals")} />
+            {filteredArrivals.length === 0 ? (
+              <TabEmptyState text={q ? tTabs("noSearchResults") : tSec("noArrivals")} />
             ) : (
               <ul className="divide-y divide-border-subtle max-h-[28rem] overflow-y-auto">
-                {allArrivals.map((res) => (
+                {filteredArrivals.map((res) => (
                   <GuestRow key={res.id} res={res} type="arrival" />
                 ))}
               </ul>
@@ -511,11 +563,11 @@ export function TodayView({ propertyId }: { propertyId: string }) {
           </TabsContent>
 
           <TabsContent value="departures">
-            {data.departures.length === 0 ? (
-              <TabEmptyState text={tSec("noCheckouts")} />
+            {filteredDepartures.length === 0 ? (
+              <TabEmptyState text={q ? tTabs("noSearchResults") : tSec("noCheckouts")} />
             ) : (
               <ul className="divide-y divide-border-subtle max-h-[28rem] overflow-y-auto">
-                {data.departures.map((res) => (
+                {filteredDepartures.map((res) => (
                   <GuestRow key={res.id} res={res} type="departure" />
                 ))}
               </ul>
@@ -523,11 +575,11 @@ export function TodayView({ propertyId }: { propertyId: string }) {
           </TabsContent>
 
           <TabsContent value="overstays">
-            {data.overstays.length === 0 ? (
-              <TabEmptyState text={tTabs("noOverstays")} />
+            {filteredOverstays.length === 0 ? (
+              <TabEmptyState text={q ? tTabs("noSearchResults") : tTabs("noOverstays")} />
             ) : (
               <ul className="divide-y divide-border-subtle max-h-[28rem] overflow-y-auto">
-                {data.overstays.map((res) => (
+                {filteredOverstays.map((res) => (
                   <GuestRow key={res.id} res={res} type="overstay" />
                 ))}
               </ul>
@@ -535,11 +587,11 @@ export function TodayView({ propertyId }: { propertyId: string }) {
           </TabsContent>
 
           <TabsContent value="inHouse">
-            {data.inHouse.length === 0 ? (
-              <TabEmptyState text={tTabs("noInHouse")} />
+            {filteredInHouse.length === 0 ? (
+              <TabEmptyState text={q ? tTabs("noSearchResults") : tTabs("noInHouse")} />
             ) : (
               <ul className="divide-y divide-border-subtle max-h-[28rem] overflow-y-auto">
-                {data.inHouse.map((res) => (
+                {filteredInHouse.map((res) => (
                   <GuestRow key={res.id} res={res} type="inHouse" />
                 ))}
               </ul>
@@ -547,11 +599,11 @@ export function TodayView({ propertyId }: { propertyId: string }) {
           </TabsContent>
 
           <TabsContent value="outstanding">
-            {data.outstanding.length === 0 ? (
-              <TabEmptyState text={tTabs("noOutstanding")} />
+            {filteredOutstanding.length === 0 ? (
+              <TabEmptyState text={q ? tTabs("noSearchResults") : tTabs("noOutstanding")} />
             ) : (
               <ul className="divide-y divide-border-subtle max-h-[28rem] overflow-y-auto">
-                {data.outstanding.map((res) => (
+                {filteredOutstanding.map((res) => (
                   <GuestRow key={res.id} res={res} type="outstanding" />
                 ))}
               </ul>
@@ -559,11 +611,11 @@ export function TodayView({ propertyId }: { propertyId: string }) {
           </TabsContent>
 
           <TabsContent value="toIssue">
-            {data.invoicesToIssue.length === 0 ? (
-              <TabEmptyState text={tTabs("noToIssue")} />
+            {filteredToIssue.length === 0 ? (
+              <TabEmptyState text={q ? tTabs("noSearchResults") : tTabs("noToIssue")} />
             ) : (
               <ul className="divide-y divide-border-subtle max-h-[28rem] overflow-y-auto">
-                {data.invoicesToIssue.map((inv) => (
+                {filteredToIssue.map((inv) => (
                   <DraftInvoiceRowItem key={inv.id} inv={inv} onIssued={handleInvoiceIssued} />
                 ))}
               </ul>

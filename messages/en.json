@@ -524,6 +524,7 @@
       },
       "tabs": {
         "ariaLabel": "Guest queues",
+        "searchPlaceholder": "Search guests, units, reservation #…",
         "inHouse": "In House",
         "outstanding": "Outstanding",
         "toIssue": "Invoices to Issue",
@@ -531,6 +532,7 @@
         "noInHouse": "No guests currently in house",
         "noOutstanding": "No outstanding balances",
         "noToIssue": "No invoices waiting to be issued",
+        "noSearchResults": "No results found for your search",
         "issue": "Issue",
         "issuing": "Issuing…",
         "issueSuccess": "Invoice issued",

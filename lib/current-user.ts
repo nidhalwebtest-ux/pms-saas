@@ -35,7 +35,16 @@ export const getSessionUser = cache(async () => {
       role: true,
       firstName: true,
       assignedRole: { select: { key: true, name: true, permissions: true } },
-      organization: { select: { id: true, name: true, currency: true, logo: true } },
+      organization: {
+        select: {
+          id: true,
+          name: true,
+          currency: true,
+          logo: true,
+          isDemo: true,
+          demoContactWhatsapp: true,
+        },
+      },
     },
   });
   if (!dbUser) return null;

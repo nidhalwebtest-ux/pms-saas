@@ -3,9 +3,17 @@
 import { createContext, useContext } from "react";
 import { formatCurrency as fmt, formatAmount as amt } from "@/lib/format-currency";
 
-type OrgContextValue = { currency: string };
+type OrgContextValue = {
+  currency: string;
+  isDemo: boolean;
+  demoContactWhatsapp: string | null;
+};
 
-const OrgContext = createContext<OrgContextValue>({ currency: "OMR" });
+const OrgContext = createContext<OrgContextValue>({
+  currency: "OMR",
+  isDemo: false,
+  demoContactWhatsapp: null,
+});
 
 export function OrgProvider({
   value,
@@ -19,6 +27,16 @@ export function OrgProvider({
 
 export function useOrgCurrency(): string {
   return useContext(OrgContext).currency;
+}
+
+/** Whether the current organization is a Demo Tour sandbox (never real customer data). */
+export function useIsDemo(): boolean {
+  return useContext(OrgContext).isDemo;
+}
+
+/** The WhatsApp number the visitor gave when starting this demo, if any. */
+export function useDemoContactWhatsapp(): string | null {
+  return useContext(OrgContext).demoContactWhatsapp;
 }
 
 /**

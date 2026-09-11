@@ -31,7 +31,7 @@ import {
   toDateString,
   type PriceSegment,
 } from "@/lib/reservation-engine";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { InvoiceStatus, InvoiceType, LineItemCategory, RateType, RateSource } from "@prisma/client";
 
 // ── Re-export so callers can import everything from one place ─────────────────
@@ -192,11 +192,22 @@ function daysBetween(a: Date, b: Date): number {
  * current calendar year.  Format: "INV-YYYY-NNNNN" (zero-padded to 5 digits).
  *
  * MUST be called inside a Prisma $transaction to avoid race conditions.
+ *
+ * Concurrency: takes a pessimistic row lock on the Organization row itself
+ * (`SELECT ... FOR UPDATE`) before reading the current max invoice number.
+ * The Organization row is a stable, always-present parent with no contention
+ * of its own, so it doubles safely as a per-org mutex — this serializes
+ * concurrent callers instead of racing two "read max, then +1" reads onto
+ * the same number (which previously surfaced as a unique-constraint error
+ * under concurrent invoice generation, e.g. two receptionists at once, or
+ * the demo-tour seeder generating several invoices in parallel).
  */
 export async function nextInvoiceNumber(
   orgId: string,
   tx: Prisma.TransactionClient,
 ): Promise<string> {
+  await tx.$queryRaw`SELECT id FROM "Organization" WHERE id = ${orgId} FOR UPDATE`;
+
   const year = new Date().getFullYear().toString();
   const prefix = `INV-${year}-`;
 

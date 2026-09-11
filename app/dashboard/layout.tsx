@@ -6,6 +6,8 @@ import InactivityGuard from "@/components/dashboard/InactivityGuard";
 import NavigationProgress from "@/components/ui/NavigationProgress";
 import AvailabilityCalendarButton from "@/components/dashboard/AvailabilityCalendarButton";
 import AdminPanelButton from "@/components/dashboard/AdminPanelButton";
+import { DemoBanner } from "@/components/dashboard/DemoBanner";
+import { DemoWhatsAppButton } from "@/components/dashboard/DemoWhatsAppButton";
 import { getSuperAdmin } from "@/lib/super-admin";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPropertyId } from "@/lib/selected-property";
@@ -30,6 +32,8 @@ export default async function DashboardLayout({
 
   const role = (dbUser.role ?? "STAFF") as Role;
   const currency = dbUser.organization?.currency ?? "OMR";
+  const isDemo = dbUser.organization?.isDemo ?? false;
+  const demoContactWhatsapp = dbUser.organization?.demoContactWhatsapp ?? null;
 
   // Effective nav visibility: operational tabs AND setup entities (Settings
   // sub-pages + the `settings` aggregate) all derive from the permission matrix.
@@ -75,7 +79,7 @@ export default async function DashboardLayout({
       : rawSelectedPropertyId;
 
   return (
-    <OrgProvider value={{ currency }}>
+    <OrgProvider value={{ currency, isDemo, demoContactWhatsapp }}>
      <PermissionsProvider perms={access.perms} isOwner={access.isOwner}>
       {/*
        * `overflow-x-hidden` is a defensive guard so a stray overflowing
@@ -87,6 +91,8 @@ export default async function DashboardLayout({
         <NavigationProgress />
 
         <InactivityGuard />
+
+        {isDemo && <DemoBanner />}
 
         <div className="bg-navbar-bg shadow-navbar z-10 relative">
           <Header
@@ -113,6 +119,8 @@ export default async function DashboardLayout({
         />
 
         {isSuperAdmin && <AdminPanelButton />}
+
+        {isDemo && <DemoWhatsAppButton />}
       </div>
      </PermissionsProvider>
     </OrgProvider>

@@ -468,6 +468,10 @@
     "dataImport": "Data Import"
   },
   "dashboard": {
+    "demoBanner": {
+      "title": "Demo data — for exploring",
+      "cta": "Ready to set up your real buildings? Contact Nidhal"
+    },
     "goodMorning": "Good morning, {name}",
     "goodAfternoon": "Good afternoon, {name}",
     "goodEvening": "Good evening, {name}",
@@ -5702,6 +5706,24 @@
       "cta1": "Start free",
       "cta2": "Book a demo"
     },
+    "demoTour": {
+      "cta": "Demo Tour",
+      "ctaSecondary": "Start free",
+      "title": "Try Binaya now",
+      "subtitle": "Jump straight into a fully set-up system with sample data — no signup, no card.",
+      "nameLabel": "Your name",
+      "namePlaceholder": "e.g. Ahmed Al Balushi",
+      "submit": "Start Demo",
+      "cancel": "Cancel",
+      "stage1": "Preparing your demo system…",
+      "stage2": "Creating your buildings and units…",
+      "stage3": "Adding tenants and reservations…",
+      "stage4": "Almost ready…",
+      "errorNameRequired": "Please enter your name.",
+      "errorWhatsappInvalid": "Please enter a valid WhatsApp number.",
+      "errorRateLimited": "Too many attempts. Please try again in a few minutes.",
+      "errorGeneric": "Something went wrong. Please try again."
+    },
     "footer": {
       "tagline": "Property management, made in Oman.",
       "contact": "Salalah, Dhofar, Oman",
@@ -6299,6 +6321,14 @@
       "count": "{n} total",
       "empty": "No organizations yet.",
       "since": "since {date}",
+      "viewDetails": "View details",
+      "daysAgo": "{n, plural, =0 {today} one {# day ago} other {# days ago}}",
+      "filterAriaLabel": "Filter organizations",
+      "filterAll": "All",
+      "filterReal": "Real",
+      "filterDemo": "Demo",
+      "demoBadge": "Demo",
+      "expiredBadge": "Expired",
       "metrics": {
         "users": "Users",
         "buildings": "Buildings",

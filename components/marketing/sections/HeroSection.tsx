@@ -1,8 +1,8 @@
-import { ArrowRight, Check, PlayCircle } from "lucide-react";
+import { Check, PlayCircle } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import Container from "../ui/Container";
-import { MarketingButton } from "../ui/MarketingButton";
 import HeroVideoPlayer from "../HeroVideoPlayer";
+import { HeroCtaRow } from "../HeroCtaRow";
 
 /* Hero — headline + creative software video player container for Binaya_Demo.mp4 */
 export default async function HeroSection() {
@@ -28,20 +28,7 @@ export default async function HeroSection() {
           <p className="mt-5 max-w-[520px] text-[17px] leading-[1.6] text-gray-600 md:text-[20px]">
             {t("sub")}
           </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <MarketingButton href="/login?mode=signup" variant="primary" size="xl">
-              {t("cta1")}
-              <ArrowRight className="h-4 w-4 rtl:rotate-180" strokeWidth={1.75} />
-            </MarketingButton>
-            <a
-              href="https://wa.me/96877804803"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-6 py-3.5 text-base font-bold text-gray-900 shadow-sm transition-all hover:bg-gray-50 hover:border-gray-400 active:scale-95"
-            >
-              <span>{t("cta2")}</span>
-            </a>
-          </div>
+          <HeroCtaRow />
         </div>
 
         {/* Video Player Container */}

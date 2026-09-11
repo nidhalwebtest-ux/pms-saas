@@ -236,6 +236,15 @@ model Organization {
   maxProperties      Int      @default(1)
   subscriptionStatus String   @default("ACTIVE")
 
+  /// Demo sandbox orgs (binaya.app "Demo Tour"). Seeded, fully-featured,
+  /// self-contained orgs created for a visitor from just a name + WhatsApp
+  /// number — never real customer data. Used to filter/badge them in the
+  /// super-admin organizations list; never auto-expired or auto-deleted.
+  isDemo               Boolean  @default(false)
+  demoCreatedAt        DateTime?
+  demoContactName      String?
+  demoContactWhatsapp  String?
+
   createdAt          DateTime @default(now())
 
   users              User[]
@@ -254,6 +263,8 @@ model Organization {
   websiteBookingRequests WebsiteBookingRequest[]
 
   importJobs             ImportJob[]
+
+  @@index([isDemo, demoContactWhatsapp])
 }
 
 // 4. Users

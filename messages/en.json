@@ -470,7 +470,40 @@
   "dashboard": {
     "demoBanner": {
       "title": "Demo data — for exploring",
-      "cta": "Ready to set up your real buildings? Contact Nidhal"
+      "cta": "Ready to set up your real buildings? Contact Nidhal",
+      "showMeAround": "Show me around"
+    },
+    "tour": {
+      "ariaLabel": "Guided tour",
+      "skip": "Skip",
+      "next": "Next",
+      "finish": "Finish",
+      "waiting": "Loading this part of the app…",
+      "progress": "Step {current} of {total}",
+      "todayTabs": {
+        "title": "Your daily queues",
+        "body": "Arrivals, checkouts, overstays and more — everything the front desk needs today, one tab away."
+      },
+      "calendarFab": {
+        "title": "Availability calendar",
+        "body": "Click this button to open the full building calendar."
+      },
+      "calendarUnits": {
+        "title": "Every unit at a glance",
+        "body": "Each row is a unit — see who's in, who's leaving, and what's free, without opening a single reservation."
+      },
+      "calendarReservation": {
+        "title": "A reservation, in context",
+        "body": "Click any block to see guest, dates and balance — right where it happens on the calendar."
+      },
+      "calendarFilters": {
+        "title": "Jump to any date range",
+        "body": "Quick presets or a custom range — including the Khareef season — to see exactly what you need."
+      },
+      "reservationsTable": {
+        "title": "All reservations, searchable",
+        "body": "Every booking in one sortable, filterable list — this is where day-to-day reservation work happens."
+      }
     },
     "goodMorning": "Good morning, {name}",
     "goodAfternoon": "Good afternoon, {name}",

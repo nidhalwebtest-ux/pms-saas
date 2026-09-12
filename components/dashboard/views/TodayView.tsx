@@ -503,7 +503,7 @@ export function TodayView({ propertyId }: { propertyId: string }) {
       </div>
 
       {/* ── Guest queues: one tabbed panel instead of a wide 2-col grid ── */}
-      <div className="rounded-xl bg-surface border border-border-subtle overflow-hidden">
+      <div data-tour="today-tabs" className="rounded-xl bg-surface border border-border-subtle overflow-hidden">
         <Tabs value={focusTab} onValueChange={(v) => setFocusTab(v as FocusTab)}>
           <div className="flex items-center gap-3 px-2 pt-2">
             <TabsList variant="underline" size="md" ariaLabel={tTabs("ariaLabel")} className="flex-1 min-w-0">

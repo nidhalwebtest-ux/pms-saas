@@ -20,6 +20,7 @@ export default function AvailabilityCalendarButton({
       {/* Bottom-left floating button */}
       <button
         type="button"
+        data-tour="availability-fab"
         onClick={() => setOpen(true)}
         title={t("availabilityCalendar")}
         className="fixed bottom-6 left-6 z-40 flex items-center gap-2 rounded-full bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-lg ring-1 ring-blue-700 hover:bg-blue-700 transition-colors rtl:left-auto rtl:right-6"

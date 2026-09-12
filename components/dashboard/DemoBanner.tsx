@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { FeatureAnnouncement } from "@/components/ui";
+import { FeatureAnnouncement, Button } from "@/components/ui";
+import { useTourState } from "@/hooks/useTourState";
 
 const WHATSAPP_URL =
   "https://wa.me/96877804803?text=" +
@@ -22,6 +23,7 @@ const WHATSAPP_URL =
 export function DemoBanner() {
   const t = useTranslations("dashboard.demoBanner");
   const [dismissed, setDismissed] = useState(false);
+  const tour = useTourState();
 
   if (dismissed) return null;
 
@@ -34,6 +36,11 @@ export function DemoBanner() {
         onDismiss={() => setDismissed(true)}
         className="rounded-none border-none bg-transparent"
       />
+      <div className="px-4 pb-2.5 -mt-1">
+        <Button variant="ghost" size="sm" onClick={() => tour.start()}>
+          {t("showMeAround")}
+        </Button>
+      </div>
     </div>
   );
 }

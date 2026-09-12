@@ -759,6 +759,7 @@ export default function ReservationsView({
         const emptyKey   = EMPTY_KEY[activeTab] ?? "default";
         const emptyEmoji = EMPTY_EMOJI[activeTab] ?? "📋";
         return (
+          <div data-tour="reservations-table">
           <DataTable<ReservationRow>
             data={filtered}
             columns={columns}
@@ -778,6 +779,7 @@ export default function ReservationsView({
             }
             aria-label={t("title")}
           />
+          </div>
         );
       })()}
 

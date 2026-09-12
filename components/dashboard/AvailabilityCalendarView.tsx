@@ -232,14 +232,14 @@ export default function AvailabilityCalendarView({
         <div className="b-spacer" />
         <div className="live"><i />{t("live")}</div>
         {onClose && (
-          <button type="button" className="btn-ghost" title={t("close")} onClick={onClose} style={{ marginInlineStart: 8 }}>
+          <button type="button" data-tour="close-calendar" className="btn-ghost" title={t("close")} onClick={onClose} style={{ marginInlineStart: 8 }}>
             <XMarkIcon style={{ width: 18, height: 18 }} />
           </button>
         )}
       </div>
 
       {/* ── Filter bar (two rows) ── */}
-      <div className="bcal-filter">
+      <div className="bcal-filter" data-tour="calendar-date-filters">
         <div className="bcal-filter-row">
         <div className="fzone">
           <span className="fz-lbl">{t("filter.range")}</span>
@@ -437,7 +437,11 @@ function Row({
   return (
     <>
       {/* rail */}
-      <div className={`rc ${density === "compact" ? "compact" : ""}`} style={{ gridRow: ui + 2, gridColumn: 1 }}>
+      <div
+        className={`rc ${density === "compact" ? "compact" : ""}`}
+        style={{ gridRow: ui + 2, gridColumn: 1 }}
+        {...(ui === 0 ? { "data-tour": "calendar-units-list" } : {})}
+      >
         <div className="u-main">
           <div className="u-no">{u.name}</div>
           <div className="u-sub">{unitTypeLabel(u.unitType)}{u.floor > 0 ? ` · ${t("floor", { n: u.floor })}` : ""}</div>
@@ -491,6 +495,7 @@ function Row({
         if (s.kind === "body") {
           return (
             <div key={si} className={`seg seg-body ${showNames ? "named" : ""} ${s.res.status === "CHECKED_IN" ? "occ" : ""}`} style={{ gridRow: ui + 2, gridColumn: `${s.from + 2} / ${s.to + 3}` }}
+              data-tour="calendar-reservation-block"
               onMouseEnter={(e) => onEnter(e, { kind: "booking", unit: u, res: s.res, isCheckin: false, col: s.from })}
               onMouseLeave={onLeave}
               onClick={() => activate({ kind: "booking", unit: u, res: s.res, isCheckin: false, col: s.from })}>

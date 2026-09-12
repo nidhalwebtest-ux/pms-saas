@@ -8,6 +8,8 @@ import AvailabilityCalendarButton from "@/components/dashboard/AvailabilityCalen
 import AdminPanelButton from "@/components/dashboard/AdminPanelButton";
 import { DemoBanner } from "@/components/dashboard/DemoBanner";
 import { DemoWhatsAppButton } from "@/components/dashboard/DemoWhatsAppButton";
+import { TourOverlay } from "@/components/dashboard/tour/TourOverlay";
+import { AutoStartTour } from "@/components/dashboard/tour/AutoStartTour";
 import { getSuperAdmin } from "@/lib/super-admin";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPropertyId } from "@/lib/selected-property";
@@ -121,6 +123,9 @@ export default async function DashboardLayout({
         {isSuperAdmin && <AdminPanelButton />}
 
         {isDemo && <DemoWhatsAppButton />}
+
+        {isDemo && <AutoStartTour />}
+        {isDemo && <TourOverlay />}
       </div>
      </PermissionsProvider>
     </OrgProvider>

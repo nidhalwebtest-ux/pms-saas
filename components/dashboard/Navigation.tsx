@@ -102,6 +102,16 @@ const navigationConfig: NavItem[] = [
     ],
   },
   {
+    key:            "vendors",
+    labelKey:       "vendors",
+    href:           "/dashboard/vendors",
+    activePatterns: ["/dashboard/vendors"],
+    children: [
+      { labelKey: "vendorList", href: "/dashboard/vendors" },
+      { labelKey: "newVendor",  href: "/dashboard/vendors/new" },
+    ],
+  },
+  {
     key:      "reports",
     labelKey: "reports",
     href:     "/dashboard/reports",
@@ -164,6 +174,7 @@ const CHILD_REQUIRES: Record<string, { entity: string; level: PermissionLevel }>
   "/dashboard/reservations/new":           { entity: "reservations", level: "CREATE" },
   "/dashboard/payments/new":               { entity: "payments",     level: "CREATE" },
   "/dashboard/expenses/new":               { entity: "expenses",     level: "CREATE" },
+  "/dashboard/vendors/new":                { entity: "vendors",      level: "CREATE" },
   // Setup (Settings sub-pages + Manage categories).
   "/dashboard/settings/team":              { entity: "team",                 level: "VIEW" },
   "/dashboard/settings/roles":             { entity: "roles",                level: "VIEW" },

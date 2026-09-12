@@ -13,6 +13,8 @@ import {
   BuildingOffice2Icon,
   DocumentTextIcon,
   PaperAirplaneIcon,
+  BuildingStorefrontIcon,
+  PlusIcon,
 } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui";
 
@@ -23,6 +25,12 @@ interface Category {
   nameAr: string | null;
   icon: string | null;
   isActive: boolean;
+}
+interface Vendor {
+  id: string;
+  name: string;
+  nameAr: string | null;
+  categoryId: string | null;
 }
 
 interface Props {
@@ -54,6 +62,14 @@ export default function SubmitExpenseForm({ properties, defaultPropertyId }: Pro
   const [categories, setCategories] = useState<Category[]>([]);
   const [catsLoading, setCatsLoading] = useState(true);
 
+  // Vendors
+  const [vendorId, setVendorId] = useState("");
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [vendorsLoading, setVendorsLoading] = useState(true);
+  const [creatingVendor, setCreatingVendor] = useState(false);
+  const [newVendorName, setNewVendorName] = useState("");
+  const [savingVendor, setSavingVendor] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
 
   // Hydrate property selection: query param > localStorage > first property
@@ -80,6 +96,39 @@ export default function SubmitExpenseForm({ properties, defaultPropertyId }: Pro
       .catch(() => toast.error(tErr("loadCategoriesFailed")))
       .finally(() => setCatsLoading(false));
   }, [tErr]);
+
+  // Fetch vendors (optional selector — no error toast on failure/no-access,
+  // the field just stays empty and the expense submits without a vendor).
+  useEffect(() => {
+    fetch("/api/vendors")
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setVendors(d.vendors); })
+      .catch(() => {})
+      .finally(() => setVendorsLoading(false));
+  }, []);
+
+  async function handleCreateVendor() {
+    const name = newVendorName.trim();
+    if (name.length < 2) { toast.error(tErr("vendorNameTooShort")); return; }
+    setSavingVendor(true);
+    try {
+      const res = await fetch("/api/vendors", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error ?? tErr("vendorCreateFailed")); return; }
+      setVendors((prev) => [...prev, data.vendor].sort((a, b) => a.name.localeCompare(b.name)));
+      setVendorId(data.vendor.id);
+      setNewVendorName("");
+      setCreatingVendor(false);
+    } catch {
+      toast.error(tErr("networkError"));
+    } finally {
+      setSavingVendor(false);
+    }
+  }
 
   // ── Upload receipts ────────────────────────────────────────────────────
   async function handleFiles(files: FileList | null) {
@@ -134,6 +183,7 @@ export default function SubmitExpenseForm({ properties, defaultPropertyId }: Pro
         body: JSON.stringify({
           propertyId,
           categoryId,
+          vendorId: vendorId || undefined,
           amount: amt,
           description,
           notes: notes || undefined,
@@ -171,7 +221,7 @@ export default function SubmitExpenseForm({ properties, defaultPropertyId }: Pro
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          propertyId, categoryId, amount: amt, description,
+          propertyId, categoryId, vendorId: vendorId || undefined, amount: amt, description,
           notes: notes || undefined,
           receiptImage: receipts[0],
           receiptImage2: receipts[1] || undefined,
@@ -182,7 +232,7 @@ export default function SubmitExpenseForm({ properties, defaultPropertyId }: Pro
       toast.success(tErr("submittedNumber", { number: data.expense.expenseNumber }));
       if (typeof window !== "undefined") localStorage.setItem(LAST_PROPERTY_KEY, propertyId);
       // Reset form fields except property
-      setCategoryId(""); setAmount(""); setDescription(""); setNotes(""); setReceipts([]);
+      setCategoryId(""); setVendorId(""); setAmount(""); setDescription(""); setNotes(""); setReceipts([]);
     } catch { toast.error(tErr("networkError")); }
     finally { setSubmitting(false); }
   }
@@ -257,6 +307,66 @@ export default function SubmitExpenseForm({ properties, defaultPropertyId }: Pro
                   </button>
                 );
               })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Vendor (optional) ───────────────────────────────────────────── */}
+      <div className="bg-white rounded-xl shadow-sm ring-1 ring-gray-200 overflow-hidden">
+        <div className="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+          <BuildingStorefrontIcon className="h-4 w-4 text-gray-400" />
+          <h3 className="text-sm font-semibold text-gray-700">{t("vendorHeading")}</h3>
+          <span className="text-xs text-gray-400 font-normal">{t("vendorOptional")}</span>
+        </div>
+        <div className="px-5 py-4">
+          {creatingVendor ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                autoFocus
+                value={newVendorName}
+                onChange={(e) => setNewVendorName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleCreateVendor(); } }}
+                placeholder={t("vendorNamePlaceholder")}
+                className="flex-1 min-w-[180px] rounded-lg border-0 bg-white py-2.5 px-3 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm"
+              />
+              <button
+                type="button"
+                onClick={handleCreateVendor}
+                disabled={savingVendor}
+                className="rounded-lg bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
+              >
+                {savingVendor ? t("vendorSaving") : t("vendorSave")}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setCreatingVendor(false); setNewVendorName(""); }}
+                className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+              >
+                {t("vendorCancel")}
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                value={vendorId}
+                onChange={(e) => setVendorId(e.target.value)}
+                disabled={vendorsLoading}
+                className="flex-1 min-w-[180px] rounded-lg border-0 bg-white py-2.5 ps-3 pe-10 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm disabled:opacity-60"
+              >
+                <option value="">{t("vendorPlaceholder")}</option>
+                {vendors.map((v) => (
+                  <option key={v.id} value={v.id}>{v.name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setCreatingVendor(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:border-gray-400 transition-colors"
+              >
+                <PlusIcon className="h-4 w-4" />
+                {t("vendorAddNew")}
+              </button>
             </div>
           )}
         </div>

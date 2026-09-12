@@ -35,7 +35,7 @@ export function reportSlug(key: string): string | null {
 export const REPORT_GROUP_SLUGS: { group: string; slugs: string[] }[] = [
   { group: "revenue",     slugs: ["revenue-by-building", "revenue-by-tenant", "revenue-by-unit-type", "revenue-by-source", "revenue-trend", "revenue-comparison"] },
   { group: "occupancy",   slugs: ["occupancy-by-building", "occupancy-trend", "vacancy-analysis", "avg-length-of-stay", "khareef-performance"] },
-  { group: "financial",   slugs: ["aging-receivables", "outstanding-balances", "cash-flow", "pnl-by-building", "expense-breakdown"] },
+  { group: "financial",   slugs: ["aging-receivables", "outstanding-balances", "cash-flow", "pnl-by-building", "expense-breakdown", "spend-by-vendor"] },
   { group: "operational", slugs: ["receptionist-performance", "tenant-reports", "maintenance", "booking-sources", "cancellation-analysis", "target-vs-actual"] },
   { group: "tax",         slugs: ["vat-summary", "revenue-by-month", "annual-summary"] },
 ];
@@ -63,7 +63,7 @@ const actionEntities: EntityDef[] = ACTION_GROUPS.flatMap((g) =>
 export const PERMISSION_GROUPS: PermissionGroup[] = [
   {
     key: "lists",
-    entities: [{ key: "buildings" }, { key: "units" }, { key: "tenants" }],
+    entities: [{ key: "buildings" }, { key: "units" }, { key: "tenants" }, { key: "vendors" }],
   },
   {
     key: "transactions",
@@ -148,7 +148,7 @@ export const DEFAULT_MATRICES: Record<SystemRoleKey, PermissionMap> = {
   // Receptionist — front-desk: tenants & reservations, raise invoices/payments/
   // returns, submit expenses; read-only buildings/units; no reports/setup.
   STAFF: withDerived({
-    buildings: "VIEW", units: "VIEW", tenants: "FULL",
+    buildings: "VIEW", units: "VIEW", tenants: "FULL", vendors: "VIEW",
     reservations: "FULL", invoices: "CREATE", payments: "CREATE",
     returns: "CREATE", expenses: "CREATE", reconciliation: "CREATE",
     reports: "NONE", salesTargets: "NONE",
@@ -161,7 +161,7 @@ export const DEFAULT_MATRICES: Record<SystemRoleKey, PermissionMap> = {
   // Accountant — finance: invoices/payments/returns + process expenses; no
   // tenants/reservations/properties management; no reports/setup.
   ACCOUNTANT: withDerived({
-    buildings: "NONE", units: "NONE", tenants: "VIEW",
+    buildings: "NONE", units: "NONE", tenants: "VIEW", vendors: "FULL",
     reservations: "VIEW", invoices: "EDIT", payments: "FULL",
     returns: "EDIT", expenses: "EDIT", reconciliation: "FULL",
     reports: "NONE", salesTargets: "NONE",
@@ -250,6 +250,7 @@ export const NAV_ENTITY: Record<string, string[]> = {
   returns:      ["returns"],
   payments:     ["payments"],
   expenses:     ["expenses"],
+  vendors:      ["vendors"],
   cashier:      ["reconciliation", "banks"],
   reports:      REPORT_ENTITY_KEYS,
   salesTargets: ["salesTargets"],

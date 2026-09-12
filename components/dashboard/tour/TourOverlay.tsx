@@ -49,21 +49,6 @@ export function TourOverlay() {
   const step = TOUR_STEPS[tour.step];
   const isLastStep = tour.step === TOUR_STEPS.length - 1;
 
-  // Navigate to the step's route first, if it isn't the current page. The
-  // availability calendar is a modal rendered by a layout-level component
-  // (AvailabilityCalendarButton) rather than a route, so it stays mounted
-  // and open across a client-side navigation unless explicitly closed —
-  // close it here so the destination page is actually visible underneath.
-  useEffect(() => {
-    if (!tour.hydrated || !tour.active || !step) return;
-    if (step.route && step.route !== pathname) {
-      const closeCalendarBtn = document.querySelector<HTMLButtonElement>('[data-tour="close-calendar"]');
-      closeCalendarBtn?.click();
-      router.push(step.route);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tour.hydrated, tour.active, tour.step, pathname]);
-
   // Locate the target element for the current step. Keeps polling
   // indefinitely rather than giving up — the target may just be behind a
   // slow data fetch (the Today tabs render only once dashboard data has
@@ -119,11 +104,26 @@ export function TourOverlay() {
 
   if (!tour.hydrated || !tour.active || !step) return null;
 
+  // Navigating happens only here, as a direct result of the visitor
+  // clicking Next — never as a reactive effect. An effect watching
+  // pathname/step would also fire on a fresh page load (e.g. the visitor
+  // typing a URL, or a hard navigation into Vendors mid-tour), forcibly
+  // yanking them back to whatever route the current step wants — which is
+  // exactly the bug this replaced.
   function next() {
     if (isLastStep) {
       tour.stop();
-    } else {
-      tour.goToStep(tour.step + 1);
+      return;
+    }
+    const nextStep = TOUR_STEPS[tour.step + 1];
+    tour.goToStep(tour.step + 1);
+    if (nextStep.route && nextStep.route !== pathname) {
+      // The availability calendar is a modal rendered by a layout-level
+      // component, not a route, so it stays mounted across a client-side
+      // navigation unless explicitly closed first.
+      const closeCalendarBtn = document.querySelector<HTMLButtonElement>('[data-tour="close-calendar"]');
+      closeCalendarBtn?.click();
+      router.push(nextStep.route);
     }
   }
 

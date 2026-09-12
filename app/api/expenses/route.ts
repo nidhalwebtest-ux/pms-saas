@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { categoryId, description, amount, propertyId, receiptImage, receiptImage2, notes } = body;
+  const { categoryId, description, amount, propertyId, receiptImage, receiptImage2, notes, vendorId } = body;
 
   // Validate required fields
   if (!categoryId) return NextResponse.json({ error: "Category is required" }, { status: 400 });
@@ -164,6 +164,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid category" }, { status: 400 });
   }
 
+  // Vendor is optional — existing expenses and quick petty-cash entries have none.
+  if (vendorId) {
+    const vendor = await prisma.vendor.findUnique({ where: { id: vendorId }, select: { organizationId: true, isActive: true } });
+    if (!vendor || vendor.organizationId !== orgUser.organizationId || !vendor.isActive) {
+      return NextResponse.json({ error: "Invalid vendor" }, { status: 400 });
+    }
+  }
+
   const expense = await prisma.$transaction(async (tx) => {
     const expenseNumber = await nextExpenseNumber(orgUser.organizationId, tx);
 
@@ -172,6 +180,7 @@ export async function POST(req: NextRequest) {
         organizationId: orgUser.organizationId,
         expenseNumber,
         categoryId,
+        vendorId: vendorId || null,
         description: description.trim(),
         amount: roundOMR(Number(amount)),
         propertyId,

@@ -445,6 +445,9 @@
     "allExpenses": "All Expenses",
     "submitExpense": "Submit Expense",
     "manageCategories": "Manage Categories",
+    "vendors": "Vendors",
+    "vendorList": "Vendor List",
+    "newVendor": "New Vendor",
     "reports": "Reports",
     "salesTargets": "Sales Targets",
     "settings": "Settings",
@@ -2785,6 +2788,7 @@
       "cash-flow": "Cash Flow",
       "pnl-by-building": "P&L by Building",
       "expense-breakdown": "Expense Breakdown",
+      "spend-by-vendor": "Spend by Vendor",
       "receptionist-performance": "Receptionist Performance",
       "tenant-reports": "Tenant Reports",
       "maintenance": "Maintenance",
@@ -3167,6 +3171,23 @@
       "empty": "No revenue or expenses in this period.",
       "footer": "Live data · revenue net of returns − approved/processed expenses",
       "source": "Source: PMS"
+    },
+    "spendByVendor": {
+      "subtitle": "Spend by vendor · ",
+      "omr": "OMR",
+      "kpiTotalSpend": "Total spend",
+      "kpiVendorCount": "Vendors paid",
+      "kpiExpenseCount": "Expenses",
+      "tableTitle": "Spend by vendor",
+      "tableMeta": "{count} vendors",
+      "colVendor": "Vendor",
+      "colCategory": "Category",
+      "colExpenseCount": "Expenses",
+      "colTotalSpend": "Total Spend",
+      "colPercent": "% of Total",
+      "grandTotal": "All vendors",
+      "empty": "No vendor spend in this period.",
+      "footer": "Live data · approved/processed expenses only"
     },
     "expenses": {
       "subtitle": "Spending by category · ",
@@ -4143,6 +4164,7 @@
       "descriptionLabel": "Description",
       "buildingLabel": "Building",
       "categoryLabel": "Category",
+      "vendorLabel": "Vendor",
       "submittedByLabel": "Submitted by",
       "submittedAtLabel": "Submitted at",
       "notesLabel": "Notes",
@@ -4195,6 +4217,14 @@
       "buildingPlaceholder": "Select a building…",
       "categoryHeading": "Category",
       "categoryEmpty": "No categories available.",
+      "vendorHeading": "Vendor",
+      "vendorOptional": "(optional)",
+      "vendorPlaceholder": "No vendor selected",
+      "vendorNamePlaceholder": "New vendor name",
+      "vendorAddNew": "Add New",
+      "vendorSave": "Save",
+      "vendorSaving": "Saving…",
+      "vendorCancel": "Cancel",
       "detailsHeading": "Details",
       "amountLabel": "Amount",
       "amountPlaceholder": "0.000",
@@ -4228,6 +4258,8 @@
         "submitFailed": "Failed to submit",
         "networkError": "Network error",
         "loadCategoriesFailed": "Failed to load categories",
+        "vendorNameTooShort": "Vendor name must be at least 2 characters",
+        "vendorCreateFailed": "Failed to create vendor",
         "submittedSuccess": "Expense submitted for approval",
         "submittedNumber": "Expense {number} submitted"
       }
@@ -4288,6 +4320,128 @@
       "counter": "Receipt {current} of {total}",
       "download": "Download",
       "closeHint": "Close (Esc)"
+    }
+  },
+  "vendors": {
+    "title": "Vendors",
+    "recordsCount": "{count, plural, =0 {No records} one {# record} other {# records}}",
+    "newVendorBtn": "New Vendor",
+    "filters": {
+      "searchPlaceholder": "Search name, phone, email, category…",
+      "statusAll": "All",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "categoryLabel": "Category",
+      "allCategories": "All Categories"
+    },
+    "list": {
+      "table": {
+        "name": "Name",
+        "category": "Category",
+        "phone": "Phone",
+        "totalSpendYear": "Spend (This Year)",
+        "expenseCount": "Expenses",
+        "status": "Status",
+        "active": "Active",
+        "inactive": "Inactive",
+        "view": "View",
+        "edit": "Edit"
+      },
+      "empty": "No vendors yet",
+      "emptyDescription": "Add a vendor to start tracking who you pay for expenses.",
+      "showing": "Showing {count} vendors"
+    },
+    "form": {
+      "sections": {
+        "details": "Vendor Details",
+        "bank": "Bank Details",
+        "notes": "Notes"
+      },
+      "bankHint": "Reference details for transfers — never stored as payment credentials.",
+      "fields": {
+        "name": "Name",
+        "nameAr": "Name (Arabic)",
+        "optional": "optional",
+        "category": "Category",
+        "contactPerson": "Contact Person",
+        "phone": "Phone",
+        "email": "Email",
+        "address": "Address",
+        "taxNumber": "Tax / CR Number",
+        "bankAccountName": "Account Name",
+        "bankName": "Bank Name",
+        "accountNumber": "Account Number"
+      },
+      "placeholders": {
+        "name": "e.g. Gulf Cleaning Services",
+        "nameAr": "الاسم بالعربية",
+        "category": "Select category",
+        "contactPerson": "e.g. Ahmed Al Balushi",
+        "phone": "+968…",
+        "email": "vendor@example.com",
+        "address": "Street, area, city",
+        "taxNumber": "e.g. 1234567",
+        "bankAccountName": "Account holder name",
+        "bankName": "e.g. Bank Muscat",
+        "accountNumber": "Account / IBAN",
+        "notes": "Any additional notes about this vendor…"
+      },
+      "actions": {
+        "cancel": "Cancel",
+        "save": "Save Changes",
+        "create": "Add Vendor",
+        "saving": "Saving…"
+      },
+      "toasts": {
+        "created": "Vendor added",
+        "updated": "Vendor updated"
+      }
+    },
+    "newPage": {
+      "title": "New Vendor",
+      "description": "Add a supplier or contractor you pay for expenses."
+    },
+    "editPage": {
+      "title": "Edit Vendor",
+      "description": "Update this vendor's details."
+    },
+    "detail": {
+      "back": "Back",
+      "vendorsList": "Vendors List",
+      "editVendor": "Edit Vendor",
+      "inactive": "Inactive",
+      "since": "since {date}",
+      "kpi": {
+        "totalSpend": "Total Spend",
+        "expenseCount": "Expense Count"
+      },
+      "sections": {
+        "contact": "Contact",
+        "bank": "Bank Details",
+        "notes": "Notes"
+      },
+      "fields": {
+        "contactPerson": "Contact Person",
+        "phone": "Phone",
+        "email": "Email",
+        "address": "Address",
+        "taxNumber": "Tax / CR Number",
+        "bankAccountName": "Account Name",
+        "bankName": "Bank Name",
+        "accountNumber": "Account Number"
+      },
+      "expenses": {
+        "title": "Expenses",
+        "to": "to",
+        "empty": "No expenses in this range",
+        "runningTotal": "Total (approved + processed)",
+        "status": {
+          "PENDING": "Pending",
+          "APPROVED": "Approved",
+          "REJECTED": "Rejected",
+          "PROCESSED": "Processed"
+        }
+      }
     }
   },
   "settings": {

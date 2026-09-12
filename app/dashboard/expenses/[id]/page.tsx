@@ -11,6 +11,7 @@ import {
   ArrowLeftIcon,
   CalendarDaysIcon,
   BuildingOffice2Icon,
+  BuildingStorefrontIcon,
   TagIcon,
   UserCircleIcon,
   DocumentTextIcon,
@@ -52,6 +53,7 @@ export default async function ExpenseDetailsPage({
     where: { id },
     include: {
       category: true,
+      vendor: { select: { id: true, name: true } },
       property: { select: { id: true, name: true } },
       submittedBy: { select: { id: true, firstName: true, lastName: true } },
       reviewedBy:  { select: { id: true, firstName: true, lastName: true } },
@@ -173,6 +175,9 @@ export default async function ExpenseDetailsPage({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-gray-100">
                 <MetaItem icon={BuildingOffice2Icon} label={tDet("buildingLabel")} value={expense.property.name} />
                 <MetaItem icon={TagIcon} label={tDet("categoryLabel")} value={`${expense.category.icon ?? ""} ${expense.category.name}`.trim()} />
+                {expense.vendor && (
+                  <MetaItem icon={BuildingStorefrontIcon} label={tDet("vendorLabel")} value={expense.vendor.name} />
+                )}
                 <MetaItem icon={UserCircleIcon} label={tDet("submittedByLabel")} value={fullName(expense.submittedBy)} />
                 <MetaItem icon={CalendarDaysIcon} label={tDet("submittedAtLabel")} value={fmtDateTime(expense.submittedAt) ?? "—"} valueClass="ltr-numbers" />
               </div>

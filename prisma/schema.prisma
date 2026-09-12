@@ -255,6 +255,7 @@ model Organization {
   invoices           Invoice[]
   expenseCategories  ExpenseCat[]
   expenses           Expense[]
+  vendors            Vendor[]
   reservations       Reservation[]
   bankAccounts       BankAccount[]
   cashierSessions    CashierSession[]
@@ -900,10 +901,54 @@ model ExpenseCat {
   sortOrder      Int           @default(0)
 
   expenses       Expense[]
+  vendors        Vendor[]
 
   createdAt      DateTime      @default(now())
 
   @@index([organizationId])
+}
+
+/// Suppliers/contractors paid via Expenses. Purely a "who did we pay"
+/// reference — no portal, no work orders (see CLAUDE.md Demo Tour spec's
+/// sibling feature, Landlords, for building-ownership payouts).
+model Vendor {
+  id             String       @id @default(uuid())
+
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name           String
+  nameAr         String?
+
+  // Reuses the org's own expense category list rather than a separate
+  // enum, so a vendor's category can never drift from the categories its
+  // expenses are actually tagged with.
+  categoryId     String?
+  category       ExpenseCat?  @relation(fields: [categoryId], references: [id])
+
+  contactPerson  String?
+  phone          String?
+  email          String?
+  address        String?
+  notes          String?
+
+  // Omani commercial registration / tax number — plain reference text.
+  taxNumber      String?
+
+  // Bank transfer reference details — plain text, never payment
+  // credentials (no card/IBAN validation, no stored secrets).
+  bankAccountName String?
+  bankName        String?
+  accountNumber   String?
+
+  isActive       Boolean      @default(true)
+
+  expenses       Expense[]
+
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, isActive])
 }
 
 // ── Bank accounts & cash drawers ──────────────────────────────────────────────
@@ -1105,6 +1150,10 @@ model Expense {
   description    String
   amount         Decimal         @db.Decimal(10, 3)
 
+  // Optional — existing expenses and quick petty-cash entries have none.
+  vendorId       String?
+  vendor         Vendor?         @relation(fields: [vendorId], references: [id])
+
   // --- Where ---
   propertyId     String
   property       Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
@@ -1151,6 +1200,7 @@ model Expense {
   @@index([organizationId, status])
   @@index([submittedById])
   @@index([propertyId])
+  @@index([vendorId])
 }
 
 // ── Auth & Team ───────────────────────────────────────────────────────────────

@@ -445,6 +445,9 @@
     "allExpenses": "جميع المصروفات",
     "submitExpense": "تقديم مصروف",
     "manageCategories": "إدارة التصنيفات",
+    "vendors": "الموردون",
+    "vendorList": "قائمة الموردين",
+    "newVendor": "مورد جديد",
     "reports": "التقارير",
     "salesTargets": "أهداف المبيعات",
     "settings": "الإعدادات",
@@ -2785,6 +2788,7 @@
       "cash-flow": "التدفق النقدي",
       "pnl-by-building": "الأرباح والخسائر حسب المبنى",
       "expense-breakdown": "تفصيل المصروفات",
+      "spend-by-vendor": "الإنفاق حسب المورد",
       "receptionist-performance": "أداء موظفي الاستقبال",
       "tenant-reports": "تقارير المستأجرين",
       "maintenance": "الصيانة",
@@ -3167,6 +3171,23 @@
       "empty": "لا توجد إيرادات أو مصروفات في هذه الفترة.",
       "footer": "بيانات حية · الإيراد صافي المرتجعات − المصروفات المعتمدة/المنفذة",
       "source": "المصدر: نظام إدارة العقارات"
+    },
+    "spendByVendor": {
+      "subtitle": "الإنفاق حسب المورد · ",
+      "omr": "ر.ع",
+      "kpiTotalSpend": "إجمالي الإنفاق",
+      "kpiVendorCount": "الموردون المدفوع لهم",
+      "kpiExpenseCount": "المصروفات",
+      "tableTitle": "الإنفاق حسب المورد",
+      "tableMeta": "{count} مورد",
+      "colVendor": "المورد",
+      "colCategory": "الفئة",
+      "colExpenseCount": "المصروفات",
+      "colTotalSpend": "إجمالي الإنفاق",
+      "colPercent": "% من الإجمالي",
+      "grandTotal": "كل الموردين",
+      "empty": "لا يوجد إنفاق على الموردين في هذه الفترة.",
+      "footer": "بيانات حية · المصروفات المعتمدة/المنفذة فقط"
     },
     "expenses": {
       "subtitle": "الإنفاق حسب الفئة · ",
@@ -4143,6 +4164,7 @@
       "descriptionLabel": "الوصف",
       "buildingLabel": "المبنى",
       "categoryLabel": "التصنيف",
+      "vendorLabel": "المورد",
       "submittedByLabel": "مقدم من",
       "submittedAtLabel": "تاريخ التقديم",
       "notesLabel": "ملاحظات",
@@ -4195,6 +4217,14 @@
       "buildingPlaceholder": "اختر مبنى…",
       "categoryHeading": "التصنيف",
       "categoryEmpty": "لا توجد تصنيفات متاحة.",
+      "vendorHeading": "المورد",
+      "vendorOptional": "(اختياري)",
+      "vendorPlaceholder": "لم يتم اختيار مورد",
+      "vendorNamePlaceholder": "اسم المورد الجديد",
+      "vendorAddNew": "إضافة جديد",
+      "vendorSave": "حفظ",
+      "vendorSaving": "جارٍ الحفظ…",
+      "vendorCancel": "إلغاء",
       "detailsHeading": "التفاصيل",
       "amountLabel": "المبلغ",
       "amountPlaceholder": "0.000",
@@ -4228,6 +4258,8 @@
         "submitFailed": "تعذر التقديم",
         "networkError": "خطأ في الشبكة",
         "loadCategoriesFailed": "تعذر تحميل التصنيفات",
+        "vendorNameTooShort": "يجب أن يتكون اسم المورد من حرفين على الأقل",
+        "vendorCreateFailed": "تعذر إنشاء المورد",
         "submittedSuccess": "تم تقديم المصروف للاعتماد",
         "submittedNumber": "تم تقديم المصروف {number}"
       }
@@ -4288,6 +4320,128 @@
       "counter": "الإيصال {current} من {total}",
       "download": "تنزيل",
       "closeHint": "إغلاق (Esc)"
+    }
+  },
+  "vendors": {
+    "title": "الموردون",
+    "recordsCount": "{count, plural, =0 {لا سجلات} one {سجل واحد} two {سجلان} other {# سجلات}}",
+    "newVendorBtn": "مورد جديد",
+    "filters": {
+      "searchPlaceholder": "ابحث بالاسم، الهاتف، البريد، الفئة...",
+      "statusAll": "الكل",
+      "statusActive": "نشط",
+      "statusInactive": "غير نشط",
+      "categoryLabel": "الفئة",
+      "allCategories": "كل الفئات"
+    },
+    "list": {
+      "table": {
+        "name": "الاسم",
+        "category": "الفئة",
+        "phone": "الهاتف",
+        "totalSpendYear": "الإنفاق (هذا العام)",
+        "expenseCount": "المصروفات",
+        "status": "الحالة",
+        "active": "نشط",
+        "inactive": "غير نشط",
+        "view": "عرض",
+        "edit": "تعديل"
+      },
+      "empty": "لا يوجد موردون بعد",
+      "emptyDescription": "أضف موردًا لبدء تتبع من تدفع لهم مقابل المصروفات.",
+      "showing": "عرض {count} مورد"
+    },
+    "form": {
+      "sections": {
+        "details": "تفاصيل المورد",
+        "bank": "التفاصيل المصرفية",
+        "notes": "ملاحظات"
+      },
+      "bankHint": "بيانات مرجعية للتحويلات — لا تُخزَّن كبيانات دفع حساسة.",
+      "fields": {
+        "name": "الاسم",
+        "nameAr": "الاسم بالعربية",
+        "optional": "اختياري",
+        "category": "الفئة",
+        "contactPerson": "الشخص المسؤول",
+        "phone": "الهاتف",
+        "email": "البريد الإلكتروني",
+        "address": "العنوان",
+        "taxNumber": "الرقم الضريبي / رقم السجل التجاري",
+        "bankAccountName": "اسم صاحب الحساب",
+        "bankName": "اسم البنك",
+        "accountNumber": "رقم الحساب"
+      },
+      "placeholders": {
+        "name": "مثال: شركة الخليج للتنظيف",
+        "nameAr": "الاسم بالعربية",
+        "category": "اختر الفئة",
+        "contactPerson": "مثال: أحمد البلوشي",
+        "phone": "+968...",
+        "email": "vendor@example.com",
+        "address": "الشارع، المنطقة، المدينة",
+        "taxNumber": "مثال: 1234567",
+        "bankAccountName": "اسم صاحب الحساب",
+        "bankName": "مثال: بنك مسقط",
+        "accountNumber": "رقم الحساب / آيبان",
+        "notes": "أي ملاحظات إضافية حول هذا المورد..."
+      },
+      "actions": {
+        "cancel": "إلغاء",
+        "save": "حفظ التغييرات",
+        "create": "إضافة مورد",
+        "saving": "جارٍ الحفظ..."
+      },
+      "toasts": {
+        "created": "تمت إضافة المورد",
+        "updated": "تم تحديث المورد"
+      }
+    },
+    "newPage": {
+      "title": "مورد جديد",
+      "description": "أضف موردًا أو مقاولًا تدفع له مقابل المصروفات."
+    },
+    "editPage": {
+      "title": "تعديل المورد",
+      "description": "تحديث تفاصيل هذا المورد."
+    },
+    "detail": {
+      "back": "رجوع",
+      "vendorsList": "قائمة الموردين",
+      "editVendor": "تعديل المورد",
+      "inactive": "غير نشط",
+      "since": "منذ {date}",
+      "kpi": {
+        "totalSpend": "إجمالي الإنفاق",
+        "expenseCount": "عدد المصروفات"
+      },
+      "sections": {
+        "contact": "التواصل",
+        "bank": "التفاصيل المصرفية",
+        "notes": "ملاحظات"
+      },
+      "fields": {
+        "contactPerson": "الشخص المسؤول",
+        "phone": "الهاتف",
+        "email": "البريد الإلكتروني",
+        "address": "العنوان",
+        "taxNumber": "الرقم الضريبي / رقم السجل التجاري",
+        "bankAccountName": "اسم صاحب الحساب",
+        "bankName": "اسم البنك",
+        "accountNumber": "رقم الحساب"
+      },
+      "expenses": {
+        "title": "المصروفات",
+        "to": "إلى",
+        "empty": "لا مصروفات في هذه الفترة",
+        "runningTotal": "الإجمالي (المعتمدة والمصروفة)",
+        "status": {
+          "PENDING": "قيد الانتظار",
+          "APPROVED": "معتمد",
+          "REJECTED": "مرفوض",
+          "PROCESSED": "تمت المعالجة"
+        }
+      }
     }
   },
   "settings": {

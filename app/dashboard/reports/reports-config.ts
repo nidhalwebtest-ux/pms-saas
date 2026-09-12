@@ -50,6 +50,7 @@ export const REPORT_GROUPS: ReportGroup[] = [
       { slug: "cash-flow", label: "Cash Flow", implemented: true },
       { slug: "pnl-by-building", label: "P&L by Building", implemented: true },
       { slug: "expense-breakdown", label: "Expense Breakdown", implemented: true },
+      { slug: "spend-by-vendor", label: "Spend by Vendor", implemented: true },
     ],
   },
   {

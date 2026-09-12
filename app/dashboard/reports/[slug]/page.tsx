@@ -21,6 +21,7 @@ import { getOutstandingBalances } from "@/lib/reports/outstanding-balances";
 import { getCashFlow } from "@/lib/reports/cash-flow";
 import { getPnlByBuilding } from "@/lib/reports/pnl-by-building";
 import { getExpenseBreakdown } from "@/lib/reports/expense-breakdown";
+import { getSpendByVendor } from "@/lib/reports/spend-by-vendor";
 import { getReceptionistPerformance } from "@/lib/reports/receptionist-performance";
 import { getTenantReports } from "@/lib/reports/tenant-reports";
 import { getBookingSources } from "@/lib/reports/booking-sources";
@@ -42,6 +43,7 @@ import OutstandingBalances from "./OutstandingBalances";
 import CashFlow from "./CashFlow";
 import PnlByBuilding from "./PnlByBuilding";
 import ExpenseBreakdown from "./ExpenseBreakdown";
+import SpendByVendor from "./SpendByVendor";
 import ReceptionistPerformance from "./ReceptionistPerformance";
 import TenantReports from "./TenantReports";
 import BookingSources from "./BookingSources";
@@ -69,7 +71,7 @@ const AGGREGATORS: Record<string, (a: { orgId: string; from: Date; to: Date; pro
   "revenue-by-source": getRevenueBySource,
 };
 
-const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis", "revenue-trend", "avg-length-of-stay", "khareef-performance", "revenue-comparison", "aging-receivables", "outstanding-balances", "cash-flow", "pnl-by-building", "expense-breakdown", "receptionist-performance", "tenant-reports", "booking-sources", "cancellation-analysis", "maintenance", "vat-summary", "revenue-by-month", "annual-summary", "target-vs-actual"]);
+const IMPLEMENTED = new Set([...Object.keys(VARIANTS), "occupancy-by-building", "occupancy-trend", "vacancy-analysis", "revenue-trend", "avg-length-of-stay", "khareef-performance", "revenue-comparison", "aging-receivables", "outstanding-balances", "cash-flow", "pnl-by-building", "expense-breakdown", "spend-by-vendor", "receptionist-performance", "tenant-reports", "booking-sources", "cancellation-analysis", "maintenance", "vat-summary", "revenue-by-month", "annual-summary", "target-vs-actual"]);
 
 function ErrorCard({ title, message }: { title: string; message: string }) {
   return (
@@ -444,6 +446,30 @@ export default async function ReportPage({
       ]);
       return (
         <PnlByBuilding
+          data={data}
+          properties={properties}
+          preset={range.preset}
+          rangeText={range.rangeText}
+          fromDate={range.from}
+          toDate={range.to}
+          selectedPropertyId={propertyId ?? ""}
+        />
+      );
+    } catch (err) {
+      console.error(`[reports/${slug}] aggregation failed:`, err);
+      return <ErrorCard title={report.label} message={err instanceof Error ? err.message : "Unknown error"} />;
+    }
+  }
+
+  // ── Spend by Vendor ───────────────────────────────────────────────────
+  if (slug === "spend-by-vendor") {
+    try {
+      const [data, properties] = await Promise.all([
+        getSpendByVendor({ orgId: orgUser.organizationId, from, to, propertyId }),
+        propertiesPromise,
+      ]);
+      return (
+        <SpendByVendor
           data={data}
           properties={properties}
           preset={range.preset}

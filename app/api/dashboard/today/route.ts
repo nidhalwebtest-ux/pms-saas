@@ -34,6 +34,7 @@ const resSelect = {
   totalNights: true,
   grandTotal: true,
   amountPaid: true,
+  invoicesGenerated: true,
   tenant: {
     select: {
       id: true,
@@ -125,6 +126,7 @@ function serializeRes(r: {
   totalNights: number;
   grandTotal: unknown;
   amountPaid: unknown;
+  invoicesGenerated: boolean;
   tenant: { id: string; firstName: string; lastName: string; phone: string | null; classification: string; tenantType: string | null; corporateName: string | null };
   unit: { id: string; name: string; property: { id: string; name: string } } | null;
   reservationUnits: { unit: { id: string; name: string } }[];
@@ -134,8 +136,13 @@ function serializeRes(r: {
     r.unit ? [r.unit.name] : r.reservationUnits.map((ru) => ru.unit.name);
   const propertyName = r.unit?.property?.name ?? "—";
   const gt = Number(r.grandTotal);
-  // Outstanding = sum of issued, non-cancelled invoice balances.
-  const balance = r.invoices.reduce((s, inv) => s + Number(inv.balanceDue), 0);
+  // Outstanding = sum of issued, non-cancelled invoice balances. Invoices are
+  // only created when the receptionist clicks "Generate Invoices" — until
+  // then r.invoices is empty and must NOT be read as "balance settled", or
+  // an un-invoiced stay reads as fully paid (never happened, no invoice at all).
+  const balance = r.invoicesGenerated
+    ? r.invoices.reduce((s, inv) => s + Number(inv.balanceDue), 0)
+    : gt - Number(r.amountPaid);
   const ap = gt - balance;
   return {
     id: r.id,

@@ -12,9 +12,9 @@ import {
   BuildingOfficeIcon,
   ExclamationTriangleIcon,
   HomeModernIcon,
-  UserGroupIcon,
 } from "@heroicons/react/24/outline";
 import { useFormatCurrency } from "@/lib/org-context";
+import { SkeletonCard, SkeletonLine, SkeletonRectangle } from "@/components/ui";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -25,17 +25,9 @@ interface KPIs {
   occupancyRate: number;
   outstanding: number;   outstandingCount: number;
 }
-interface RevPoint   { date: string; revenue: number }
-interface ExpRow     { category: string; amount: number; pct: number }
+interface RevPoint { date: string; revenue: number }
 interface AgingBuckets {
   current: number; d1to30: number; d31to60: number; d61to90: number; d90plus: number;
-}
-interface AgingCounts {
-  current: number; d1to30: number; d31to60: number; d61to90: number; d90plus: number;
-}
-interface PerfRow {
-  userId: string; name: string; role: string;
-  checkins: number; checkouts: number; created: number; payments: number; total: number;
 }
 interface BuildingRow {
   id: string; name: string; totalUnits: number; occupied: number;
@@ -45,31 +37,31 @@ interface OccTrendPoint { month: string; revenue: number }
 interface Alert {
   type: string; severity: "red" | "amber" | "blue"; message: string; link?: string;
 }
-interface ManagerData {
+interface KpiData {
   kpis: KPIs;
   revenueTrend: RevPoint[];
-  expenseBreakdown: ExpRow[];
-  aging: { buckets: AgingBuckets; counts: AgingCounts };
-  receptionistPerformance: PerfRow[];
+  aging: { buckets: AgingBuckets };
   buildingComparison: BuildingRow[];
   occupancyTrend: OccTrendPoint[];
   alerts: Alert[];
 }
 
-// ── Inline SVG Charts (no external dependencies) ──────────────────────────────
+// ── Inline SVG charts (no external dependencies) ──────────────────────────────
+// Single brand hue per chart (magnitude-only data) — see dataviz guidance.
 
 const SVG_W = 600;
 const SVG_H = 200;
 const PAD = { l: 56, r: 8, t: 8, b: 28 };
 const PLOT_W = SVG_W - PAD.l - PAD.r;
 const PLOT_H = SVG_H - PAD.t - PAD.b;
+const CHART_HUE = "#185FA5";
 
 function MinimalLineChart({ data, noDataLabel, dateFnsLocale }: { data: RevPoint[]; noDataLabel: string; dateFnsLocale: Locale }) {
   const [tip, setTip] = useState<{ x: number; y: number; label: string; val: string } | null>(null);
   const omr = useFormatCurrency();
 
   if (data.length === 0)
-    return <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">{noDataLabel}</div>;
+    return <div className="flex items-center justify-center h-[200px] text-sm text-fg-tertiary">{noDataLabel}</div>;
 
   const maxVal = Math.max(...data.map((d) => d.revenue), 0.001);
   const n = data.length;
@@ -99,7 +91,7 @@ function MinimalLineChart({ data, noDataLabel, dateFnsLocale }: { data: RevPoint
             {format(parseISO(data[i].date), "d MMM", { locale: dateFnsLocale })}
           </text>
         ))}
-        <path d={pathD} fill="none" stroke="#185FA5" strokeWidth={2} strokeLinejoin="round" />
+        <path d={pathD} fill="none" stroke={CHART_HUE} strokeWidth={2} strokeLinejoin="round" />
         {data.map((pt, i) => (
           <circle
             key={i}
@@ -107,7 +99,7 @@ function MinimalLineChart({ data, noDataLabel, dateFnsLocale }: { data: RevPoint
             cy={yPx(pt.revenue)}
             r={4}
             fill="white"
-            stroke="#185FA5"
+            stroke={CHART_HUE}
             strokeWidth={2}
             className="cursor-pointer opacity-0 hover:opacity-100"
             onMouseEnter={() =>
@@ -150,7 +142,7 @@ function MinimalBarChart({ data, noDataLabel }: { data: OccTrendPoint[]; noDataL
   const omr = useFormatCurrency();
 
   if (data.length === 0)
-    return <div className="flex items-center justify-center h-[200px] text-sm text-gray-400">{noDataLabel}</div>;
+    return <div className="flex items-center justify-center h-[200px] text-sm text-fg-tertiary">{noDataLabel}</div>;
 
   const maxVal = Math.max(...data.map((d) => d.revenue), 0.001);
   const n = data.length;
@@ -185,8 +177,8 @@ function MinimalBarChart({ data, noDataLabel }: { data: OccTrendPoint[]; noDataL
               width={barW}
               height={Math.max(barH(pt.revenue), 2)}
               rx={4}
-              fill="#185FA5"
-              className="cursor-pointer hover:fill-indigo-400 transition-colors"
+              fill={CHART_HUE}
+              className="cursor-pointer hover:opacity-80 transition-opacity"
               onMouseEnter={() =>
                 setTip({ x: xCenter(i), y: barY(pt.revenue), label: pt.month, val: omr(pt.revenue) })
               }
@@ -232,9 +224,7 @@ function TrendBadge({
   return (
     <span
       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
-        positive
-          ? "bg-green-100 text-green-700"
-          : "bg-red-100 text-red-700"
+        positive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
       }`}
     >
       {positive
@@ -252,15 +242,15 @@ function KpiCard({
   sub?: string; color: string; icon: React.ElementType; vsLastMonthLabel: string;
 }) {
   return (
-    <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5">
+    <div className="rounded-xl bg-surface p-5 shadow-sm ring-1 ring-gray-900/5">
       <div className="flex items-start justify-between mb-3">
-        <p className="text-sm font-medium text-gray-500">{label}</p>
+        <p className="text-sm font-medium text-fg-tertiary">{label}</p>
         <div className={`rounded-lg p-2 ${color}`}>
           <Icon className="h-5 w-5" />
         </div>
       </div>
-      <p className="text-2xl font-bold text-gray-900 truncate">{value}</p>
-      {sub && <p className="mt-0.5 text-xs text-gray-400">{sub}</p>}
+      <p className="text-2xl font-bold text-fg-primary truncate">{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-fg-tertiary">{sub}</p>}
       {trend !== null && (
         <div className="mt-2">
           <TrendBadge value={trend} inverse={inverseTrend} vsLastMonthLabel={vsLastMonthLabel} />
@@ -279,48 +269,55 @@ const ALERT_ICONS: Record<string, string> = {
   red: "🔴", amber: "🟡", blue: "🔵",
 };
 
+function KpiSkeleton() {
+  return (
+    <SkeletonCard padding={0} bordered={false} announce className="bg-transparent">
+      <div className="space-y-5">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <SkeletonCard key={i} padding={20} bordered={false} announce={false} className="bg-subtle">
+              <SkeletonLine width="60%" size="sm" />
+              <SkeletonRectangle width="40%" height={28} className="mt-3" />
+              <SkeletonLine width="55%" size="sm" className="mt-3" />
+            </SkeletonCard>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <SkeletonCard key={i} padding={20} announce={false}>
+              <SkeletonLine width={160} size="sm" />
+              <SkeletonRectangle width="100%" height={200} className="mt-4" />
+            </SkeletonCard>
+          ))}
+        </div>
+      </div>
+    </SkeletonCard>
+  );
+}
+
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-export function ManagerView({
-  propertyId,
-  variant = "full",
-}: {
-  propertyId: string;
-  /** "full" = the standalone manager view; "highlights" = only building
-   *  performance, expense breakdown, and aging receivables (merged dashboard). */
-  variant?: "full" | "highlights";
-}) {
-  const highlightsOnly = variant === "highlights";
-  const t        = useTranslations("dashboard.manager");
-  const tKpis    = useTranslations("dashboard.manager.kpis");
-  const tTrend   = useTranslations("dashboard.manager.trend");
-  const tCharts  = useTranslations("dashboard.manager.charts");
-  const tBP      = useTranslations("dashboard.manager.buildingPerf");
-  const tBPTbl   = useTranslations("dashboard.manager.buildingPerf.table");
-  const tExp     = useTranslations("dashboard.manager.expenses");
-  const tExpCat  = useTranslations("dashboard.manager.expenses.categories");
-  const tAge     = useTranslations("dashboard.manager.aging");
-  const tTeam    = useTranslations("dashboard.manager.team");
-  const tTeamTbl = useTranslations("dashboard.manager.team.table");
-  const tAlerts  = useTranslations("dashboard.manager.alerts");
-  const tRoles   = useTranslations("settings.roles");
-  const locale   = useLocale();
+export function DashboardKPIs({ propertyId }: { propertyId: string }) {
+  const t       = useTranslations("dashboard.manager");
+  const tKpis   = useTranslations("dashboard.manager.kpis");
+  const tTrend  = useTranslations("dashboard.manager.trend");
+  const tCharts = useTranslations("dashboard.manager.charts");
+  const tBP     = useTranslations("dashboard.manager.buildingPerf");
+  const tBPTbl  = useTranslations("dashboard.manager.buildingPerf.table");
+  const tAge    = useTranslations("dashboard.manager.aging");
+  const tAlerts = useTranslations("dashboard.manager.alerts");
+  const locale  = useLocale();
   const dateFnsLocale = locale === "ar" ? arLocale : enLocale;
   const monthLabel = format(new Date(), "MMMM yyyy", { locale: dateFnsLocale });
-  const omr      = useFormatCurrency();
+  const omr     = useFormatCurrency();
 
-  const [data, setData]       = useState<ManagerData | null>(null);
+  const [data, setData]       = useState<KpiData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
-      const qs = new URLSearchParams();
-      if (propertyId) qs.set("propertyId", propertyId);
-      // Highlights only renders the building comparison — tell the API to skip
-      // the heavy queries that feed the hidden charts/KPIs/performance sections.
-      if (variant === "highlights") qs.set("variant", "highlights");
-      const params = qs.toString() ? `?${qs.toString()}` : "";
+      const params = propertyId ? `?propertyId=${propertyId}` : "";
       const res = await fetch(`/api/dashboard/manager${params}`);
       if (!res.ok) throw new Error("Failed to load");
       setData(await res.json());
@@ -330,16 +327,11 @@ export function ManagerView({
     } finally {
       setLoading(false);
     }
-  }, [propertyId, variant, t]);
+  }, [propertyId, t]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  if (loading)
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-sm text-gray-400">{t("loading")}</div>
-      </div>
-    );
+  if (loading) return <KpiSkeleton />;
   if (error || !data)
     return (
       <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
@@ -347,17 +339,15 @@ export function ManagerView({
       </div>
     );
 
-  const { kpis, revenueTrend, expenseBreakdown, aging, receptionistPerformance,
-          buildingComparison, occupancyTrend, alerts } = data;
-
+  const { kpis, revenueTrend, aging, buildingComparison, occupancyTrend, alerts } = data;
   const totalAging =
     aging.buckets.current + aging.buckets.d1to30 + aging.buckets.d31to60 +
     aging.buckets.d61to90 + aging.buckets.d90plus;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* ── Alerts ── */}
-      {!highlightsOnly && alerts.length > 0 && (
+      {alerts.length > 0 && (
         <div className="space-y-2">
           {alerts.map((a) => (
             <div
@@ -378,15 +368,14 @@ export function ManagerView({
         </div>
       )}
 
-      {/* ── KPI cards ── */}
-      {!highlightsOnly && (
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+      {/* ── KPI tiles ── */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
         <KpiCard
           label={tKpis("revenueMTD")}
           value={omr(kpis.revenueMTD)}
           trend={kpis.revenueTrend}
           sub={monthLabel}
-          color="bg-green-100"
+          color="bg-green-100 text-green-700"
           icon={BanknotesIcon}
           vsLastMonthLabel={tTrend("vsLastMonth")}
         />
@@ -396,7 +385,7 @@ export function ManagerView({
           trend={kpis.expensesTrend}
           inverseTrend
           sub={tKpis("lowerBetter")}
-          color="bg-red-100"
+          color="bg-red-100 text-red-700"
           icon={ArrowTrendingDownIcon}
           vsLastMonthLabel={tTrend("vsLastMonth")}
         />
@@ -405,7 +394,7 @@ export function ManagerView({
           value={omr(kpis.noi)}
           trend={kpis.noiTrend}
           sub={tKpis("revenueMinusExpenses")}
-          color={kpis.noi >= 0 ? "bg-emerald-100" : "bg-red-100"}
+          color={kpis.noi >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"}
           icon={ArrowTrendingUpIcon}
           vsLastMonthLabel={tTrend("vsLastMonth")}
         />
@@ -414,7 +403,7 @@ export function ManagerView({
           value={`${kpis.occupancyRate}%`}
           trend={null}
           sub={tKpis("currentlyCheckedIn")}
-          color="bg-blue-100"
+          color="bg-blue-100 text-blue-700"
           icon={HomeModernIcon}
           vsLastMonthLabel={tTrend("vsLastMonth")}
         />
@@ -423,76 +412,102 @@ export function ManagerView({
           value={omr(kpis.outstanding)}
           trend={null}
           sub={tKpis("outstandingSub", { count: kpis.outstandingCount })}
-          color="bg-orange-100"
+          color="bg-orange-100 text-orange-700"
           icon={ExclamationTriangleIcon}
           vsLastMonthLabel={tTrend("vsLastMonth")}
         />
-        <KpiCard
-          label={tKpis("buildings")}
-          value={String(buildingComparison.length)}
-          trend={null}
-          sub={tKpis("totalUnits", { count: buildingComparison.reduce((s, b) => s + b.totalUnits, 0) })}
-          color="bg-purple-100"
-          icon={BuildingOfficeIcon}
-          vsLastMonthLabel={tTrend("vsLastMonth")}
-        />
       </div>
-      )}
 
       {/* ── Charts row ── */}
-      {!highlightsOnly && (
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {/* Revenue trend */}
-        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5">
-          <h3 className="mb-4 text-sm font-semibold text-gray-900">
+        <div className="rounded-xl bg-surface p-5 shadow-sm ring-1 ring-gray-900/5">
+          <h3 className="mb-4 text-sm font-semibold text-fg-primary">
             {tCharts("revenue30")}
           </h3>
           <MinimalLineChart data={revenueTrend} noDataLabel={tCharts("noData")} dateFnsLocale={dateFnsLocale} />
         </div>
-
-        {/* Revenue by month (6 months) */}
-        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5">
-          <h3 className="mb-4 text-sm font-semibold text-gray-900">
+        <div className="rounded-xl bg-surface p-5 shadow-sm ring-1 ring-gray-900/5">
+          <h3 className="mb-4 text-sm font-semibold text-fg-primary">
             {tCharts("revenue6m")}
           </h3>
           <MinimalBarChart data={occupancyTrend} noDataLabel={tCharts("noData")} />
         </div>
       </div>
+
+      {/* ── Aging receivables — compact strip (replaces the old full table) ── */}
+      {totalAging > 0.001 && (
+        <div className="rounded-xl bg-surface p-5 shadow-sm ring-1 ring-gray-900/5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-fg-primary">{tAge("title")}</h3>
+            <Link href="/dashboard/payments" className="text-xs font-medium text-blue-600 hover:text-blue-800">
+              {tAge("viewAll")}
+            </Link>
+          </div>
+          <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-gray-100">
+            {([
+              ["current", aging.buckets.current, "bg-blue-400"],
+              ["d1to30", aging.buckets.d1to30, "bg-amber-400"],
+              ["d31to60", aging.buckets.d31to60, "bg-orange-500"],
+              ["d61to90", aging.buckets.d61to90, "bg-red-400"],
+              ["d90plus", aging.buckets.d90plus, "bg-red-700"],
+            ] as const).map(([key, amount, barColor]) =>
+              amount > 0.001 ? (
+                <div
+                  key={key}
+                  className={barColor}
+                  style={{ width: `${(amount / totalAging) * 100}%` }}
+                  title={`${tAge(key)}: ${omr(amount)}`}
+                />
+              ) : null,
+            )}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5">
+            {([
+              ["current", aging.buckets.current, "bg-blue-400"],
+              ["d1to30", aging.buckets.d1to30, "bg-amber-400"],
+              ["d31to60", aging.buckets.d31to60, "bg-orange-500"],
+              ["d61to90", aging.buckets.d61to90, "bg-red-400"],
+              ["d90plus", aging.buckets.d90plus, "bg-red-700"],
+            ] as const).map(([key, amount, barColor]) => (
+              <div key={key} className="flex items-center gap-1.5 text-xs">
+                <span className={`h-2 w-2 rounded-full ${barColor}`} />
+                <span className="text-fg-tertiary">{tAge(key)}</span>
+                <span className="font-semibold text-fg-primary ltr-numbers">{omr(amount)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* ── Building comparison ── */}
       {buildingComparison.length > 0 && (
-        <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
-          <div className="flex items-center gap-2 border-b border-gray-100 px-5 py-3">
-            <BuildingOfficeIcon className="h-4 w-4 text-gray-400" />
-            <h3 className="text-sm font-semibold text-gray-900">
+        <div className="overflow-hidden rounded-xl bg-surface shadow-sm ring-1 ring-gray-900/5">
+          <div className="flex items-center gap-2 border-b border-border-subtle px-5 py-3">
+            <BuildingOfficeIcon className="h-4 w-4 text-fg-tertiary" />
+            <h3 className="text-sm font-semibold text-fg-primary">
               {tBP("title", { month: monthLabel })}
             </h3>
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-100">
+            <table className="min-w-full divide-y divide-border-subtle">
               <thead>
-                <tr className="bg-gray-50">
+                <tr className="bg-subtle">
                   {(["building", "units", "occupied", "occupancy", "revenueMTD", "expensesMTD", "noi"] as const).map((k) => (
-                    <th key={k} className="px-4 py-2.5 text-start text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    <th key={k} className="px-4 py-2.5 text-start text-xs font-semibold text-fg-tertiary uppercase tracking-wider whitespace-nowrap">
                       {tBPTbl(k)}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-border-subtle">
                 {buildingComparison.map((b) => (
-                  <tr key={b.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{b.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{b.totalUnits}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{b.occupied}</td>
+                  <tr key={b.id} className="hover:bg-subtle transition-colors">
+                    <td className="px-4 py-3 text-sm font-medium text-fg-primary">{b.name}</td>
+                    <td className="px-4 py-3 text-sm text-fg-secondary">{b.totalUnits}</td>
+                    <td className="px-4 py-3 text-sm text-fg-secondary">{b.occupied}</td>
                     <td className="px-4 py-3">
                       <span className={`text-sm font-semibold ${
-                        b.occupancyPct >= 70
-                          ? "text-green-700"
-                          : b.occupancyPct >= 50
-                            ? "text-amber-600"
-                            : "text-red-600"
+                        b.occupancyPct >= 70 ? "text-green-700" : b.occupancyPct >= 50 ? "text-amber-600" : "text-red-600"
                       }`}>
                         {b.occupancyPct}%
                       </span>
@@ -506,16 +521,15 @@ export function ManagerView({
                     </td>
                   </tr>
                 ))}
-                {/* Totals row */}
-                <tr className="bg-gray-50 font-semibold">
-                  <td className="px-4 py-3 text-sm text-gray-900">{tBP("total")}</td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
+                <tr className="bg-subtle font-semibold">
+                  <td className="px-4 py-3 text-sm text-fg-primary">{tBP("total")}</td>
+                  <td className="px-4 py-3 text-sm text-fg-secondary">
                     {buildingComparison.reduce((s, b) => s + b.totalUnits, 0)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
+                  <td className="px-4 py-3 text-sm text-fg-secondary">
                     {buildingComparison.reduce((s, b) => s + b.occupied, 0)}
                   </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">{kpis.occupancyRate}%</td>
+                  <td className="px-4 py-3 text-sm text-fg-secondary">{kpis.occupancyRate}%</td>
                   <td className="px-4 py-3 text-sm text-green-700 ltr-numbers">
                     {omr(buildingComparison.reduce((s, b) => s + b.revenue, 0))}
                   </td>
@@ -526,165 +540,6 @@ export function ManagerView({
                     {omr(buildingComparison.reduce((s, b) => s + b.noi, 0))}
                   </td>
                 </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ── Expenses + Aging ── */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        {/* Expense breakdown */}
-        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5">
-          <h3 className="mb-4 text-sm font-semibold text-gray-900">
-            {tExp("title", { month: monthLabel })}
-          </h3>
-          {expenseBreakdown.length === 0 ? (
-            <p className="text-sm text-gray-400">{tExp("none")}</p>
-          ) : (
-            <div className="space-y-3">
-              {expenseBreakdown.map((e) => (
-                <div key={e.category}>
-                  <div className="flex items-center justify-between text-sm mb-1">
-                    <span className="font-medium text-gray-700">
-                      {tExpCat.has(e.category) ? tExpCat(e.category) : e.category}
-                    </span>
-                    <div className="flex items-center gap-3">
-                      <span className="text-gray-500">{e.pct}%</span>
-                      <span className="font-semibold text-gray-900 w-32 text-end ltr-numbers">
-                        {omr(e.amount)}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-gray-100">
-                    <div
-                      className="h-2 rounded-full bg-red-400 transition-all"
-                      style={{ width: `${e.pct}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-              <div className="flex justify-between border-t border-gray-100 pt-2 mt-2 text-sm font-semibold">
-                <span className="text-gray-700">{tExp("total")}</span>
-                <span className="text-red-600 ltr-numbers">
-                  {omr(expenseBreakdown.reduce((s, e) => s + e.amount, 0))}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Aging receivables */}
-        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-900/5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-900">
-              {tAge("title")}
-            </h3>
-            <Link
-              href="/dashboard/payments"
-              className="text-xs font-medium text-blue-600 hover:text-blue-800"
-            >
-              {tAge("viewAll")}
-            </Link>
-          </div>
-
-          {totalAging < 0.001 ? (
-            <p className="text-sm text-gray-400">{tAge("noBalances")}</p>
-          ) : (
-            <div className="space-y-3">
-              {([
-                ["current",  aging.buckets.current,  aging.counts.current,  "bg-blue-400",   false],
-                ["d1to30",   aging.buckets.d1to30,   aging.counts.d1to30,   "bg-amber-400",  false],
-                ["d31to60",  aging.buckets.d31to60,  aging.counts.d31to60,  "bg-orange-500", false],
-                ["d61to90",  aging.buckets.d61to90,  aging.counts.d61to90,  "bg-red-400",    false],
-                ["d90plus",  aging.buckets.d90plus,  aging.counts.d90plus,  "bg-red-700",    true],
-              ] as ["current" | "d1to30" | "d31to60" | "d61to90" | "d90plus", number, number, string, boolean][]).map(
-                ([key, amount, count, barColor, urgent]) => (
-                  <div key={key} className={`rounded-lg p-3 ${urgent && amount > 0.001 ? "bg-red-50 ring-1 ring-red-200" : ""}`}>
-                    <div className="flex items-center justify-between text-sm mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <div className={`h-2.5 w-2.5 rounded-full ${barColor}`} />
-                        <span className="font-medium text-gray-700">{tAge(key)}</span>
-                        {count > 0 && (
-                          <span className="text-xs text-gray-400">
-                            {tAge("tenants", { count })}
-                          </span>
-                        )}
-                        {urgent && amount > 0.001 && (
-                          <span className="text-xs font-bold text-red-700">{tAge("urgent")}</span>
-                        )}
-                      </div>
-                      <span className={`font-semibold ltr-numbers ${urgent && amount > 0.001 ? "text-red-700" : "text-gray-900"}`}>
-                        {omr(amount)}
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-gray-100">
-                      <div
-                        className={`h-full rounded-full ${barColor} transition-all`}
-                        style={{
-                          width: totalAging > 0
-                            ? `${Math.min((amount / totalAging) * 100, 100)}%`
-                            : "0%",
-                        }}
-                      />
-                    </div>
-                  </div>
-                ),
-              )}
-              <div className="flex justify-between border-t border-gray-100 pt-2 text-sm font-semibold">
-                <span className="text-gray-700">{tAge("totalOutstanding")}</span>
-                <span className="text-red-600 ltr-numbers">{omr(totalAging)}</span>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ── Receptionist performance ── */}
-      {!highlightsOnly && receptionistPerformance.length > 0 && (
-        <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5">
-          <div className="flex items-center gap-2 border-b border-gray-100 px-5 py-3">
-            <UserGroupIcon className="h-4 w-4 text-gray-400" />
-            <h3 className="text-sm font-semibold text-gray-900">
-              {tTeam("title", { month: monthLabel })}
-            </h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-100">
-              <thead>
-                <tr className="bg-gray-50">
-                  {(["rank", "name", "role", "reservationsCreated", "checkins", "checkouts", "paymentsLogged", "totalActions"] as const).map((k) => (
-                    <th key={k} className="px-4 py-2.5 text-start text-xs font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                      {tTeamTbl(k)}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {receptionistPerformance.map((p, i) => (
-                  <tr key={p.userId} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-                        i === 0 ? "bg-amber-100 text-amber-700"
-                        : i === 1 ? "bg-gray-100 text-gray-600"
-                        : "bg-gray-50 text-gray-400"
-                      }`}>
-                        {i + 1}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm font-medium text-gray-900">{p.name}</td>
-                    <td className="px-4 py-3">
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                        {tRoles.has(p.role) ? tRoles(p.role) : p.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{p.created}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{p.checkins}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{p.checkouts}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{p.payments}</td>
-                    <td className="px-4 py-3 text-sm font-bold text-gray-900">{p.total}</td>
-                  </tr>
-                ))}
               </tbody>
             </table>
           </div>

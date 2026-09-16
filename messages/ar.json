@@ -573,6 +573,7 @@
         "noOutstanding": "لا توجد مستحقات",
         "noToIssue": "لا توجد فواتير بانتظار الإصدار",
         "noSearchResults": "لا توجد نتائج مطابقة لبحثك",
+        "resultsCount": "{count, plural, zero {لا نتائج} one {نتيجة واحدة} two {نتيجتان} few {# نتائج} many {# نتيجة} other {# نتيجة}}",
         "issue": "إصدار",
         "issuing": "جارٍ الإصدار…",
         "issueSuccess": "تم إصدار الفاتورة",

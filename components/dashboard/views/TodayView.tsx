@@ -12,7 +12,6 @@ import {
   DocumentTextIcon,
 } from "@heroicons/react/24/outline";
 import { useFormatCurrency } from "@/lib/org-context";
-import { useTabParam } from "@/hooks/useTabParam";
 import {
   Alert,
   Badge,
@@ -391,7 +390,10 @@ export function TodayView({ propertyId }: { propertyId: string }) {
   const [data, setData]       = useState<TodayData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
-  const [focusTab, setFocusTab] = useTabParam("focus", "arrivals");
+  // Plain local state — NOT synced to the URL. Syncing via router.replace()
+  // triggers a Next.js navigation (and re-suspends this async route) on every
+  // click, which is what made tab switching feel like a fresh page load.
+  const [focusTab, setFocusTab] = useState<FocusTab>("arrivals");
   const [search, setSearch]   = useState("");
 
   const fetchData = useCallback(async () => {
@@ -464,6 +466,7 @@ export function TodayView({ propertyId }: { propertyId: string }) {
     outstanding: filteredOutstanding.length,
     toIssue: filteredToIssue.length,
   };
+  const totalMatches = Object.values(tabMatchCounts).reduce((s, n) => s + n, 0);
 
   return (
     <div className="space-y-5">
@@ -505,8 +508,27 @@ export function TodayView({ propertyId }: { propertyId: string }) {
       {/* ── Guest queues: one tabbed panel instead of a wide 2-col grid ── */}
       <div data-tour="today-tabs" className="rounded-xl bg-surface border border-border-subtle overflow-hidden">
         <Tabs value={focusTab} onValueChange={(v) => setFocusTab(v as FocusTab)}>
-          <div className="flex items-center gap-3 px-2 pt-2">
-            <TabsList variant="underline" size="md" ariaLabel={tTabs("ariaLabel")} className="flex-1 min-w-0">
+          <div className="flex flex-col gap-2.5 px-3 pt-3 sm:px-4">
+            {/* Search sits on its own row, full-width — always visible and never
+                squeezed by the tab strip, with a live match count while typing. */}
+            <div className="flex items-center gap-3">
+              <FilterBarSearch
+                search={{
+                  value: search,
+                  onChange: setSearch,
+                  placeholder: tTabs("searchPlaceholder"),
+                  debounceMs: 0,
+                  shortcut: true,
+                }}
+                className="max-w-none sm:max-w-[360px]"
+              />
+              {q && (
+                <span className="hidden shrink-0 text-xs text-fg-tertiary sm:inline">
+                  {tTabs("resultsCount", { count: totalMatches })}
+                </span>
+              )}
+            </div>
+            <TabsList variant="underline" size="md" ariaLabel={tTabs("ariaLabel")} className="-mx-1 overflow-x-auto">
               <TabsTrigger value="arrivals" count={q ? tabMatchCounts.arrivals : tabCounts.arrivals}>
                 {tSec("arrivingToday")}
               </TabsTrigger>
@@ -539,15 +561,6 @@ export function TodayView({ propertyId }: { propertyId: string }) {
                 {tTabs("toIssue")}
               </TabsTrigger>
             </TabsList>
-            <FilterBarSearch
-              search={{
-                value: search,
-                onChange: setSearch,
-                placeholder: tTabs("searchPlaceholder"),
-                debounceMs: 0,
-              }}
-              className="max-w-[260px]"
-            />
           </div>
 
           <TabsContent value="arrivals">

@@ -6,8 +6,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { ar as arLocale, enUS as enLocale } from "date-fns/locale";
 import type { Role } from "@/lib/permissions";
 import { TodayView } from "./views/TodayView";
-import { ReceptionistView } from "./views/ReceptionistView";
-import { ManagerView } from "./views/ManagerView";
+import { DashboardKPIs } from "./views/DashboardKPIs";
 
 interface Props {
   user: { firstName: string; role: Role };
@@ -16,7 +15,7 @@ interface Props {
 }
 
 /** Subtle section divider that groups the merged dashboard into Today /
- *  Occupancy & Guests / Performance zones. */
+ *  Performance zones. */
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3 pt-1">
@@ -71,13 +70,10 @@ export function DashboardShell({ user, propertyId, properties }: Props) {
       <SectionHeading>{t("sectionToday")}</SectionHeading>
       <TodayView propertyId={propertyId} />
 
-      {/* ── Occupancy & guests (full receptionist workspace) ── */}
-      <SectionHeading>{t("sectionOperations")}</SectionHeading>
-      <ReceptionistView propertyId={propertyId} properties={properties} />
-
-      {/* ── Performance: building comparison, expenses, aging ── */}
+      {/* ── KPIs: revenue/expense/occupancy tiles, trend charts, aging,
+          building comparison ── */}
       <SectionHeading>{t("sectionPerformance")}</SectionHeading>
-      <ManagerView propertyId={propertyId} variant="highlights" />
+      <DashboardKPIs propertyId={propertyId} />
     </div>
   );
 }

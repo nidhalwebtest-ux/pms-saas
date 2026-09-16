@@ -573,6 +573,7 @@
         "noOutstanding": "No outstanding balances",
         "noToIssue": "No invoices waiting to be issued",
         "noSearchResults": "No results found for your search",
+        "resultsCount": "{count, plural, =0 {No matches} one {# match} other {# matches}}",
         "issue": "Issue",
         "issuing": "Issuing…",
         "issueSuccess": "Invoice issued",

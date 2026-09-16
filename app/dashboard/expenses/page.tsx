@@ -100,7 +100,7 @@ export default async function ExpensesPage() {
     processedBy:     e.processedBy,
   }));
 
-  const canSubmit  = access.canCreate("expenses") && ["OWNER", "STAFF"].includes(dbUser.role);
+  const canSubmit  = access.canCreate("expenses") && ["OWNER", "MANAGER", "STAFF"].includes(dbUser.role);
   const canManage  = access.can("expenses", "EDIT") && ["OWNER", "MANAGER"].includes(dbUser.role);
 
   const t = await getTranslations("expenses");

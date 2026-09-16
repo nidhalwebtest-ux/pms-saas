@@ -39,7 +39,7 @@ export const ACTION_ACCESS: Record<string, Role[]> = {
   manageExpenses:     ["OWNER", "MANAGER", "ACCOUNTANT"],
   manageTenants:      ["OWNER", "MANAGER", "STAFF"],
   manageReservations: ["OWNER", "MANAGER", "STAFF"],
-  submitExpense:      ["OWNER", "STAFF"],              // Receptionist + Owner can submit
+  submitExpense:      ["OWNER", "MANAGER", "STAFF"],   // Receptionist, Manager, Owner can submit
   approveExpense:     ["OWNER", "MANAGER"],            // Manager/Owner can approve or reject
   processExpense:     ["OWNER", "ACCOUNTANT"],         // Accountant/Owner can process
   manageExpenseCategories: ["OWNER", "MANAGER"],       // Admin-level

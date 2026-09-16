@@ -23,8 +23,9 @@ export default async function NewExpensePage({
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
 
-  // Only OWNER + STAFF (receptionist) can submit
-  if (!["OWNER", "STAFF"].includes(dbUser.role)) {
+  // OWNER, MANAGER, and STAFF (receptionist) can submit. ACCOUNTANT is
+  // deliberately excluded — they process/approve expenses but don't submit them.
+  if (!["OWNER", "MANAGER", "STAFF"].includes(dbUser.role)) {
     redirect("/dashboard/expenses");
   }
 

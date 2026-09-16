@@ -136,9 +136,10 @@ export async function POST(req: NextRequest) {
   let orgUser;
   try { orgUser = await requireOrgUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
 
-  // Only OWNER and STAFF can submit
-  if (!["OWNER", "STAFF"].includes(orgUser.role ?? "")) {
-    return NextResponse.json({ error: "Only receptionists can submit expenses" }, { status: 403 });
+  // OWNER, MANAGER, and STAFF can submit. ACCOUNTANT is deliberately excluded —
+  // they process/approve expenses but don't submit them.
+  if (!["OWNER", "MANAGER", "STAFF"].includes(orgUser.role ?? "")) {
+    return NextResponse.json({ error: "You don't have permission to submit expenses" }, { status: 403 });
   }
 
   const body = await req.json();

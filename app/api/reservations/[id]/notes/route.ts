@@ -1,18 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { forbiddenIfNo } from "@/lib/access";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
-
-async function getActor() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { id: true, organizationId: true },
-  });
-  return dbUser?.organizationId ? dbUser : null;
-}
+import { getActor } from "@/lib/current-user";
 
 export async function POST(
   req: NextRequest,

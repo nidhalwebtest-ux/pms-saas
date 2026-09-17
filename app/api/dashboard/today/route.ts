@@ -1,19 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getOrgId } from "@/lib/current-user";
 import { Prisma } from "@prisma/client";
 import { tenantDisplayName } from "@/lib/tenant-display";
-
-async function getOrgId() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { organizationId: true },
-  });
-  return dbUser?.organizationId ?? null;
-}
 
 function propResFilter(propertyId: string) {
   if (!propertyId) return {};

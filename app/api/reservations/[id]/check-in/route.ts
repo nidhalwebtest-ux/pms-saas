@@ -1,22 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { forbiddenIfNo } from "@/lib/access";
 import { Prisma } from "@prisma/client";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getActor } from "@/lib/current-user";
 import { canTransitionTo, type StoredStatus } from "@/lib/reservation-status";
 import { generateInvoicesForReservation, issueDraftInvoicesOnCheckIn } from "@/lib/invoice-engine";
 import { getUnitConflict, getCheckedInOccupant } from "@/lib/reservation-conflict";
-
-async function getActor() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { id: true, organizationId: true },
-  });
-  return dbUser?.organizationId ? dbUser : null;
-}
 
 export async function PATCH(
   req: NextRequest,

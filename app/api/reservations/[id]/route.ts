@@ -1,24 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { forbiddenIfNo } from "@/lib/access";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getActor } from "@/lib/current-user";
 import { Prisma } from "@prisma/client";
 import { getDisplayStatus, type StoredStatus } from "@/lib/reservation-status";
 import { calculateNights, calculateGrandTotal } from "@/lib/reservation-engine";
 import { getUnitConflict, type ConflictDetail } from "@/lib/reservation-conflict";
 import { computeUnitPricings, findMonthlyBlock } from "@/lib/reservation-pricing";
-
-async function getActor() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { id: true, organizationId: true },
-  });
-  return dbUser?.organizationId ? dbUser : null;
-}
 
 export async function GET(
   _req: NextRequest,

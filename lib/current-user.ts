@@ -50,3 +50,37 @@ export const getSessionUser = cache(async () => {
   if (!dbUser) return null;
   return { ...dbUser, email: user.email ?? null };
 });
+
+/**
+ * Narrow org-id lookup, request-cached. Equivalent to the `getOrgId()`
+ * helper independently redefined across ~20 API routes — consolidated here
+ * so repeated calls within one request (or across helpers that both need
+ * it) share the same cached `getAuthUser()` result instead of each route
+ * re-running its own copy. Returns null if unauthenticated or the org is
+ * unset.
+ */
+export const getOrgId = cache(async (): Promise<string | null> => {
+  const user = await getAuthUser();
+  if (!user) return null;
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { organizationId: true },
+  });
+  return dbUser?.organizationId ?? null;
+});
+
+/**
+ * Actor lookup (id + organizationId), request-cached. Equivalent to the
+ * `getActor()` helper independently redefined across the reservation API
+ * routes. Returns null if unauthenticated or the org is unset — matches
+ * the original `dbUser?.organizationId ? dbUser : null` behavior exactly.
+ */
+export const getActor = cache(async (): Promise<{ id: string; organizationId: string } | null> => {
+  const user = await getAuthUser();
+  if (!user) return null;
+  const dbUser = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { id: true, organizationId: true },
+  });
+  return dbUser?.organizationId ? { id: dbUser.id, organizationId: dbUser.organizationId } : null;
+});

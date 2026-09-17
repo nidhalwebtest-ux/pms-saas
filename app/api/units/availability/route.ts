@@ -5,8 +5,8 @@
  * Used by the BookingEngine unit-selection step.
  */
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getOrgId } from "@/lib/current-user";
 import {
   calculateNights,
   countCalendarMonths,
@@ -15,17 +15,6 @@ import {
   sumSubtotals,
 } from "@/lib/reservation-engine";
 import { getUnitPriceForRange } from "@/lib/pricing";
-
-async function getOrgId() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { organizationId: true },
-  });
-  return dbUser?.organizationId ?? null;
-}
 
 export async function GET(req: NextRequest) {
   const orgId = await getOrgId();

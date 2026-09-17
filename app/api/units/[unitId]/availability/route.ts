@@ -5,19 +5,8 @@
  * Returns { available: boolean, conflict?: { id, startDate, endDate, status } }
  */
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
-
-async function getOrgId() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { organizationId: true },
-  });
-  return dbUser?.organizationId ?? null;
-}
+import { getOrgId } from "@/lib/current-user";
 
 export async function GET(
   req: NextRequest,

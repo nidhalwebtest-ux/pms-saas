@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { forbiddenIfNo } from "@/lib/access";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getActor } from "@/lib/current-user";
 import { getEffectivePropertyIds } from "@/lib/property-scope";
 import { Prisma } from "@prisma/client";
 import {
@@ -17,17 +17,6 @@ import { computeUnitPricings, findMonthlyBlock } from "@/lib/reservation-pricing
 import { generateInvoicesForReservation } from "@/lib/invoice-engine";
 
 // ── Auth helper ───────────────────────────────────────────────────────────────
-
-async function getActor() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { id: true, organizationId: true },
-  });
-  return dbUser?.organizationId ? dbUser : null;
-}
 
 // ── Reservation number generator ──────────────────────────────────────────────
 

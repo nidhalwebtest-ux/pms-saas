@@ -88,6 +88,7 @@ type InvoiceRow = {
   status: string;
   totalAmount: string;
   amountPaid: string;
+  creditedAmount: string;
   balanceDue: string;
   dueDate: string;
   periodStart: string;
@@ -482,8 +483,22 @@ function CheckOutModal({ res, onSuccess, onClose }: {
   const [condition, setCondition] = useState({ inspected: false, keysReturned: false, noDamage: false });
   const [loading, setLoading] = useState(false);
 
+  // Invoice figures as source of truth (net of return credits), same pattern
+  // as the main financial summary — res.grandTotal/amountPaid/balanceDue can
+  // be stale relative to what's actually been credited/paid on the invoices.
+  const nonCancelledInvoices = res.invoices.filter((inv) => !["CANCELLED", "VOID"].includes(inv.status));
+  const modalGrandTotal = res.invoices.length > 0
+    ? nonCancelledInvoices.reduce((s, inv) => s + Number(inv.totalAmount) - Number(inv.creditedAmount ?? 0), 0)
+    : Number(res.grandTotal);
+  const modalAmountPaid = res.invoices.length > 0
+    ? nonCancelledInvoices.reduce((s, inv) => s + Number(inv.amountPaid), 0)
+    : Number(res.amountPaid);
+  const modalBalanceDue = res.invoices.length > 0
+    ? nonCancelledInvoices.reduce((s, inv) => s + Number(inv.balanceDue), 0)
+    : Number(res.balanceDue);
+
   const adjustmentAmt = adjustToggle && isEarly ? -estimatedAdjustment : 0;
-  const adjustedBalance = Math.max(0, Number(res.balanceDue) + adjustmentAmt).toFixed(3);
+  const adjustedBalance = Math.max(0, modalBalanceDue + adjustmentAmt).toFixed(3);
 
   async function handleConfirm() {
     setLoading(true);
@@ -554,7 +569,7 @@ function CheckOutModal({ res, onSuccess, onClose }: {
         <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
           <div className="flex justify-between text-gray-600">
             <span>{t("originalTotal")}</span>
-            <span><span className="ltr-numbers">{res.grandTotal}</span> OMR</span>
+            <span><span className="ltr-numbers">{modalGrandTotal.toFixed(3)}</span> OMR</span>
           </div>
           {adjustToggle && isEarly && estimatedAdjustment > 0 && (
             <div className="flex justify-between text-blue-600">
@@ -564,7 +579,7 @@ function CheckOutModal({ res, onSuccess, onClose }: {
           )}
           <div className="flex justify-between text-gray-600 border-t pt-2">
             <span>{t("alreadyPaid")}</span>
-            <span><span className="ltr-numbers">-{res.amountPaid}</span> OMR</span>
+            <span><span className="ltr-numbers">-{modalAmountPaid.toFixed(3)}</span> OMR</span>
           </div>
           <div className={`flex justify-between font-bold text-base pt-1 ${Number(adjustedBalance) > 0 ? "text-red-600" : "text-green-600"}`}>
             <span>{t("balanceDue")}</span>
@@ -624,7 +639,12 @@ function CancelModal({ res, onSuccess, onClose }: {
   const [reason, setReason] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
-  const totalPaid = Number(res.amountPaid);
+  // Invoice-derived, same as the financial summary — res.amountPaid can be
+  // stale relative to what's actually been paid/credited on the invoices.
+  const nonCancelledInvoicesForCancel = res.invoices.filter((inv) => !["CANCELLED", "VOID"].includes(inv.status));
+  const totalPaid = res.invoices.length > 0
+    ? nonCancelledInvoicesForCancel.reduce((s, inv) => s + Number(inv.amountPaid), 0)
+    : Number(res.amountPaid);
 
   async function handleConfirm() {
     if (!reason) { toast.error(t("selectReasonError")); return; }
@@ -649,7 +669,7 @@ function CancelModal({ res, onSuccess, onClose }: {
           <Alert
             variant="warning"
             description={t.rich("refundWarning", {
-              amount: res.amountPaid,
+              amount: totalPaid.toFixed(3),
               b: (chunks) => <strong>{chunks}</strong>,
             })}
           />
@@ -1860,15 +1880,28 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
     ["Upcoming", "Arriving Today", "Overdue Arrival"].includes(res.displayStatus);
 
 
-  // Use invoice balances as the source of truth when invoices exist
+  // Use invoice figures as the source of truth when invoices exist — they're
+  // net of return credits, unlike Reservation.grandTotal/amountPaid, which
+  // (for reservations that predate the sync fix, or via any path that
+  // doesn't go through the invoice/return engines) can go stale.
+  const nonCancelledInvoices = res.invoices.filter((inv) => !["CANCELLED", "VOID"].includes(inv.status));
   const invoiceBalanceDue = res.invoices.length > 0
-    ? res.invoices
-        .filter((inv) => !["CANCELLED", "VOID"].includes(inv.status))
-        .reduce((s, inv) => s + Number(inv.balanceDue), 0)
+    ? nonCancelledInvoices.reduce((s, inv) => s + Number(inv.balanceDue), 0)
     : Number(res.balanceDue);
   const balanceDue = Math.round(invoiceBalanceDue * 1000) / 1000;
   const isPaid = balanceDue <= 0 && res.invoices.some((inv) => ["PAID"].includes(inv.status));
   const isOverpaid = balanceDue < 0;
+
+  // Effective grand total (net of return credits) and total paid, both
+  // derived from invoices when they exist — matches balanceDue's pattern
+  // above and stays correct regardless of whether Reservation.grandTotal/
+  // amountPaid happen to be in sync.
+  const displayGrandTotal = res.invoices.length > 0
+    ? nonCancelledInvoices.reduce((s, inv) => s + Number(inv.totalAmount) - Number(inv.creditedAmount ?? 0), 0)
+    : Number(res.grandTotal);
+  const displayAmountPaid = res.invoices.length > 0
+    ? nonCancelledInvoices.reduce((s, inv) => s + Number(inv.amountPaid), 0)
+    : Number(res.amountPaid);
   const today = new Date().toISOString();
 
   return (
@@ -1923,7 +1956,13 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
               <span className="font-semibold">{tBanners("refundLabel")} </span>
               <span>
                 {tBanners.rich("refundBody", {
-                  amount: res.amountPaid,
+                  // A cancel is only ever allowed when no invoice has recorded
+                  // payments (blocked server-side otherwise), so by the time a
+                  // cancelled reservation reaches this state its invoices are
+                  // cancelled/empty too — res.payments (the same source the
+                  // cancel API itself uses for refundPending) is correct here,
+                  // not an invoice-derived figure.
+                  amount: res.payments.reduce((s, p) => s + Number(p.amount), 0).toFixed(3),
                   b: (chunks) => <strong>{chunks}</strong>,
                 })}
               </span>
@@ -2394,7 +2433,7 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
                 )}
                 <div className="flex justify-between font-semibold text-gray-900 pt-2 border-t border-gray-200">
                   <span>{tFinancial("grandTotal")}</span>
-                  <span className="ltr-numbers">{Number(res.grandTotal).toFixed(3)} OMR</span>
+                  <span className="ltr-numbers">{displayGrandTotal.toFixed(3)} OMR</span>
                 </div>
 
                 {/* Payments */}
@@ -2412,7 +2451,7 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
                     ))}
                     <div className="flex justify-between text-sm font-medium text-gray-700 pt-1 border-t border-dashed mt-2">
                       <span>{tFinancial("totalPaid")}</span>
-                      <span className="ltr-numbers">{Number(res.amountPaid).toFixed(3)}</span>
+                      <span className="ltr-numbers">{displayAmountPaid.toFixed(3)}</span>
                     </div>
                   </div>
                 )}

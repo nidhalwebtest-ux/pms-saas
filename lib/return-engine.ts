@@ -25,6 +25,7 @@ import {
 import {
   buildBillingCyclePeriods,
   getReservationUnitInfos,
+  recalcReservationGrandTotal,
   type UnitInfo,
 } from "@/lib/invoice-engine";
 import type { Prisma } from "@prisma/client";
@@ -521,6 +522,7 @@ export async function executeDailyReturn(params: {
     if (preview.affectedInvoices.length > 0) {
       const inv = preview.affectedInvoices[0];
       await applyReturnCredit(tx, inv.id, roundOMR(preview.returnAmount), ret.returnNumber);
+      await recalcReservationGrandTotal(tx, reservationId);
     }
 
     // Get unit IDs
@@ -636,6 +638,7 @@ export async function executeMonthlyReturn(params: {
       if (cancelSet.has(ai.id)) continue;
       await applyReturnCredit(tx, ai.id, roundOMR(ai.returnAmount), ret.returnNumber);
     }
+    await recalcReservationGrandTotal(tx, reservationId);
 
     // Get unit IDs
     const reservation = await tx.reservation.findUnique({

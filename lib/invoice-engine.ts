@@ -1686,6 +1686,40 @@ async function _recalcReservationAmountPaid(
   });
 }
 
+// ── Recalculate reservation.grandTotal after a return credit ──────────────────
+
+/**
+ * Sync Reservation.grandTotal/totalPrice to the reservation's current
+ * effective charge — sum of each non-cancelled invoice's totalAmount minus
+ * its creditedAmount. Mirrors _recalcReservationAmountPaid's pattern:
+ * returns apply credit to the Invoice (the source of truth) but never
+ * touched the Reservation's own total fields, so any UI reading
+ * Reservation.grandTotal directly kept showing the pre-return amount even
+ * after a return fully credited an invoice. Called after applyReturnCredit.
+ */
+export async function recalcReservationGrandTotal(
+  tx:            Prisma.TransactionClient,
+  reservationId: string,
+): Promise<void> {
+  const invoices = await tx.invoice.findMany({
+    where: { reservationId, status: { notIn: ["CANCELLED", "VOID"] } },
+    select: { totalAmount: true, creditedAmount: true },
+  });
+  if (invoices.length === 0) return;
+
+  const effectiveTotal = roundOMR(
+    invoices.reduce(
+      (sum, inv) => sum + Number(inv.totalAmount) - Number(inv.creditedAmount ?? 0),
+      0,
+    ),
+  );
+
+  await tx.reservation.update({
+    where: { id: reservationId },
+    data:  { grandTotal: effectiveTotal, totalPrice: effectiveTotal },
+  });
+}
+
 // ── Tenant financial summary ───────────────────────────────────────────────────
 
 /**

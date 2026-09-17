@@ -375,6 +375,10 @@ model Property {
   websiteBookingRequests WebsiteBookingRequest[]
 
   createdAt      DateTime @default(now())
+
+  // organizationId + isArchived is the filter on nearly every property query
+  // in the app (dashboard, reservations, manager KPIs, reports).
+  @@index([organizationId, isArchived])
 }
 
 model Unit {
@@ -415,6 +419,10 @@ model Unit {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // propertyId is the near-universal filter (availability calendar, manager
+  // KPI building comparison, units list).
+  @@index([propertyId])
 }
 
 model UnitPrice {
@@ -519,6 +527,11 @@ model Tenant {
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+
+  // organizationId backs the `tenant: { organizationId }` relation filter
+  // used on nearly every reservation/dashboard/report query that touches
+  // the tenant relation.
+  @@index([organizationId])
 }
 
 model Reservation {
@@ -717,6 +730,11 @@ model Invoice {
   @@index([organizationId, status])
   @@index([tenantId])
   @@index([reservationId])
+  // Outstanding-balance queries (dashboard KPI, aging receivables report)
+  // filter organizationId (equality) + balanceDue > 0 (range) directly —
+  // this matches that shape more directly than the status-keyed index above,
+  // whose second column is compared with notIn/not, not equality.
+  @@index([organizationId, balanceDue])
 }
 
 model InvoiceLineItem {
@@ -811,6 +829,9 @@ model PaymentAllocation {
   createdAt      DateTime @default(now())
 
   @@unique([paymentId, invoiceId])
+  // organizationId is filtered directly (not just via the payment/invoice
+  // relations) in the manager KPI revenue/outstanding queries.
+  @@index([organizationId])
 }
 
 // ── Returns ───────────────────────────────────────────────────────────────────

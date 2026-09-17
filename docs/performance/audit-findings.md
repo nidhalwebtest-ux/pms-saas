@@ -616,7 +616,116 @@ fetch (~150-300ms) on expense submission and on onboarding completion —
 the latter being a one-time but first-impression-critical path.
 
 ### What wasn't done this round (deferred to a later pass, per the approved scope)
-Unbounded list-page fetches (§4.3, 7+ pages), missing indexes (§4.5), and
-report-bundle code-splitting (§4.7) were left untouched this round —
-larger, higher-risk changes that need their own dedicated verification
-pass rather than being bundled into today's mechanical/structural fixes.
+Missing indexes (§4.5) and report-bundle code-splitting (§4.7) were left
+untouched this round — larger, higher-risk changes that need their own
+dedicated verification pass rather than being bundled into today's
+mechanical/structural fixes.
+
+### 6.5 — Unbounded list-page fetches (§4.3): investigated, deliberately NOT changed
+Before touching `take: 500`/`take: 2000`/`take: 5000` across the 7+
+flagged pages, checked actual row counts against the (confirmed
+production) database rather than assuming the caps were being hit:
+
+```
+total reservations (all orgs combined): 221
+tenants: 132        payments: 79        expenses: 27        invoices: 251
+```
+
+At these real volumes, none of the existing caps are truncating
+anything today — every org's full dataset fits comfortably under even
+the smallest cap (`take: 500`). Two things follow from that:
+
+1. **Shrinking the caps would not speed up today's queries** — there is
+   no 5000-row result currently being fetched and discarded; the cap is
+   headroom, not an active cost.
+2. **Shrinking the caps would introduce a real correctness risk for no
+   present benefit.** All 7 pages (confirmed for reservations by reading
+   `ReservationsView.tsx`) do their tab-filtering and search **entirely
+   client-side**, over the one bounded fetch, with no further network
+   call per tab click or keystroke — the reservations list's quick-filter
+   tabs (`arriving`, `inHouse`, `overstay`, etc.) are computed display
+   statuses derived client-side (`useMemo` at `ReservationsView.tsx:444`)
+   from whatever the single fetch returned. A separate
+   `/api/reservations/summary` endpoint (unbounded, narrow `select`)
+   independently computes the tab *counts*, so counts stay accurate
+   regardless of the list cap — but the list *rows* themselves would
+   silently stop covering older records the day an org's data exceeds
+   a shrunk cap, while the tab still shows an accurate count next to an
+   incomplete table. That's a worse bug than the one being fixed.
+
+**Decision (confirmed with the user): left as-is.** True server-side
+pagination (fetch-per-tab, fetch-per-search-keystroke) was considered
+and explicitly declined — it would trade today's instant client-side
+tab/search UX for a network round trip on every interaction, which is
+a real behavior change the team did not want bundled into a
+"performance fix" pass. Revisit this category if/when an org's actual
+data volume approaches one of the existing caps — at that point,
+server-side pagination (with the tab-filter and search moved into the
+query's `WHERE` clause) is the correct fix, not a smaller cap.
+
+---
+
+## 7. Phase 2, round 2 — missing indexes applied (2026-09-18)
+
+### 7.1 — Indexes added (§4.5)
+Five purely additive `CREATE INDEX` statements, each backed by a specific
+query traced in §2/§6, applied to `prisma/schema.prisma` and pushed to the
+live database via `prisma db push`:
+
+```sql
+CREATE INDEX "Property_organizationId_isArchived_idx" ON "Property"("organizationId", "isArchived");
+CREATE INDEX "Unit_propertyId_idx" ON "Unit"("propertyId");
+CREATE INDEX "Tenant_organizationId_idx" ON "Tenant"("organizationId");
+CREATE INDEX "PaymentAllocation_organizationId_idx" ON "PaymentAllocation"("organizationId");
+CREATE INDEX "Invoice_organizationId_balanceDue_idx" ON "Invoice"("organizationId", "balanceDue");
+```
+
+One deliberate deviation from the original §4.5 proposal: rather than widen
+the existing `Invoice.@@index([organizationId, status])` to include
+`balanceDue`, a separate `(organizationId, balanceDue)` index was added
+instead. The outstanding-balance queries (dashboard KPI, aging receivables)
+filter `status` with `notIn`/`not` — not equality — so appending
+`balanceDue` onto the status-keyed index would have bought less than it
+looked like on paper; a dedicated index on the two columns that actually
+get equality/range-filtered together is the more honest fix.
+
+**Confirmed applied:** queried `pg_indexes` directly after the push — all
+5 index names present, correct tables. Verified with `tsc --noEmit` and a
+full `next build` (both clean) and re-ran the actual outstanding-balance
+query the new `Invoice` index backs (56 invoices, 17962.000 OMR total) —
+same query, same filter, same shape as before the index existed; only the
+query plan changes, never the result.
+
+**Operational note for future schema work on this project:** the first
+attempt to compute this diff (`prisma migrate diff --from-url
+$DATABASE_URL`, i.e. the pooled/pgbouncer connection string) hung for 12+
+minutes with no output and had to be killed. Re-running against
+`$DIRECT_URL` (the non-pooled connection, already configured as `directUrl`
+in the schema's `datasource` block) completed in seconds. `prisma db push`
+itself was unaffected — Prisma already routes schema-changing operations
+through `directUrl` automatically — but any future manual
+`prisma migrate diff`/introspection command should be pointed at
+`DIRECT_URL` explicitly, not `DATABASE_URL`.
+
+**No live `EXPLAIN ANALYZE` before/after timing was captured** — same
+production-database safety constraint as every other round in this report.
+At the current real row counts (Invoice ~250, Tenant ~130, Property/Unit
+low hundreds across all orgs combined), the *absolute* time saved by any
+of these 5 indexes today is small — a full sequential scan on a few
+hundred rows is already fast in server-side terms; the win is structural
+(guaranteed index use as these tables grow, avoiding the point where a
+sequential scan on a several-thousand-row table becomes the dominant cost
+noted in §3's "Live EXPLAIN ANALYZE" discussion) rather than a
+measurable improvement to today's reported 3-4s loads, which are still
+overwhelmingly a function of the region mismatch (§1) and the per-request
+round-trip pattern (§6.1), not table scan cost at this data volume.
+
+### 7.2 — Unbounded list-page fetches (§4.3): reaffirmed as skipped
+Re-confirmed the §6.5 decision still stands — this round didn't touch
+`take: 500`/`2000`/`5000` anywhere. No new information changed that
+call.
+
+### What's still remaining
+Report-bundle code-splitting (§4.7) — wrapping the 23 report view
+imports in `next/dynamic()` — is the only item from the original ranked
+list not yet started.

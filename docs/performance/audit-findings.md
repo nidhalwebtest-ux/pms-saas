@@ -505,3 +505,118 @@ Supabase supports it, given the product's Oman/Gulf user base) is feasible,
 that is the structural fix this report would recommend evaluating in a
 follow-up phase — it was out of scope to change here, but every other
 finding in this report is, at best, mitigating a symptom of it.
+
+---
+
+## 6. Phase 2, round 1 — fixes applied (2026-09-17)
+
+Same production-DB safety constraint as Phase 1 applies: no live query
+timing was captured (no safe non-prod connection to measure against), so
+this round's "before/after" is a **structural before/after** — round-trip
+counts and code shape, confirmed by reading the diffs — not measured
+wall-clock milliseconds. Every change was verified with `npx tsc --noEmit`
+and a full `npx next build` (both clean) after each category, plus a
+manual line-by-line diff review for behavior preservation. No business
+logic, filter conditions, or returned data shape changed in any of these —
+only round-trip count, query shape (`select` narrowing), and client-side
+navigation calls.
+
+### 6.1 — Auth/org lookup dedup (§4.1)
+**Before:** 32 files (not 10 — re-grepped and confirmed the real count)
+each defined a local `getOrgId()`/`getActor()`.
+**After:** 29 of the 32 now import shared, `React.cache()`-backed
+`getOrgId`/`getActor` from `lib/current-user.ts`. **3 files intentionally
+left untouched**, each for a confirmed, non-guessed reason:
+- `app/api/reservations/[id]/pdf/route.ts` and
+  `app/api/payments/[id]/receipt-pdf/route.ts` — their local functions
+  additionally select the full `organization` relation (for PDF branding),
+  a shape the shared helper doesn't cover; forcing them onto it would
+  require a second query, a net loss.
+- `app/api/reservations/summary/route.ts` — its local function's `select`
+  (`{ organizationId: true }`) doesn't match either shared helper's shape
+  exactly (it's named `getActor` but only returns `organizationId`, not
+  `id`); left alone rather than guess which callers might expect `.id`.
+
+**Honest caveat on impact, corrected from the original Phase 1 framing:**
+`supabase.auth.getUser()` and the following `prisma.user.findUnique()`
+are a genuine data dependency (the query needs the user id from the auth
+call) and **cannot be parallelized against each other** — Phase 1's
+proposed mechanism was imprecise on this point. The real win from this
+change is narrower than first estimated: (a) consistency — one audited
+query shape instead of 32 near-duplicates that could silently drift, and
+(b) `React.cache()` dedup *within a single request*, which helps any
+route/component that calls the helper more than once in one invocation
+(confirmed: `app/api/reservations/route.ts` called `getActor()` twice,
+once each in GET and POST — no longer duplicated in-file, though GET and
+POST are separate requests so this specific file's win is code-quality,
+not latency, since neither handler was calling it more than once *within
+a single invocation*). This change does **not** eliminate the ~150ms
+auth round trip each API request still pays — that's inherent to
+`getUser()`'s security model (server-side JWT validation against GoTrue),
+not a bug. The bigger, real fix (passing already-validated identity from
+`middleware.ts`, which already calls `getUser()` on every `/dashboard/*`
+request and discards the result) is **flagged as a follow-up**, not
+implemented in this round — it touches the auth boundary directly and
+deserves its own focused review rather than being bundled into a
+mechanical refactor pass.
+
+### 6.2 — Manager KPI dashboard: two sequential waves merged (§4.4)
+**File:** `app/api/dashboard/manager/route.ts`.
+**Before:** 16-query `Promise.all` (phase 1), awaited fully, **then** a
+separate 4-query `Promise.all` (phase 2, building comparison) started only
+after phase 1 resolved. Confirmed by reading the code between them
+(lines ~276-323 in the pre-fix file): pure synchronous map-building and
+array transforms, zero `await`s, and none of phase 2's 4 queries reference
+any value phase 1 produced — all 4 use only `orgId`/`propertyId`/
+`monthStart`/the where-clause bases, available before phase 1 starts.
+**After:** single 20-item `Promise.all`. **Structural round-trip
+reduction:** 2 sequential network waves → 1. At the ~150ms Mumbai↔Ireland
+RTT established in §1, this removes one full wave's worth of latency from
+this endpoint — roughly 150-300ms depending on which query in the removed
+wave was slowest, consistent with the original estimate.
+
+### 6.3 — Availability calendar: sequential awaits collapsed + over-fetch trimmed (§4.2)
+**File:** `app/api/availability/route.ts`.
+**Before:** 4 sequential legs — `getSessionUser()` → `property.findUnique`
+(ownership check) → `unit.findMany` (bare `include`, all ~20 `Unit`
+columns) → `Promise.all` of 2 reservation queries.
+**After:** the ownership check and all 3 data queries (`unit.findMany` +
+both reservation queries) now run in one `Promise.all`; the ownership
+check (`property.organizationId !== orgId` → 404) is still enforced
+immediately after, **before** any data is serialized into the response —
+same security boundary as before, just checked after the batch resolves
+instead of gating the batch from starting. `unit.findMany` narrowed from
+bare `include` to an explicit `select` of exactly the 6 fields the
+response actually reads (`id`, `name`, `floor`, `unitType`, `status`,
+`basePrice`, `prices[0].dailyRate`) — confirmed by grepping every
+`unit.<field>` reference in the file — dropping `description`,
+`amenities`, `publicDescriptionEn/Ar`, `amenitiesAr`, `photos` from the
+transferred payload. **Structural round-trip reduction:** 4 sequential
+waves → 2 (`getSessionUser()`, then the merged batch). Date-overlap and
+segment-building logic (lines building `unitResMap`, the `occ[]`
+walk, split/arr/body/checkout segment classification) is byte-for-byte
+unchanged — only the query issuance order and the unit `select` shape
+changed.
+
+### 6.4 — Confirmed save-redirect double-fetch (§4.6)
+**Files:** `app/dashboard/expenses/new/SubmitExpenseForm.tsx` (the
+originally-flagged instance) and `app/onboarding/OnboardingWizard.tsx`
+(a second instance found during verification — re-grepped all
+`router.push`/`router.refresh` call sites across the app; every other
+`router.refresh()` call is a standalone same-page refresh after a
+non-navigating action, which is the correct use of `refresh()`, not this
+bug).
+**Before:** `router.push(dest); router.refresh();` back-to-back in both
+files — the `refresh()` was redundant since `push()` to a dynamic
+(cookie-reading, uncached) route already server-renders the destination
+fresh.
+**After:** the `router.refresh()` call removed from both; `router.push()`
+alone remains. **Structural round-trip reduction:** 1 fewer full RSC
+fetch (~150-300ms) on expense submission and on onboarding completion —
+the latter being a one-time but first-impression-critical path.
+
+### What wasn't done this round (deferred to a later pass, per the approved scope)
+Unbounded list-page fetches (§4.3, 7+ pages), missing indexes (§4.5), and
+report-bundle code-splitting (§4.7) were left untouched this round —
+larger, higher-risk changes that need their own dedicated verification
+pass rather than being bundled into today's mechanical/structural fixes.

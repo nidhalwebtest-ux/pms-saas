@@ -305,8 +305,10 @@ export default function OnboardingWizard() {
       }
 
       if (result.ok) {
+        // router.push() alone already server-renders /dashboard fresh — a
+        // following router.refresh() was a redundant second fetch of the
+        // same page.
         router.push("/dashboard");
-        router.refresh();
         return;
       }
 

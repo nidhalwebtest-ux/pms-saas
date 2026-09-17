@@ -57,13 +57,6 @@ export async function GET(req: Request) {
   if (days > 90)
     return NextResponse.json({ error: "Date range too large (max 90 days)" }, { status: 400 });
 
-  const property = await prisma.property.findUnique({
-    where: { id: propertyId },
-    select: { organizationId: true, name: true },
-  });
-  if (!property || property.organizationId !== orgId)
-    return NextResponse.json({ error: "Property not found" }, { status: 404 });
-
   // Unit filter (unitType / floor) — supported by the calendar's filter bar.
   const unitWhere: Record<string, unknown> = { propertyId };
   if (unitTypes) {
@@ -75,16 +68,24 @@ export async function GET(req: Request) {
     if (!isNaN(f)) unitWhere.floor = f;
   }
 
-  const units = await prisma.unit.findMany({
-    where: unitWhere,
-    include: {
-      prices: { where: { isActive: true, priceType: "DEFAULT" }, orderBy: { priority: "desc" }, take: 1 },
-    },
-    orderBy: [{ floor: "asc" }, { name: "asc" }],
-  });
-
-  // Overlapping reservations — legacy single-unit + multi-unit junction.
-  const [resOld, resNew] = await Promise.all([
+  // Ownership check (property.findUnique) and the unit/reservation queries
+  // don't depend on each other's results — all filter by propertyId/orgId,
+  // which are already known from the query string. Run them together instead
+  // of gating the data queries behind the ownership check resolving first;
+  // the ownership check is still verified below, before anything is returned.
+  const [property, units, resOld, resNew] = await Promise.all([
+    prisma.property.findUnique({
+      where: { id: propertyId },
+      select: { organizationId: true, name: true },
+    }),
+    prisma.unit.findMany({
+      where: unitWhere,
+      select: {
+        id: true, name: true, floor: true, unitType: true, status: true, basePrice: true,
+        prices: { where: { isActive: true, priceType: "DEFAULT" }, orderBy: { priority: "desc" }, take: 1, select: { dailyRate: true } },
+      },
+      orderBy: [{ floor: "asc" }, { name: "asc" }],
+    }),
     prisma.reservation.findMany({
       where: {
         unit: { propertyId },
@@ -115,6 +116,9 @@ export async function GET(req: Request) {
       },
     }),
   ]);
+
+  if (!property || property.organizationId !== orgId)
+    return NextResponse.json({ error: "Property not found" }, { status: 404 });
 
   const unitResMap = new Map<string, ResInfo[]>();
   const seen = new Set<string>();

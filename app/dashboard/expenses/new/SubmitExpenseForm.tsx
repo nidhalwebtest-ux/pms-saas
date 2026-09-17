@@ -197,8 +197,10 @@ export default function SubmitExpenseForm({ properties, defaultPropertyId }: Pro
       toast.success(tErr("submittedSuccess"));
       // Save the building selection for next time
       if (typeof window !== "undefined") localStorage.setItem(LAST_PROPERTY_KEY, propertyId);
+      // router.push() alone already server-renders the destination fresh —
+      // a following router.refresh() was a redundant second fetch of the
+      // same page.
       router.push("/dashboard/expenses");
-      router.refresh();
     } catch {
       toast.error(tErr("networkError"));
     } finally {

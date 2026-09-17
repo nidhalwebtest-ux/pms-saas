@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
+import { getOrgId } from "@/lib/current-user";
 import { Prisma } from "@prisma/client";
 import {
   addMonths,
@@ -9,17 +9,6 @@ import {
   format,
   eachDayOfInterval,
 } from "date-fns";
-
-async function getOrgId() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { organizationId: true },
-  });
-  return dbUser?.organizationId ?? null;
-}
 
 function propResFilter(propertyId: string) {
   if (!propertyId) return {};
@@ -90,7 +79,13 @@ export async function GET(req: NextRequest) {
     ...(propertyId ? { propertyId } : {}),
   };
 
-  // ── Phase-1 parallel queries ───────────────────────────────────────────────
+  // ── Parallel queries ─────────────────────────────────────────────────────
+  // Originally split into two sequential Promise.all "waves" (this batch,
+  // then the building-comparison batch further down) even though neither
+  // wave's queries read the other's results — both only ever reference
+  // orgId/propertyId/monthStart and the where-clause bases above, all
+  // available up front. Merged into one batch so the whole route pays for
+  // one round-trip wave instead of two.
   const [
     revCurrent,
     revPrev,
@@ -108,6 +103,10 @@ export async function GET(req: NextRequest) {
     payments6m,
     overstayCount,
     refundCount,
+    propPayments,
+    propExpenses,
+    allUnitsForComp,
+    occupiedResForComp,
   ] = await Promise.all([
     prisma.paymentAllocation.aggregate({
       where: { ...allocBase, payment: { date: { gte: monthStart, lt: todayStart } } },
@@ -192,6 +191,39 @@ export async function GET(req: NextRequest) {
     }),
     prisma.reservation.count({
       where: { ...resBase, status: "CANCELLED", refundPending: true },
+    }),
+    // Per-property revenue this month — invoice allocations only.
+    prisma.paymentAllocation.findMany({
+      where: { ...allocBase, payment: { date: { gte: monthStart } } },
+      select: {
+        amount: true,
+        invoice: { select: { propertyId: true } },
+      },
+    }),
+    prisma.expense.findMany({
+      where: { ...expBase, submittedAt: { gte: monthStart } },
+      select: { amount: true, propertyId: true },
+    }),
+    prisma.unit.findMany({
+      where: {
+        property: {
+          organizationId: orgId,
+          isArchived: false,
+          ...(propertyId ? { id: propertyId } : {}),
+        },
+      },
+      select: { id: true, propertyId: true },
+    }),
+    prisma.reservation.findMany({
+      where: { ...resBase, status: "CHECKED_IN" },
+      select: {
+        unitId: true,
+        unit: { select: { propertyId: true } },
+        reservationUnits: {
+          where: { isMovedOut: { not: true } },
+          select: { unit: { select: { propertyId: true } } },
+        },
+      },
     }),
   ]);
 
@@ -332,48 +364,11 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  // ── Building comparison (phase-2 queries) ─────────────────────────────────
+  // ── Building comparison (from the merged query batch above) ───────────────
   const propRevMap  = new Map<string, number>();
   const propExpMap  = new Map<string, number>();
   const propUnitMap = new Map<string, number>();
   const propOccMap  = new Map<string, number>();
-
-  const [propPayments, propExpenses, allUnitsForComp, occupiedResForComp] =
-    await Promise.all([
-      // Per-property revenue this month — invoice allocations only.
-      prisma.paymentAllocation.findMany({
-        where: { ...allocBase, payment: { date: { gte: monthStart } } },
-        select: {
-          amount: true,
-          invoice: { select: { propertyId: true } },
-        },
-      }),
-      prisma.expense.findMany({
-        where: { ...expBase, submittedAt: { gte: monthStart } },
-        select: { amount: true, propertyId: true },
-      }),
-      prisma.unit.findMany({
-        where: {
-          property: {
-            organizationId: orgId,
-            isArchived: false,
-            ...(propertyId ? { id: propertyId } : {}),
-          },
-        },
-        select: { id: true, propertyId: true },
-      }),
-      prisma.reservation.findMany({
-        where: { ...resBase, status: "CHECKED_IN" },
-        select: {
-          unitId: true,
-          unit: { select: { propertyId: true } },
-          reservationUnits: {
-            where: { isMovedOut: { not: true } },
-            select: { unit: { select: { propertyId: true } } },
-          },
-        },
-      }),
-    ]);
 
   for (const unit of allUnitsForComp) {
     propUnitMap.set(

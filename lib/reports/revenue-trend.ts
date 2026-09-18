@@ -3,9 +3,15 @@ import { prisma } from "@/lib/prisma";
 /**
  * Revenue Trend — net revenue bucketed over time (day / week / month).
  *
- * Same posting basis as Revenue by Building (issued invoices by issueDate +,
- * active returns by createdAt −). Each time bucket gets its net = invoiced −
- * returned, so a bucket can be negative if credit notes outweigh invoices.
+ * Bucketed by each invoice's billing period (periodStart), not by when it
+ * was issued or paid — a monthly reservation invoiced/paid all on the same
+ * day still has each invoice's revenue land in its own period's month.
+ * A return's credit is bucketed into the SAME month as the invoice it
+ * credited (via the return's linked invoiceId), so a month's net revenue
+ * stays tied to what was actually billed for that period regardless of
+ * when the return was processed. Returns with no linked invoice (should
+ * not normally occur — every return applies against at least one invoice)
+ * fall back to the return's own createdAt.
  */
 
 const DAY = 86_400_000;
@@ -79,18 +85,28 @@ export async function getRevenueTrend(params: {
     where: {
       organizationId: orgId,
       status: { notIn: ["DRAFT", "CANCELLED", "VOID"] },
-      issueDate: { gte: rangeFrom, lt: rangeToExclusive },
+      periodStart: { gte: rangeFrom, lt: rangeToExclusive },
       ...(propertyId ? { propertyId } : {}),
     },
-    select: { issueDate: true, lineItems: { select: { lineTotal: true } } },
+    select: { periodStart: true, lineItems: { select: { lineTotal: true } } },
   });
 
+  // Returns are matched to their linked invoice's period, not filtered by
+  // their own createdAt — a return processed after the invoice's period
+  // ended must still land in that period's bucket if the invoice itself is
+  // in range. Only active returns with a resolvable invoice period count;
+  // fetch across the org (not date-scoped) and let findBucket() drop any
+  // that fall outside the built bucket range.
   const returns = await prisma.return.findMany({
     where: {
-      organizationId: orgId, status: "active", createdAt: { gte: rangeFrom, lt: rangeToExclusive },
+      organizationId: orgId, status: "active",
       ...(propertyId ? { invoice: { propertyId } } : {}),
     },
-    select: { createdAt: true, lineItems: { select: { lineTotal: true } } },
+    select: {
+      createdAt: true,
+      invoice: { select: { periodStart: true } },
+      lineItems: { select: { lineTotal: true } },
+    },
   });
 
   // Bucket index for a day timestamp.
@@ -105,14 +121,15 @@ export async function getRevenueTrend(params: {
   const txc = new Array(buckets.length).fill(0);
 
   for (const i of invoices) {
-    if (!i.issueDate) continue;
-    const bi = findBucket(i.issueDate.getTime());
+    if (!i.periodStart) continue;
+    const bi = findBucket(i.periodStart.getTime());
     if (bi < 0) continue;
     inv[bi] = r3(inv[bi] + i.lineItems.reduce((s, li) => s + Number(li.lineTotal), 0));
     txc[bi]++;
   }
   for (const r of returns) {
-    const bi = findBucket(r.createdAt.getTime());
+    const bucketDate = r.invoice?.periodStart ?? r.createdAt;
+    const bi = findBucket(bucketDate.getTime());
     if (bi < 0) continue;
     ret[bi] = r3(ret[bi] + r.lineItems.reduce((s, li) => s + Number(li.lineTotal), 0));
     txc[bi]++;

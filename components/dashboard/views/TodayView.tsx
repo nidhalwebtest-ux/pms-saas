@@ -218,7 +218,7 @@ function DraftInvoiceRowItem({
   onIssued: (id: string) => void;
 }) {
   const t = useTranslations("dashboard.today.guest");
-  const tIssue = useTranslations("dashboard.today.toIssue");
+  const tIssue = useTranslations("dashboard.today.tabs");
   const omr = useFormatCurrency();
   const [issuing, setIssuing] = useState(false);
 

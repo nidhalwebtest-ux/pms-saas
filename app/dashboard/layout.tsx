@@ -109,7 +109,7 @@ export default async function DashboardLayout({
           <Navigation role={role} navAccess={navAccess} websiteRequestCount={websiteRequestCount} />
         </div>
 
-        <main className="py-6 sm:py-10">
+        <main className="pb-6 pt-4 sm:pb-10 sm:pt-6">
           <div className="px-3 sm:px-6 lg:px-8">{children}</div>
         </main>
 

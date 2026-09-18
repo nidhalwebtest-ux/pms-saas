@@ -17,9 +17,38 @@ import { tenantDisplayName } from "@/lib/tenant-display";
  *  Helpers — local to this column file
  * ------------------------------------------------------------------------- */
 
+// Tenant.nationality stores a free-text demonym ("Omani", "Emirati", …), not
+// an ISO-3166 country code — naively slicing the first two letters produced
+// wrong flags for most entries (e.g. "Emirati".slice(0,2) = "EM" → Eritrea's
+// flag, not the UAE's; "Tunisian" → "TU", not a real ISO code at all, so no
+// flag glyph exists for it). Maps every demonym in TenantForm's
+// PRIORITY_NATIONALITIES/ALL_NATIONALITIES list to its real country code.
+const NATIONALITY_TO_ISO: Record<string, string> = {
+  afghan: "AF", albanian: "AL", algerian: "DZ", american: "US",
+  argentinian: "AR", australian: "AU", austrian: "AT",
+  bahraini: "BH",
+  bangladeshi: "BD", belgian: "BE", brazilian: "BR", british: "GB",
+  bulgarian: "BG", canadian: "CA", chilean: "CL", chinese: "CN",
+  colombian: "CO", czech: "CZ", danish: "DK", dutch: "NL",
+  egyptian: "EG", emirati: "AE", ethiopian: "ET", filipino: "PH",
+  finnish: "FI", french: "FR", german: "DE", greek: "GR",
+  hungarian: "HU", indian: "IN", indonesian: "ID", iranian: "IR",
+  iraqi: "IQ", irish: "IE", italian: "IT", japanese: "JP",
+  jordanian: "JO", kenyan: "KE", korean: "KR", kuwaiti: "KW",
+  lebanese: "LB", libyan: "LY", malaysian: "MY", moroccan: "MA",
+  nepali: "NP", nigerian: "NG", norwegian: "NO", omani: "OM",
+  pakistani: "PK", palestinian: "PS", polish: "PL", portuguese: "PT",
+  qatari: "QA", romanian: "RO", russian: "RU", saudi: "SA",
+  singaporean: "SG", "south african": "ZA", spanish: "ES",
+  "sri lankan": "LK", sudanese: "SD", swedish: "SE", swiss: "CH",
+  syrian: "SY", thai: "TH", tunisian: "TN", turkish: "TR",
+  ukrainian: "UA", uzbek: "UZ", vietnamese: "VN", yemeni: "YE",
+};
+
 export function countryFlag(nationality: string | null): string {
   if (!nationality) return "";
-  const code = nationality.trim().toUpperCase().slice(0, 2);
+  const key = nationality.trim().toLowerCase();
+  const code = NATIONALITY_TO_ISO[key] ?? (/^[A-Za-z]{2}$/.test(nationality.trim()) ? nationality.trim().toUpperCase() : "");
   if (code.length !== 2) return "";
   return String.fromCodePoint(
     ...code.split("").map((c) => 0x1f1e6 + c.charCodeAt(0) - 65),

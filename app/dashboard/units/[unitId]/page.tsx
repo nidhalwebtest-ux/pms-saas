@@ -229,13 +229,13 @@ export default async function UnitDetailPage({
       </nav>
 
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="sm:flex sm:items-start sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-blue-100">
             <HomeModernIcon className="h-6 w-6 text-blue-700" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-bold text-gray-900">{unit.name}</h1>
               <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${cfg.badge}`}>
                 <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
@@ -252,7 +252,7 @@ export default async function UnitDetailPage({
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="mt-4 flex flex-wrap items-center gap-2 sm:mt-0 sm:ms-4 sm:flex-shrink-0">
           <Link
             href="/dashboard/units"
             className="flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 shadow-sm transition-colors"

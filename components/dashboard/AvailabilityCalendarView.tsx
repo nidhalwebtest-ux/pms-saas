@@ -257,7 +257,7 @@ export default function AvailabilityCalendarView({
           </button>
         </div>
 
-        <div className="fzone">
+        <div className="fzone fzone-daterange">
           <span className="fz-lbl">{t("filter.custom")}</span>
           <div className="daterange">
             <label className="dfield">

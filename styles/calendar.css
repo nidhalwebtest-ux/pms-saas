@@ -291,4 +291,22 @@
   .bcal-grid.compact { --col: 42px; --rowh: 42px; }
   .bcal .rc { padding: 0 11px; gap: 0; }
   .bcal .rc .u-occ { display: none; }
+
+  /* Date range picker gets its own full-width row instead of sharing the
+     horizontally-scrolling preset strip, where it was squeezed and partly
+     hidden off-screen. */
+  .bcal-filter-row { flex-wrap: wrap; overflow-x: visible; }
+  .bcal .fzone-daterange {
+    flex-basis: 100%;
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+    padding-inline-start: 0;
+    border-inline-start: 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--gray-200);
+  }
+  .bcal .fzone-daterange .daterange { width: 100%; }
+  .bcal .fzone-daterange .dfield { flex: 1; min-width: 0; }
+  .bcal .fzone-daterange .dfield .dval { white-space: nowrap; }
 }

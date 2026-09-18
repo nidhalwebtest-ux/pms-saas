@@ -120,6 +120,17 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
     const [open, setOpen] = useState(false);
     const rootRef = useRef<HTMLDivElement>(null);
 
+    // On touch devices, make the trigger input read-only so tapping it opens
+    // the calendar without also summoning the on-screen keyboard (which would
+    // otherwise cover or fight the dropdown for screen space). Desktop/mouse
+    // input keeps typing enabled. Checked once on mount — pointer capability
+    // doesn't change mid-session.
+    const [isCoarsePointer, setIsCoarsePointer] = useState(false);
+    useEffect(() => {
+      if (typeof window === "undefined" || !window.matchMedia) return;
+      setIsCoarsePointer(window.matchMedia("(pointer: coarse)").matches);
+    }, []);
+
     // Re-sync display when the selected date changes from outside.
     useEffect(() => {
       setDisplay(fmt(selected, displayFormat));
@@ -225,12 +236,13 @@ export const DatePicker = forwardRef<HTMLInputElement, DatePickerProps>(
             ref={ref}
             type="text"
             disabled={disabled}
-            readOnly={readOnly}
+            readOnly={readOnly || isCoarsePointer}
             required={required}
             placeholder={placeholder ?? displayFormat.toLowerCase()}
             value={display}
             onChange={(e) => setDisplay(e.target.value)}
             onFocus={() => !readOnly && !disabled && setOpen(true)}
+            onClick={() => isCoarsePointer && !readOnly && !disabled && setOpen(true)}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             autoComplete="off"

@@ -184,7 +184,7 @@ export function PhoneInput({
           disabled ? "opacity-60" : ""
         }`}
       >
-        <Popover className="relative">
+        <Popover className="relative shrink-0">
           <PopoverButton
             type="button"
             disabled={disabled}
@@ -252,7 +252,7 @@ export function PhoneInput({
           placeholder={placeholder}
           value={display}
           onChange={(e) => onInput(e.target.value)}
-          className={`ltr-numbers flex-1 rounded-e-xl border-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:ring-0 ${txt}`}
+          className={`ltr-numbers min-w-0 flex-1 rounded-e-xl border-0 bg-transparent px-3 py-2.5 text-sm focus:outline-none focus:ring-0 ${txt}`}
         />
         {name && <input type="hidden" name={name} value={canonical} />}
       </div>

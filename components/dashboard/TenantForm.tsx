@@ -26,7 +26,7 @@ import {
   ShieldExclamationIcon,
 } from "@heroicons/react/24/outline";
 import { createTenant, updateTenant } from "@/app/dashboard/tenants/actions";
-import { PhoneInput } from "@/components/ui";
+import { PhoneInput, SearchableSelect, type SearchableSelectOption } from "@/components/ui";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -265,6 +265,25 @@ function SegBtn({
   );
 }
 
+// ── Nationality options (English value stored, localized label shown) ─────────
+// Priority nationalities first (starred), then the rest alphabetically —
+// mirrors the old datalist's ordering. `t` is the tenants.form.nationalityLabels
+// translations hook; falls back to the English demonym if a label is missing.
+function useNationalityOptions(t: (key: string) => string): SearchableSelectOption[] {
+  const ordered = [
+    ...PRIORITY_NATIONALITIES,
+    ...ALL_NATIONALITIES.filter((n) => !PRIORITY_NATIONALITIES.includes(n)),
+  ];
+  return ordered.map((n) => {
+    let label: string;
+    try { label = t(n); } catch { label = n; }
+    return {
+      value: n,
+      label: PRIORITY_NATIONALITIES.includes(n) ? `${label} ⭐` : label,
+    };
+  });
+}
+
 // ── Quick-Add form (minimal 7-field version) ──────────────────────────────────
 
 function QuickAddForm({
@@ -292,6 +311,8 @@ function QuickAddForm({
   const tIdT   = useTranslations("tenants.idTypes");
   const tType  = useTranslations("tenants.types");
   const tSrc   = useTranslations("tenants.sources");
+  const tNat   = useTranslations("tenants.form.nationalityLabels");
+  const nationalityOptions = useNationalityOptions(tNat);
 
   return (
     <div className="rounded-xl border border-blue-200 bg-white p-5 shadow-sm">
@@ -311,15 +332,14 @@ function QuickAddForm({
           <PhoneInput value={phone} onValueChange={setPhone} required placeholder={tPh("phone")} />
         </div>
         <div>
-          <label className="mb-1.5 block text-sm font-medium text-gray-700">{tFld("nationality")} <span className="text-red-500">*</span></label>
-          <input value={nationality} onChange={(e) => setNationality(e.target.value)}
-            list="nat-quick" placeholder={tPh("nationalityQuick")} required
-            className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-          <datalist id="nat-quick">
-            {[...PRIORITY_NATIONALITIES, ...ALL_NATIONALITIES.filter((n) => !PRIORITY_NATIONALITIES.includes(n))].map((n) => (
-              <option key={n} value={n} />
-            ))}
-          </datalist>
+          <SearchableSelect
+            label={tFld("nationality")}
+            value={nationality || null}
+            onValueChange={(v) => setNationality(v ?? "")}
+            options={nationalityOptions}
+            placeholder={tPh("nationalityQuick")}
+            required
+          />
         </div>
         <div>
           <label className="mb-2 block text-sm font-medium text-gray-700">{tFld("idType")} <span className="text-red-500">*</span></label>
@@ -403,6 +423,8 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
   const tSrc   = useTranslations("tenants.sources");
   const tCls   = useTranslations("tenants.classifications");
   const tPay   = useTranslations("tenants.paymentMethods");
+  const tNat   = useTranslations("tenants.form.nationalityLabels");
+  const nationalityOptions = useNationalityOptions(tNat);
 
   // Mode (only relevant when creating)
   const [quickMode, setQuickMode] = useState(!isEdit);
@@ -500,11 +522,11 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
     return (
       <div className="space-y-4">
         {/* Mode toggle */}
-        <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3">
-          <div className="flex overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-sm">
-            <span className="rounded-md bg-blue-600 px-4 py-1.5 font-semibold text-white shadow-sm">{tForm("modeQuickAdd")}</span>
+        <div className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <div className="flex overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-sm w-fit max-w-full">
+            <span className="rounded-md bg-blue-600 px-4 py-1.5 font-semibold text-white shadow-sm whitespace-nowrap">{tForm("modeQuickAdd")}</span>
             <button type="button" onClick={() => setQuickMode(false)}
-              className="rounded-md px-4 py-1.5 font-medium text-gray-500 hover:text-gray-800 transition-colors">
+              className="rounded-md px-4 py-1.5 font-medium text-gray-500 hover:text-gray-800 transition-colors whitespace-nowrap">
               {tForm("modeFullForm")}
             </button>
           </div>
@@ -544,13 +566,13 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
     <div className="space-y-4">
       {/* Mode toggle */}
       {!isEdit && (
-        <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3">
-          <div className="flex overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-sm">
+        <div className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+          <div className="flex overflow-hidden rounded-lg border border-gray-200 bg-gray-50 p-0.5 text-sm w-fit max-w-full">
             <button type="button" onClick={() => setQuickMode(true)}
-              className="rounded-md px-4 py-1.5 font-medium text-gray-500 hover:text-gray-800 transition-colors">
+              className="rounded-md px-4 py-1.5 font-medium text-gray-500 hover:text-gray-800 transition-colors whitespace-nowrap">
               {tForm("modeQuickAdd")}
             </button>
-            <span className="rounded-md bg-blue-600 px-4 py-1.5 font-semibold text-white shadow-sm">{tForm("modeFullForm")}</span>
+            <span className="rounded-md bg-blue-600 px-4 py-1.5 font-semibold text-white shadow-sm whitespace-nowrap">{tForm("modeFullForm")}</span>
           </div>
           <p className="text-xs text-gray-400">{tForm("fullFormTagline")}</p>
         </div>
@@ -603,17 +625,15 @@ export default function TenantForm({ initialData, onSuccess }: Props) {
                 className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
             </div>
             <div className="sm:col-span-2">
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                {tFld("nationality")} <span className="text-red-500">*</span>
-                <span className="ms-2 text-xs font-normal text-gray-400">{tFld("nationalityHint")}</span>
-              </label>
-              <input value={nationality} onChange={(e) => setNationality(e.target.value)}
-                list="nat-full" placeholder={tPh("nationalityFull")} required
-                className="block w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20" />
-              <datalist id="nat-full">
-                {PRIORITY_NATIONALITIES.map((n) => <option key={`p-${n}`} value={n}>{n} ⭐</option>)}
-                {ALL_NATIONALITIES.filter((n) => !PRIORITY_NATIONALITIES.includes(n)).map((n) => <option key={n} value={n} />)}
-              </datalist>
+              <SearchableSelect
+                label={tFld("nationality")}
+                helperText={tFld("nationalityHint")}
+                value={nationality || null}
+                onValueChange={(v) => setNationality(v ?? "")}
+                options={nationalityOptions}
+                placeholder={tPh("nationalityFull")}
+                required
+              />
             </div>
           </div>
         </Section>

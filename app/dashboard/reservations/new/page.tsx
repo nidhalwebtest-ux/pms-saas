@@ -49,7 +49,7 @@ export default async function NewReservationPage({
           select: {
             id: true, firstName: true, lastName: true,
             phone: true, email: true,
-            classification: true, nationality: true,
+            classification: true, nationality: true, idNumber: true,
           },
         })
       : null,

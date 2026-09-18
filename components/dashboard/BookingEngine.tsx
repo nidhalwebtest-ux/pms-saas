@@ -55,6 +55,7 @@ interface TenantResult {
   email:          string | null;
   classification: string | null;
   nationality:    string | null;
+  idNumber:       string | null;
 }
 
 interface UnitConflict {
@@ -243,7 +244,10 @@ export default function BookingEngine({
     () => allTenants.map((tn) => ({
       value: tn.id,
       label: `${tn.firstName} ${tn.lastName}`,
-      description: `${tn.phone}${tn.nationality ? ` · ${tn.nationality}` : ""}`,
+      // Also searchable (not just displayed) — SearchableSelect matches
+      // against description too, so a receptionist can find a tenant by
+      // phone or ID number, not just name.
+      description: `${tn.phone}${tn.nationality ? ` · ${tn.nationality}` : ""}${tn.idNumber ? ` · ${tn.idNumber}` : ""}`,
       raw: tn,
     })),
     [allTenants],
@@ -611,6 +615,7 @@ export default function BookingEngine({
                     email:          null,
                     classification: "regular",
                     nationality:    null,
+                    idNumber:       null,
                   });
                   setShowAddTenant(false);
                 }}

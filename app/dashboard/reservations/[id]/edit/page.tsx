@@ -35,7 +35,7 @@ export default async function EditReservationPage({
       tenant: {
         select: {
           id: true, firstName: true, lastName: true,
-          phone: true, email: true, classification: true, nationality: true,
+          phone: true, email: true, classification: true, nationality: true, idNumber: true,
         },
       },
       reservationUnits: {

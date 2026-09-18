@@ -206,7 +206,12 @@ export const SearchableSelect = forwardRef<HTMLInputElement, SearchableSelectPro
       if (!options) return [];
       if (!query) return options;
       const q = query.toLowerCase();
-      return options.filter((o) => o.label.toLowerCase().includes(q));
+      // Match against the description too (not just the label) — callers
+      // like the reservation tenant picker put phone/ID/nationality there,
+      // and users expect to search by any of those, not just the name.
+      return options.filter(
+        (o) => o.label.toLowerCase().includes(q) || o.description?.toLowerCase().includes(q),
+      );
     }, [options, query]);
     const items: SearchableSelectOption[] = loadOptions
       ? results

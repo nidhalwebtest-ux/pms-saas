@@ -3702,7 +3702,14 @@
       "refund": "Refund",
       "noPayments": "No payments recorded yet.",
       "unitLabel": "Unit",
-      "viewReservation": "View reservation"
+      "viewReservation": "View reservation",
+      "returns": "Returns",
+      "noReturns": "No returns on this invoice.",
+      "returnNumber": "Return #",
+      "returnDate": "Date",
+      "returnPeriod": "Period",
+      "returnAmount": "Amount",
+      "returnRefund": "Refund"
     },
     "actions": {
       "issuing": "Issuing…",

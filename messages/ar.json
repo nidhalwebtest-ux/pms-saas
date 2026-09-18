@@ -3702,7 +3702,14 @@
       "refund": "استرداد",
       "noPayments": "لم يتم تسجيل أي دفعات بعد.",
       "unitLabel": "وحدة",
-      "viewReservation": "عرض الحجز"
+      "viewReservation": "عرض الحجز",
+      "returns": "المرتجعات",
+      "noReturns": "لا توجد مرتجعات على هذه الفاتورة.",
+      "returnNumber": "رقم المرتجع",
+      "returnDate": "التاريخ",
+      "returnPeriod": "الفترة",
+      "returnAmount": "المبلغ",
+      "returnRefund": "الاسترداد"
     },
     "actions": {
       "issuing": "جارٍ الإصدار…",

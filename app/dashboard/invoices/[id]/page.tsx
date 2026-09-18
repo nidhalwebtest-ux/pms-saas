@@ -22,8 +22,11 @@ import {
   Badge,
   resolveInvoiceBadge,
   getPaymentMethodBadge,
+  getReturnStatusBadge,
+  returnStatusKey,
   type PaymentMethodKey,
 } from "@/components/ui";
+import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -117,6 +120,24 @@ export default async function InvoiceDetailPage({
         },
         orderBy: { createdAt: "asc" },
       },
+      returns: {
+        select: {
+          id: true,
+          returnNumber: true,
+          status: true,
+          returnFrom: true,
+          returnTo: true,
+          returnDays: true,
+          returnType: true,
+          returnAmount: true,
+          refundRequired: true,
+          refundAmount: true,
+          refundStatus: true,
+          reason: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "asc" },
+      },
       createdBy: { select: { firstName: true, lastName: true } },
     },
   });
@@ -137,6 +158,8 @@ export default async function InvoiceDetailPage({
   const tDet    = await getTranslations("invoices.detail");
   const tType   = await getTranslations("invoices.types");
   const tMethod = await getTranslations("invoices.paymentMethods");
+  const tRetStatus = await getTranslations("returns.statuses");
+  const tRetTable  = await getTranslations("returns.table");
 
   const fmtDate = (d: Date | string) =>
     format(new Date(d), "d MMM yyyy", { locale: dfLoc });
@@ -429,6 +452,60 @@ export default async function InvoiceDetailPage({
               </div>
             )}
           </div>
+
+          {/* Returns */}
+          {invoice.returns.length > 0 && (
+            <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-900/5 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-2">
+                <ArrowUturnLeftIcon className="h-4 w-4 text-purple-600" />
+                <h2 className="text-sm font-semibold text-gray-900">{tDet("returns")}</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-100">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="py-2.5 ps-5 pe-3 text-start text-xs font-semibold uppercase tracking-wide text-gray-500">{tDet("returnNumber")}</th>
+                      <th className="px-3 py-2.5 text-start text-xs font-semibold uppercase tracking-wide text-gray-500">{tDet("returnDate")}</th>
+                      <th className="px-3 py-2.5 text-start text-xs font-semibold uppercase tracking-wide text-gray-500">{tDet("returnPeriod")}</th>
+                      <th className="px-3 py-2.5 text-start text-xs font-semibold uppercase tracking-wide text-gray-500">{tRetTable("status")}</th>
+                      <th className="px-5 py-2.5 text-end text-xs font-semibold uppercase tracking-wide text-gray-500">{tDet("returnAmount")}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {invoice.returns.map((ret) => {
+                      const badgeKey = returnStatusKey(ret.status, ret.refundStatus);
+                      return (
+                        <tr key={ret.id}>
+                          <td className="py-3 ps-5 pe-3 text-sm">
+                            <Link
+                              href={`/dashboard/returns/${ret.id}`}
+                              className="font-mono font-semibold text-indigo-600 hover:text-indigo-900 transition-colors ltr-numbers"
+                            >
+                              {ret.returnNumber}
+                            </Link>
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-900 ltr-numbers">
+                            {fmtDate(ret.createdAt)}
+                          </td>
+                          <td className="px-3 py-3 text-sm text-gray-600 ltr-numbers">
+                            {fmtDate(ret.returnFrom)} – {fmtDate(ret.returnTo)}
+                          </td>
+                          <td className="px-3 py-3 text-sm">
+                            <Badge {...getReturnStatusBadge(badgeKey)} size="sm">
+                              {tRetStatus(badgeKey)}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-3 text-sm text-end font-semibold text-purple-700 ltr-numbers">
+                            −{Number(ret.returnAmount).toFixed(3)} OMR
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ── Right column (1/3) ────────────────────────────────────────── */}

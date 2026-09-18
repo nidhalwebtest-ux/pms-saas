@@ -30,6 +30,7 @@ import {
   ChatBubbleLeftEllipsisIcon,
   UserIcon,
   BanknotesIcon,
+  ArrowUturnLeftIcon,
 } from "@heroicons/react/24/outline";
 import {
   Alert,
@@ -2266,12 +2267,30 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
                           ? tInvoices("statuses.overdue")
                           : tInvoices("statuses.pending");
 
+                        // Returns credited against this invoice (matched by
+                        // invoice number — the only link ReturnRow exposes) —
+                        // surfaced here so the impact of a return is visible
+                        // right in the invoices list, alongside the detailed
+                        // Returns section further down.
+                        const invoiceReturns = res.returns.filter((r) => r.invoiceNumber === inv.invoiceNumber);
+
                         return (
                           <tr key={inv.id} className={isCancelled ? "opacity-40" : ""}>
                             <td className="py-2 font-mono text-xs text-gray-700 pe-2 ltr-numbers">
                               <Link href={`/dashboard/invoices/${inv.id}`} className="hover:text-blue-600 hover:underline">
                                 {inv.invoiceNumber}
                               </Link>
+                              {invoiceReturns.map((ret) => (
+                                <Link
+                                  key={ret.id}
+                                  href={`/dashboard/returns/${ret.id}`}
+                                  className="mt-0.5 flex items-center gap-1 text-purple-700 hover:underline w-fit"
+                                  title={ret.returnNumber}
+                                >
+                                  <ArrowUturnLeftIcon className="h-3 w-3 shrink-0" />
+                                  <span>−{Number(ret.returnAmount).toFixed(3)}</span>
+                                </Link>
+                              ))}
                             </td>
                             <td className="py-2 text-xs text-gray-500 pe-2 ltr-numbers">
                               {fmtDate(inv.periodStart, { day: "numeric", month: "short" })}

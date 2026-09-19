@@ -6904,6 +6904,17 @@
         "vendorName": "Vendor",
         "date": "Date",
         "notes": "Notes"
+      },
+      "reservations": {
+        "tenantIdNumber": "Tenant ID number",
+        "propertyName": "Building name",
+        "unitName": "Unit name",
+        "startDate": "Check-in date",
+        "endDate": "Check-out date",
+        "rateType": "Rate type",
+        "source": "Source",
+        "discountAmount": "Discount (OMR)",
+        "notes": "Notes"
       }
     }
   }

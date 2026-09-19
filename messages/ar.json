@@ -6904,6 +6904,17 @@
         "vendorName": "المورد",
         "date": "التاريخ",
         "notes": "ملاحظات"
+      },
+      "reservations": {
+        "tenantIdNumber": "رقم هوية المستأجر",
+        "propertyName": "اسم المبنى",
+        "unitName": "اسم الوحدة",
+        "startDate": "تاريخ الوصول",
+        "endDate": "تاريخ المغادرة",
+        "rateType": "نوع السعر",
+        "source": "المصدر",
+        "discountAmount": "الخصم (ر.ع)",
+        "notes": "ملاحظات"
       }
     }
   }

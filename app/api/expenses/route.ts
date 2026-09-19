@@ -4,28 +4,10 @@ import { requireOrgUser } from "@/lib/tenant";
 import { prisma } from "@/lib/prisma";
 import { getEffectivePropertyIds } from "@/lib/property-scope";
 import { getSelectedPropertyId } from "@/lib/selected-property";
+import { createExpenseCore } from "@/lib/expense-engine";
 import { Prisma } from "@prisma/client";
 
 function roundOMR(n: number) { return Math.round(n * 1000) / 1000; }
-
-/** Generate next sequential expense number: EXP-YYYY-NNNNN */
-async function nextExpenseNumber(orgId: string, tx: Prisma.TransactionClient) {
-  const year = new Date().getFullYear().toString();
-  const prefix = `EXP-${year}-`;
-
-  const last = await tx.expense.findFirst({
-    where: { organizationId: orgId, expenseNumber: { startsWith: prefix } },
-    orderBy: { expenseNumber: "desc" },
-    select: { expenseNumber: true },
-  });
-
-  let seq = 1;
-  if (last?.expenseNumber) {
-    const parts = last.expenseNumber.split("-");
-    seq = parseInt(parts[parts.length - 1], 10) + 1;
-  }
-  return `${prefix}${String(seq).padStart(5, "0")}`;
-}
 
 /**
  * GET /api/expenses — list with filters and role-based visibility.
@@ -173,30 +155,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const expense = await prisma.$transaction(async (tx) => {
-    const expenseNumber = await nextExpenseNumber(orgUser.organizationId, tx);
+  const created = await createExpenseCore(
+    { categoryId, propertyId, description, amount: Number(amount), vendorId, receiptImage, receiptImage2, notes },
+    orgUser.organizationId,
+    orgUser.userId,
+  );
 
-    return tx.expense.create({
-      data: {
-        organizationId: orgUser.organizationId,
-        expenseNumber,
-        categoryId,
-        vendorId: vendorId || null,
-        description: description.trim(),
-        amount: roundOMR(Number(amount)),
-        propertyId,
-        receiptImage: receiptImage || null,
-        receiptImage2: receiptImage2 || null,
-        notes: notes?.trim() || null,
-        submittedById: orgUser.userId,
-        submittedAt: new Date(),
-        status: "PENDING",
-      },
-      include: {
-        category: { select: { name: true, icon: true } },
-        property: { select: { name: true } },
-      },
-    });
+  const expense = await prisma.expense.findUniqueOrThrow({
+    where: { id: created.id },
+    include: {
+      category: { select: { name: true, icon: true } },
+      property: { select: { name: true } },
+    },
   });
 
   return NextResponse.json({

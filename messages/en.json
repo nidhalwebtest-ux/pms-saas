@@ -6895,6 +6895,15 @@
         "classification": "Classification",
         "city": "City",
         "country": "Country"
+      },
+      "expenses": {
+        "categoryName": "Category",
+        "propertyName": "Building name",
+        "description": "Description",
+        "amount": "Amount (OMR)",
+        "vendorName": "Vendor",
+        "date": "Date",
+        "notes": "Notes"
       }
     }
   }

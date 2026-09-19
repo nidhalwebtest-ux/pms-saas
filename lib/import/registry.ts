@@ -3,6 +3,7 @@ import type { ImportAdapter } from "./types";
 import { buildingsAdapter } from "./adapters/buildings";
 import { unitsAdapter } from "./adapters/units";
 import { tenantsAdapter } from "./adapters/tenants";
+import { expensesAdapter } from "./adapters/expenses";
 
 /* ============================================================================
  *  Adapter registry — dependency order matters: this array IS the order shown
@@ -13,6 +14,7 @@ export const IMPORT_ADAPTERS: ImportAdapter<unknown>[] = [
   buildingsAdapter as ImportAdapter<unknown>,
   unitsAdapter as ImportAdapter<unknown>,
   tenantsAdapter as ImportAdapter<unknown>,
+  expensesAdapter as ImportAdapter<unknown>,
 ];
 
 export function getAdapter(recordType: ImportRecordType): ImportAdapter<unknown> {

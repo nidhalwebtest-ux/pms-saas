@@ -6895,6 +6895,15 @@
         "classification": "التصنيف",
         "city": "المدينة",
         "country": "الدولة"
+      },
+      "expenses": {
+        "categoryName": "الفئة",
+        "propertyName": "اسم المبنى",
+        "description": "الوصف",
+        "amount": "المبلغ (ر.ع)",
+        "vendorName": "المورد",
+        "date": "التاريخ",
+        "notes": "ملاحظات"
       }
     }
   }

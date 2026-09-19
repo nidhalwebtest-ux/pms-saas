@@ -1,6 +1,7 @@
 import type { ImportRecordType } from "@prisma/client";
 import type { ImportAdapter } from "./types";
 import { buildingsAdapter } from "./adapters/buildings";
+import { unitsAdapter } from "./adapters/units";
 
 /* ============================================================================
  *  Adapter registry — dependency order matters: this array IS the order shown
@@ -9,6 +10,7 @@ import { buildingsAdapter } from "./adapters/buildings";
 
 export const IMPORT_ADAPTERS: ImportAdapter<unknown>[] = [
   buildingsAdapter as ImportAdapter<unknown>,
+  unitsAdapter as ImportAdapter<unknown>,
 ];
 
 export function getAdapter(recordType: ImportRecordType): ImportAdapter<unknown> {

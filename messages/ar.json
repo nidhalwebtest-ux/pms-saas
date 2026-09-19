@@ -6870,6 +6870,17 @@
         "address": "العنوان",
         "totalFloors": "عدد الطوابق",
         "description": "الوصف"
+      },
+      "units": {
+        "propertyName": "اسم المبنى",
+        "name": "اسم الوحدة",
+        "unitType": "نوع الوحدة",
+        "floor": "الطابق",
+        "bedrooms": "غرف النوم",
+        "bathrooms": "الحمامات",
+        "basePrice": "السعر الأساسي (ر.ع)",
+        "area": "المساحة (م²)",
+        "description": "الوصف"
       }
     }
   }

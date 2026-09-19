@@ -6870,6 +6870,17 @@
         "address": "Address",
         "totalFloors": "Total floors",
         "description": "Description"
+      },
+      "units": {
+        "propertyName": "Building name",
+        "name": "Unit name",
+        "unitType": "Unit type",
+        "floor": "Floor",
+        "bedrooms": "Bedrooms",
+        "bathrooms": "Bathrooms",
+        "basePrice": "Base price (OMR)",
+        "area": "Area (m²)",
+        "description": "Description"
       }
     }
   }

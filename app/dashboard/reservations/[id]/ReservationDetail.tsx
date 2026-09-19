@@ -2410,9 +2410,20 @@ export default function ReservationDetail({ id, allowEarlyCheckIn = false, overp
                       <span className="font-medium text-green-600 ltr-numbers">-{Number(res.discountAmount).toFixed(3)} OMR</span>
                     </div>
                   )}
+                  {res.returns.length > 0 && (
+                    <div className="pt-3 border-t border-gray-100 space-y-1">
+                      <p className="font-medium text-sm text-gray-800 mb-2">{tPricing("returns")}</p>
+                      {res.returns.map((ret) => (
+                        <div key={ret.id} className="flex justify-between text-sm text-gray-700 ps-4">
+                          <span className="ltr-numbers">{ret.returnNumber}</span>
+                          <span className="font-medium text-purple-700 ltr-numbers">-{Number(ret.returnAmount).toFixed(3)} OMR</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
                     <span>{tPricing("grandTotal")}</span>
-                    <span className="ltr-numbers">{Number(res.grandTotal).toFixed(3)} OMR</span>
+                    <span className="ltr-numbers">{displayGrandTotal.toFixed(3)} OMR</span>
                   </div>
                 </div>
               )}

@@ -2077,6 +2077,7 @@
         "none": "No unit pricing data.",
         "extraCharges": "Extra Charges",
         "discount": "Discount",
+        "returns": "Returns",
         "grandTotal": "Grand Total"
       },
       "financial": {

@@ -22,12 +22,20 @@ export interface WizardState {
   options: ImportOptions;
 }
 
-export function DataImportWizard({ counts }: { counts: RecordCounts }) {
+export function DataImportWizard({
+  counts, resumeJob,
+}: {
+  counts: RecordCounts;
+  /** When set (e.g. from the history view's re-import action, which is a
+   *  full page navigation rather than in-wizard state), the wizard opens
+   *  directly at this job's upload step instead of "choose". */
+  resumeJob?: { id: string; recordType: ImportRecordType };
+}) {
   const t = useTranslations("dataImport");
-  const [step, setStep] = useState<WizardStep>("choose");
+  const [step, setStep] = useState<WizardStep>(resumeJob ? "upload" : "choose");
   const [state, setState] = useState<WizardState>({
-    jobId: null,
-    recordType: null,
+    jobId: resumeJob?.id ?? null,
+    recordType: resumeJob?.recordType ?? null,
     upload: null,
     mapping: {},
     options: DEFAULT_IMPORT_OPTIONS,

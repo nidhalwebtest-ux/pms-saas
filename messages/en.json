@@ -6881,6 +6881,20 @@
         "basePrice": "Base price (OMR)",
         "area": "Area (m²)",
         "description": "Description"
+      },
+      "tenants": {
+        "firstName": "First name",
+        "lastName": "Last name",
+        "phone": "Phone",
+        "idNumber": "ID number",
+        "nationality": "Nationality",
+        "idType": "ID type",
+        "email": "Email",
+        "tenantType": "Tenant type",
+        "source": "Source",
+        "classification": "Classification",
+        "city": "City",
+        "country": "Country"
       }
     }
   }

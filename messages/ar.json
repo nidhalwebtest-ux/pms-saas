@@ -6881,6 +6881,20 @@
         "basePrice": "السعر الأساسي (ر.ع)",
         "area": "المساحة (م²)",
         "description": "الوصف"
+      },
+      "tenants": {
+        "firstName": "الاسم الأول",
+        "lastName": "اسم العائلة",
+        "phone": "رقم الهاتف",
+        "idNumber": "رقم الهوية",
+        "nationality": "الجنسية",
+        "idType": "نوع الهوية",
+        "email": "البريد الإلكتروني",
+        "tenantType": "نوع النزيل",
+        "source": "المصدر",
+        "classification": "التصنيف",
+        "city": "المدينة",
+        "country": "الدولة"
       }
     }
   }

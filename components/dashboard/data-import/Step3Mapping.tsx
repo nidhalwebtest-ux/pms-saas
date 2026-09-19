@@ -43,6 +43,10 @@ export function Step3Mapping({
   }, [upload.previewRows, mapping, adapter, options]);
 
   const missingRequired = adapter.fields.filter((f) => f.required && !mapping[f.key]);
+  // The date-format option only means anything for an adapter that actually
+  // has date-typed fields — showing it for Buildings (no date fields at all)
+  // implied it did something when it silently had no effect.
+  const hasDateFields = adapter.fields.some((f) => f.type === "date");
 
   async function handleConfirm() {
     setSaving(true);
@@ -78,6 +82,14 @@ export function Step3Mapping({
       </div>
 
       {error && <Alert variant="error" description={error} />}
+
+      {upload.hasFormulaCells && (
+        <Alert
+          variant="warning"
+          title={t3("formulaWarningTitle")}
+          description={t3("formulaWarningBody")}
+        />
+      )}
 
       {/* Field mapping table */}
       <div className="overflow-hidden rounded-lg border border-border-subtle">
@@ -216,32 +228,34 @@ export function Step3Mapping({
           />
         </RadioGroup>
 
-        <RadioGroup
-          label={t3("dateFormat")}
-          helperText={t3("dateFormatHint")}
-        >
-          <Radio
-            name="dateFormat"
-            value="auto"
-            label={t3("dateAuto")}
-            checked={options.dateFormat === "auto"}
-            onChange={() => setOptions((o) => ({ ...o, dateFormat: "auto" }))}
-          />
-          <Radio
-            name="dateFormat"
-            value="DMY"
-            label={t3("dateDMY")}
-            checked={options.dateFormat === "DMY"}
-            onChange={() => setOptions((o) => ({ ...o, dateFormat: "DMY" }))}
-          />
-          <Radio
-            name="dateFormat"
-            value="MDY"
-            label={t3("dateMDY")}
-            checked={options.dateFormat === "MDY"}
-            onChange={() => setOptions((o) => ({ ...o, dateFormat: "MDY" }))}
-          />
-        </RadioGroup>
+        {hasDateFields && (
+          <RadioGroup
+            label={t3("dateFormat")}
+            helperText={t3("dateFormatHint")}
+          >
+            <Radio
+              name="dateFormat"
+              value="auto"
+              label={t3("dateAuto")}
+              checked={options.dateFormat === "auto"}
+              onChange={() => setOptions((o) => ({ ...o, dateFormat: "auto" }))}
+            />
+            <Radio
+              name="dateFormat"
+              value="DMY"
+              label={t3("dateDMY")}
+              checked={options.dateFormat === "DMY"}
+              onChange={() => setOptions((o) => ({ ...o, dateFormat: "DMY" }))}
+            />
+            <Radio
+              name="dateFormat"
+              value="MDY"
+              label={t3("dateMDY")}
+              checked={options.dateFormat === "MDY"}
+              onChange={() => setOptions((o) => ({ ...o, dateFormat: "MDY" }))}
+            />
+          </RadioGroup>
+        )}
       </div>
 
       <div className="flex justify-between pt-2">

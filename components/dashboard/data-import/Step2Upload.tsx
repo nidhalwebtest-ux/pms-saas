@@ -16,6 +16,7 @@ export interface UploadResult {
   mapping: FieldMapping;
   matchedFields: string[];
   unmatchedColumns: string[];
+  hasFormulaCells: boolean;
 }
 
 const ENCODING_OPTIONS: { value: DetectedEncoding; label: string }[] = [

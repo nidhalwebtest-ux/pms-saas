@@ -28,11 +28,12 @@ const RECORD_LIST_HREF: Record<ImportRecordType, string> = {
 };
 
 export function Step5Run({
-  jobId, recordType, onStartAnother,
+  jobId, recordType, onStartAnother, onReimport,
 }: {
   jobId: string;
   recordType: ImportRecordType;
   onStartAnother: () => void;
+  onReimport: (newJobId: string) => void;
 }) {
   const t5 = useTranslations("dataImport.step5");
   const tResult = useTranslations("dataImport.result");
@@ -41,6 +42,7 @@ export function Step5Run({
 
   const [job, setJob] = useState<JobStatus | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [reimporting, setReimporting] = useState(false);
   const runningRef = useRef(true);
   const startTimeRef = useRef<number>(Date.now());
   const [elapsed, setElapsed] = useState(0);
@@ -94,12 +96,18 @@ export function Step5Run({
   }
 
   async function handleReimport() {
-    const res = await fetch(`/api/import-jobs/${jobId}/reimport`, { method: "POST" });
-    if (!res.ok) {
-      toast.error("Couldn't start a re-import.");
-      return;
+    setReimporting(true);
+    try {
+      const res = await fetch(`/api/import-jobs/${jobId}/reimport`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.id) {
+        toast.error("Couldn't start a re-import.");
+        return;
+      }
+      onReimport(data.id);
+    } finally {
+      setReimporting(false);
     }
-    onStartAnother();
   }
 
   const isRunning = !job || job.status === "RUNNING";
@@ -166,7 +174,7 @@ export function Step5Run({
                 {tResult("downloadFailedRows")}
               </Button>
             </a>
-            <Button variant="primary" onClick={handleReimport}>
+            <Button variant="primary" onClick={handleReimport} disabled={reimporting} loading={reimporting}>
               {tResult("reimport")}
             </Button>
           </>

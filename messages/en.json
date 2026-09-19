@@ -6780,7 +6780,9 @@
       "dateAuto": "Auto-detect",
       "dateDMY": "DD/MM/YYYY (31/12/2026)",
       "dateMDY": "MM/DD/YYYY (12/31/2026)",
-      "selectColumn": "— Not mapped —"
+      "selectColumn": "— Not mapped —",
+      "formulaWarningTitle": "Some cells may have been read as spreadsheet formulas",
+      "formulaWarningBody": "Your file contains cells written as Excel formulas (starting with \"=\"). Their calculated values can't be read automatically — those cells will come through as blank. Check the preview below and fix any affected cells in your source file if needed."
     },
     "step4": {
       "title": "Validate",

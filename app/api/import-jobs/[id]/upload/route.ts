@@ -103,5 +103,6 @@ export async function POST(
     mapping: autoMap.mapping,
     matchedFields: [...autoMap.matchedFields],
     unmatchedColumns: autoMap.unmatchedColumns,
+    hasFormulaCells: parsed.file.hasFormulaCells,
   });
 }

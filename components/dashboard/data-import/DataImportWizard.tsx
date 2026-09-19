@@ -50,6 +50,15 @@ export function DataImportWizard({ counts }: { counts: RecordCounts }) {
     setStep("choose");
   }
 
+  // Re-import jumps straight into the new job's upload step (same record
+  // type, fresh job id) instead of resetting to "choose" — reimport always
+  // requires uploading a fixed file, so this is the equivalent of starting
+  // step 2 directly rather than losing the new job entirely.
+  function goToReimport(newJobId: string) {
+    setState((s) => ({ ...s, jobId: newJobId, upload: null, mapping: {}, options: DEFAULT_IMPORT_OPTIONS }));
+    setStep("upload");
+  }
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div>
@@ -113,6 +122,7 @@ export function DataImportWizard({ counts }: { counts: RecordCounts }) {
             jobId={state.jobId}
             recordType={state.recordType}
             onStartAnother={reset}
+            onReimport={goToReimport}
           />
         )}
       </div>

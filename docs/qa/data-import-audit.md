@@ -1,12 +1,17 @@
 # Data Migration / CSV Import — Audit & Test Report
 
-**Date:** 2026-09-18
+**Date:** 2026-09-18 (fixes applied 2026-09-19)
 **Scope:** `Settings → Data Import` — the CSV/XLSX bulk-import wizard.
 **Method:** full code read of the engine, every API route, every wizard
 component, and the Prisma schema; live functional testing of the real
 pipeline (parser → auto-map → parse → validate → create) against an
 isolated demo organization (`عبدالله وجدي — Demo`, safe to write test
 data into — never production/customer orgs).
+
+**Status: all findings below are fixed and verified**, except the
+`value-parsers.ts` note (§3.5, correctly inert since it's unreferenced —
+flagged for whoever builds the next adapter) and §3.6 (a scope note for a
+future adapter, not an action item today). See §7 for what changed.
 
 ---
 
@@ -154,22 +159,26 @@ no way to trigger except by calling the API directly.
 for both `/import-jobs` (list) and `/undo` — no references outside the
 API route files themselves.
 
-### 3.4 — Step 3's Date Format and "Update" options are inert for the only real adapter (confirmed, minor)
+### 3.4 — Step 3's Date Format option is inert for the only real adapter (confirmed, minor — fixed)
 
-**What:** Step 3 (mapping) presents a live "Date format" control
-(Auto/DMY/MDY) and an "Update" duplicate-handling option. Neither has
-any effect on a Buildings import: `BuildingRow` has no date fields at
-all, and the adapter's own code comment states "update" is silently
-treated as "skip" (no per-entity update path exists yet).
+**What:** Step 3 (mapping) presented a live "Date format" control
+(Auto/DMY/MDY) with no effect on a Buildings import — `BuildingRow` has
+no date fields at all.
 
-**Consequence:** A user could deliberately choose "Update" expecting an
-existing building to be overwritten with new CSV data, and instead the
-row is silently skipped with no distinct feedback that "Update" doesn't
-actually do that yet.
+**Correction to the original finding:** the "Update" duplicate-handling
+option, initially flagged alongside this, is **not** actually
+undisclosed — `Step3Mapping.tsx` already shows
+`duplicateHandlingHint` as helper text under that control:
+*"Update existing" isn't available yet for this record type — duplicates
+are skipped either way until it ships.* Re-checked directly against the
+component before fixing anything; only the Date Format control had no
+such disclosure.
 
-**Confidence:** Confirmed by reading `Step3Mapping.tsx` (renders the
-controls) against `buildings.ts` (has no date fields; comment explicitly
-states the "update" fallback behavior).
+**Fix applied:** the Date Format control is now hidden entirely when the
+active adapter has no date-typed fields (`adapter.fields.some(f => f.type
+=== "date")`), rather than shown with a caveat — so it will reappear
+automatically once an adapter (e.g. Reservations) actually has date
+fields to configure.
 
 ### 3.5 — `lib/import/value-parsers.ts` is entirely unused; the DMY/MDY ambiguity logic is unvalidated (confirmed, latent)
 
@@ -241,15 +250,10 @@ database, not just in isolation.
   functional pipeline test in §4 exercised the same engine functions the
   API routes call, but not the HTTP layer, the upload `<input>`, or any
   client-side interaction.
-- **XLSX (binary) file upload** — only the CSV path was exercised live;
-  the XLSX branch shares the same `XLSX.read()` call and is very likely
-  subject to the same §3.1 formula issue (probably worse, since a real
-  `.xlsx` file's formula cells are formulas by construction), but this
-  wasn't separately confirmed with an actual `.xlsx` binary.
 - **The `cancel` endpoint** and **large-file/near-5000-row behavior**
   were read but not executed.
 
-## 6. Priority recommendation
+## 6. Priority recommendation (original)
 
 If picking one thing to fix first: **§3.1 (silent `=`-prefix data
 loss)**. It's the only finding that can silently corrupt legitimate
@@ -258,3 +262,84 @@ or a forward-looking concern for unbuilt adapters. §3.2 and §3.3 are the
 next-most-user-visible (a receptionist who hits an import with errors
 and tries to fix-and-retry currently can't do it the way the button
 implies they can).
+
+---
+
+## 7. Fixes applied (2026-09-19)
+
+All confirmed findings were fixed the following day. Summary — full
+detail in the commit history (`fix(import): stop silent data loss on
+"=" values, fix orphaned re-import`, then `feat(import): add job
+history + Undo UI`).
+
+### §3.1 — data loss on `=`-prefixed values
+Fixed at the root: `lib/import/parse-file.ts` now reads CSV text with
+`XLSX.read(text, { type: "string", raw: true })` — `raw: true` at the
+**read** step (not the `sheet_to_json` extraction step, which still
+uses `raw: false` for correct number/date display formatting; the two
+are independent knobs) keeps every CSV cell as a literal string, so
+`"=1+1"` and a full `HYPERLINK` payload both now survive parsing intact
+and correctly reach `sanitizeRow()`, which does what it was always
+supposed to do. Verified directly: the previously-blanked values now
+round-trip correctly, and benign `-`/`+`/`@`-prefixed values (already
+fine before) are unaffected.
+
+**One thing the original report got wrong**, corrected during the fix:
+I initially assumed a genuine `.xlsx` binary would hit this same bug,
+"probably worse." Testing it directly showed otherwise — a formula cell
+in a real `.xlsx` file only comes back blank if it has **no cached
+value**, and Excel always writes a cached value alongside any formula
+when it saves a file. A hand-constructed test `.xlsx` with an explicit
+formula-with-cached-value cell parsed its value correctly; the only way
+to produce a genuinely uncached formula cell was found to not survive
+`XLSX.write()`'s own binary serialization in the first place. So the
+XLSX path was not actually at risk in practice — added `hasFormulaCells`
+detection and a Step 3 warning banner as defensive infrastructure
+regardless, since it's cheap and correct for the edge case, but it is
+expected to rarely if ever fire for real-world Excel-produced files.
+
+### §3.2 — orphaned Re-import job
+Fixed: `Step5Run.tsx` now reads the reimport endpoint's response body
+and calls a new `onReimport(newJobId)` callback; `DataImportWizard.tsx`
+jumps straight into that job's upload step instead of resetting to
+"choose". Confirmed the server always re-derives `fieldMapping` from
+whatever file gets uploaded next regardless of what was pre-seeded, so
+no wizard-level state was being skipped by taking this shortcut.
+
+### §3.3 — no job-history view, Undo unreachable
+Built: `components/dashboard/data-import/JobHistory.tsx`, rendered
+below the wizard on the Data Import settings page. Lists past jobs with
+status, counts, download-errors, re-import, and Undo (full confirm +
+partial-undo-blocked messaging) — using translation strings that had
+already been written for this exact feature (`dataImport.history.*`,
+`dataImport.undo.*` in both `en.json`/`ar.json`) but were never wired to
+any component. Re-import from this view is a full-page navigation
+(`?resumeJobId=`), resolved org-scoped server-side in
+`page.tsx`, since the history table lives outside the wizard's
+in-memory state.
+
+**Verified end-to-end** against the isolated demo org: ran a full job
+lifecycle (create → upload → validate → run) through the real engine
+functions, producing 1 created building + 1 rejected row; confirmed the
+history-list query returns exactly what the UI renders; confirmed
+Undo's preview endpoint reported the correct eligible count, the delete
+endpoint removed the created building, and re-querying the database
+confirmed it was actually gone. Deleted the test job afterward and
+confirmed the demo org returned to its exact original state (0 import
+jobs, its original 2 buildings).
+
+### §3.4 — Date Format control shown for an adapter with no date fields
+Fixed: hidden via `adapter.fields.some(f => f.type === "date")` rather
+than given more disclaimer text — Buildings has no date fields, so the
+control now simply doesn't render for it, and will reappear
+automatically for a future adapter that has real date fields to
+configure. (Also corrected the original finding: the "Update"
+duplicate-handling option, initially grouped with this issue, already
+had disclosure text and did not need a fix — see §3.4 above.)
+
+### Not changed
+§3.5 (`value-parsers.ts` unused) and §3.6 (row PII exposure scoped to
+`dataImport:VIEW`) remain as documented, forward-looking notes for
+whoever builds the next adapter (most likely Reservations, which will
+need real date parsing) — neither is an active bug against the
+Buildings adapter that exists today.

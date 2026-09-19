@@ -123,12 +123,16 @@ export function parseFile(filename: string, buffer: Uint8Array, encodingOverride
       // `raw: true` at READ time (not sheet_to_json time) keeps every CSV
       // cell as a literal string, so a value like "=1+1" or "=HYPERLINK(...)"
       // is never parsed as a live formula and silently blanked — it reaches
-      // sanitizeRow() downstream exactly as typed, which is what actually
-      // neutralizes a formula-injection payload (prefixes it with ' so it's
-      // inert but preserved). CSV cells can never carry a *real* formula
-      // (there's no spreadsheet engine backing a .csv), so this is safe for
-      // every legitimate value too — confirmed numeric/date formatting via
-      // sheet_to_json's own `raw: false` is unaffected by the read-time flag.
+      // the rest of the pipeline exactly as typed. Values are NOT formula-
+      // sanitized here (or when stored as ImportJobRow.rawData) — sanitizing
+      // this early corrupted legitimate values like phone numbers starting
+      // with "+". Sanitization only happens at CSV *export* time
+      // (csv-writer.ts's buildErrorCsv), the one place a value is ever
+      // re-opened in a spreadsheet app. CSV cells can never carry a *real*
+      // formula (there's no spreadsheet engine backing a .csv), so raw:true
+      // is safe for every legitimate value too — confirmed numeric/date
+      // formatting via sheet_to_json's own `raw: false` is unaffected by the
+      // read-time flag.
       const wb = XLSX.read(text, { type: "string", raw: true });
       const sheet = wb.Sheets[wb.SheetNames[0]];
       hasFormulaCells = false;

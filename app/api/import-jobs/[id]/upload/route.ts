@@ -7,7 +7,6 @@ import { getAdapter } from "@/lib/import/registry";
 import { parseFile } from "@/lib/import/parse-file";
 import { autoMapHeaders } from "@/lib/import/auto-map";
 import { detectEncoding } from "@/lib/import/encoding";
-import { sanitizeRow } from "@/lib/import/sanitize";
 import { uploadImportFile, importSourcePath } from "@/lib/import/storage";
 import type { DetectedEncoding } from "@/lib/import/encoding";
 
@@ -85,11 +84,20 @@ export async function POST(
     }),
   ]);
 
+  // rawData is stored exactly as parsed — NOT formula-sanitized here. It's
+  // only ever read as plain string data (parseRow/validateRow) or written
+  // back out as CSV (buildErrorCsv in csv-writer.ts, which does apply
+  // sanitizeCsvCell — the correct place, since that's the only path where a
+  // value is ever re-opened in a spreadsheet app). Sanitizing at ingestion
+  // corrupted legitimate values that start with one of the 4 guarded
+  // characters (notably "+" — e.g. every international phone number) before
+  // any adapter ever saw them, baking a stray leading "'" into real data
+  // like Tenant.phone.
   await prisma.importJobRow.createMany({
     data: parsed.file.rows.map((raw, i) => ({
       jobId: job.id,
       rowNumber: i + 1,
-      rawData: sanitizeRow(raw),
+      rawData: raw,
       status: "PENDING" as const,
     })),
   });

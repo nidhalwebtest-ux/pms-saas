@@ -16,7 +16,7 @@ export default function AdminPanelButton() {
     <Link
       href="/admin"
       title={t("quickAccess")}
-      className="fixed bottom-6 right-6 z-40 flex items-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-lg ring-1 ring-brand-700 transition-colors hover:bg-brand-700"
+      className="fixed bottom-6 end-6 z-40 flex items-center gap-2 rounded-full bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-lg ring-1 ring-brand-700 transition-colors hover:bg-brand-700"
     >
       <ShieldCheckIcon className="h-5 w-5" />
       <span className="hidden sm:inline">{t("quickAccess")}</span>

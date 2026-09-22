@@ -5546,11 +5546,11 @@
       "closeMenu": "Close menu"
     },
     "hero": {
-      "badge": "🇴🇲 Made in Oman, for Oman",
+      "badge": "Built Arabic-first for the Gulf",
       "t1": "Run your buildings",
       "t2": "like a pro,",
       "t3": "not a spreadsheet.",
-      "sub": "Binaya brings reservations, payments, invoicing, and reporting into one place — built for property managers in Salalah and across Dhofar.",
+      "sub": "Binaya brings reservations, payments, invoicing, and reporting into one place — built for property managers across Oman and the Gulf, with OMR precision to the last baisa.",
       "cta1": "Start free — one building",
       "cta2": "Contact Us",
       "videoTitle": "Watch Binaya PMS in action",
@@ -5918,7 +5918,7 @@
         },
         {
           "q": "What about my existing data?",
-          "a": "You can import units and past bookings, and our team in Oman will help you get set up."
+          "a": "You can import units and past bookings, and our team will help you get set up."
         }
       ]
     },
@@ -5947,10 +5947,10 @@
       "errorGeneric": "Something went wrong. Please try again."
     },
     "footer": {
-      "tagline": "Property management, made in Oman.",
+      "tagline": "Property management for the Gulf, built Arabic-first.",
       "contact": "Salalah, Dhofar, Oman",
       "rights": "© 2026 Binaya PMS. All rights reserved.",
-      "made": "Made in Oman 🇴🇲",
+      "made": "Proudly based in Oman 🇴🇲",
       "cols": [
         {
           "h": "Product",

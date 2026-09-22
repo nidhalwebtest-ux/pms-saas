@@ -36,8 +36,8 @@ export default function ContactSection() {
           </h2>
           <p className="mt-3 text-lg text-gray-600">
             {isAr
-              ? "تحدث مباشرة مع فريق خبراء بناية في صلالة وعُمان عبر الواتساب أو الهاتف أو أرسل استفسارك وسنعاود الاتصال بك."
-              : "Speak directly with our team in Salalah, Oman via WhatsApp or phone, or send an inquiry below."}
+              ? "تحدث مباشرة مع فريق خبراء بناية عبر الواتساب أو الهاتف، أو أرسل استفسارك وسنعاود الاتصال بك."
+              : "Speak directly with our team via WhatsApp or phone, or send an inquiry below."}
           </p>
         </div>
 

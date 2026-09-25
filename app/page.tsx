@@ -17,20 +17,20 @@ import FinalCtaSection from "@/components/marketing/sections/FinalCtaSection";
 import FloatingWhatsApp from "@/components/marketing/FloatingWhatsApp";
 
 export const metadata: Metadata = {
-  title: "نظام بناية لإدارة العقارات | Binaya PMS — Property Management Software in Salalah, Oman",
+  title: "نظام بناية لإدارة الفنادق والشقق المفروشة | Binaya PMS — Hotel & Furnished Apartment Management Software",
   description:
-    "برنامج بناية لإدارة المباني والعقارات في صلالة وسلطنة عُمان. نظام متكامل لإدارة الحجوزات، المستأجرين، الفواتير، المصروفات والتقارير المالية بالريال العُماني. | Leading property management software for buildings, reservations, invoicing, and expenses in Salalah & Oman.",
+    "برنامج بناية لإدارة الفنادق والشقق المفروشة في عُمان ودول الخليج. نظام متكامل لإدارة الحجوزات، النزلاء، الفواتير، المصروفات والتقارير المالية بالريال العُماني. | Leading hotel and furnished-apartment management software for reservations, guests, invoicing, and expenses across Oman & the Gulf.",
   keywords: [
-    "برنامج إدارة العقارات صلالة",
-    "إدارة المباني عمان",
-    "نظام إدارة الأملاك صلالة",
-    "برنامج شقق مفروشة صلالة",
+    "برنامج إدارة الفنادق عمان",
+    "نظام إدارة الشقق المفروشة",
+    "برنامج حجوزات فنادق صلالة",
+    "إدارة الشقق الفندقية عمان",
     "Binaya PMS",
-    "Salalah Property Management Software",
-    "Oman PMS",
-    "Property Management Software Salalah",
-    "فواتير العقارات عمان",
-    "إدارة الحجوزات عمان",
+    "Hotel Management Software Oman",
+    "Furnished Apartment Management Software",
+    "Short-Term Rental Management Software Gulf",
+    "فواتير الفنادق عمان",
+    "إدارة حجوزات النزلاء",
   ],
   authors: [{ name: "Binaya Software Team", url: "https://www.binaya.app" }],
   creator: "Binaya PMS",
@@ -44,9 +44,9 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "نظام بناية لإدارة العقارات | Binaya PMS — Property Management Software in Salalah, Oman",
+    title: "نظام بناية لإدارة الفنادق والشقق المفروشة | Binaya PMS — Hotel & Furnished Apartment Management Software",
     description:
-      "برنامج بناية لإدارة المباني والعقارات في صلالة وعُمان. الحجوزات، الفواتير، المصروفات، والتقارير في مكان واحد.",
+      "برنامج بناية لإدارة الفنادق والشقق المفروشة في عُمان ودول الخليج. الحجوزات، الفواتير، المصروفات، والتقارير في مكان واحد.",
     url: "https://www.binaya.app",
     siteName: "Binaya PMS",
     images: [
@@ -62,8 +62,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "نظام بناية لإدارة العقارات | Binaya PMS",
-    description: "أدِر مبانيك باحترافية في صلالة وعُمان — نظام الحجوزات والمدفوعات والمصروفات بالريال العُماني.",
+    title: "نظام بناية لإدارة الفنادق والشقق المفروشة | Binaya PMS",
+    description: "أدِر فندقك أو شققك المفروشة باحترافية — نظام الحجوزات والمدفوعات والمصروفات بالريال العُماني.",
     images: ["/brand/binaya-mark.svg"],
   },
   robots: {
@@ -94,7 +94,7 @@ export default function MarketingHomePage() {
       offerCount: "3",
     },
     description:
-      "Binaya PMS is the premier property management platform in Salalah, Oman designed for real estate managers to handle reservations, units, invoicing, and expenses.",
+      "Binaya PMS is the premier hotel and furnished-apartment management platform in Oman designed for hospitality operators to handle reservations, guests, invoicing, and expenses.",
     publisher: {
       "@type": "Organization",
       name: "Binaya PMS",

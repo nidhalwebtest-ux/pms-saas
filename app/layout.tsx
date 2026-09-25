@@ -30,9 +30,9 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Binaya — Property Management for Oman",
+  title: "Binaya — Hotel & Furnished Apartment Management",
   description:
-    "Manage properties, tenants, reservations, and payments in one modern platform. Built for property managers in Oman.",
+    "Manage hotels, furnished apartments, guest reservations, and payments in one modern platform. Built for hospitality operators in Oman and the Gulf.",
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/apple-icon.png", sizes: "180x180" }],

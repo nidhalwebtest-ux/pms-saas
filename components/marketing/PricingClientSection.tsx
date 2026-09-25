@@ -28,7 +28,7 @@ export default function PricingClientSection() {
     {
       id: "starter",
       name: isAr ? "الخطة الأولى (المبتدئ)" : "Starter Plan",
-      desc: isAr ? "مثالية للمباني الفردية وإدارة العقارات الصغيرة" : "Ideal for single buildings and smaller property portfolios",
+      desc: isAr ? "مثالية للفنادق والشقق المفروشة الفردية والصغيرة" : "Ideal for single hotels and smaller furnished-apartment portfolios",
       monthlyPrice: 15,
       yearlyPrice: 10,
       highlightBadge: isAr ? "تجربة مجانية لمدة شهريْن 🎁" : "2 Months Free Trial 🎁",
@@ -62,7 +62,7 @@ export default function PricingClientSection() {
     {
       id: "growth",
       name: isAr ? "الخطة الثانية (النمو الاحترافي)" : "Pro / Growth Plan",
-      desc: isAr ? "الخطة الأكثر شعبية لمؤسسات إدارة العقارات المتنامية" : "Most popular plan for growing property portfolios",
+      desc: isAr ? "الخطة الأكثر شعبية لفنادق وشقق مفروشة المتنامية" : "Most popular plan for growing hotel and furnished-apartment portfolios",
       monthlyPrice: 30,
       yearlyPrice: 25,
       highlightBadge: isAr ? "الأكثر شعبية ⭐" : "Most Popular ⭐",

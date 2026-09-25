@@ -146,7 +146,7 @@ export default function ContactSection() {
                     </label>
                     <textarea
                       rows={3}
-                      placeholder={isAr ? "أخبرنا باحتياجاتك أو عدد المباني والوحدات..." : "Tell us about your property management needs..."}
+                      placeholder={isAr ? "أخبرنا باحتياجاتك أو عدد الفندق أو الشقق ووحداتها..." : "Tell us about your hotel or furnished-apartment management needs..."}
                       value={formData.message}
                       onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"

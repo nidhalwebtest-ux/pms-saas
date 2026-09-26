@@ -12,8 +12,13 @@ export interface PdfTableRow {
   variant?: "default" | "sub";
 }
 
+export interface PdfTableFooterCell {
+  content: string;
+  colSpan?: number;
+}
+
 export interface PdfTableFooterRow {
-  cells: string[];
+  cells: (string | PdfTableFooterCell)[];
 }
 
 export interface PdfTableOptions {
@@ -53,7 +58,9 @@ export function renderTable(opts: PdfTableOptions): string {
     .join("");
 
   const tfoot = opts.footerRow
-    ? `<tfoot><tr>${opts.footerRow.cells.map((c) => `<td>${c}</td>`).join("")}</tr></tfoot>`
+    ? `<tfoot><tr>${opts.footerRow.cells
+        .map((c) => (typeof c === "string" ? `<td>${c}</td>` : `<td${c.colSpan ? ` colspan="${c.colSpan}"` : ""}>${c.content}</td>`))
+        .join("")}</tr></tfoot>`
     : "";
 
   return `<table class="pdf-table${opts.zebra ? " zebra" : ""}"><thead><tr>${theadCells}</tr></thead><tbody>${tbodyRows}</tbody>${tfoot}</table>`;

@@ -8,8 +8,20 @@ import { getEffectivePropertyIds } from "@/lib/property-scope";
 import { verifyShareFromRequest } from "@/lib/share-token";
 import { getPdfLocaleContext } from "@/lib/pdf-i18n";
 import { htmlToPdf } from "@/lib/pdf/render";
-import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
-import { getPdfBranding, brandRootCss, logoHtml } from "@/lib/pdf/branding";
+import { getPdfBranding } from "@/lib/pdf/branding";
+import { escHtml } from "@/lib/pdf/html";
+import {
+  renderPdfDocument,
+  renderPdfHeader,
+  renderSectionLabel,
+  renderGrid,
+  renderFieldStacked,
+  renderLabeledBox,
+  renderTable,
+  renderPdfFooter,
+  buildPageNumberFooterTemplate,
+  type PdfTableRow,
+} from "@/lib/pdf/shell";
 
 // Headless Chromium needs the Node runtime (not edge); allow time for cold-start launch.
 export const runtime = "nodejs";
@@ -133,9 +145,6 @@ export async function GET(
   const tCommon  = await getTranslations({ locale, namespace: "pdfs.common" });
   const tMethods = await getTranslations({ locale, namespace: "payments.methods" });
 
-  const isRtl = dir === "rtl";
-  const secondaryDir = isRtl ? "ltr" : "rtl";
-
   const fmtMethod = (m: string) => (tMethods.has(m) ? tMethods(m) : m);
 
   // Build transactions
@@ -233,330 +242,119 @@ export async function GET(
       ? t("summary.credit")
       : t("summary.settled");
 
-  const html = `<!DOCTYPE html>
-<html lang="${locale}" dir="${dir}">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${t("title")} — ${tenantName}</title>
-<style>
-  ${pdfFontFaceCss()}
-  ${brandRootCss(brand)}
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  .brand-logo { margin-bottom:6px; }
+  // ── Header ───────────────────────────────────────────────────────────────
+  const header = renderPdfHeader({
+    brand,
+    orgName,
+    orgAddressLines: [
+      `${orgCity}, ${tCommon("country")}${org?.phone ? ` · ${org.phone}` : ""}`,
+      t("printedOn", { date: printDate }),
+    ],
+    docTitle: t("title"),
+    metaRows: [],
+  });
 
-  @page {
-    size: ${brand.paperSize} landscape;
-    margin: 12mm 14mm;
-  }
+  const metaGrid = renderGrid(3, [
+    renderFieldStacked({ dir, label: t("labels.tenant"), labelSecondary: tOther("labels.tenant"), value: tenantName, valueSub: tenantNameAr || undefined }),
+    renderFieldStacked({ dir, label: t("labels.contact"), labelSecondary: tOther("labels.contact"), value: tenant.phone, ltrNumbers: true, valueSub: tenant.email ?? undefined }),
+    renderFieldStacked({ dir, label: t("labels.period"), labelSecondary: tOther("labels.period"), value: periodLabel, valueSub: t("transactions", { count: finalRows.length }) }),
+  ]);
 
-  body {
-    font-family: ${PDF_FONT_STACK};
-    font-size: 9pt;
-    color: #1a1a2e;
-    background: #fff;
-    line-height: 1.4;
-  }
+  const summaryGrid = renderGrid(4, [
+    renderLabeledBox({ variant: "highlight", fields: [{ label: t("summary.totalCharged"), value: `${totalCharged.toFixed(3)} ${tCommon("omr")}`, ltrNumbers: true }] }) +
+      `<div style="font-size:7.5pt;color:#9ca3af;margin-top:2px">${escHtml(t("summary.invoicesCount", { count: invoices.length }))}</div>`,
+    renderLabeledBox({ variant: "highlight", fields: [{ label: t("summary.totalPaid"), value: `${totalPaid.toFixed(3)} ${tCommon("omr")}`, ltrNumbers: true }] }) +
+      `<div style="font-size:7.5pt;color:#9ca3af;margin-top:2px">${escHtml(t("summary.paymentsCount", { count: payments.length }))}</div>`,
+    renderLabeledBox({ variant: "highlight", fields: [{ label: t("summary.totalReturned"), value: `${totalReturned.toFixed(3)} ${tCommon("omr")}`, ltrNumbers: true }] }) +
+      `<div style="font-size:7.5pt;color:#9ca3af;margin-top:2px">${escHtml(t("summary.refundsCount", { count: refunds.length }))}</div>`,
+    `<div class="labeled-box highlight" style="border-color:${currentBalance > 0 ? "#fca5a5" : "#86efac"};background:${currentBalance > 0 ? "#fef2f2" : "#f0fdf4"}">
+      <div class="box-title">${escHtml(t("summary.balanceDue"))}</div>
+      <div style="font-size:15pt;font-weight:800;color:${currentBalance > 0 ? "#dc2626" : "#16a34a"}" class="ltr-numbers">${currentBalance.toFixed(3)}</div>
+      <div style="font-size:7.5pt;color:#9ca3af;margin-top:2px">${escHtml(tCommon("omr"))} · ${escHtml(balanceState)}</div>
+    </div>`,
+  ]);
 
-  /* ── Header ── */
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    border-bottom: 2px solid var(--brand);
-    padding-bottom: 10px;
-    margin-bottom: 14px;
-  }
-  .header-left h1 {
-    font-size: 18pt;
-    font-weight: 700;
-    color: var(--brand);
-    letter-spacing: -0.3px;
-  }
-  .header-left .subtitle {
-    font-size: 8pt;
-    color: #6b7280;
-    margin-top: 2px;
-    direction: ${secondaryDir};
-  }
-  .header-right {
-    text-align: ${isRtl ? "left" : "right"};
-  }
-  .header-right .org-name {
-    font-size: 11pt;
-    font-weight: 700;
-    color: #111827;
-  }
-  .header-right .org-sub {
-    font-size: 8pt;
-    color: #6b7280;
-    margin-top: 2px;
-  }
+  const ledgerRows: PdfTableRow[] = finalRows.map((row) => ({
+    cells: [
+      `<span style="white-space:nowrap" class="ltr-numbers">${escHtml(fmtShort(row.date))}</span>`,
+      `<span class="badge badge-${row.type.toLowerCase()}">${escHtml(t(`types.${row.type}`))}</span>`,
+      escHtml(row.description),
+      `<span style="color:#6b7280;font-size:8pt">${escHtml(row.reference)}</span>`,
+      row.debit > 0 ? `<span class="debit ltr-numbers">${row.debit.toFixed(3)}</span>` : `<span style="color:#d1d5db">${escHtml(tCommon("dash"))}</span>`,
+      row.credit > 0 ? `<span class="credit ltr-numbers">${row.credit.toFixed(3)}</span>` : `<span style="color:#d1d5db">${escHtml(tCommon("dash"))}</span>`,
+      `<span class="ltr-numbers ${row.balance > 0 ? "bal-pos" : "bal-zero"}">${row.balance.toFixed(3)}</span>`,
+    ],
+  }));
 
-  /* ── Tenant & Meta Info ── */
-  .meta-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 12px;
-    margin-bottom: 14px;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 10px 14px;
-  }
-  .meta-block .label {
-    font-size: 7pt;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #9ca3af;
-    font-weight: 600;
-  }
-  .meta-block .label .sec {
-    text-transform: none;
-    letter-spacing: 0;
-    color: #cbd5e1;
-    margin-${isRtl ? "right" : "left"}: 4px;
-    direction: ${secondaryDir};
-  }
-  .meta-block .value {
-    font-size: 9.5pt;
-    font-weight: 600;
-    color: #111827;
-    margin-top: 2px;
-  }
-  .meta-block .value-sub {
-    font-size: 7.5pt;
-    color: #6b7280;
-    margin-top: 1px;
-  }
+  const ledgerTable = finalRows.length === 0
+    ? `<table class="pdf-table"><tbody><tr><td colspan="7" style="text-align:center;padding:20px;color:#9ca3af">${escHtml(t("noTransactions"))}</td></tr></tbody></table>`
+    : renderTable({
+        columns: [
+          { header: t("table.date"), width: "90px", align: "start" },
+          { header: t("table.type"), width: "70px", align: "start" },
+          { header: t("table.description"), align: "start" },
+          { header: t("table.reference"), width: "90px", align: "start" },
+          { header: t("table.charges"), width: "85px" },
+          { header: t("table.payments"), width: "85px" },
+          { header: t("table.balance"), width: "90px" },
+        ],
+        rows: ledgerRows,
+        zebra: true,
+        footerRow: {
+          cells: [
+            { content: escHtml(t("totalsLine", { count: finalRows.length })), colSpan: 4 },
+            `<span class="ltr-numbers">${totalCharged.toFixed(3)}</span>`,
+            `<span class="ltr-numbers">${totalPaid.toFixed(3)}</span>`,
+            `<span class="ltr-numbers">${escHtml(t("balanceCell", { amount: currentBalance.toFixed(3) }))}</span>`,
+          ],
+        },
+      });
 
-  /* ── Summary boxes ── */
-  .summary-row {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-  .summary-box {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 6px;
-    padding: 8px 12px;
-  }
-  .summary-box .s-label {
-    font-size: 7pt;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: #9ca3af;
-    font-weight: 600;
-  }
-  .summary-box .s-value {
-    font-size: 13pt;
-    font-weight: 700;
-    margin-top: 3px;
-    color: #111827;
-    direction: ltr;
-  }
-  .summary-box.charged .s-value { color: #1d4ed8; }
-  .summary-box.paid    .s-value { color: #15803d; }
-  .summary-box.returned .s-value { color: #b45309; }
-  .summary-box.balance  { border-color: ${currentBalance > 0 ? "#fca5a5" : "#86efac"}; background: ${currentBalance > 0 ? "#fef2f2" : "#f0fdf4"}; }
-  .summary-box.balance .s-value { color: ${currentBalance > 0 ? "#dc2626" : "#16a34a"}; font-size: 15pt; }
-  .summary-box .s-sub {
-    font-size: 7.5pt;
-    color: #9ca3af;
-    margin-top: 2px;
-  }
+  const footer = renderPdfFooter({
+    primaryLine: t("footerLocation", { org: orgName, city: orgCity }),
+    metaLine: escHtml(t("generated", { date: printDate })),
+  });
 
-  /* ── Table ── */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 8.5pt;
-  }
-  thead tr {
-    background: #1e40af;
-    color: #fff;
-  }
-  thead th {
-    padding: 7px 8px;
-    text-align: ${isRtl ? "right" : "left"};
-    font-weight: 600;
-    font-size: 7.5pt;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    white-space: nowrap;
-  }
-  thead th.num { text-align: ${isRtl ? "left" : "right"}; }
-
-  tbody tr:nth-child(even) { background: #f8fafc; }
-  tbody tr:hover           { background: #eff6ff; }
-
-  tbody td {
-    padding: 5.5px 8px;
-    border-bottom: 1px solid #f1f5f9;
-    vertical-align: middle;
-    color: #374151;
-  }
-  tbody td.num { text-align: ${isRtl ? "left" : "right"}; font-variant-numeric: tabular-nums; direction: ltr; }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    padding: 2px 7px;
-    border-radius: 9999px;
-    font-size: 7pt;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    white-space: nowrap;
-  }
-  .badge-invoice { background: #dbeafe; color: #1d4ed8; }
-  .badge-payment { background: #dcfce7; color: #15803d; }
-  .badge-return  { background: #fef3c7; color: #92400e; }
-  .badge-refund  { background: #ffe4e6; color: #9f1239; }
-
-  .debit  { color: #dc2626; font-weight: 600; }
-  .credit { color: #16a34a; font-weight: 600; }
-  .bal-pos { color: #dc2626; font-weight: 700; }
-  .bal-zero{ color: #16a34a; font-weight: 700; }
-
-  /* ── Footer ── */
-  tfoot tr {
-    background: #1e40af;
-    color: #fff;
-  }
-  tfoot td {
-    padding: 7px 8px;
-    font-weight: 700;
-    font-size: 9pt;
-    border-top: 2px solid #1e3a8a;
-  }
-  tfoot td.num { text-align: ${isRtl ? "left" : "right"}; font-variant-numeric: tabular-nums; direction: ltr; }
-
-  /* ── Page footer ── */
-  .page-footer {
-    margin-top: 14px;
-    display: flex;
-    justify-content: space-between;
-    font-size: 7.5pt;
-    color: #9ca3af;
-    border-top: 1px solid #e5e7eb;
-    padding-top: 6px;
-  }
-
-  @media print {
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .no-print { display: none; }
-  }
-</style>
-</head>
-<body>
-
-<!-- Header -->
-<div class="header">
-  <div class="header-left">
-    <h1>${t("title")}</h1>
-    <div class="subtitle">${tOther("title")}</div>
+  const body = `
+  ${header}
+  <div class="body" style="padding:20px 0 0">
+    <div style="margin-bottom:14px">${metaGrid}</div>
+    <div style="margin-bottom:14px">${summaryGrid}</div>
+    ${ledgerTable}
   </div>
-  <div class="header-right">
-    ${logoHtml(brand) ? `<div class="brand-logo">${logoHtml(brand)}</div>` : ""}
-    <div class="org-name">${orgName}</div>
-    <div class="org-sub">${orgCity}, ${tCommon("country")}${org?.phone ? ` · <span style="direction:ltr">${org.phone}</span>` : ""}</div>
-    <div class="org-sub" style="margin-top:4px;">${t("printedOn", { date: printDate })}</div>
-  </div>
-</div>
+  ${footer}`;
 
-<!-- Tenant & Period Info -->
-<div class="meta-row">
-  <div class="meta-block">
-    <div class="label">${t("labels.tenant")} <span class="sec">${tOther("labels.tenant")}</span></div>
-    <div class="value">${tenantName}</div>
-    ${tenantNameAr ? `<div class="value-sub" dir="rtl">${tenantNameAr}</div>` : ""}
-  </div>
-  <div class="meta-block">
-    <div class="label">${t("labels.contact")} <span class="sec">${tOther("labels.contact")}</span></div>
-    <div class="value" style="direction:ltr">${tenant.phone}</div>
-    ${tenant.email ? `<div class="value-sub" style="direction:ltr">${tenant.email}</div>` : ""}
-  </div>
-  <div class="meta-block">
-    <div class="label">${t("labels.period")} <span class="sec">${tOther("labels.period")}</span></div>
-    <div class="value">${periodLabel}</div>
-    <div class="value-sub">${t("transactions", { count: finalRows.length })}</div>
-  </div>
-</div>
+  const html = renderPdfDocument({
+    lang: locale,
+    dir,
+    brand,
+    orientation: "landscape",
+    pageMargin: "12mm 14mm",
+    baseFontSize: "9pt",
+    title: `${t("title")} — ${tenantName}`,
+    body,
+    extraStyles: `
+      .grid-3 { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; }
+      table.pdf-table thead th { background: var(--brand); color: #fff; }
+      table.pdf-table tfoot td { background: var(--brand-dark); color: #fff; border-top: 2px solid var(--brand-dark); font-size: 9pt; font-weight: 700; }
+      .debit { color: #dc2626; font-weight: 600; }
+      .credit { color: #16a34a; font-weight: 600; }
+      .bal-pos { color: #dc2626; font-weight: 700; }
+      .bal-zero { color: #16a34a; font-weight: 700; }
+      .badge { display: inline-flex; align-items: center; padding: 2px 7px; border-radius: 9999px; font-size: 7pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; }
+      .badge-invoice { background: #dbeafe; color: #1d4ed8; }
+      .badge-payment { background: #dcfce7; color: #15803d; }
+      .badge-return { background: #fef3c7; color: #92400e; }
+      .badge-refund { background: #ffe4e6; color: #9f1239; }
+    `,
+  });
 
-<!-- Summary -->
-<div class="summary-row">
-  <div class="summary-box charged">
-    <div class="s-label">${t("summary.totalCharged")}</div>
-    <div class="s-value">${totalCharged.toFixed(3)}</div>
-    <div class="s-sub">${tCommon("omr")} · ${t("summary.invoicesCount", { count: invoices.length })}</div>
-  </div>
-  <div class="summary-box paid">
-    <div class="s-label">${t("summary.totalPaid")}</div>
-    <div class="s-value">${totalPaid.toFixed(3)}</div>
-    <div class="s-sub">${tCommon("omr")} · ${t("summary.paymentsCount", { count: payments.length })}</div>
-  </div>
-  <div class="summary-box returned">
-    <div class="s-label">${t("summary.totalReturned")}</div>
-    <div class="s-value">${totalReturned.toFixed(3)}</div>
-    <div class="s-sub">${tCommon("omr")} · ${t("summary.refundsCount", { count: refunds.length })}</div>
-  </div>
-  <div class="summary-box balance">
-    <div class="s-label">${t("summary.balanceDue")}</div>
-    <div class="s-value">${currentBalance.toFixed(3)}</div>
-    <div class="s-sub">${tCommon("omr")} · ${balanceState}</div>
-  </div>
-</div>
-
-<!-- Ledger Table -->
-<table>
-  <thead>
-    <tr>
-      <th style="width:90px">${t("table.date")}</th>
-      <th style="width:70px">${t("table.type")}</th>
-      <th>${t("table.description")}</th>
-      <th style="width:90px">${t("table.reference")}</th>
-      <th class="num" style="width:85px">${t("table.charges")}</th>
-      <th class="num" style="width:85px">${t("table.payments")}</th>
-      <th class="num" style="width:90px">${t("table.balance")}</th>
-    </tr>
-  </thead>
-  <tbody>
-    ${finalRows.length === 0
-      ? `<tr><td colspan="7" style="text-align:center;padding:20px;color:#9ca3af;">${t("noTransactions")}</td></tr>`
-      : finalRows.map((row) => `
-    <tr>
-      <td style="white-space:nowrap;direction:ltr">${fmtShort(row.date)}</td>
-      <td><span class="badge badge-${row.type.toLowerCase()}">${t(`types.${row.type}`)}</span></td>
-      <td>${row.description}</td>
-      <td style="color:#6b7280;font-size:8pt">${row.reference}</td>
-      <td class="num">${row.debit > 0 ? `<span class="debit">${row.debit.toFixed(3)}</span>` : `<span style="color:#d1d5db">${tCommon("dash")}</span>`}</td>
-      <td class="num">${row.credit > 0 ? `<span class="credit">${row.credit.toFixed(3)}</span>` : `<span style="color:#d1d5db">${tCommon("dash")}</span>`}</td>
-      <td class="num ${row.balance > 0 ? "bal-pos" : "bal-zero"}">${row.balance.toFixed(3)}</td>
-    </tr>`).join("")}
-  </tbody>
-  <tfoot>
-    <tr>
-      <td colspan="4">${t("totalsLine", { count: finalRows.length })}</td>
-      <td class="num">${totalCharged.toFixed(3)}</td>
-      <td class="num">${totalPaid.toFixed(3)}</td>
-      <td class="num">${t("balanceCell", { amount: currentBalance.toFixed(3) })}</td>
-    </tr>
-  </tfoot>
-</table>
-
-<!-- Page Footer -->
-<div class="page-footer">
-  <span>${t("footerLocation", { org: orgName, city: orgCity })}</span>
-  <span>${t("generated", { date: printDate })}</span>
-</div>
-
-</body>
-</html>`;
-
-  const pdf = await htmlToPdf(html, { preferCSSPageSize: true });
+  const pdf = await htmlToPdf(html, {
+    preferCSSPageSize: true,
+    displayHeaderFooter: true,
+    headerTemplate: "<span></span>",
+    footerTemplate: buildPageNumberFooterTemplate(),
+  });
 
   return new Response(Buffer.from(pdf), {
     headers: {

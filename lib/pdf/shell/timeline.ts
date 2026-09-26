@@ -3,7 +3,7 @@ import { escHtml } from "../html";
 export interface TimelineStep {
   label: string;
   sublabel?: string;
-  state: "done" | "current" | "pending";
+  state: "done" | "current" | "pending" | "rejected";
 }
 
 /** Generalization of expense's .steps workflow timeline (submitted -> reviewed -> processed) to N steps. */

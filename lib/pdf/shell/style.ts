@@ -123,6 +123,7 @@ export function buildPdfBaseStyles(opts: PdfStyleOptions): string {
   .timeline .step .dot { width: 12px; height: 12px; border-radius: 50%; background: #e5e7eb; flex: none; margin-top: 2px; }
   .timeline .step.state-done .dot { background: #16a34a; }
   .timeline .step.state-current .dot { background: #2563eb; }
+  .timeline .step.state-rejected .dot { background: #dc2626; }
   .timeline .step-label { font-weight: 700; font-size: 12.5px; color: #111827; }
   .timeline .step-sublabel { font-size: 11px; color: #9ca3af; margin-top: 1px; }
 

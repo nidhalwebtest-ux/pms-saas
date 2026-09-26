@@ -105,6 +105,7 @@ export function buildPdfBaseStyles(opts: PdfStyleOptions): string {
   .totals-row.tone-grand { font-size: 15px; font-weight: 800; color: #111827; padding: 8px 0 6px; border-top: 2px solid #e5e7eb; border-bottom: none; margin-top: 2px; }
   .totals-row.tone-positive { color: #16a34a; }
   .totals-row.tone-negative { font-size: 14px; font-weight: 700; color: #dc2626; padding-top: 6px; border-bottom: none; }
+  .totals-row.tone-warning { font-weight: 700; color: #d97706; padding-top: 6px; border-bottom: none; }
   .totals-row.tone-muted { color: #6b7280; }
 
   .ink-stamp { display: inline-block; border: 3px solid #16a34a; border-radius: 8px; color: #16a34a; font-size: 22px; font-weight: 900; letter-spacing: 4px; padding: 4px 18px; transform: rotate(-3deg); opacity: 0.85; margin-top: 4px; }

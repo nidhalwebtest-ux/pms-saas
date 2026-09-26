@@ -1,6 +1,6 @@
 import { escHtml } from "../html";
 
-export type TotalsRowTone = "default" | "grand" | "positive" | "negative" | "muted";
+export type TotalsRowTone = "default" | "grand" | "positive" | "negative" | "warning" | "muted";
 
 export interface TotalsRow {
   label: string;

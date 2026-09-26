@@ -5,8 +5,18 @@ import { requireOrgUser } from "@/lib/tenant";
 import { forbiddenIfNo } from "@/lib/access";
 import { getBankStatement } from "@/lib/bank-statement";
 import { htmlToPdf } from "@/lib/pdf/render";
-import { pdfFontFaceCss } from "@/lib/pdf/fonts";
-import { getPdfBranding, brandRootCss, logoHtml, footerLine } from "@/lib/pdf/branding";
+import { getPdfBranding, footerLine } from "@/lib/pdf/branding";
+import { escHtml } from "@/lib/pdf/html";
+import {
+  renderPdfDocument,
+  renderPdfHeader,
+  renderGrid,
+  renderLabeledBox,
+  renderTable,
+  renderPdfFooter,
+  buildPageNumberFooterTemplate,
+  type PdfTableRow,
+} from "@/lib/pdf/shell";
 
 // Headless Chromium needs the Node runtime.
 export const runtime = "nodejs";
@@ -16,7 +26,6 @@ function parseDate(s: string | null, fallback: Date): Date {
   const d = new Date(s);
   return isNaN(d.getTime()) ? fallback : d;
 }
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const denied = await forbiddenIfNo("banks", "VIEW");
@@ -36,82 +45,107 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const locale = await getLocale();
   const isAr = locale === "ar";
+  const dir = isAr ? "rtl" : "ltr";
   const t = await getTranslations("settings.banks.statement");
-  const branding = await getPdfBranding(orgUser.organizationId);
+  const brand = await getPdfBranding(orgUser.organizationId);
 
   const cur = stmt.account.currency;
   const money = (n: number) => `${n.toFixed(3)} ${cur}`;
   const fmtD = (iso: string) => format(new Date(iso), "d MMM yyyy");
   const typeLabel = (ty: string) => (t.has(`types.${ty}`) ? t(`types.${ty}`) : ty);
 
-  const rowsHtml = stmt.rows.map((r) => `
-    <tr>
-      <td>${fmtD(r.date)}</td>
-      <td>${esc(typeLabel(r.type))}</td>
-      <td>${esc(r.description ?? "—")}</td>
-      <td class="num">${r.amount > 0 ? money(r.amount) : ""}</td>
-      <td class="num neg">${r.amount < 0 ? money(Math.abs(r.amount)) : ""}</td>
-      <td class="num bold">${money(r.balance)}</td>
-    </tr>`).join("");
+  const rows: PdfTableRow[] = stmt.rows.map((r) => ({
+    cells: [
+      `<span class="ltr-numbers">${escHtml(fmtD(r.date))}</span>`,
+      escHtml(typeLabel(r.type)),
+      escHtml(r.description ?? "—"),
+      r.amount > 0 ? `<span class="ltr-numbers" style="color:#15803d">${escHtml(money(r.amount))}</span>` : "",
+      r.amount < 0 ? `<span class="ltr-numbers" style="color:#dc2626">${escHtml(money(Math.abs(r.amount)))}</span>` : "",
+      `<span class="ltr-numbers" style="font-weight:600">${escHtml(money(r.balance))}</span>`,
+    ],
+  }));
 
-  const html = `<!DOCTYPE html><html dir="${isAr ? "rtl" : "ltr"}" lang="${locale}"><head><meta charset="utf-8">
-  <style>
-    ${pdfFontFaceCss()}
-    ${brandRootCss(branding)}
-    * { box-sizing: border-box; }
-    body { font-family: 'Inter','Cairo',sans-serif; color:#1f2937; font-size:12px; margin:0; padding:28px; }
-    .head { display:flex; justify-content:space-between; align-items:flex-start; border-bottom:2px solid var(--brand); padding-bottom:14px; margin-bottom:16px; }
-    .title { font-size:18px; font-weight:700; color:var(--brand); }
-    .sub { font-size:11px; color:#6b7280; margin-top:4px; }
-    .summary { display:flex; gap:10px; margin-bottom:14px; }
-    .box { flex:1; border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; }
-    .box .l { font-size:9px; text-transform:uppercase; letter-spacing:.05em; color:#9ca3af; }
-    .box .v { font-size:14px; font-weight:600; margin-top:2px; }
-    table { width:100%; border-collapse:collapse; }
-    th { background:#f9fafb; font-size:9.5px; text-transform:uppercase; letter-spacing:.04em; color:#6b7280; text-align:start; padding:7px 8px; border-bottom:1px solid #e5e7eb; }
-    td { padding:7px 8px; border-bottom:1px solid #f3f4f6; }
-    .num { text-align:end; direction:ltr; } .neg { color:#dc2626; } .bold { font-weight:600; }
-    tfoot td { font-weight:700; background:#f9fafb; border-top:2px solid #e5e7eb; }
-    .footer { margin-top:20px; font-size:9px; color:#9ca3af; text-align:center; }
-  </style></head><body>
-    <div class="head">
-      <div>
-        <div class="title">${esc(stmt.account.bankName)}${stmt.account.label ? " — " + esc(stmt.account.label) : ""}</div>
-        <div class="sub">${t("title")}${stmt.account.accountNumber ? " · " + esc(stmt.account.accountNumber) : ""}</div>
-        <div class="sub">${fmtD(stmt.from)} – ${fmtD(stmt.to)}</div>
-      </div>
-      ${logoHtml(branding, { height: 36 })}
-    </div>
-    <div class="summary">
-      <div class="box"><div class="l">${t("opening")}</div><div class="v">${money(stmt.openingBalance)}</div></div>
-      <div class="box"><div class="l">${t("totalIn")}</div><div class="v" style="color:#15803d">${money(stmt.totalIn)}</div></div>
-      <div class="box"><div class="l">${t("totalOut")}</div><div class="v" style="color:#dc2626">${money(stmt.totalOut)}</div></div>
-      <div class="box"><div class="l">${t("closing")}</div><div class="v">${money(stmt.closingBalance)}</div></div>
-    </div>
-    <table>
-      <thead><tr>
-        <th>${t("col.date")}</th><th>${t("col.type")}</th><th>${t("col.description")}</th>
-        <th class="num">${t("col.in")}</th><th class="num">${t("col.out")}</th><th class="num">${t("col.balance")}</th>
-      </tr></thead>
-      <tbody>
-        <tr><td colspan="5" style="color:#6b7280">${t("openingRow")}</td><td class="num bold">${money(stmt.openingBalance)}</td></tr>
-        ${rowsHtml || `<tr><td colspan="6" style="text-align:center;color:#9ca3af;padding:24px">${t("empty")}</td></tr>`}
-      </tbody>
-      <tfoot><tr>
-        <td colspan="3">${t("closing")}</td>
-        <td class="num" style="color:#15803d">${money(stmt.totalIn)}</td>
-        <td class="num neg">${money(stmt.totalOut)}</td>
-        <td class="num">${money(stmt.closingBalance)}</td>
-      </tr></tfoot>
-    </table>
-    <div class="footer">${esc(footerLine(branding, isAr, ""))}</div>
-  </body></html>`;
+  const openingRow: PdfTableRow = {
+    cells: [
+      { content: `<span style="color:#6b7280">${escHtml(t("openingRow"))}</span>`, colSpan: 5 },
+      `<span class="ltr-numbers" style="font-weight:600">${escHtml(money(stmt.openingBalance))}</span>`,
+    ],
+  };
 
-  const pdf = await htmlToPdf(html, { preferCSSPageSize: true });
+  const emptyRow: PdfTableRow = {
+    cells: [{ content: `<span style="text-align:center;display:block;color:#9ca3af;padding:24px 0">${escHtml(t("empty"))}</span>`, colSpan: 6 }],
+  };
+
+  const header = renderPdfHeader({
+    brand,
+    orgName: `${stmt.account.bankName}${stmt.account.label ? " — " + stmt.account.label : ""}`,
+    orgAddressLines: [
+      `${t("title")}${stmt.account.accountNumber ? " · " + stmt.account.accountNumber : ""}`,
+      `${fmtD(stmt.from)} – ${fmtD(stmt.to)}`,
+    ],
+    docTitle: t("title"),
+    metaRows: [],
+  });
+
+  const summaryGrid = renderGrid(4, [
+    renderLabeledBox({ variant: "highlight", fields: [{ label: t("opening"), value: money(stmt.openingBalance), ltrNumbers: true }] }),
+    `<div class="labeled-box highlight"><div class="box-title">${escHtml(t("totalIn"))}</div><div style="font-size:18px;font-weight:800;color:#15803d" class="ltr-numbers">${escHtml(money(stmt.totalIn))}</div></div>`,
+    `<div class="labeled-box highlight"><div class="box-title">${escHtml(t("totalOut"))}</div><div style="font-size:18px;font-weight:800;color:#dc2626" class="ltr-numbers">${escHtml(money(stmt.totalOut))}</div></div>`,
+    renderLabeledBox({ variant: "highlight", fields: [{ label: t("closing"), value: money(stmt.closingBalance), ltrNumbers: true }] }),
+  ]);
+
+  const table = renderTable({
+    columns: [
+      { header: t("col.date"), align: "start" },
+      { header: t("col.type"), align: "start" },
+      { header: t("col.description"), align: "start" },
+      { header: t("col.in") },
+      { header: t("col.out") },
+      { header: t("col.balance") },
+    ],
+    rows: [openingRow, ...(rows.length > 0 ? rows : [emptyRow])],
+    zebra: true,
+    footerRow: {
+      cells: [
+        { content: escHtml(t("closing")), colSpan: 3 },
+        `<span class="ltr-numbers" style="color:#15803d">${escHtml(money(stmt.totalIn))}</span>`,
+        `<span class="ltr-numbers" style="color:#dc2626">${escHtml(money(stmt.totalOut))}</span>`,
+        `<span class="ltr-numbers">${escHtml(money(stmt.closingBalance))}</span>`,
+      ],
+    },
+  });
+
+  const footer = renderPdfFooter({ primaryLine: footerLine(brand, isAr, "") });
+
+  const body = `
+  ${header}
+  <div class="body" style="padding:20px 0 0">
+    <div style="margin-bottom:16px">${summaryGrid}</div>
+    ${table}
+  </div>
+  ${footer}`;
+
+  const html = renderPdfDocument({
+    lang: locale,
+    dir,
+    brand,
+    pageMargin: "10mm",
+    baseFontSize: "12px",
+    title: `${t("title")} — ${stmt.account.bankName}`,
+    body,
+  });
+
+  const pdf = await htmlToPdf(html, {
+    preferCSSPageSize: true,
+    displayHeaderFooter: true,
+    headerTemplate: "<span></span>",
+    footerTemplate: buildPageNumberFooterTemplate(),
+  });
   return new Response(Buffer.from(pdf), {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `inline; filename="bank-statement-${stmt.account.bankName.replace(/\s+/g, "-")}.pdf"`,
+      "Cache-Control": "no-store",
     },
   });
 }

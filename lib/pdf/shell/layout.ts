@@ -23,6 +23,32 @@ export function renderField(opts: LabeledFieldOptions): string {
   return `<div class="field${opts.emphasis ? " emphasis" : ""}">${label}<span class="${valueClass}">${escHtml(opts.value)}</span></div>`;
 }
 
+export interface StackedFieldOptions {
+  label: string;
+  labelSecondary?: string;
+  value: string;
+  valueSub?: string;
+  ltrNumbers?: boolean;
+  dir: "ltr" | "rtl";
+}
+
+/**
+ * Stacked label-above-value field (small caps label, bold value below) —
+ * receipt's/ledger's .field-label/.field-value pattern, distinct from
+ * renderField's inline label:value row. Supports an optional bilingual
+ * secondary label line for documents that show both locales at once.
+ */
+export function renderFieldStacked(opts: StackedFieldOptions): string {
+  const secondaryDir = opts.dir === "rtl" ? "ltr" : "rtl";
+  const valueClass = [opts.ltrNumbers ? "ltr-numbers" : ""].filter(Boolean).join(" ");
+  return `
+  <div>
+    <div class="field-label">${escHtml(opts.label)}${opts.labelSecondary ? `<span class="sec" style="direction:${secondaryDir}">${escHtml(opts.labelSecondary)}</span>` : ""}</div>
+    <div class="field-value ${valueClass}">${escHtml(opts.value)}</div>
+    ${opts.valueSub ? `<div class="field-value-sub" dir="${secondaryDir}">${escHtml(opts.valueSub)}</div>` : ""}
+  </div>`;
+}
+
 export interface LabeledBoxOptions {
   title?: string;
   fields: LabeledFieldOptions[];

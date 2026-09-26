@@ -5,8 +5,19 @@ import { prisma } from "@/lib/prisma";
 import { verifyShareFromRequest } from "@/lib/share-token";
 import { getPdfLocaleContext } from "@/lib/pdf-i18n";
 import { htmlToPdf } from "@/lib/pdf/render";
-import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
-import { getPdfBranding, brandRootCss, logoHtml } from "@/lib/pdf/branding";
+import { getPdfBranding } from "@/lib/pdf/branding";
+import { escHtml } from "@/lib/pdf/html";
+import {
+  renderPdfDocument,
+  renderPdfHeader,
+  renderSectionLabel,
+  renderFieldStacked,
+  renderTotalsBox,
+  renderAmountInWords,
+  renderTable,
+  renderPdfFooter,
+  type PdfTableRow,
+} from "@/lib/pdf/shell";
 
 // Headless Chromium needs the Node runtime (not edge); allow time for cold-start launch.
 export const runtime = "nodejs";
@@ -227,7 +238,6 @@ export async function GET(
   const tMethods = await getTranslations({ locale, namespace: "payments.methods" });
 
   const isRtl = dir === "rtl";
-  const secondaryDir = isRtl ? "ltr" : "rtl";
 
   const fmtPeriod = (start: Date | null, end: Date | null) => {
     if (!start || !end) return "";
@@ -243,204 +253,116 @@ export async function GET(
   const wordsPrimary   = locale === "ar" ? amountToWordsAr(amount) : amountToWordsEn(amount);
   const wordsSecondary = locale === "ar" ? amountToWordsEn(amount) : amountToWordsAr(amount);
 
-  // ── Section header helper ─────────────────────────────────────────────────
-  const sectionHeader = (key: string) => `
-    <div class="section-title">
-      <span>${t(key)}</span>
-      <span class="sec">${tOther(key)}</span>
-    </div>`;
-
   // ── Invoice allocation rows ───────────────────────────────────────────────
-  const allocationRows = payment.allocations.map((alloc) => {
+  const allocationRows: PdfTableRow[] = payment.allocations.map((alloc) => {
     const inv = alloc.invoice;
     const isPaid = inv.status === "PAID";
     const statusBadge = isPaid
-      ? `<span style="color:#15803d;font-weight:700">${t("statuses.paid")}</span>`
-      : `<span style="color:#d97706;font-weight:700">${t("statuses.partial")}</span>`;
+      ? `<span style="color:#15803d;font-weight:700">${escHtml(t("statuses.paid"))}</span>`
+      : `<span style="color:#d97706;font-weight:700">${escHtml(t("statuses.partial"))}</span>`;
+    return {
+      cells: [
+        `<span style="font-family:monospace;font-size:12px">${escHtml(inv.invoiceNumber)}</span>`,
+        `<span style="font-size:11px;color:#6b7280">${escHtml(fmtPeriod(inv.periodStart, inv.periodEnd))}</span>`,
+        `<span class="ltr-numbers" style="font-weight:600">${Number(alloc.amount).toFixed(3)}</span>`,
+        `<span style="text-align:center;display:block">${statusBadge}</span>`,
+      ],
+    };
+  });
 
-    return `
-    <tr>
-      <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;font-family:monospace;font-size:12px">${inv.invoiceNumber}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;font-size:11px;color:#6b7280">${fmtPeriod(inv.periodStart, inv.periodEnd)}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;text-align:${isRtl ? "left" : "right"};font-weight:600"><span class="ltr-num">${Number(alloc.amount).toFixed(3)}</span></td>
-      <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6;text-align:center">${statusBadge}</td>
-    </tr>`;
-  }).join("");
+  const header = renderPdfHeader({
+    brand,
+    compact: true,
+    orgName,
+    orgAddressLines: [
+      org?.address ? `${org.address}${org?.city ? `, ${org.city}` : ""}` : "",
+      org?.phone ? `${tCommon("tel")}: ${org.phone}` : "",
+    ].filter(Boolean),
+    docTitle: t("title"),
+    metaRows: [
+      { label: t("fields.receiptNo"), value: receiptNumber, ltrNumbers: true },
+      { label: t("fields.date"), value: todayStr },
+    ],
+  });
 
-  const html = `<!DOCTYPE html>
-<html lang="${locale}" dir="${dir}">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width"/>
-  <title>${t("title")} ${receiptNumber}</title>
-  <style>
-    ${pdfFontFaceCss()}
-    ${brandRootCss(brand)}
-    .brand-logo { margin-bottom:8px; }
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: ${PDF_FONT_STACK}; font-size:13px; color:#1a1a1a; background:#fff; }
-    .page { max-width:600px; margin:0 auto; padding:32px; }
+  // Green-tinted highlight (not the shell's neutral .highlight) — this is the
+  // one figure on a payment receipt that should read as "money confirmed
+  // received," matching the original design's #f0fdf4/#86efac treatment.
+  // The method/bank line lives inside the box (a second line under the
+  // amount), not as a sibling — matching the original's single bordered card.
+  const methodLine = `${escHtml(t("fields.method", { method: fmtMethod(payment.method) }))}${payment.bankAccount ? ` · ${escHtml(payment.bankAccount.bankName)}${payment.bankAccount.label ? " — " + escHtml(payment.bankAccount.label) : ""}` : ""}`;
+  const amountBox = `<div class="labeled-box highlight" style="background:#f0fdf4;border-color:#86efac">${renderTotalsBox({
+    rows: [{ label: t("fields.amount"), value: `${amount.toFixed(3)} ${tCommon("omr")}`, tone: "positive", ltrNumbers: true }],
+  })}<div style="font-size:11px;color:#15803d;margin-top:4px">${methodLine}</div></div>`;
 
-    .header { display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:20px; border-bottom:3px solid var(--brand); margin-bottom:24px; }
-    .org-name { font-size:20px; font-weight:800; color:var(--brand); }
-    .org-sub  { font-size:11px; color:#6b7280; margin-top:5px; line-height:1.7; }
-    .doc-area { text-align:${isRtl ? "left" : "right"}; }
-    .doc-title-primary   { font-size:15px; font-weight:700; color:var(--brand); letter-spacing:0.03em; }
-    .doc-title-secondary { font-size:13px; color:#6b7280; margin-top:2px; direction:${secondaryDir}; }
-    .receipt-num { font-size:17px; font-weight:800; font-family:monospace; color:#111827; margin-top:8px; direction:ltr; }
+  const applicableSection = brand.showPaymentHistory && payment.allocations.length > 0
+    ? `
+    <div class="section">
+      ${renderSectionLabel(t("sections.appliedTo"), tOther("sections.appliedTo"))}
+      ${renderTable({
+        columns: [
+          { header: t("table.invoice"), align: "start" },
+          { header: t("table.period"), align: "start" },
+          { header: t("table.applied") },
+          { header: t("table.status") },
+        ],
+        rows: allocationRows,
+      })}
+      <div style="display:flex;justify-content:flex-end;padding:8px 10px;font-size:13px;font-weight:700;border-top:2px solid #e5e7eb;margin-top:4px">
+        <span>${escHtml(t("totalApplied", { amount: amount.toFixed(3) }))}</span>
+      </div>
+    </div>`
+    : "";
 
-    .section { margin-bottom:20px; }
-    .section-title {
-      font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em;
-      color:#6b7280; padding-bottom:6px; border-bottom:1px solid #e5e7eb;
-      display:flex; justify-content:space-between; margin-bottom:10px;
-    }
-    .section-title .sec { font-size:11px; color:#9ca3af; text-transform:none; letter-spacing:0; direction:${secondaryDir}; }
+  const footerPrimaryText = (isRtl ? (brand.footerTextAr || brand.footerText) : brand.footerText)?.trim();
+  const footer = renderPdfFooter({
+    primaryLine: footerPrimaryText || t("footer.thankYou"),
+    secondaryLine: footerPrimaryText ? undefined : tOther("footer.thankYou"),
+    metaLine: `${escHtml(t("footer.computerGenerated"))} | ${escHtml(tOther("footer.computerGenerated"))}${payment.receivedBy ? `<br/>${escHtml(t("footer.recordedBy", { name: `${payment.receivedBy.firstName ?? ""} ${payment.receivedBy.lastName ?? ""}`.trim() }))}` : ""}`,
+  });
 
-    .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-    .field-label { font-size:10px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:2px; }
-    .field-label .sec { text-transform:none; letter-spacing:0; direction:${secondaryDir}; margin-${isRtl ? "right" : "left"}:4px; }
-    .field-value { font-size:13px; color:#111827; font-weight:600; }
-
-    .amount-box {
-      background:#f0fdf4; border:2px solid #86efac; border-radius:10px;
-      padding:14px 18px; display:flex; justify-content:space-between; align-items:center;
-      margin:16px 0;
-    }
-    .amount-label { font-size:11px; color:#15803d; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; }
-    .amount-value { font-size:22px; font-weight:800; color:#15803d; direction:ltr; }
-
-    .words-box { background:#f9fafb; border-radius:8px; padding:12px 14px; margin-bottom:16px; border:1px solid #e5e7eb; }
-    .words-primary   { font-size:12px; color:#374151; font-style:italic; }
-    .words-secondary { font-size:12px; color:#374151; margin-top:4px; direction:${secondaryDir}; text-align:${isRtl ? "left" : "right"}; font-style:italic; }
-
-    table { width:100%; border-collapse:collapse; }
-    thead tr { background:#f9fafb; }
-    th { text-align:${isRtl ? "right" : "left"}; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#6b7280; padding:8px 10px; border-bottom:2px solid #e5e7eb; }
-    th.right { text-align:${isRtl ? "left" : "right"}; }
-    th.center { text-align:center; }
-
-    .footer { margin-top:28px; padding-top:16px; border-top:2px solid #e5e7eb; text-align:center; }
-    .footer-thank-primary   { font-size:14px; font-weight:600; color:#374151; }
-    .footer-thank-secondary { font-size:13px; color:#6b7280; margin-top:4px; direction:${secondaryDir}; }
-    .footer-note { font-size:10px; color:#9ca3af; margin-top:10px; }
-
-    .ltr-num { direction:ltr; unicode-bidi:embed; display:inline-block; }
-
-    @page { size:A5; margin:12mm; }
-    @media print {
-      body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-      .page { padding:0; }
-    }
-  </style>
-</head>
-<body>
-<div class="page">
-
-  <!-- HEADER -->
-  <div class="header">
-    <div>
-      ${logoHtml(brand) ? `<div class="brand-logo">${logoHtml(brand)}</div>` : ""}
-      <div class="org-name">${orgName}</div>
-      <div class="org-sub">
-        ${org?.address ? `<div>${org.address}${org?.city ? `, ${org.city}` : ""}</div>` : ""}
-        ${org?.phone ? `<div>${tCommon("tel")}: <span class="ltr-num">${org.phone}</span></div>` : ""}
+  const body = `
+  ${header}
+  <div class="body" style="padding:20px 0 0">
+    <div class="section">
+      ${renderSectionLabel(t("sections.receiptDetails"), tOther("sections.receiptDetails"))}
+      <div class="info-grid">
+        ${renderFieldStacked({ dir, label: t("fields.receiptNo"), labelSecondary: tOther("fields.receiptNo"), value: receiptNumber, ltrNumbers: true })}
+        ${renderFieldStacked({ dir, label: t("fields.date"), labelSecondary: tOther("fields.date"), value: fmtLong(payment.date) })}
+        ${renderFieldStacked({ dir, label: t("fields.receivedFrom"), labelSecondary: tOther("fields.receivedFrom"), value: `${payment.tenant.firstName} ${payment.tenant.lastName}`, valueSub: payment.tenant.fullNameArabic ?? undefined })}
+        ${renderFieldStacked({ dir, label: t("fields.phone"), labelSecondary: tOther("fields.phone"), value: payment.tenant.phone ?? tCommon("dash"), ltrNumbers: true })}
       </div>
     </div>
-    <div class="doc-area">
-      <div class="doc-title-primary">${t("title")}</div>
-      <div class="doc-title-secondary">${tOther("title")}</div>
-      <div class="receipt-num">${receiptNumber}</div>
-      <div class="footer-note" style="margin-top:6px">${todayStr}</div>
+
+    <div class="section">
+      ${renderSectionLabel(t("sections.paymentDetails"), tOther("sections.paymentDetails"))}
+      <div style="margin-bottom:12px">${amountBox}</div>
+      ${payment.reference ? `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;color:#374151"><span style="color:#9ca3af">${escHtml(t("fields.reference"))}</span><span style="font-weight:600">${escHtml(payment.reference)}</span></div>` : ""}
+      ${payment.notes ? `<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;color:#374151"><span style="color:#9ca3af">${escHtml(t("fields.notes"))}</span><span style="font-weight:600">${escHtml(payment.notes)}</span></div>` : ""}
     </div>
+
+    ${renderAmountInWords({ primary: wordsPrimary, secondary: wordsSecondary })}
+
+    ${applicableSection}
   </div>
+  ${footer}`;
 
-  <!-- RECEIPT META -->
-  <div class="section">
-    ${sectionHeader("sections.receiptDetails")}
-    <div class="info-grid">
-      <div>
-        <div class="field-label">${t("fields.receiptNo")}<span class="sec">${tOther("fields.receiptNo")}</span></div>
-        <div class="field-value" style="font-family:monospace">${receiptNumber}</div>
-      </div>
-      <div>
-        <div class="field-label">${t("fields.date")}<span class="sec">${tOther("fields.date")}</span></div>
-        <div class="field-value">${fmtLong(payment.date)}</div>
-      </div>
-      <div>
-        <div class="field-label">${t("fields.receivedFrom")}<span class="sec">${tOther("fields.receivedFrom")}</span></div>
-        <div class="field-value">${payment.tenant.firstName} ${payment.tenant.lastName}</div>
-        ${payment.tenant.fullNameArabic ? `<div style="font-size:11px;color:#6b7280;direction:rtl">${payment.tenant.fullNameArabic}</div>` : ""}
-      </div>
-      <div>
-        <div class="field-label">${t("fields.phone")}<span class="sec">${tOther("fields.phone")}</span></div>
-        <div class="field-value"><span class="ltr-num">${payment.tenant.phone ?? tCommon("dash")}</span></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- PAYMENT DETAILS -->
-  <div class="section">
-    ${sectionHeader("sections.paymentDetails")}
-    <div class="amount-box">
-      <div>
-        <div class="amount-label">${t("fields.amount")}<span class="sec" style="text-transform:none;letter-spacing:0;direction:${secondaryDir};margin-${isRtl ? "right" : "left"}:4px">${tOther("fields.amount")}</span></div>
-        <div style="font-size:11px;color:#15803d;margin-top:2px">${t("fields.method", { method: fmtMethod(payment.method) })}${payment.bankAccount ? ` · ${payment.bankAccount.bankName}${payment.bankAccount.label ? " — " + payment.bankAccount.label : ""}` : ""}</div>
-      </div>
-      <div class="amount-value"><span class="ltr-num">${amount.toFixed(3)}</span> ${tCommon("omr")}</div>
-    </div>
-    ${payment.reference ? `
-    <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;color:#374151">
-      <span style="color:#9ca3af">${t("fields.reference")} <span style="direction:${secondaryDir}">${tOther("fields.reference")}</span></span>
-      <span style="font-weight:600">${payment.reference}</span>
-    </div>` : ""}
-    ${payment.notes ? `
-    <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;color:#374151">
-      <span style="color:#9ca3af">${t("fields.notes")} <span style="direction:${secondaryDir}">${tOther("fields.notes")}</span></span>
-      <span style="font-weight:600">${payment.notes}</span>
-    </div>` : ""}
-  </div>
-
-  <!-- AMOUNT IN WORDS -->
-  <div class="words-box">
-    <div class="field-label" style="margin-bottom:6px">${t("sections.amountInWords")} <span class="sec">${tOther("sections.amountInWords")}</span></div>
-    <div class="words-primary">${wordsPrimary}</div>
-    <div class="words-secondary">${wordsSecondary}</div>
-  </div>
-
-  <!-- APPLIED TO -->
-  ${brand.showPaymentHistory && payment.allocations.length > 0 ? `
-  <div class="section">
-    ${sectionHeader("sections.appliedTo")}
-    <table>
-      <thead>
-        <tr>
-          <th>${t("table.invoice")}</th>
-          <th>${t("table.period")}</th>
-          <th class="right">${t("table.applied")}</th>
-          <th class="center">${t("table.status")}</th>
-        </tr>
-      </thead>
-      <tbody>${allocationRows}</tbody>
-    </table>
-    <div style="display:flex;justify-content:flex-end;padding:8px 10px;font-size:13px;font-weight:700;border-top:2px solid #e5e7eb;margin-top:4px">
-      <span>${t("totalApplied", { amount: amount.toFixed(3) })}</span>
-    </div>
-  </div>` : ""}
-
-  <!-- FOOTER -->
-  <div class="footer">
-    ${(isRtl ? (brand.footerTextAr || brand.footerText) : brand.footerText)?.trim()
-      ? `<div class="footer-thank-primary">${(isRtl ? (brand.footerTextAr || brand.footerText) : brand.footerText)!.trim()}</div>`
-      : `<div class="footer-thank-primary">${t("footer.thankYou")}</div>
-         <div class="footer-thank-secondary">${tOther("footer.thankYou")}</div>`}
-    <div class="footer-note">${t("footer.computerGenerated")} | <span style="direction:${secondaryDir}">${tOther("footer.computerGenerated")}</span></div>
-    ${payment.receivedBy ? `<div class="footer-note">${t("footer.recordedBy", { name: `${payment.receivedBy.firstName ?? ""} ${payment.receivedBy.lastName ?? ""}`.trim() })}</div>` : ""}
-  </div>
-
-</div>
-</body>
-</html>`;
+  const html = renderPdfDocument({
+    lang: locale,
+    dir,
+    brand,
+    paperSize: "A4", // overridden by extraStyles' @page rule below — receipt is the one A5 document
+    pageMargin: "12mm",
+    baseFontSize: "13px",
+    title: `${t("title")} ${receiptNumber}`,
+    body,
+    extraStyles: `
+      @page { size: A5; margin: 12mm; }
+      .page { max-width: 600px; margin: 0 auto; }
+      .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      .section { margin-bottom: 20px; }
+    `,
+  });
 
   const pdf = await htmlToPdf(html, { preferCSSPageSize: true });
 

@@ -87,6 +87,12 @@ export function buildPdfBaseStyles(opts: PdfStyleOptions): string {
 
   .tenant-name { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 4px; }
 
+  /* Stacked field (label above value) — receipt's/ledger's pattern, distinct from the inline .field row above. */
+  .field-label { font-size: 10px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; display: flex; gap: 6px; align-items: baseline; }
+  .field-label .sec { text-transform: none; letter-spacing: normal; color: #9ca3af; }
+  .field-value { font-size: 13px; color: #111827; font-weight: 600; }
+  .field-value-sub { font-size: 11px; color: #6b7280; margin-top: 1px; }
+
   /* Table — one ruled style for every document, zebra-optional for long documents. */
   table.pdf-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
   table.pdf-table thead th { padding: 8px 12px; text-align: ${isAr ? "right" : "left"}; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #6b7280; background: #f3f4f6; border-bottom: 1px solid #e5e7eb; }

@@ -21,6 +21,8 @@ export interface PdfHeaderOptions {
   statusPill?: { label: string; tone: StatusTone };
   /** A5/compact documents get tighter padding and a smaller title. */
   compact?: boolean;
+  /** Extra pre-rendered HTML appended to the right-side meta column, below the meta table (e.g. reservation's large document-number figure). */
+  metaExtra?: string;
 }
 
 /**
@@ -29,7 +31,7 @@ export interface PdfHeaderOptions {
  * so every PDF shares one visual identity instead of 3 incompatible designs.
  */
 export function renderPdfHeader(opts: PdfHeaderOptions): string {
-  const { brand, orgName, orgAddressLines, docTitle, metaRows, statusPill, compact } = opts;
+  const { brand, orgName, orgAddressLines, docTitle, metaRows, statusPill, compact, metaExtra } = opts;
   const logo = logoHtml(brand);
 
   const metaRowsHtml = metaRows
@@ -50,6 +52,7 @@ export function renderPdfHeader(opts: PdfHeaderOptions): string {
     </div>
     <div class="doc-meta">
       <table><tbody>${metaRowsHtml}</tbody></table>
+      ${metaExtra ?? ""}
     </div>
   </div>`;
 }

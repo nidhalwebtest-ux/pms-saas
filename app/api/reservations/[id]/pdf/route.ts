@@ -6,8 +6,22 @@ import { verifyShareFromRequest } from "@/lib/share-token";
 import { getDisplayStatus, type StoredStatus } from "@/lib/reservation-status";
 import { DISPLAY_STATUS_KEY, getPdfLocaleContext } from "@/lib/pdf-i18n";
 import { htmlToPdf } from "@/lib/pdf/render";
-import { pdfFontFaceCss, PDF_FONT_STACK } from "@/lib/pdf/fonts";
-import { getPdfBranding, brandRootCss, logoHtml } from "@/lib/pdf/branding";
+import { getPdfBranding } from "@/lib/pdf/branding";
+import { escHtml } from "@/lib/pdf/html";
+import {
+  renderPdfDocument,
+  renderPdfHeader,
+  renderStatusPill,
+  renderSectionLabel,
+  renderGrid,
+  renderFieldStacked,
+  renderTable,
+  renderTotalsBox,
+  renderSignatureBlock,
+  renderPdfFooter,
+  type StatusTone,
+  type PdfTableRow,
+} from "@/lib/pdf/shell";
 
 // Headless Chromium needs the Node runtime (not edge); allow time for cold-start launch.
 export const runtime = "nodejs";
@@ -77,7 +91,6 @@ export async function GET(
   const tUnitTypes = await getTranslations({ locale, namespace: "reservations.detail.unitTypes" });
 
   const isRtl = dir === "rtl";
-  const secondaryDir = isRtl ? "ltr" : "rtl";
 
   // ── Merge units (legacy + junction table) ─────────────────────────────────
   const seen = new Set<string>();
@@ -127,10 +140,10 @@ export async function GET(
   const statusKey = DISPLAY_STATUS_KEY[ds.label];
   const statusLabel = tStatus.has(statusKey) ? tStatus(statusKey) : ds.label;
 
-  const statusColor =
-    r.status === "CHECKED_IN" || r.status === "CONFIRMED" ? "#15803d" :
-    r.status === "COMPLETED"  ? brand.brandColor :
-    r.status === "CANCELLED"  ? "#dc2626" : "#374151";
+  const statusTone: StatusTone =
+    r.status === "CHECKED_IN" || r.status === "CONFIRMED" ? "success" :
+    r.status === "COMPLETED"  ? "info" :
+    r.status === "CANCELLED"  ? "danger" : "neutral";
 
   const durationLabel = r.rateType === "monthly"
     ? t("duration.months", { count: Math.round(r.totalNights / 30) })
@@ -144,267 +157,148 @@ export async function GET(
     ? t("table.months")
     : t("table.nights");
 
-  // ── Unit rows HTML ─────────────────────────────────────────────────────────
-  const unitRows = units.map((u) => `
-    <tr>
-      <td style="padding:8px 10px;font-weight:600;border-bottom:1px solid #f3f4f6">${u.name}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6">${u.propertyName}</td>
-      <td style="padding:8px 10px;border-bottom:1px solid #f3f4f6">${fmtUnitType(u.unitType)}</td>
-      <td style="padding:8px 10px;text-align:${isRtl ? "left" : "right"};border-bottom:1px solid #f3f4f6">
-        ${Number(u.rateAmount).toFixed(3)}${u.seasonalPriceName ? `<br/><span style="font-size:10px;color:#d97706">${u.seasonalPriceName}</span>` : ""}
-      </td>
-      <td style="padding:8px 10px;text-align:${isRtl ? "left" : "right"};border-bottom:1px solid #f3f4f6">${u.nights}</td>
-      <td style="padding:8px 10px;text-align:${isRtl ? "left" : "right"};font-weight:600;border-bottom:1px solid #f3f4f6">${Number(u.subtotal).toFixed(3)}</td>
-    </tr>`).join("");
+  // ── Unit rows ────────────────────────────────────────────────────────────
+  const unitRows: PdfTableRow[] = units.map((u) => ({
+    cells: [
+      `<strong>${escHtml(u.name)}</strong>`,
+      escHtml(u.propertyName),
+      escHtml(fmtUnitType(u.unitType)),
+      `<span class="ltr-numbers">${Number(u.rateAmount).toFixed(3)}</span>${u.seasonalPriceName ? `<br/><span style="font-size:10px;color:#d97706">${escHtml(u.seasonalPriceName)}</span>` : ""}`,
+      `<span class="ltr-numbers">${u.nights}</span>`,
+      `<span class="ltr-numbers" style="font-weight:700">${Number(u.subtotal).toFixed(3)}</span>`,
+    ],
+  }));
 
-  // ── Payment rows HTML ──────────────────────────────────────────────────────
+  // ── Payment rows ─────────────────────────────────────────────────────────
   const tMethods = await getTranslations({ locale, namespace: "payments.methods" });
   const fmtMethod = (m: string) => (tMethods.has(m) ? tMethods(m) : m);
 
   const paymentRows = r.payments.map((p) => `
     <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;color:#374151">
-      <span>${fmtLong(p.date)} — ${fmtMethod(p.method)}${p.reference ? ` <span style="color:#9ca3af">(${p.reference})</span>` : ""}</span>
-      <span>${Number(p.amount).toFixed(3)}</span>
+      <span>${escHtml(fmtLong(p.date))} — ${escHtml(fmtMethod(p.method))}${p.reference ? ` <span style="color:#9ca3af">(${escHtml(p.reference)})</span>` : ""}</span>
+      <span class="ltr-numbers">${Number(p.amount).toFixed(3)}</span>
     </div>`).join("");
 
-  // ── Charge rows HTML ───────────────────────────────────────────────────────
+  // ── Charge rows ──────────────────────────────────────────────────────────
   const chargeRows = r.charges.length > 0 ? r.charges.map((c) => `
     <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;color:#374151">
-      <span style="color:#d97706">${c.description}</span>
-      <span>+${Number(c.amount).toFixed(3)}</span>
+      <span style="color:#d97706">${escHtml(c.description)}</span>
+      <span class="ltr-numbers">+${Number(c.amount).toFixed(3)}</span>
     </div>`).join("") : "";
 
-  // ── Section header helper ─────────────────────────────────────────────────
-  const sectionHeader = (key: string) => `
-    <div class="section-header">
-      <span>${t(key)}</span>
-      <span class="sec">${tOther(key)}</span>
+  // ── Header ───────────────────────────────────────────────────────────────
+  // The original design shows the reservation number as a large monospace
+  // figure and the "printed on" date as a small caption below the meta
+  // table, not as ordinary label:value rows — passed via metaExtra since
+  // that layout is visually distinct from a normal meta row.
+  const resNumberBlock = `
+    <div style="font-size:20px;font-weight:800;font-family:monospace;color:#111827;margin-top:10px" class="ltr-numbers">${escHtml(r.reservationNumber ?? r.id.slice(0, 8).toUpperCase())}</div>
+    <div style="font-size:11px;color:#9ca3af;margin-top:3px">${escHtml(t("printedOn", { date: today }))}</div>`;
+
+  const header = renderPdfHeader({
+    brand,
+    orgName,
+    orgAddressLines: [
+      org?.address ? `${org.address}${org?.city ? `, ${org.city}` : ""}` : "",
+      org?.phone ? `${tCommon("tel")}: ${org.phone}` : "",
+    ].filter(Boolean),
+    docTitle: t("title"),
+    metaRows: [],
+    metaExtra: resNumberBlock,
+    statusPill: { label: statusLabel, tone: statusTone },
+  });
+
+  // ── Guest info / stay details (4-col grids) ─────────────────────────────
+  const guestInfoGrid = renderGrid(4, [
+    renderFieldStacked({ dir, label: t("fields.fullName"), value: `${r.tenant.firstName} ${r.tenant.lastName}`, valueSub: r.tenant.fullNameArabic ?? undefined }),
+    renderFieldStacked({ dir, label: t("fields.phone"), value: r.tenant.phone, ltrNumbers: true, valueSub: r.tenant.whatsappNumber ? t("whatsapp", { number: r.tenant.whatsappNumber }) : undefined }),
+    renderFieldStacked({ dir, label: t("fields.idDocument"), value: `${r.tenant.idType?.toUpperCase() ?? "ID"}: ${r.tenant.idNumber ?? tCommon("dash")}` }),
+    renderFieldStacked({ dir, label: t("fields.nationality"), value: r.tenant.nationality ?? tCommon("dash") }),
+  ]);
+
+  const stayDetailsGrid = renderGrid(4, [
+    renderFieldStacked({ dir, label: t("fields.checkIn"), value: fmtFull(r.startDate), valueSub: r.actualCheckIn ? t("actual", { date: fmtFull(r.actualCheckIn) }) : undefined }),
+    renderFieldStacked({ dir, label: t("fields.checkOut"), value: fmtFull(r.endDate), valueSub: r.actualCheckOut ? t("actual", { date: fmtFull(r.actualCheckOut) }) : undefined }),
+    renderFieldStacked({ dir, label: t("fields.duration"), value: durationLabel }),
+    renderFieldStacked({ dir, label: t("fields.rateType"), value: rateTypeLabel }),
+  ]);
+
+  const unitsTable = renderTable({
+    columns: [
+      { header: t("table.unit"), align: "start" },
+      { header: t("table.property"), align: "start" },
+      { header: t("table.type"), align: "start" },
+      { header: t("table.rate") },
+      { header: nightsOrMonthsHeader },
+      { header: t("table.subtotal") },
+    ],
+    rows: unitRows,
+  });
+
+  // ── Financial summary ────────────────────────────────────────────────────
+  const financialRows = units.map((u) => `
+    <div class="totals-row"><span style="color:#6b7280">${escHtml(u.name)}: <span class="ltr-numbers">${u.nights} × ${Number(u.rateAmount).toFixed(3)}</span></span><span class="ltr-numbers">${Number(u.subtotal).toFixed(3)}</span></div>`).join("");
+
+  const financialSummary = `
+    <div style="max-width:360px;margin-${isRtl ? "right" : "left"}:auto">
+      ${financialRows}
+      ${chargeRows ? `<div style="font-size:10px;color:#d97706;text-transform:uppercase;letter-spacing:0.06em;margin-top:8px;margin-bottom:4px">${escHtml(t("extraCharges"))}</div>${chargeRows}` : ""}
+      ${Number(r.discountAmount) > 0 ? `<div class="totals-row"><span>${escHtml(t("discount"))}</span><span class="tone-positive ltr-numbers">-${Number(r.discountAmount).toFixed(3)}</span></div>` : ""}
+      <div class="totals-row tone-grand"><span>${escHtml(t("grandTotal"))}</span><span class="ltr-numbers">${escHtml(t("grandTotalAmount", { amount: grandTotal.toFixed(3) }))}</span></div>
+      ${r.payments.length > 0 ? `
+        <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin-top:16px;margin-bottom:6px">${escHtml(t("paymentsReceived"))}</div>
+        ${paymentRows}
+        <div class="totals-row" style="border-top:1px dashed #e5e7eb;padding-top:6px;margin-top:4px;font-weight:600"><span>${escHtml(t("totalPaid"))}</span><span class="ltr-numbers">${escHtml(t("totalPaidAmount", { amount: amountPaid.toFixed(3) }))}</span></div>` : ""}
+      ${renderTotalsBox({
+        rows: [{
+          label: isPaid ? t("fullyPaid") : t("balanceDue"),
+          value: isPaid ? t("grandTotalAmount", { amount: "0.000" }) : t("grandTotalAmount", { amount: balanceDue.toFixed(3) }),
+          tone: isPaid ? "positive" : "negative",
+          ltrNumbers: true,
+        }],
+      })}
     </div>`;
 
-  // ── Full HTML ──────────────────────────────────────────────────────────────
-  const html = `<!DOCTYPE html>
-<html lang="${locale}" dir="${dir}">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width"/>
-  <title>${t("title")} ${r.reservationNumber ?? r.id.slice(0, 8)} — ${org?.name ?? ""}</title>
-  <style>
-    ${pdfFontFaceCss()}
-    ${brandRootCss(brand)}
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body { font-family: ${PDF_FONT_STACK}; font-size:12px; color:#1a1a1a; background:#fff; }
-    .page { max-width:800px; margin:0 auto; padding:40px; }
+  const notesSection = brand.showNotes && r.notes
+    ? `<div class="section">${renderSectionLabel(t("sections.notes"))}<p style="font-size:12px;color:#374151;line-height:1.6">${escHtml(r.notes)}</p></div>`
+    : "";
 
-    /* Header */
-    .header { display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:24px; border-bottom:3px solid var(--brand); margin-bottom:28px; }
-    .org-logo-area { flex:1; }
-    .org-name { font-size:22px; font-weight:800; color:var(--brand); letter-spacing:-0.3px; }
-    .org-sub  { font-size:11px; color:#6b7280; margin-top:6px; line-height:1.8; }
-    .res-info-area { text-align:${isRtl ? "left" : "right"}; }
-    .doc-title-primary  { font-size:16px; font-weight:700; color:var(--brand); }
-    .doc-title-secondary  { font-size:13px; color:#6b7280; margin-top:2px; font-family: ${PDF_FONT_STACK}; direction:${secondaryDir}; }
-    .res-number    { font-size:20px; font-weight:800; font-family:monospace; color:#111827; margin-top:10px; direction:ltr; }
-    .print-date    { font-size:11px; color:#9ca3af; margin-top:3px; }
-    .status-pill   { display:inline-block; margin-top:8px; padding:4px 14px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:0.04em; background:${statusColor}1a; color:${statusColor}; border:1px solid ${statusColor}4d; }
+  const signatureSection = brand.showSignature
+    ? renderSignatureBlock({
+        lines: [
+          { label: `${t("signatures.authorizedBy")} ________________________` },
+          { label: `${t("signatures.guestSignature")} ________________________` },
+        ],
+      })
+    : "";
 
-    /* Section */
-    .section { margin-bottom:24px; }
-    .section-header { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.1em; color:#6b7280; margin-bottom:10px; padding-bottom:5px; border-bottom:1px solid #e5e7eb; display:flex; justify-content:space-between; align-items:center; }
-    .section-header .sec { font-size:11px; color:#9ca3af; text-transform:none; letter-spacing:0; direction:${secondaryDir}; }
+  const footerPrimaryText = (isRtl ? (brand.footerTextAr || brand.footerText) : brand.footerText)?.trim();
+  const footer = renderPdfFooter({
+    primaryLine: footerPrimaryText || t("footer.thankYou", { name: org?.name ?? t("defaultPropertyDescription") }),
+    secondaryLine: footerPrimaryText ? undefined : tOther("footer.thankYou", { name: org?.name ?? tOther("defaultPropertyDescription") }),
+  });
 
-    /* Grid */
-    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-    .four-col { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
-    .field-label { font-size:10px; color:#9ca3af; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:3px; }
-    .field-value { font-size:12px; color:#111827; font-weight:600; line-height:1.4; }
-    .field-sub   { font-size:11px; color:#6b7280; margin-top:1px; }
-
-    /* Table */
-    table { width:100%; border-collapse:collapse; }
-    thead tr { background:#f9fafb; }
-    th { text-align:${isRtl ? "right" : "left"}; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#6b7280; padding:8px 10px; border-bottom:2px solid #e5e7eb; }
-    th.numeric { text-align:${isRtl ? "left" : "right"}; }
-
-    /* Financial */
-    .fin-row { display:flex; justify-content:space-between; padding:5px 0; font-size:12px; color:#374151; }
-    .fin-row.subtotal { border-top:1px solid #e5e7eb; padding-top:8px; margin-top:4px; font-weight:600; }
-    .fin-row.grand    { font-size:14px; font-weight:800; color:#111827; border-top:2px solid #111827; padding-top:8px; margin-top:8px; }
-    .balance-box { margin-top:16px; padding:16px 20px; border-radius:10px; text-align:${isRtl ? "left" : "right"}; background:${isPaid ? "#f0fdf4" : "#fef2f2"}; border:2px solid ${isPaid ? "#86efac" : "#fca5a5"}; }
-    .balance-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; color:${isPaid ? "#15803d" : "#dc2626"}; }
-    .balance-amount { font-size:22px; font-weight:800; color:${isPaid ? "#15803d" : "#dc2626"}; margin-top:4px; direction:ltr; }
-
-    /* Signature */
-    .sig-grid { display:grid; grid-template-columns:1fr 1fr; gap:60px; margin-top:40px; padding-top:24px; border-top:1px solid #e5e7eb; }
-    .sig-line  { border-top:1px solid #9ca3af; margin-top:36px; padding-top:6px; font-size:11px; color:#6b7280; }
-
-    /* Footer */
-    .footer { margin-top:28px; padding-top:18px; border-top:2px solid #e5e7eb; text-align:center; }
-    .footer-primary { font-size:13px; font-weight:600; color:#374151; }
-    .footer-secondary { font-size:12px; color:#6b7280; margin-top:4px; direction:${secondaryDir}; font-family: ${PDF_FONT_STACK}; }
-
-    /* Numeric isolation in RTL */
-    .ltr-num { direction:ltr; unicode-bidi:embed; display:inline-block; }
-
-    /* Print */
-    @page { size:${brand.paperSize}; margin:15mm; }
-    .brand-logo { margin-bottom:10px; }
-    @media print {
-      body { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-      .page { padding:0; }
-    }
-  </style>
-</head>
-<body>
-<div class="page">
-
-  <!-- ═══ HEADER ═══ -->
-  <div class="header">
-    <div class="org-logo-area">
-      ${logoHtml(brand) ? `<div class="brand-logo">${logoHtml(brand)}</div>` : ""}
-      <div class="org-name">${orgName}</div>
-      <div class="org-sub">
-        ${org?.address ? `<div>${org.address}${org?.city ? `, ${org.city}` : ""}</div>` : ""}
-        ${org?.phone ? `<div>${tCommon("tel")}: <span class="ltr-num">${org.phone}</span></div>` : ""}
-      </div>
-    </div>
-    <div class="res-info-area">
-      <div class="doc-title-primary">${t("title")}</div>
-      <div class="doc-title-secondary">${tOther("title")}</div>
-      <div class="res-number">${r.reservationNumber ?? r.id.slice(0, 8).toUpperCase()}</div>
-      <div class="print-date">${t("printedOn", { date: today })}</div>
-      <span class="status-pill">${statusLabel}</span>
-    </div>
+  const body = `
+  ${header}
+  <div class="body" style="padding:28px 0 0">
+    <div class="section">${renderSectionLabel(t("sections.guestInfo"), tOther("sections.guestInfo"))}${guestInfoGrid}</div>
+    <div class="section">${renderSectionLabel(t("sections.stayDetails"), tOther("sections.stayDetails"))}${stayDetailsGrid}</div>
+    <div class="section">${renderSectionLabel(t("sections.units"), tOther("sections.units"))}${unitsTable}</div>
+    <div class="section">${renderSectionLabel(t("sections.financialSummary"), tOther("sections.financialSummary"))}${financialSummary}</div>
+    ${notesSection}
+    ${signatureSection}
   </div>
+  ${footer}`;
 
-  <!-- ═══ GUEST INFORMATION ═══ -->
-  <div class="section">
-    ${sectionHeader("sections.guestInfo")}
-    <div class="four-col">
-      <div>
-        <div class="field-label">${t("fields.fullName")}</div>
-        <div class="field-value">${r.tenant.firstName} ${r.tenant.lastName}</div>
-        ${r.tenant.fullNameArabic ? `<div class="field-sub" style="direction:rtl">${r.tenant.fullNameArabic}</div>` : ""}
-      </div>
-      <div>
-        <div class="field-label">${t("fields.phone")}</div>
-        <div class="field-value"><span class="ltr-num">${r.tenant.phone}</span></div>
-        ${r.tenant.whatsappNumber ? `<div class="field-sub">${t("whatsapp", { number: r.tenant.whatsappNumber })}</div>` : ""}
-      </div>
-      <div>
-        <div class="field-label">${t("fields.idDocument")}</div>
-        <div class="field-value">${r.tenant.idType?.toUpperCase() ?? "ID"}: ${r.tenant.idNumber ?? tCommon("dash")}</div>
-      </div>
-      <div>
-        <div class="field-label">${t("fields.nationality")}</div>
-        <div class="field-value">${r.tenant.nationality ?? tCommon("dash")}</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ STAY DETAILS ═══ -->
-  <div class="section">
-    ${sectionHeader("sections.stayDetails")}
-    <div class="four-col">
-      <div style="grid-column:span 1">
-        <div class="field-label">${t("fields.checkIn")}</div>
-        <div class="field-value">${fmtFull(r.startDate)}</div>
-        ${r.actualCheckIn ? `<div class="field-sub" style="color:#15803d">${t("actual", { date: fmtFull(r.actualCheckIn) })}</div>` : ""}
-      </div>
-      <div style="grid-column:span 1">
-        <div class="field-label">${t("fields.checkOut")}</div>
-        <div class="field-value">${fmtFull(r.endDate)}</div>
-        ${r.actualCheckOut ? `<div class="field-sub" style="color:var(--brand)">${t("actual", { date: fmtFull(r.actualCheckOut) })}</div>` : ""}
-      </div>
-      <div>
-        <div class="field-label">${t("fields.duration")}</div>
-        <div class="field-value">${durationLabel}</div>
-      </div>
-      <div>
-        <div class="field-label">${t("fields.rateType")}</div>
-        <div class="field-value">${rateTypeLabel}</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ UNITS ═══ -->
-  <div class="section">
-    ${sectionHeader("sections.units")}
-    <table>
-      <thead>
-        <tr>
-          <th>${t("table.unit")}</th>
-          <th>${t("table.property")}</th>
-          <th>${t("table.type")}</th>
-          <th class="numeric">${t("table.rate")}</th>
-          <th class="numeric">${nightsOrMonthsHeader}</th>
-          <th class="numeric">${t("table.subtotal")}</th>
-        </tr>
-      </thead>
-      <tbody>${unitRows}</tbody>
-    </table>
-  </div>
-
-  <!-- ═══ FINANCIAL SUMMARY ═══ -->
-  <div class="section">
-    ${sectionHeader("sections.financialSummary")}
-    <div style="max-width:360px;margin-${isRtl ? "right" : "left"}:auto">
-      ${units.map((u) => `
-        <div class="fin-row">
-          <span style="color:#6b7280">${u.name}: <span class="ltr-num">${u.nights} × ${Number(u.rateAmount).toFixed(3)}</span></span>
-          <span class="ltr-num">${Number(u.subtotal).toFixed(3)}</span>
-        </div>`).join("")}
-      ${chargeRows ? `
-        <div style="font-size:10px;color:#d97706;text-transform:uppercase;letter-spacing:0.06em;margin-top:8px;margin-bottom:4px">${t("extraCharges")}</div>
-        ${chargeRows}` : ""}
-      ${Number(r.discountAmount) > 0 ? `
-        <div class="fin-row">
-          <span>${t("discount")}</span>
-          <span style="color:#16a34a" class="ltr-num">-${Number(r.discountAmount).toFixed(3)}</span>
-        </div>` : ""}
-      <div class="fin-row grand">
-        <span>${t("grandTotal")}</span>
-        <span class="ltr-num">${t("grandTotalAmount", { amount: grandTotal.toFixed(3) })}</span>
-      </div>
-      ${r.payments.length > 0 ? `
-        <div style="font-size:10px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;margin-top:16px;margin-bottom:6px">${t("paymentsReceived")}</div>
-        ${paymentRows}
-        <div class="fin-row" style="border-top:1px dashed #e5e7eb;padding-top:6px;margin-top:4px;font-weight:600">
-          <span>${t("totalPaid")}</span>
-          <span class="ltr-num">${t("totalPaidAmount", { amount: amountPaid.toFixed(3) })}</span>
-        </div>` : ""}
-      <div class="balance-box">
-        ${isPaid
-          ? `<div class="balance-label">${t("fullyPaid")}</div><div class="balance-amount">${t("grandTotalAmount", { amount: "0.000" })}</div>`
-          : `<div class="balance-label">${t("balanceDue")}</div><div class="balance-amount">${t("grandTotalAmount", { amount: balanceDue.toFixed(3) })}</div>`}
-      </div>
-    </div>
-  </div>
-
-  ${brand.showNotes && r.notes ? `
-  <!-- ═══ NOTES ═══ -->
-  <div class="section">
-    ${sectionHeader("sections.notes")}
-    <p style="font-size:12px;color:#374151;line-height:1.6">${r.notes}</p>
-  </div>` : ""}
-
-  ${brand.showSignature ? `
-  <!-- ═══ SIGNATURES ═══ -->
-  <div class="sig-grid">
-    <div><div class="sig-line">${t("signatures.authorizedBy")} ________________________</div></div>
-    <div><div class="sig-line">${t("signatures.guestSignature")} ________________________</div></div>
-  </div>` : ""}
-
-  <!-- ═══ FOOTER ═══ -->
-  <div class="footer">
-    ${(isRtl ? (brand.footerTextAr || brand.footerText) : brand.footerText)?.trim()
-      ? `<div class="footer-primary">${(isRtl ? (brand.footerTextAr || brand.footerText) : brand.footerText)!.trim()}</div>`
-      : `<div class="footer-primary">${t("footer.thankYou", { name: org?.name ?? t("defaultPropertyDescription") })}</div>
-         <div class="footer-secondary">${tOther("footer.thankYou", { name: org?.name ?? tOther("defaultPropertyDescription") })}</div>`}
-  </div>
-
-</div>
-</body>
-</html>`;
+  const html = renderPdfDocument({
+    lang: locale,
+    dir,
+    brand,
+    pageMargin: "15mm",
+    baseFontSize: "12px",
+    title: `${t("title")} ${r.reservationNumber ?? r.id.slice(0, 8)} — ${org?.name ?? ""}`,
+    body,
+  });
 
   const pdf = await htmlToPdf(html, { preferCSSPageSize: true });
   const fileName = `reservation-${r.reservationNumber ?? r.id.slice(0, 8)}.pdf`;

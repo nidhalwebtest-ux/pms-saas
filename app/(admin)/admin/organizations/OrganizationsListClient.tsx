@@ -18,6 +18,7 @@ import { Badge, Tabs, TabsList, TabsTrigger } from "@/components/ui";
 import { useTabParam } from "@/hooks/useTabParam";
 import { waLink } from "@/utils/whatsapp";
 import { fmtDate } from "../_lib/format";
+import DeleteOrganizationButton from "./DeleteOrganizationButton";
 
 const DEMO_EXPIRY_DAYS = 14;
 
@@ -129,13 +130,19 @@ export function OrganizationsListClient({ orgs }: { orgs: OrgListItem[] }) {
                       </p>
                     </div>
                   </Link>
-                  <Link
-                    href={`/admin/organizations/${o.id}`}
-                    className="inline-flex items-center gap-1 rounded-lg border border-border-default bg-canvas px-3 py-1.5 text-xs font-medium text-fg-secondary transition-colors hover:bg-surface hover:text-brand-600"
-                  >
-                    <span>{t("viewDetails")}</span>
-                    <ChevronRightIcon className="h-3.5 w-3.5 rtl:rotate-180" />
-                  </Link>
+                  <div className="flex flex-shrink-0 items-center gap-2">
+                    <Link
+                      href={`/admin/organizations/${o.id}`}
+                      className="inline-flex items-center gap-1 rounded-lg border border-border-default bg-canvas px-3 py-1.5 text-xs font-medium text-fg-secondary transition-colors hover:bg-surface hover:text-brand-600"
+                    >
+                      <span>{t("viewDetails")}</span>
+                      <ChevronRightIcon className="h-3.5 w-3.5 rtl:rotate-180" />
+                    </Link>
+                    <DeleteOrganizationButton
+                      variant="icon"
+                      org={{ id: o.id, name: o.name, isDemo: o.isDemo, userCount: o.counts.users }}
+                    />
+                  </div>
                 </div>
 
                 {o.isDemo && (o.demoContactName || o.demoContactWhatsapp) && (

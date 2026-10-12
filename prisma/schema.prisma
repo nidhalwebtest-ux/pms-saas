@@ -1509,6 +1509,7 @@ model Prospect {
 
   visits           ProspectVisit[]
   followups        ProspectFollowup[]
+  questions        LeadQuestion[]
 
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -1567,6 +1568,43 @@ model ProspectFollowup {
 
   @@index([prospectId])
   @@index([completed, dueDate])
+}
+
+/// Topic of a question a lead asked (founder CRM → Questions).
+enum LeadQuestionCategory {
+  PRICING
+  FEATURES
+  SETUP          // onboarding, data migration, training
+  INTEGRATIONS   // Booking.com, payments, accounting…
+  SECURITY       // data safety, backups, privacy
+  SUPPORT
+  CONTRACT       // terms, cancellation, trial
+  OTHER
+}
+
+/// Questions leads ask during visits / demos / chats, collected so the founder
+/// can write strong answers (FAQ, website copy, sales scripts). Org-agnostic,
+/// like the rest of the founder CRM. `timesAsked` counts repeats — the
+/// most-asked questions are the ones worth answering first.
+model LeadQuestion {
+  id          String               @id @default(uuid())
+  question    String
+  category    LeadQuestionCategory @default(OTHER)
+  answer      String?              // null/empty = still unanswered
+  notes       String?              // context: how it came up, objections behind it
+  timesAsked  Int                  @default(1)
+  lastAskedAt DateTime             @default(now())
+
+  // Optional: which lead asked it first.
+  prospectId  String?
+  prospect    Prospect?            @relation(fields: [prospectId], references: [id], onDelete: SetNull)
+
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  @@index([category])
+  @@index([timesAsked])
+  @@index([prospectId])
 }
 
 /// Founder CRM goals — a single org-agnostic settings row.

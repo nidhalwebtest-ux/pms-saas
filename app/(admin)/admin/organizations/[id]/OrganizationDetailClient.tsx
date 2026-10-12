@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import DeleteOrganizationButton from "../DeleteOrganizationButton";
 import Link from "next/link";
 import {
   BuildingOfficeIcon,
@@ -267,6 +268,10 @@ export default function OrganizationDetailClient({
               </p>
             </div>
           </div>
+          <DeleteOrganizationButton
+            org={{ id: data.id, name: data.name, userCount: data.metrics.users }}
+            redirectTo="/admin/organizations"
+          />
         </div>
       </div>
 

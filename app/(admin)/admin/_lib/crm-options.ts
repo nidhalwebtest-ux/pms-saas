@@ -74,3 +74,39 @@ export function interestBadge(interest: string): BadgeVariantProps {
       return { tone: "neutral", appearance: "subtle" };
   }
 }
+
+/* ============================================================================
+ *  Lead questions (Admin → Questions)
+ * ========================================================================= */
+
+export const QUESTION_CATEGORIES = [
+  "PRICING",
+  "FEATURES",
+  "SETUP",
+  "INTEGRATIONS",
+  "SECURITY",
+  "SUPPORT",
+  "CONTRACT",
+  "OTHER",
+] as const;
+
+export function questionCategoryBadge(category: string): BadgeVariantProps {
+  switch (category) {
+    case "PRICING":
+      return { tone: "gold", appearance: "subtle" };
+    case "FEATURES":
+      return { tone: "info", appearance: "subtle" };
+    case "SETUP":
+      return { tone: "accent", appearance: "subtle" };
+    case "INTEGRATIONS":
+      return { tone: "brand", appearance: "subtle" };
+    case "SECURITY":
+      return { tone: "danger", appearance: "subtle" };
+    case "SUPPORT":
+      return { tone: "success", appearance: "subtle" };
+    case "CONTRACT":
+      return { tone: "warning", appearance: "subtle" };
+    default:
+      return { tone: "neutral", appearance: "subtle" };
+  }
+}

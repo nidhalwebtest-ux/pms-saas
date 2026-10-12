@@ -5,18 +5,19 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { ChatBubbleLeftRightIcon, CheckIcon } from "@heroicons/react/24/outline";
+import { ChatBubbleLeftRightIcon, CheckIcon, TrashIcon } from "@heroicons/react/24/outline";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
-import { Badge, EmptyState } from "@/components/ui";
+import { Badge, EmptyState, useConfirmDialog } from "@/components/ui";
 import { fmtDate, dueState } from "../_lib/format";
 import { waLink } from "@/utils/whatsapp";
-import { toggleFollowup } from "../prospects/actions";
+import { toggleFollowup, deleteFollowup } from "../prospects/actions";
 import type { QueueItem } from "./page";
 
-function QueueRow({ item, pending, onComplete }: {
+function QueueRow({ item, pending, onComplete, onDelete }: {
   item: QueueItem;
   pending: boolean;
   onComplete: (item: QueueItem) => void;
+  onDelete: (item: QueueItem) => void;
 }) {
   const t = useTranslations("admin");
   const wa = item.channel === "WHATSAPP" ? waLink(item.phone, item.purpose ?? undefined) : null;
@@ -65,6 +66,17 @@ function QueueRow({ item, pending, onComplete }: {
           <span className="hidden sm:inline">{t("queue.whatsapp")}</span>
         </a>
       )}
+
+      <button
+        type="button"
+        onClick={() => onDelete(item)}
+        disabled={pending}
+        aria-label={t("common.delete")}
+        title={t("common.delete")}
+        className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-fg-tertiary transition-colors hover:bg-error-50 hover:text-error-600 disabled:opacity-50"
+      >
+        <TrashIcon className="h-4 w-4" />
+      </button>
     </li>
   );
 }
@@ -72,7 +84,24 @@ function QueueRow({ item, pending, onComplete }: {
 export default function FollowupQueue({ items }: { items: QueueItem[] }) {
   const t = useTranslations("admin");
   const router = useRouter();
+  const confirm = useConfirmDialog();
   const [pending, startTransition] = useTransition();
+
+  const remove = async (item: QueueItem) => {
+    const { confirmed } = await confirm({
+      title: t("followups.deleteDialog.title"),
+      description: item.purpose ?? t("followups.deleteDialog.descFallback"),
+      confirmLabel: t("followups.deleteDialog.confirm"),
+      tone: "destructive",
+    });
+    if (!confirmed) return;
+    startTransition(async () => {
+      const res = await deleteFollowup(item.id, item.prospectId);
+      if ("error" in res) { toast.error(res.error); return; }
+      toast.success(t("followups.deleted"));
+      router.refresh();
+    });
+  };
 
   const overdue = items.filter((i) => dueState(i.dueDate) === "overdue");
   const today = items.filter((i) => dueState(i.dueDate) !== "overdue");
@@ -105,7 +134,7 @@ export default function FollowupQueue({ items }: { items: QueueItem[] }) {
           </h3>
           <ul className="space-y-2">
             {overdue.map((i) => (
-              <QueueRow key={i.id} item={i} pending={pending} onComplete={complete} />
+              <QueueRow key={i.id} item={i} pending={pending} onComplete={complete} onDelete={remove} />
             ))}
           </ul>
         </section>
@@ -118,7 +147,7 @@ export default function FollowupQueue({ items }: { items: QueueItem[] }) {
           </h3>
           <ul className="space-y-2">
             {today.map((i) => (
-              <QueueRow key={i.id} item={i} pending={pending} onComplete={complete} />
+              <QueueRow key={i.id} item={i} pending={pending} onComplete={complete} onDelete={remove} />
             ))}
           </ul>
         </section>

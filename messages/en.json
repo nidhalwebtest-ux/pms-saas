@@ -6093,11 +6093,78 @@
     "noPayments": "No payments yet."
   },
   "admin": {
+    "questions": {
+      "title": "Lead questions",
+      "subtitle": "{count, plural, =0 {Collect what leads ask, then craft the best answers} one {# question collected} other {# questions collected}}",
+      "table": "Lead questions",
+      "addQuestion": "Add question",
+      "noAnswerYet": "No answer yet",
+      "writeAnswer": "Write answer",
+      "askedAgain": "Asked again (+1)",
+      "copyAnswer": "Copy Q&A",
+      "filters": {
+        "all": "All",
+        "unanswered": "Unanswered",
+        "answered": "Answered",
+        "search": "Search questions, answers, notes…",
+        "category": "Category",
+        "allCategories": "All categories"
+      },
+      "columns": {
+        "question": "Question",
+        "category": "Category",
+        "timesAsked": "Asked",
+        "askedBy": "First asked by",
+        "lastAsked": "Last asked"
+      },
+      "form": {
+        "addTitle": "Add a lead question",
+        "editTitle": "Edit question",
+        "subtitle": "Capture it word for word — answer it now or later.",
+        "sections": {
+          "question": "The question",
+          "answer": "Your answer"
+        },
+        "question": "Question",
+        "questionPh": "e.g. Can I import my existing bookings from Excel?",
+        "category": "Category",
+        "timesAsked": "Times asked",
+        "askedBy": "First asked by",
+        "askedByPh": "Pick a prospect",
+        "askedByEmpty": "No matching prospect",
+        "notes": "Context",
+        "notesPh": "When did it come up? What worry is behind it?",
+        "answer": "Answer",
+        "answerPh": "Write the answer you'd give on WhatsApp or in a demo…",
+        "answerHelp": "Leave empty to keep it in the Unanswered list.",
+        "requiredQuestion": "Please write the question."
+      },
+      "toast": {
+        "added": "Question added",
+        "updated": "Question saved",
+        "deleted": "Question deleted",
+        "askedAgain": "Now asked {count} times",
+        "copied": "Question & answer copied",
+        "copyFailed": "Couldn't copy to clipboard"
+      },
+      "deleteDialog": {
+        "title": "Delete this question?",
+        "desc": "The question and its answer will be removed permanently.",
+        "confirm": "Delete"
+      },
+      "empty": {
+        "firstTitle": "No questions collected yet",
+        "firstDesc": "Every time a lead asks something during a visit, demo or chat, add it here. Repeated questions rise to the top.",
+        "noMatchTitle": "No matching questions",
+        "noMatchDesc": "Try another search or clear the filters."
+      }
+    },
     "quickAccess": "Admin Panel",
     "nav": {
       "dashboard": "Dashboard",
       "prospects": "Prospects",
       "followups": "Follow-ups",
+      "questions": "Questions",
       "organizations": "Organizations",
       "settings": "Settings",
       "title": "Binaya Sales CRM",
@@ -6122,6 +6189,16 @@
       "loading": "Loading…"
     },
     "enums": {
+      "questionCategory": {
+        "PRICING": "Pricing",
+        "FEATURES": "Features",
+        "SETUP": "Setup & onboarding",
+        "INTEGRATIONS": "Integrations",
+        "SECURITY": "Security & data",
+        "SUPPORT": "Support",
+        "CONTRACT": "Contract & trial",
+        "OTHER": "Other"
+      },
       "contactRole": {
         "OWNER": "Owner",
         "MANAGER": "Manager",
@@ -6538,6 +6615,24 @@
       }
     },
     "organizations": {
+      "delete": {
+        "button": "Delete organization",
+        "title": "Delete organization permanently",
+        "warningTitle": "This cannot be undone",
+        "warningBody": "Every building, unit, tenant, reservation, invoice, payment, expense and setting of this organization will be erased, and its {users, plural, =0 {logins} one {# user login} other {# user logins}} will be removed.",
+        "typeLabel": "Type “{name}” to confirm",
+        "cancel": "Cancel",
+        "confirm": "Delete forever",
+        "done": "“{name}” was deleted",
+        "authWarning": "{count, plural, one {# login} other {# logins}} could not be removed from Supabase Auth — remove manually.",
+        "errors": {
+          "not_authorized": "You are not allowed to do this.",
+          "not_found": "This organization no longer exists.",
+          "name_mismatch": "The name you typed doesn't match.",
+          "own_org": "You can't delete the organization your own account belongs to.",
+          "failed": "Deletion failed — nothing was removed. Check the server logs."
+        }
+      },
       "title": "Organizations",
       "subtitle": "Every company using the platform, with live activity counts.",
       "count": "{n} total",

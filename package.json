@@ -9,6 +9,7 @@
     "lint": "next lint",
     "postinstall": "prisma generate",
     "seed:test": "tsx --env-file=.env scripts/seed-test-data.ts",
+    "test:pricing": "tsx --test lib/saas-pricing.test.ts",
     "verify:integrity": "tsx --env-file=.env scripts/verify-data-integrity.ts"
   },
   "dependencies": {

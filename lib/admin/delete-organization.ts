@@ -30,6 +30,9 @@ export async function deleteOrganizationData(
     [
       // ── Loose references (no FK) and website inbox ────────────────────────
       db.shareLink.deleteMany({ where: org }),
+      db.whatsAppMessage.deleteMany({ where: org }),
+      db.whatsAppTemplate.deleteMany({ where: org }),
+      db.whatsAppAccount.deleteMany({ where: org }),
       db.salesTarget.deleteMany({ where: org }),
       db.websiteBookingRequest.deleteMany({ where: org }),
 

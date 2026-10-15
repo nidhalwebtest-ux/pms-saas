@@ -1740,3 +1740,75 @@ model WebsiteBookingRequest {
   @@index([organizationId, status])
   @@index([status, expiresAt])
 }
+
+// ── WhatsApp Business Cloud API (per-organization integration) ────────────────
+// Each org connects ITS OWN WhatsApp Business Account (manual credentials in
+// Phase 1). The access token is AES-256-GCM encrypted (lib/whatsapp/crypto.ts)
+// and never leaves the server. Rows are scoped by organizationId like ShareLink.
+
+model WhatsAppAccount {
+  id                  String    @id @default(uuid())
+  organizationId      String    @unique
+  wabaId              String
+  phoneNumberId       String    @unique
+  displayPhone        String
+  verifiedName        String?
+  qualityRating       String?   // GREEN | YELLOW | RED | UNKNOWN
+  accessTokenEnc      String
+  tokenLast4          String
+  connectionType      String    @default("MANUAL")    // MANUAL | EMBEDDED
+  status              String    @default("CONNECTED") // CONNECTED | ERROR
+  lastError           String?
+  webhookSubscribedAt DateTime?
+  connectedById       String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([wabaId])
+}
+
+model WhatsAppTemplate {
+  id             String   @id @default(uuid())
+  organizationId String
+  metaTemplateId String?
+  name           String
+  language       String   // ar | en | …
+  category       String   // UTILITY | MARKETING | AUTHENTICATION
+  status         String   @default("PENDING") // APPROVED | PENDING | REJECTED | PAUSED | DISABLED
+  rejectedReason String?
+  purpose        String   @default("CUSTOM")  // RESERVATION_CONFIRMATION | ARRIVAL_REMINDER | INVOICE | RECEIPT | CUSTOM
+  components     Json     // Meta components (positional variables)
+  variableMap    Json?    // { header: PmsField[], body: PmsField[] } — null for templates created outside Binaya
+  createdById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, name, language])
+  @@index([organizationId, status])
+  @@index([metaTemplateId])
+}
+
+model WhatsAppMessage {
+  id             String    @id @default(uuid())
+  organizationId String
+  direction      String    @default("OUT") // OUT | IN
+  templateId     String?
+  templateName   String?
+  language       String?
+  toPhone        String?
+  fromPhone      String?
+  waMessageId    String?   @unique
+  status         String    @default("SENT") // SENT | DELIVERED | READ | FAILED | RECEIVED
+  errorCode      String?
+  errorMessage   String?
+  entityType     String?   // reservation | invoice | receipt | test
+  entityId       String?
+  body           String?   // inbound text / rendered outbound preview
+  sentById       String?
+  statusAt       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, entityType, entityId])
+}

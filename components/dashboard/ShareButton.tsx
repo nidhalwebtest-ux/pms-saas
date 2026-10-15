@@ -11,8 +11,10 @@ import {
   LinkIcon,
   ArrowDownTrayIcon,
   ChevronRightIcon,
+  PaperAirplaneIcon,
 } from "@heroicons/react/24/outline";
 import type { ShareDocType } from "@/lib/share-token";
+import WhatsAppSendDialog, { type WaOptions } from "./WhatsAppSendDialog";
 
 interface MintData {
   shareUrl: string;
@@ -42,11 +44,21 @@ export default function ShareButton({
   const [loading, setLoading] = useState(false);
   const [data, setData] = useState<MintData | null>(null);
   const [busy, setBusy] = useState(false);
+  // WhatsApp Business (Cloud API) — only for documents that have message templates.
+  const waDoc = type === "reservation" || type === "invoice" || type === "receipt" ? type : null;
+  const [wa, setWa] = useState<WaOptions | null>(null);
+  const [waOpen, setWaOpen] = useState(false);
 
   async function openModal() {
     setOpen(true);
     if (data) return;
     setLoading(true);
+    if (waDoc && !wa) {
+      fetch(`/api/whatsapp/send?type=${waDoc}&id=${encodeURIComponent(id)}`)
+        .then((r) => (r.ok ? r.json() : { connected: false }))
+        .then((d: WaOptions) => setWa(d))
+        .catch(() => setWa({ connected: false }));
+    }
     try {
       const res = await fetch("/api/share/mint", {
         method: "POST",
@@ -172,6 +184,10 @@ export default function ShareButton({
               ) : (
                 <>
                   {data.title && <p className="mb-2 text-sm text-gray-500 truncate">{data.title}</p>}
+                  {waDoc && wa?.connected && (
+                    <Option tone="green" icon={<PaperAirplaneIcon className="h-5 w-5" />} title={t("whatsappApi.option")} desc={t("whatsappApi.optionDesc")}
+                      onClick={() => { setOpen(false); setWaOpen(true); }} />
+                  )}
                   <Option tone="green" icon={<ChatBubbleLeftRightIcon className="h-5 w-5" />} title={t("whatsapp")} desc={t("whatsappDesc")} onClick={onWhatsApp} />
                   <Option tone="blue" icon={<EnvelopeIcon className="h-5 w-5" />} title={t("email")} desc={t("emailDesc")} onClick={onEmail} />
                   <Option icon={<LinkIcon className="h-5 w-5" />} title={t("copyLink")} desc={t("copyDesc")} onClick={onCopy} />
@@ -181,6 +197,10 @@ export default function ShareButton({
             </div>
           </div>
         </div>
+      )}
+
+      {waOpen && waDoc && wa && (
+        <WhatsAppSendDialog type={waDoc} id={id} options={wa} onClose={() => { setWaOpen(false); setWa(null); }} />
       )}
     </>
   );

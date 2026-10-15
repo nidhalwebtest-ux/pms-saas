@@ -44,3 +44,6 @@ next-env.d.ts
 
 # design handoff (kept locally, not part of the app)
 /design/
+
+# Local promo video project (renders, screenshots, tooling) — never commit
+/promo-video/

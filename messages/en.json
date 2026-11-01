@@ -5951,49 +5951,11 @@
       "t2": "like a pro,",
       "t3": "not a spreadsheet.",
       "sub": "Binaya brings reservations, payments, invoicing, and reporting into one place — built for property managers across Oman and the Gulf, with OMR precision to the last baisa.",
-      "cta1": "Start free — one building",
-      "cta2": "Contact Us",
       "videoTitle": "Watch Binaya PMS in action",
       "videoSub": "Click to play the software demo video",
-      "note": "Free forever for one building and up to 5 units. No card required.",
-      "mockTitle": "Binaya · Dashboard",
-      "k1": "Bookings",
-      "k2": "Occupancy",
-      "k3": "Due today",
-      "k4": "OMR in",
-      "listTitle": "Today’s reservations",
-      "today": "Today",
-      "floatTitle": "Payment received",
-      "floatSub": "Unit 204 · OMR 120.000",
-      "rows": [
-        {
-          "unit": "Unit 204 · Al Waha",
-          "guest": "Salim Al-Balushi",
-          "amount": "120.000",
-          "color": "#185FA5",
-          "status": "Confirmed",
-          "badgeBg": "#eaf3fc",
-          "badgeFg": "#185FA5"
-        },
-        {
-          "unit": "Unit 108 · Al Waha",
-          "guest": "Maryam Al-Habsi",
-          "amount": "95.500",
-          "color": "#1f9d64",
-          "status": "Paid",
-          "badgeBg": "#eafaf1",
-          "badgeFg": "#1f9d64"
-        },
-        {
-          "unit": "Unit 301 · Al Naseem",
-          "guest": "Khalid Al-Maqbali",
-          "amount": "150.000",
-          "color": "#d98315",
-          "status": "Due",
-          "badgeBg": "#fff4e6",
-          "badgeFg": "#d98315"
-        }
-      ]
+      "videoMute": "Mute or unmute",
+      "videoFullscreen": "Full screen",
+      "videoPlay": "Play demo video"
     },
     "faq": {
       "eyebrow": "FAQ",
@@ -6066,17 +6028,14 @@
           "h": "Company",
           "links": [
             "About",
-            "Contact",
-            "Blog",
-            "Careers"
+            "Contact"
           ]
         },
         {
           "h": "Legal",
           "links": [
             "Privacy",
-            "Terms",
-            "Security"
+            "Terms"
           ]
         }
       ]

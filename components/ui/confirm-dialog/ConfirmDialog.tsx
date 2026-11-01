@@ -7,7 +7,10 @@ import {
 } from "@heroicons/react/24/outline";
 import { Modal, ModalHeader, ModalBody, ModalFooter } from "../modal";
 import { Button } from "../Button";
-import { Select, TextArea, TextField } from "../form";
+// direct imports, not the "../form" barrel (which pulls the date pickers into every page via the root layout)
+import { Select } from "../form/Select";
+import { TextArea } from "../form/TextArea";
+import { TextField } from "../form/TextField";
 import type {
   ConfirmDialogOptions,
   ConfirmDialogResult,

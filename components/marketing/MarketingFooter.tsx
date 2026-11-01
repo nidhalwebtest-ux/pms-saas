@@ -6,10 +6,11 @@ import Container from "./ui/Container";
 type Col = { h: string; links: string[] };
 
 // Real destinations, parallel to the translated label order per column.
+// "How it works" → the solution story (the old #how section was merged into it); no "#" placeholders.
 const HREFS: string[][] = [
-  ["/#features", "/#pricing", "/#how", "/#faq"],
-  ["/about", "/contact", "#", "#"],
-  ["/privacy", "/terms", "#"],
+  ["/#features", "/#pricing", "/#solution", "/#faq"],
+  ["/about", "/contact"],
+  ["/privacy", "/terms"],
 ];
 
 export default async function MarketingFooter() {

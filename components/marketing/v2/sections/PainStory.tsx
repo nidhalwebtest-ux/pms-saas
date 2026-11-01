@@ -142,7 +142,7 @@ export function PainStory({
                 <span className="grid h-12 w-12 flex-none place-items-center rounded-2xl bg-[#85B7EB]/15 text-[#85B7EB] lg:h-14 lg:w-14">
                   <DuoIcon name={p.icon} size={32} />
                 </span>
-                <span className="text-[18px] font-semibold leading-[1.5] xl:text-[19px]">{p.t}</span>
+                <span className="text-[18px] font-semibold leading-[1.5] lg:text-[16px] xl:text-[19px]">{p.t}</span>
               </li>
             ))}
           </ol>

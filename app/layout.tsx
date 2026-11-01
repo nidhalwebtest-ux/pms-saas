@@ -6,7 +6,8 @@ import { getLocale, getMessages } from "next-intl/server";
 import "@/styles/globals.css";
 import { Toaster } from "sonner";
 import { dirFor, type Locale } from "@/i18n/config";
-import { ConfirmDialogProvider } from "@/components/ui";
+// direct import: the "@/components/ui" barrel would ship the whole dashboard UI kit to every page
+import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
 
 const sans = IBM_Plex_Sans({
   subsets: ["latin", "latin-ext"],

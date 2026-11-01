@@ -2,16 +2,12 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Modal,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
-  TextField,
-  PhoneInput,
-  Button,
-  Spinner,
-} from "@/components/ui";
+// direct imports, not the "@/components/ui" barrel (keeps the dashboard UI kit out of the landing page bundle)
+import { Modal, ModalHeader, ModalBody, ModalFooter } from "@/components/ui/modal";
+import { TextField } from "@/components/ui/form/TextField";
+import { PhoneInput } from "@/components/ui/form/PhoneInput";
+import { Button } from "@/components/ui/Button";
+import { Spinner } from "@/components/ui/Spinner";
 import { startDemo, type DemoResult } from "@/app/demo/actions";
 
 /**

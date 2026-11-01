@@ -73,7 +73,7 @@ export default function HeroVideoPlayer({
               onClick={toggleMute}
               className="rounded-lg bg-white/10 p-1.5 text-gray-300 transition hover:bg-white/20 hover:text-white"
               title={isMuted ? "Unmute" : "Mute"}
-              aria-label="Toggle mute"
+              aria-label={t("videoMute")}
             >
               {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
             </button>
@@ -81,7 +81,7 @@ export default function HeroVideoPlayer({
               onClick={toggleFullScreen}
               className="rounded-lg bg-white/10 p-1.5 text-gray-300 transition hover:bg-white/20 hover:text-white"
               title="Full screen"
-              aria-label="Full screen"
+              aria-label={t("videoFullscreen")}
             >
               <Maximize className="h-4 w-4" />
             </button>
@@ -110,7 +110,7 @@ export default function HeroVideoPlayer({
                   togglePlay();
                 }}
                 className="group/btn relative flex h-14 w-14 items-center justify-center rounded-full bg-brand-500 text-white shadow-xl transition-transform duration-300 hover:scale-110 active:scale-95"
-                aria-label="Play demo video"
+                aria-label={t("videoPlay")}
               >
                 <span className="absolute -inset-1.5 animate-ping rounded-full bg-brand-500/40 opacity-75" />
                 <Play className="h-6 w-6 text-white ms-0.5" fill="currentColor" />

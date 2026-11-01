@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Button, type ButtonProps } from "@/components/ui";
+// direct import, not the "@/components/ui" barrel: the barrel pulls the whole dashboard UI kit into the landing page
+import { Button, buttonClasses, type ButtonProps } from "@/components/ui/Button";
 
 /* ============================================================================
  *  MarketingButton — thin convenience around the design-system Button.
@@ -12,9 +13,9 @@ import { Button, type ButtonProps } from "@/components/ui";
  *  single-sourced: every change to the design-system Button flows through
  *  here automatically.
  *
- *  Also accepts an optional `href` and wraps the button in a Next Link so
- *  call sites can pass `<MarketingButton href="…">` without having to wire
- *  up the Link themselves.
+ *  Also accepts an optional `href`: it then renders ONE Next Link styled with
+ *  the same button classes (never a <button> nested in an <a> — invalid HTML,
+ *  two tab stops, and announced twice by screen readers).
  * ========================================================================= */
 
 export type MarketingButtonProps = Omit<ButtonProps, "lift"> & {
@@ -28,7 +29,22 @@ export function MarketingButton({
   children,
   ...rest
 }: MarketingButtonProps) {
-  const btn = (
+  if (href) {
+    const { fullWidth, className, leftIcon, rightIcon } = rest;
+    return (
+      <Link
+        href={href}
+        className={buttonClasses({ variant, size, fullWidth, lift: variant === "primary", className })}
+        aria-label={rest["aria-label"]}
+      >
+        {leftIcon && <span className="inline-flex shrink-0" aria-hidden="true">{leftIcon}</span>}
+        <span>{children}</span>
+        {rightIcon && <span className="inline-flex shrink-0" aria-hidden="true">{rightIcon}</span>}
+      </Link>
+    );
+  }
+
+  return (
     <Button
       {...rest}
       variant={variant}
@@ -38,17 +54,6 @@ export function MarketingButton({
       {children}
     </Button>
   );
-
-  if (href) {
-    // Wrap in a Link for real navigation. The inner Button must NOT preventDefault
-    // — doing so cancels the Link's navigation (every CTA would become a no-op).
-    return (
-      <Link href={href} className={rest.fullWidth ? "block w-full" : "inline-flex"}>
-        {btn}
-      </Link>
-    );
-  }
-  return btn;
 }
 
 /* ============================================================================

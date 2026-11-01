@@ -371,3 +371,35 @@ Also noted: the app creates every organisation with `plan = "FREE"`, but nothing
 - The floating button is hidden on the end card.
 
 **Open:** the website form could also create a `Prospect` in the admin CRM. That needs a public endpoint with spam protection and a `WEBSITE` lead source, so it's left out of this phase.
+
+## Phase 5: QA (1 Nov 2026)
+
+Everything was run against a **production build** (`next build` + `next start`); the build passes. `/marketing-lab` returns 404 in production.
+
+**Results**
+
+| Check | Result |
+|---|---|
+| Layout sweep: widths 320 / 360 / 390 / 430 / 768 / 1024 / 1280 / 1440 / 1920, Arabic + English, scrolling the whole page | no horizontal overflow, 0 console errors or warnings, every nav anchor present exactly once |
+| Cross-browser: Chromium, **WebKit** (desktop + iPhone 13 emulation) and **Firefox** | pinned pain cards, the bridge's two-column ending, the chapter scenes, the calculator and the end card all render correctly; 0 errors |
+| Keyboard | logical tab order; every focusable element has a visible focus style; each CTA is a single tab stop |
+| Lighthouse, mobile (simulated slow 4G + 4× CPU, median of 3) | performance **56** (was ~43), accessibility **100**, best practices **100**, SEO **100**, CLS 0 |
+| Lighthouse, desktop | performance **95–97**, accessibility / best practices / SEO **100**; LCP 1.1 s |
+| Accuracy | every number in the landing copy is the real pricing (5 free units, 1.00 / 0.70 / 0.50, 20% yearly) or a real capture value (2/0/3/3, 40.00, 1435.00, 402.00) |
+
+**Fixed during QA**
+1. **The dashboard UI kit was shipped to every page.** The root layout imported `ConfirmDialogProvider` through the `@/components/ui` barrel; `ConfirmDialog` used the `form` barrel (date pickers); and `MarketingButton` and `DemoTourModal` also used the barrel. All now import directly, which cut the landing page's JavaScript by about 120 KB compressed, and the fix applies to all pages, including `/login`.
+2. **Nested interactive elements:** `MarketingButton` with `href` rendered `<a><button></button></a>` (invalid HTML, two tab stops, announced twice). It now renders one `<Link>` styled with the new `buttonClasses()` helper exported from `components/ui/Button.tsx` (the `Button` itself uses the same helper, so there's no visual change).
+3. **Footer:** «كيف يعمل» pointed to the removed `#how` section; it now points to `#solution`. The three dead `#` links (Blog, Careers, Security) and their labels are removed.
+4. **Hero video controls:** the screen-reader labels were English-only; they're now translated (`hero.videoMute / videoFullscreen / videoPlay`). The visible hero is unchanged.
+5. **Unused hero copy removed:** 13 keys from the deleted hero mock, including its fake guest rows and amounts.
+6. **Pain cards** use slightly smaller text between 1024 and 1279 px, so the five cards don't wrap to four lines.
+
+**Recommendations, not done here (app-wide changes beyond the landing page)**
+- **All of the app's translations ship with every page.** The root layout passes all messages to `NextIntlClientProvider`, so the landing HTML carries the dashboard's strings (about half of its 106 KB compressed HTML). Giving the root provider only shared namespaces, and the dashboard layout its own, would make every public page much lighter.
+- **Google Analytics** loads `afterInteractive` (178 KB, about 230 ms of main-thread time on mobile). `strategy="lazyOnload"` would help mobile scores at the cost of missing some very short visits.
+- **Fonts:** the root layout preloads three IBM Plex families that the landing page doesn't use (it uses Cairo). Setting `preload: false` there, or scoping fonts per layout, would remove those requests.
+- **Global CSS** is one large render-blocking stylesheet for the whole app.
+- **Website leads:** the end-card form could also create a `Prospect` in the admin CRM. That needs a public endpoint with spam protection.
+
+**Tools used:** Playwright 1.64 with WebKit and Firefox installed into `~/Library/Caches/ms-playwright` (about 200 MB, removable), Lighthouse 12 run via npx with the local headless Chrome, and axe-based accessibility audits within Lighthouse.

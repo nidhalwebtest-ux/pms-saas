@@ -114,6 +114,34 @@ function devWarnAriaLabel(size: ButtonSize, ariaLabel?: string) {
   }
 }
 
+/** The button's classes for a variant × size, so links can look like buttons without nesting a
+ * <button> inside an <a> (invalid HTML, and two tab stops). Same tables the Button itself uses. */
+export function buttonClasses({
+  variant = "primary",
+  size = "md",
+  fullWidth = false,
+  lift = false,
+  loading = false,
+  className = "",
+}: {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  fullWidth?: boolean;
+  lift?: boolean;
+  loading?: boolean;
+  className?: string;
+} = {}): string {
+  const sizeClass = variant === "link" ? "" : size === "icon" ? sizeIcon.md : sizeText[size];
+  // Marketing lift treatment — only meaningful on the primary variant.
+  const liftClass =
+    lift && variant === "primary"
+      ? "shadow-brand hover:shadow-brand-hover hover:-translate-y-px active:translate-y-0 transition-[transform,box-shadow,background-color] duration-150"
+      : "";
+  return [base, variantClasses[variant], sizeClass, fullWidth ? "w-full" : "", loading ? "cursor-wait" : "", liftClass, className]
+    .filter(Boolean)
+    .join(" ");
+}
+
 /* ----------------------------------------------------------------------------
  *  Component
  * ------------------------------------------------------------------------- */
@@ -149,36 +177,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     onClick?.(e);
   };
 
-  const sizeClass =
-    variant === "link"
-      ? ""
-      : size === "icon"
-      ? sizeIcon.md
-      : sizeText[size];
-
   const spinnerPx =
     size === "sm" ? 12 :
     size === "lg" ? 16 :
     size === "xl" ? 18 :
     size === "icon" ? 16 : 14;
 
-  // Marketing lift treatment — only meaningful on the primary variant.
-  const liftClass =
-    lift && variant === "primary"
-      ? "shadow-brand hover:shadow-brand-hover hover:-translate-y-px active:translate-y-0 transition-[transform,box-shadow,background-color] duration-150"
-      : "";
-
-  const classes = [
-    base,
-    variantClasses[variant],
-    sizeClass,
-    fullWidth ? "w-full" : "",
-    loading ? "cursor-wait" : "",
-    liftClass,
-    className,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const classes = buttonClasses({ variant, size, fullWidth, lift, loading, className });
 
   const startSlot = loading ? <Spinner size={spinnerPx} /> : leftIcon;
 

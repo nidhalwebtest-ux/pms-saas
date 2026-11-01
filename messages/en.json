@@ -5786,7 +5786,75 @@
       "escalationB": "the chaos doubles",
       "bridgeQ": "The solution?",
       "bridgeTagline": "Binaya — hotel & serviced-apartment management",
+      "bridgeBody": "Binaya is a complete cloud system for hotels and serviced apartments. It organises your bookings and unit calendar, applies seasonal prices automatically, issues invoices and tracks payments and the daily cash box, with reports ready for every decision — in Arabic and English, from your phone.",
       "markLabel": "Binaya logo"
+    },
+    "chapters": {
+      "railLabel": "Solution chapters",
+      "items": [
+        {
+          "key": "dashboard",
+          "tab": "Dashboard",
+          "pains": [
+            0
+          ],
+          "title": "All your data in one place",
+          "sub": "Arrivals, departures, overstays and in-house guests on one screen, for every building.",
+          "alt": "Binaya dashboard: today's arrivals, departures, overstays and current guests"
+        },
+        {
+          "key": "calendar",
+          "tab": "Calendar",
+          "pains": [
+            1,
+            2
+          ],
+          "title": "No more double bookings",
+          "sub": "The calendar shows vacant and occupied units at a glance, and the system blocks any booking that overlaps an existing one.",
+          "alt": "Binaya availability calendar: picking free dates and creating a new booking"
+        },
+        {
+          "key": "pricing",
+          "tab": "Seasonal prices",
+          "pains": [
+            3
+          ],
+          "title": "Seasonal prices apply automatically",
+          "sub": "Set the season's rate once and it applies to every night inside that period.",
+          "alt": "Binaya unit pricing: the default rate and the peak-season rate"
+        },
+        {
+          "key": "payments",
+          "tab": "Payments",
+          "pains": [],
+          "title": "Every rial in view",
+          "sub": "Every payment is recorded against its invoice, and the cash box is reconciled daily.",
+          "alt": "Payments and the daily cash box in Binaya"
+        },
+        {
+          "key": "invoices",
+          "tab": "Invoices",
+          "pains": [
+            4
+          ],
+          "title": "Organised invoices, and overdue balances at a glance",
+          "sub": "Invoices and receipts in order, with overdue customer balances in one clear list.",
+          "alt": "An overdue invoice and the overdue invoices list in Binaya"
+        }
+      ],
+      "dash": {
+        "arrivals": "Arrivals",
+        "departures": "Departures",
+        "overstays": "Overstays",
+        "guests": "Guests"
+      },
+      "calWarn": "This unit is booked for these dates",
+      "calOk": "No overlap",
+      "nightRate": "Nightly rate · OMR",
+      "paymentsTotal": "Total payments · OMR",
+      "cashMatched": "Cash box matched",
+      "dueTotal": "Total due · OMR",
+      "replay": "Replay"
     },
     "hero": {
       "badge": "Built Arabic-first for the Gulf",

@@ -176,6 +176,18 @@ export const FOCUS = {
       290,
       370,
       360
+    ],
+    "defaultCard": [
+      37,
+      298,
+      356,
+      143
+    ],
+    "seasonCard": [
+      37,
+      506,
+      356,
+      132
     ]
   },
   "payments": {

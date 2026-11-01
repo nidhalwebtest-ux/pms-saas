@@ -79,6 +79,7 @@ export function PainStory({
           },
         });
         tl.from("[data-intro]", { opacity: 0.35, y: 16, duration: 0.6 }, 0);
+        // the horizontal cards arrive one by one in reading order (right → left in Arabic)
         gsap.utils.toArray<HTMLElement>(cardsSel).forEach((card, i) => {
           tl.to(card, { opacity: 1, y: 0, filter: "blur(0px)", duration: 1 }, 0.4 + i * 0.85);
         });
@@ -93,15 +94,18 @@ export function PainStory({
         tl.to({}, { duration: 0.8 }); // short hold before the pin releases
       });
 
-      // tablet & mobile: no pin, each card blurs in as it enters
+      // tablet & mobile: no pin; the swipeable row of cards staggers in when it enters, then the line
       mm.add("(max-width: 1023px)", () => {
-        gsap.utils.toArray<HTMLElement>([cardsSel, "[data-esc]"].join(",")).forEach((el) => {
-          gsap.fromTo(
-            el,
-            { opacity: 0, y: 26, filter: "blur(10px)" },
-            { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.55, ease: EASE.enter, scrollTrigger: { trigger: el, start: "top 88%", once: true } },
-          );
-        });
+        gsap.fromTo(
+          cardsSel,
+          { opacity: 0, y: 26, filter: "blur(10px)" },
+          { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.55, stagger: 0.12, ease: EASE.enter, scrollTrigger: { trigger: "[data-pain-row]", start: "top 85%", once: true } },
+        );
+        gsap.fromTo(
+          "[data-esc]",
+          { opacity: 0, y: 18, filter: "blur(8px)" },
+          { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.55, stagger: 0.25, ease: EASE.enter, scrollTrigger: { trigger: "[data-esc]", start: "top 90%", once: true } },
+        );
       });
 
       return () => mm.revert();
@@ -110,38 +114,43 @@ export function PainStory({
   );
 
   return (
-    <section ref={root} id="problems" data-screen-label="Pains" className={`${s.root} ${s.story} scroll-mt-16`}>
+    // The dark story starts as a rounded navy "sheet" that slightly overlaps the hero's bottom padding:
+    // a clean, deliberate edge with a soft lift shadow, instead of a light→dark colour blend.
+    <section
+      ref={root}
+      id="problems"
+      data-screen-label="Pains"
+      className={`${s.root} ${s.story} ${s.sheet} relative z-[1] -mt-4 scroll-mt-16 rounded-t-[32px] md:-mt-14 md:rounded-t-[56px]`}
+    >
       <div className={s.hex} aria-hidden="true" />
-      {/* soft hand-off from the light hero: a white veil that fades out over the section's own
-          background, so there is no seam where the band ends */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-48 md:h-64"
-        style={{ background: "linear-gradient(180deg,#ffffff 0%,rgba(234,243,252,.92) 22%,rgba(170,200,232,.55) 52%,rgba(133,183,235,.18) 78%,rgba(133,183,235,0) 100%)" }}
-      />
-      <div aria-hidden="true" className="h-36 md:h-48" />
-      <div ref={pin} className="relative flex items-center py-16 lg:h-screen lg:py-0">
+      <div ref={pin} className="relative flex items-center pb-16 pt-20 lg:h-screen lg:py-0">
         <Chaos />
-        <Container className="relative">
-          <div className="mx-auto max-w-[780px]">
-            <h2 data-intro className="text-center text-[34px] font-bold leading-[1.25] md:text-[52px]">
-              {intro}
-            </h2>
-            <ol className="mt-9 grid list-none gap-3 p-0 md:mt-11 md:gap-3.5">
-              {pains.map((p, i) => (
-                <li key={i} data-pain className={`${s.glass} flex items-center gap-4 px-5 py-4 md:gap-5 md:px-7 md:py-[18px]`}>
-                  <span className="grid h-12 w-12 flex-none place-items-center rounded-[14px] bg-[#85B7EB]/15 text-[#85B7EB] md:h-14 md:w-14">
-                    <DuoIcon name={p.icon} size={30} />
-                  </span>
-                  <span className="text-[18px] leading-[1.45] md:text-[23px]">{p.t}</span>
-                </li>
-              ))}
-            </ol>
-            <p className="mt-8 text-center text-[24px] leading-[1.4] md:mt-10 md:text-[34px]">
-              <span data-esc className="inline-block text-white/75">{escalationA}</span>{" "}
-              <span data-esc className="inline-block font-bold">{escalationB}</span>
-            </p>
-          </div>
+        <Container wide className="relative">
+          <h2 data-intro className="mx-auto max-w-[780px] text-center text-[34px] font-bold leading-[1.25] md:text-[52px]">
+            {intro}
+          </h2>
+          {/* horizontal cards: 5 across on desktop, a swipeable row on smaller screens */}
+          <ol
+            data-pain-row
+            className="-mx-5 mt-10 flex list-none snap-x snap-mandatory gap-4 overflow-x-auto px-5 pb-4 sm:-mx-8 sm:px-8 md:mt-12 lg:mx-0 lg:grid lg:grid-cols-5 lg:gap-5 lg:overflow-visible lg:px-0 lg:pb-0"
+          >
+            {pains.map((p, i) => (
+              <li
+                key={i}
+                data-pain
+                className={`${s.glass} flex w-[72vw] max-w-[280px] flex-none snap-start flex-col gap-5 p-6 lg:w-auto lg:max-w-none lg:px-5 lg:py-6`}
+              >
+                <span className="grid h-14 w-14 place-items-center rounded-2xl bg-[#85B7EB]/15 text-[#85B7EB]">
+                  <DuoIcon name={p.icon} size={32} />
+                </span>
+                <span className="text-[19px] font-semibold leading-[1.5] lg:text-[18px] xl:text-[19px]">{p.t}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-8 text-center text-[24px] leading-[1.4] md:mt-12 md:text-[34px]">
+            <span data-esc className="inline-block text-white/75">{escalationA}</span>{" "}
+            <span data-esc className="inline-block font-bold">{escalationB}</span>
+          </p>
         </Container>
       </div>
     </section>

@@ -305,3 +305,37 @@ Also noted: the app creates every organisation with `plan = "FREE"`, but nothing
 **Copy:** a new `marketing.story` namespace (ar + en), with the video's wording. `marketing.hero.note` now says "one building and up to 5 units" (D1); it's shown by the final CTA. The old `marketing.problem` and `marketing.solution` keys are now unused and get removed in the phase 4 clean-up.
 
 **Checked:** `tsc` passes. Screenshots taken in Arabic and English, desktop and mobile: the hand-off, 5 pinned steps, the escalation, the bridge start and end, and reduced motion. No console errors.
+
+## Phase 3: as built (1 Nov 2026)
+
+**New section `v2/sections/SolutionSection` → `SolutionStory` (`#features`), replacing the three feature blocks**
+- **Desktop ≥1024 px:** the chapters' text scrolls on one side. The device column stays on screen (CSS `sticky`). The active chapter's scene cross-fades in and plays, and a tab rail (لوحة التحكم · التقويم · أسعار الموسم · المدفوعات · الفواتير) jumps between chapters. No chapter is active until the first one reaches the middle of the screen, so its tour plays when the visitor arrives.
+- **Mobile and tablet:** each chapter is its text followed by its own device. The scene plays when it scrolls into view.
+- **The pain flip:** each chapter's returning pain card(s) flip to the gold ✓ when it becomes active.
+- **Reduced motion:** every scene shows its final state; no camera moves.
+
+**The five scenes (`v2/scenes/`), all on real captures**
+
+| Chapter | Scene |
+|---|---|
+| 1 · كل بياناتك في مكان واحد | camera tour over the 4 KPI cards with the gold glow; chips tick ✓ with the real values 2 / 0 / 3 / 3 |
+| 2 · لا حجز مزدوج بعد اليوم | push into the calendar; the cursor clicks a free date; hovering the booked unit shows the app's booking card with the red pulse and «الوحدة محجوزة في هذه الفترة» (explanatory); the end date opens the real «حجز جديد» dialog; «إنشاء الحجز» gets the gold ✓; then «بلا تعارض». It ends on the button press, without inventing a "created" screen. |
+| 3 · سعر الموسم يُطبَّق تلقائيًا | glow on the default card at 20.000, then on the season card while the counter rolls 20.000 → 40.000 |
+| 4 · كل ريال تحت عينك | payments header glow, counter to the real 1435.000, then the daily cash box (variance 0.000) and «الصندوق مطابق» ✓ |
+| 5 · فواتير منظّمة، والمتأخرات تعرفها فورًا | invoice totals glow, then the overdue list with «المتبقي» glowing and the total due rolling to 402.000 |
+
+**Supporting changes**
+- **Shared scene code:** `useScene` (a paused timeline that restarts when its chapter activates and rewinds once hidden), `rollNumber` / `fmtNum` (integer baisa), and `SceneParts` (stacked real screens, counter and check chips, a cursor locked to the UI through the zoom).
+- **Copy:** `marketing.chapters` (ar + en).
+- **Screens:** `screens.ts` adds the pricing page's default and season card boxes, from the measured `boxes-pricing.json`.
+- **Sticky fix:** `.story` uses `overflow: clip`, because `hidden` would break the sticky device column.
+- **Removed:** `FeatureReservations`, `FeatureReports`, `FeatureExpenses`, `FeatureFinance`, `FeatureBlock` and the whole `mocks/` folder (hand-drawn UIs).
+
+**Checked:** `tsc` passes. Captures taken in Arabic and English on desktop, mid-scene and at the end of each of the 5 chapters; on mobile, all 5; plus reduced motion. No console errors. Fixed during review: chapter 1's tour used to play on page load, before the visitor reached it.
+
+## Review adjustments (1 Nov 2026)
+
+1. **Hero → dark story:** the white-to-navy gradient band is replaced by a rounded navy "sheet" (56 px top corners on desktop, 32 px on mobile). It overlaps the hero's bottom padding slightly, with a soft lift shadow and a faint light-blue rim. There's no colour blend.
+2. **Pain cards:** horizontal cards, 5 across on desktop, still pinned and arriving one by one in reading order. On smaller screens they're a swipeable row that staggers in.
+3. **Bridge:** after the centred logo beat, «الحل؟» fades out and the logo lockup glides to the end side (left in Arabic, right in English), while a paragraph about the system (`marketing.story.bridgeBody`) appears on the other side. The final two-column layout is the real one; the lockup only starts measured to the centre and is re-measured on resize. On mobile the paragraph appears below the logo.
+4. **Money on the landing page:** the animated amounts use 2 decimals (40.00, 1435.00, 402.00). `fmtNum` now takes 0 / 2 / 3 decimals, with 2 as the default. The app's screenshots inside the devices still show the app's real 3-decimal values (e.g. "OMR 40.000"), and the app itself keeps 3 decimals, as CLAUDE.md requires.

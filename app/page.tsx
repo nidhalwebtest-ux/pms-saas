@@ -4,9 +4,7 @@ import MarketingFooter from "@/components/marketing/MarketingFooter";
 import HeroSection from "@/components/marketing/sections/HeroSection";
 import PainSection from "@/components/marketing/v2/sections/PainSection";
 import BridgeSection from "@/components/marketing/v2/sections/BridgeSection";
-import FeatureReservations from "@/components/marketing/sections/FeatureReservations";
-import FeatureReports from "@/components/marketing/sections/FeatureReports";
-import FeatureExpenses from "@/components/marketing/sections/FeatureExpenses";
+import SolutionSection from "@/components/marketing/v2/sections/SolutionSection";
 import ImpactSection from "@/components/marketing/sections/ImpactSection";
 import HowItWorksSection from "@/components/marketing/sections/HowItWorksSection";
 import PricingSection from "@/components/marketing/sections/PricingSection";
@@ -123,9 +121,7 @@ export default function MarketingHomePage() {
         <HeroSection />
         <PainSection />
         <BridgeSection />
-        <FeatureReservations />
-        <FeatureReports />
-        <FeatureExpenses />
+        <SolutionSection />
         <ImpactSection />
         <HowItWorksSection />
         <PricingSection />

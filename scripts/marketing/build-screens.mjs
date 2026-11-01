@@ -17,6 +17,8 @@ const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), "../.
 const SRC = path.join(ROOT, "promo-video/screenshots/v4");
 const OUT = path.join(ROOT, "public/marketing/screens");
 const BOX = JSON.parse(fs.readFileSync(path.join(ROOT, "promo-video/screenshots/v6/boxes.json"), "utf8"));
+// pricing-page card boxes measured at capture time (default rate card + season card)
+const PRICE_BOX = JSON.parse(fs.readFileSync(path.join(ROOT, "promo-video/screenshots/v4/boxes-pricing.json"), "utf8"))["m-pricing-430"];
 const PHONE_ASPECT = 844 / 390;
 
 // key, source file, CSS width of the capture, device pixel ratio, window top (CSS px) for phone crops
@@ -74,7 +76,8 @@ const focus = {
   dashboard: Object.fromEntries(Object.entries(FOCUS.dashboard).map(([k, r]) => [k, rebase("dashboard", r)])),
   calendar: { startCell: C.start_cell, endCell: C.end_cell, firstOccupied: C.first_occupied, redPulse: C.red_pulse,
               dialog: C.dialog, createButton: C.create_btn, popover: C.popover, view: FOCUS.calendar ? A.glow.cal.focus : null },
-  pricing: { key: rebase("pricing", FOCUS.pricing.key), view: rebase("pricing", FOCUS.pricing.focus) },
+  pricing: { key: rebase("pricing", FOCUS.pricing.key), view: rebase("pricing", FOCUS.pricing.focus),
+             defaultCard: rebase("pricing", PRICE_BOX.default.card), seasonCard: rebase("pricing", PRICE_BOX.season.card) },
   payments: { key: rebase("payments", FOCUS.payments.key), view: rebase("payments", FOCUS.payments.focus) },
   cashbox: { key: rebase("cashbox", FOCUS.cashbox.key), view: rebase("cashbox", FOCUS.cashbox.focus) },
   invoice: { key: rebase("invoice", FOCUS.invoice.key), view: rebase("invoice", FOCUS.invoice.focus) },

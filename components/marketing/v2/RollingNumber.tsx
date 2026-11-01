@@ -2,25 +2,23 @@
 
 import { useRef } from "react";
 import { gsap, useGSAP, prefersReducedMotion } from "./motion";
+import { fmtNum as fmt, type Decimals } from "./scenes/useScene";
 
 /* A number that rolls to a REAL value when it scrolls into view (the video's counters).
- * Money is integer baisa, formatted with 3 decimals; never floats. Screen readers get the final
- * value immediately (the rolling text is aria-hidden). */
-
-const fmt = (v: number, decimals: 0 | 3) =>
-  decimals === 3 ? `${Math.floor(v / 1000)}.${String(Math.round(v) % 1000).padStart(3, "0")}` : String(Math.round(v));
+ * Money is integer baisa, shown with 2 decimals on the landing page; never floats. Screen readers
+ * get the final value immediately (the rolling text is aria-hidden). */
 
 export function RollingNumber({
   to,
   from = 0,
-  decimals = 3,
+  decimals = 2,
   duration = 0.9,
   className = "",
 }: {
-  /** target: baisa when decimals=3, a plain integer when decimals=0 */
+  /** target: baisa when decimals is 2 or 3, a plain integer when decimals=0 */
   to: number;
   from?: number;
-  decimals?: 0 | 3;
+  decimals?: Decimals;
   duration?: number;
   className?: string;
 }) {

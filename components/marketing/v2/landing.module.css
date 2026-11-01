@@ -1,0 +1,177 @@
+/* Landing v2 — visual language of the promo video. Scoped (CSS module) so nothing leaks into the dashboard.
+ * Colours: navy #0B1F3A, brand #185FA5, light #85B7EB; gold #C9A45C ONLY for numbers, glows, ✓ and the main CTA. */
+
+.root {
+  --navy: #0b1f3a;
+  --brand: #185fa5;
+  --light: #85b7eb;
+  --gold: #c9a45c;
+  --gold-hi: #d4b06a;
+}
+
+/* ---------------------------------------------------------------- dark story sections */
+.story {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(60% 34% at 12% 22%, rgba(133, 183, 235, 0.18) 0%, rgba(133, 183, 235, 0) 100%),
+    radial-gradient(55% 30% at 92% 72%, rgba(133, 183, 235, 0.14) 0%, rgba(133, 183, 235, 0) 100%),
+    radial-gradient(120% 70% at 85% 0%, rgba(24, 95, 165, 0.5) 0%, rgba(24, 95, 165, 0) 60%),
+    linear-gradient(165deg, var(--navy) 0%, var(--navy) 42%, #123a6b 78%, var(--brand) 120%);
+}
+
+/* headings inherit white here (styles/globals.css colours h1–h6 for the light app) */
+.story :where(h1, h2, h3, h4, h5, h6) { color: inherit; }
+
+/* faint hexagon outlines, corners only */
+.hex {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.09;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='84' height='145.5' viewBox='0 0 84 145.5'%3E%3Cpath d='M42 0L84 24.25V72.75L42 97L0 72.75V24.25Z M42 97V145.5 M0 72.75V121.25 M84 72.75V121.25' fill='none' stroke='%2385B7EB' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-size: 84px 145.5px;
+  -webkit-mask-image: radial-gradient(40% 32% at 0% 0%, #000 0%, transparent 100%), radial-gradient(42% 34% at 100% 100%, #000 0%, transparent 100%);
+  mask-image: radial-gradient(40% 32% at 0% 0%, #000 0%, transparent 100%), radial-gradient(42% 34% at 100% 100%, #000 0%, transparent 100%);
+}
+
+/* ---------------------------------------------------------------- frosted glass card */
+.glass {
+  background: rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 20px;
+  box-shadow: 0 18px 50px rgba(5, 15, 30, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+}
+
+/* ---------------------------------------------------------------- RTL wipe (the video's scene transition) */
+/* --w goes 0 → 110 (percent). RTL reveals from the right edge, LTR from the left. */
+.wipe {
+  --w: 110;
+  -webkit-mask-image: linear-gradient(to left, #000 calc(var(--w) * 1% - 10%), transparent calc(var(--w) * 1%));
+  mask-image: linear-gradient(to left, #000 calc(var(--w) * 1% - 10%), transparent calc(var(--w) * 1%));
+}
+:global([dir="ltr"]) .wipe {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(var(--w) * 1% - 10%), transparent calc(var(--w) * 1%));
+  mask-image: linear-gradient(to right, #000 calc(var(--w) * 1% - 10%), transparent calc(var(--w) * 1%));
+}
+
+/* ---------------------------------------------------------------- devices (CSS-built, like the video) */
+.laptop { position: relative; width: 100%; }
+.lid {
+  position: relative;
+  padding: 2.2%;
+  padding-bottom: 2.6%;
+  border-radius: 18px 18px 6px 6px;
+  background: linear-gradient(180deg, #1b2d47, #0d1a2e);
+  box-shadow: inset 0 0 0 1px rgba(133, 183, 235, 0.22), 0 40px 80px -30px rgba(3, 10, 22, 0.6);
+}
+.base {
+  position: relative;
+  height: 0;
+  padding-bottom: 2.6%;
+  margin: 0 -5%;
+  border-radius: 2px 2px 18px 18px;
+  background: linear-gradient(180deg, #e3e9f1 0%, #b9c6d6 60%, #8fa2ba 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+.base::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 16%;
+  height: 38%;
+  transform: translateX(-50%);
+  border-radius: 0 0 10px 10px;
+  background: #a9b7c9;
+}
+.phone {
+  position: relative;
+  width: 100%;
+  padding: 3.2%;
+  border-radius: 13% / 6%;
+  background: linear-gradient(160deg, #22344f, #0b1628 60%, #16263f);
+  box-shadow: inset 0 0 0 2px rgba(133, 183, 235, 0.25), 0 40px 90px -30px rgba(3, 10, 22, 0.55);
+}
+.phone .screen { border-radius: 10.5% / 4.9%; }
+.island {
+  position: absolute;
+  left: 50%;
+  top: 2.2%;
+  z-index: 3;
+  width: 28%;
+  height: 3.4%;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #050d1a;
+}
+
+/* the screen viewport: clips the camera layer */
+.screen {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+  border-radius: 6px;
+  isolation: isolate;
+}
+.reflect {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.13) 0%, rgba(255, 255, 255, 0.04) 30%, rgba(255, 255, 255, 0) 46%);
+}
+
+/* camera layer: the screenshot + overlays, moved with transform only (origin top-left) */
+.cam {
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 0;
+  /* no will-change: it would freeze the raster at 1× and the zoomed UI would look blurry */
+}
+.cam img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+
+/* gold focus glow over a UI area (positioned in % of the screen) */
+.glow {
+  position: absolute;
+  z-index: 2;
+  border: 1.4px solid rgba(201, 164, 92, 0.9);
+  border-radius: 6px;
+  box-shadow: 0 0 14px 3px rgba(201, 164, 92, 0.5), inset 0 0 8px rgba(201, 164, 92, 0.22);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* explanatory red pulse (not app UI) */
+.pulse {
+  position: absolute;
+  z-index: 2;
+  border: 1.4px solid rgba(220, 38, 38, 0.95);
+  border-radius: 4px;
+  box-shadow: 0 0 10px 3px rgba(220, 38, 38, 0.5);
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---------------------------------------------------------------- gold primary CTA */
+.ctaGold {
+  /* literal colours: this class is also used outside .root (navbar, drawer) */
+  background: linear-gradient(180deg, #d4b06a, #c9a45c);
+  color: #0b1f3a;
+  box-shadow: 0 14px 34px -10px rgba(201, 164, 92, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+.ctaGold:hover { filter: brightness(1.04); }
+
+/* numbers are gold */
+.goldNum { color: #c9a45c; font-variant-numeric: tabular-nums; }
+
+/* ---------------------------------------------------------------- reduced motion: final states, no masks */
+@media (prefers-reduced-motion: reduce) {
+  .wipe { -webkit-mask-image: none !important; mask-image: none !important; }
+  .cam { transform: none !important; }
+}

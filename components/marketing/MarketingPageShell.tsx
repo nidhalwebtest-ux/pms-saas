@@ -18,7 +18,7 @@ export default function MarketingPageShell({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-x-hidden">
+    <div className="overflow-x-clip">
       <MarketingNavbar />
       <main id="top" className="bg-white">
         <header className="border-b border-gray-200 bg-gradient-to-b from-brand-50/60 to-white">

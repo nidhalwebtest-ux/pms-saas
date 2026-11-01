@@ -5751,7 +5751,42 @@
       "login": "Log in",
       "trial": "Start free",
       "openMenu": "Open menu",
-      "closeMenu": "Close menu"
+      "closeMenu": "Close menu",
+      "problems": "Problems",
+      "solution": "Solution",
+      "whatsapp": "WhatsApp us",
+      "signup": "Start free",
+      "whatsappText": "Hi, I'd like to know more about Binaya"
+    },
+    "story": {
+      "painsIntro": "You know these problems…",
+      "pains": [
+        {
+          "icon": "chatsCircle",
+          "t": "Data scattered across WhatsApp and notebooks"
+        },
+        {
+          "icon": "calendarX",
+          "t": "Double bookings for the same apartment"
+        },
+        {
+          "icon": "doorOpen",
+          "t": "No clear view of vacant and occupied units"
+        },
+        {
+          "icon": "tag",
+          "t": "Seasonal prices changed by hand"
+        },
+        {
+          "icon": "handCoins",
+          "t": "Overdue customer balances that are hard to track"
+        }
+      ],
+      "escalationA": "And in peak season…",
+      "escalationB": "the chaos doubles",
+      "bridgeQ": "The solution?",
+      "bridgeTagline": "Binaya — hotel & serviced-apartment management",
+      "markLabel": "Binaya logo"
     },
     "hero": {
       "badge": "Built Arabic-first for the Gulf",
@@ -5763,7 +5798,7 @@
       "cta2": "Contact Us",
       "videoTitle": "Watch Binaya PMS in action",
       "videoSub": "Click to play the software demo video",
-      "note": "Free forever for one building. No card required.",
+      "note": "Free forever for one building and up to 5 units. No card required.",
       "mockTitle": "Binaya · Dashboard",
       "k1": "Bookings",
       "k2": "Occupancy",

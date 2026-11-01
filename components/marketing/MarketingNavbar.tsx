@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
@@ -8,19 +8,75 @@ import { ChevronDown, Menu, X } from "lucide-react";
 import Container from "./ui/Container";
 import { MarketingButton } from "./ui/MarketingButton";
 import { type Locale } from "@/i18n/config";
+import { DuoIcon } from "./v2/icons";
+import { whatsappUrl } from "@/lib/marketing/whatsapp";
+import v2 from "./v2/landing.module.css";
 
+// Landing v2: the four anchors follow the promo video's story (pain → solution → pricing → contact).
 const NAV_LINKS = [
-  { href: "/#features", key: "features" },
-  { href: "/#how",      key: "how" },
-  { href: "/#pricing",  key: "pricing" },
-  { href: "/#contact",  key: "contact" },
-  { href: "/#faq",      key: "faq" },
+  { href: "/#problems", id: "problems", key: "problems" },
+  { href: "/#solution", id: "solution", key: "solution" },
+  { href: "/#pricing",  id: "pricing",  key: "pricing" },
+  { href: "/#contact",  id: "contact",  key: "contact" },
 ];
+
+/** Scroll-spy: id of the story section under the middle of the viewport (null above the first). */
+function useActiveSection(ids: string[]) {
+  const [active, setActive] = useState<string | null>(null);
+  useEffect(() => {
+    const els = ids.map((id) => document.getElementById(id)).filter((e): e is HTMLElement => !!e);
+    if (!els.length) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) if (e.isIntersecting) setActive(e.target.id);
+      },
+      { rootMargin: "-45% 0px -50% 0px" },
+    );
+    els.forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, [ids]);
+  return active;
+}
+
+/** The video's gold progress bar: fills in the reading direction as the page scrolls. */
+function ReadingProgress() {
+  const bar = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const p = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0;
+      if (bar.current) bar.current.style.transform = `scaleX(${p})`;
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    update();
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+  return (
+    <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[3px]">
+      <span
+        ref={bar}
+        className="absolute inset-0 origin-left rtl:origin-right bg-[#C9A45C]/70"
+        style={{ transform: "scaleX(0)" }}
+      />
+    </span>
+  );
+}
 
 export default function MarketingNavbar() {
   const t = useTranslations("marketing.nav");
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [ids] = useState(() => NAV_LINKS.map((l) => l.id));
+  const active = useActiveSection(ids);
+  const wa = whatsappUrl(t("whatsappText"));
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -66,8 +122,9 @@ export default function MarketingNavbar() {
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/brand/binaya-mark.svg" alt="" className="h-[30px] w-[30px]" />
-            <span>
-              Binaya <span className="font-normal text-gray-500">PMS</span>
+            {/* wordmark in Poppins 600, as in the promo video */}
+            <span dir="ltr" className="[font-family:var(--font-poppins),sans-serif] text-[19px] font-semibold tracking-[-0.02em]">
+              Binaya
             </span>
           </Link>
 
@@ -76,9 +133,20 @@ export default function MarketingNavbar() {
               <a
                 key={link.href}
                 href={link.href}
-                className="inline-flex items-center gap-1 rounded-md px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                aria-current={active === link.id ? "location" : undefined}
+                className={[
+                  "relative inline-flex items-center gap-1 whitespace-nowrap rounded-md px-3 py-2 text-[15px] transition-colors hover:bg-gray-100 hover:text-gray-900",
+                  active === link.id ? "font-semibold text-brand-600" : "text-gray-700",
+                ].join(" ")}
               >
                 {t(link.key)}
+                <span
+                  aria-hidden="true"
+                  className={[
+                    "absolute inset-x-3 -bottom-px h-[2px] rounded-full bg-brand-500 transition-opacity duration-200",
+                    active === link.id ? "opacity-100" : "opacity-0",
+                  ].join(" ")}
+                />
               </a>
             ))}
           </nav>
@@ -92,11 +160,22 @@ export default function MarketingNavbar() {
                 {t("login")}
               </MarketingButton>
             </div>
-            <div className="hidden sm:inline-flex">
-              <MarketingButton href="/login?mode=signup" variant="primary" size="md">
-                {t("trial")}
+            <div className="hidden md:inline-flex">
+              <MarketingButton href="/login?mode=signup" variant="secondary" size="md">
+                {t("signup")}
               </MarketingButton>
             </div>
+            {/* primary CTA (D5): WhatsApp, gold like the video's CTA */}
+            <a
+              href={wa}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-cta="nav-whatsapp"
+              className={`${v2.ctaGold} hidden sm:inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-[14.5px] font-bold transition-[filter]`}
+            >
+              <DuoIcon name="whatsappLogo" size={20} duo="#0B1F3A" duoOpacity={0.18} />
+              {t("whatsapp")}
+            </a>
             <button
               type="button"
               aria-label={menuOpen ? t("closeMenu") : t("openMenu")}
@@ -111,9 +190,10 @@ export default function MarketingNavbar() {
             </button>
           </div>
         </Container>
+        <ReadingProgress />
       </header>
 
-      <MobileDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
+      <MobileDrawer open={menuOpen} onClose={() => setMenuOpen(false)} whatsapp={wa} />
     </>
   );
 }
@@ -123,7 +203,7 @@ export default function MarketingNavbar() {
  *  anchor and close on click; the backdrop and ESC close it too.
  * ========================================================================= */
 
-function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
+function MobileDrawer({ open, onClose, whatsapp }: { open: boolean; onClose: () => void; whatsapp: string }) {
   const t = useTranslations("marketing.nav");
   return (
     <>
@@ -143,8 +223,9 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
         aria-modal="true"
         aria-hidden={!open}
         className={[
-          "fixed inset-x-0 top-[60px] z-40 max-h-[calc(100vh-60px)] overflow-y-auto border-b border-gray-200 bg-white shadow-xl transition-transform duration-300 lg:hidden",
-          open ? "translate-y-0" : "-translate-y-full",
+          "fixed inset-x-0 top-[60px] z-40 max-h-[calc(100vh-60px)] overflow-y-auto border-b border-gray-200 bg-white shadow-xl transition-[transform,visibility] duration-300 lg:hidden",
+          // invisible when closed, so no part of the drawer can peek out under the header
+          open ? "visible translate-y-0" : "invisible -translate-y-full",
         ].join(" ")}
       >
         <Container className="py-6">
@@ -162,11 +243,21 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
             ))}
           </nav>
           <div className="mt-5 flex flex-col gap-2 border-t border-gray-200 pt-5">
-            <MarketingButton href="/login" variant="secondary" size="lg" fullWidth>
-              {t("login")}
+            <a
+              href={whatsapp}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-cta="drawer-whatsapp"
+              className={`${v2.ctaGold} inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[16px] font-bold`}
+            >
+              <DuoIcon name="whatsappLogo" size={22} duo="#0B1F3A" duoOpacity={0.18} />
+              {t("whatsapp")}
+            </a>
+            <MarketingButton href="/login?mode=signup" variant="secondary" size="lg" fullWidth>
+              {t("signup")}
             </MarketingButton>
-            <MarketingButton href="/login?mode=signup" variant="primary" size="lg" fullWidth>
-              {t("trial")}
+            <MarketingButton href="/login" variant="ghost" size="lg" fullWidth>
+              {t("login")}
             </MarketingButton>
           </div>
         </Container>

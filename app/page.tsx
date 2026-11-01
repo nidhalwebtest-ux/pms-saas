@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import MarketingNavbar from "@/components/marketing/MarketingNavbar";
 import MarketingFooter from "@/components/marketing/MarketingFooter";
 import HeroSection from "@/components/marketing/sections/HeroSection";
-import ProblemSection from "@/components/marketing/sections/ProblemSection";
-import SolutionSection from "@/components/marketing/sections/SolutionSection";
+import PainSection from "@/components/marketing/v2/sections/PainSection";
+import BridgeSection from "@/components/marketing/v2/sections/BridgeSection";
 import FeatureReservations from "@/components/marketing/sections/FeatureReservations";
 import FeatureReports from "@/components/marketing/sections/FeatureReports";
 import FeatureExpenses from "@/components/marketing/sections/FeatureExpenses";
@@ -15,6 +15,7 @@ import RtlPreviewSection from "@/components/marketing/sections/RtlPreviewSection
 import FaqSection from "@/components/marketing/sections/FaqSection";
 import FinalCtaSection from "@/components/marketing/sections/FinalCtaSection";
 import FloatingWhatsApp from "@/components/marketing/FloatingWhatsApp";
+import { landingFontClass } from "@/components/marketing/v2/fonts";
 
 export const metadata: Metadata = {
   title: "نظام بناية لإدارة الفنادق والشقق المفروشة | Binaya PMS — Hotel & Furnished Apartment Management Software",
@@ -110,7 +111,7 @@ export default function MarketingHomePage() {
   };
 
   return (
-    <div className="overflow-x-hidden">
+    <div className={`overflow-x-clip ${landingFontClass}`}>
       {/* Structured Data (JSON-LD) for Search Engine Rich Snippets */}
       <script
         type="application/ld+json"
@@ -120,8 +121,8 @@ export default function MarketingHomePage() {
       <MarketingNavbar />
       <main id="top">
         <HeroSection />
-        <ProblemSection />
-        <SolutionSection />
+        <PainSection />
+        <BridgeSection />
         <FeatureReservations />
         <FeatureReports />
         <FeatureExpenses />

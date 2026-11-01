@@ -1,18 +1,33 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useLocale } from "next-intl";
 import { MessageSquare } from "lucide-react";
 
 export default function FloatingWhatsApp() {
   const locale = useLocale();
   const isAr = locale === "ar";
+  // hide while the end card (#contact) is on screen: it already shows the WhatsApp actions
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    const el = document.getElementById("contact");
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setHidden(e.isIntersecting), { threshold: 0.15 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   const whatsappUrl = "https://wa.me/96877804803?text=" + encodeURIComponent(
     isAr ? "مرحبًا بناية، أود الاستفسار عن نظام إدارة الفنادق والشقق المفروشة." : "Hello Binaya, I would like to inquire about Binaya PMS."
   );
 
   return (
-    <div className="fixed bottom-6 end-6 z-50 flex items-center gap-3">
+    <div
+      aria-hidden={hidden || undefined}
+      className={`fixed bottom-6 end-6 z-50 flex items-center gap-3 transition-[opacity,transform] duration-300 ${
+        hidden ? "pointer-events-none translate-y-4 opacity-0" : "opacity-100"
+      }`}
+    >
       {/* Tooltip Label */}
       <span className="hidden sm:inline-flex rounded-xl bg-gray-900 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur-md border border-white/10 animate-bounce">
         {isAr ? "تواصل معنا عبر واتساب 👋" : "Chat with us on WhatsApp 👋"}

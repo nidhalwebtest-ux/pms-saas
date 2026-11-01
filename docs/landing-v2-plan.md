@@ -339,3 +339,35 @@ Also noted: the app creates every organisation with `plan = "FREE"`, but nothing
 2. **Pain cards:** horizontal cards, 5 across on desktop, still pinned and arriving one by one in reading order. On smaller screens they're a swipeable row that staggers in.
 3. **Bridge:** after the centred logo beat, «الحل؟» fades out and the logo lockup glides to the end side (left in Arabic, right in English), while a paragraph about the system (`marketing.story.bridgeBody`) appears on the other side. The final two-column layout is the real one; the lockup only starts measured to the centre and is re-measured on resize. On mobile the paragraph appears below the logo.
 4. **Money on the landing page:** the animated amounts use 2 decimals (40.00, 1435.00, 402.00). `fmtNum` now takes 0 / 2 / 3 decimals, with 2 as the default. The app's screenshots inside the devices still show the app's real 3-decimal values (e.g. "OMR 40.000"), and the app itself keeps 3 decimals, as CLAUDE.md requires.
+
+## Phase 4: as built (1 Nov 2026)
+
+**Pricing engine (Q1a):** `lib/saas-pricing.ts` now has `FREE_UNITS = 5` and a 0-rate first band: units 1–5 are free for everyone, 6–20 cost 1.000, 21–50 cost 0.700 and 51+ cost 0.500 OMR per unit per month, with 20% off yearly. The tests were updated (7 pass). Only the marketing page uses this module; app billing is unaffected.
+
+**New sections**
+- **`StripSection`, «بالعربي، ومن جوالك»:** four true facts that close the dark story (Arabic first, Omani rials, from your phone, WhatsApp support). Replaces the RTL preview.
+- **`PricingStory` (`#pricing`):** a light sheet rising over the dark story.
+  - **Bands:** the free band «مجاني للأبد · مبنى واحد وحتى ٥ وحدات» first, then the three paid bands, each with a bar showing the rate dropping.
+  - **Calculator:** a slider plus a number input, monthly/yearly, a navy result panel with a rolling gold total (2 decimals), «مجاني» at 5 units or fewer, a breakdown that includes the free units, and the WhatsApp and signup buttons.
+  - **"Start in 3 steps"** sits underneath and replaces How it works.
+  - All strings are in `marketing.pricing2`.
+- **FAQ:** seven answers rewritten to the real pricing, plus "does it really prevent double bookings?" and "does it work on mobile?". `FAQPage` structured data added.
+- **`EndCard` (`#contact`):** the video's end card, which replaces both the final CTA and the contact section.
+  - **Top:** the logo lockup, the line, the gold WhatsApp button with «ابدأ تجربتك المجانية» as secondary, and chips for binaya.app, the WhatsApp number (LTR-isolated) and Salalah.
+  - **Below:** the real laptop and phone screens over the bedroom photo, beside a form.
+  - **The form:** it opens WhatsApp with the visitor's name, phone and message prefilled, and validates the name and phone. The old form showed «تم استلام استفسارك» but never sent anything.
+- **Floating WhatsApp button:** hides while the end card is on screen.
+
+**Clean-up**
+- **Structured-data offers:** they now match the engine (free for up to 5 units, then from 1.000 OMR per unit per month), replacing the stale 10–75 OMR range.
+- **Deleted components:** `ImpactSection` (the unverified stats), `TrustBarSection`, `TestimonialsSection` (invented quotes), `BuiltForOmanSection`, `HowItWorksSection`, `RtlPreviewSection`, `FinalCtaSection`, `ContactSection`, `PricingSection`, `PricingClientSection`, `LegacyFlatTierPricingSection` and `ui/CardIcon`.
+- **Deleted message blocks** (ar + en, verified unused): `trust`, `problem`, `solution`, `features`, `impact`, `oman`, `steps`, `testimonials`, `pricing`, `rtl`, `finalcta`, `cal`, `inv`, `rep`, `phone` and `expenses`.
+- **Scripts:** `scripts/marketing/build-icons.mjs` regenerates `v2/icons.tsx` (24 Phosphor icons). The end-card photo export was added to `build-screens.mjs`.
+
+**Checked**
+- `tsc` passes and the pricing tests pass.
+- Screenshots in Arabic and English, desktop and mobile: the strip; pricing at 40 units monthly (29.00), at 5 units («مجاني») and at 40 units yearly (23.20 / 278.40 / saves 69.60); the FAQ; the end card; form validation.
+- The form opens `wa.me/96877804803` with the prefilled text.
+- The floating button is hidden on the end card.
+
+**Open:** the website form could also create a `Prospect` in the admin CRM. That needs a public endpoint with spam protection and a `WEBSITE` lead source, so it's left out of this phase.

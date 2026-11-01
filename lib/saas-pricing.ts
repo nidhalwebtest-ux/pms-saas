@@ -3,9 +3,6 @@
  *
  * Each rate applies ONLY to the units that fall inside its band, like tax
  * brackets. All money is integer baisa (1 OMR = 1000 baisa) — never floats.
- *
- * The previous flat tiers (Starter / Growth / Ultimate) are kept, hidden, in
- * components/marketing/LegacyFlatTierPricingSection.tsx.
  */
 
 export interface PricingBand {
@@ -17,8 +14,13 @@ export interface PricingBand {
   rateBaisa: number;
 }
 
+/** The first FREE_UNITS units are free for every customer, forever (decision Q1, 31 Oct 2026).
+ * The free plan itself is one building with up to FREE_UNITS units. */
+export const FREE_UNITS = 5;
+
 export const PRICING_BANDS: readonly PricingBand[] = [
-  { from: 1, to: 20, rateBaisa: 1000 },
+  { from: 1, to: FREE_UNITS, rateBaisa: 0 },
+  { from: FREE_UNITS + 1, to: 20, rateBaisa: 1000 },
   { from: 21, to: 50, rateBaisa: 700 },
   { from: 51, to: null, rateBaisa: 500 },
 ];

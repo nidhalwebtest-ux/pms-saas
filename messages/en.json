@@ -5856,6 +5856,95 @@
       "dueTotal": "Total due · OMR",
       "replay": "Replay"
     },
+    "strip": {
+      "title": "In Arabic, from your phone",
+      "items": [
+        {
+          "icon": "translate",
+          "t": "Arabic first",
+          "d": "A complete right-to-left Arabic interface, with English one tap away."
+        },
+        {
+          "icon": "coins",
+          "t": "In Omani rials",
+          "d": "Prices, invoices and payments in Omani rials."
+        },
+        {
+          "icon": "deviceMobile",
+          "t": "From your phone",
+          "d": "Runs in the browser on phone and computer, with nothing to install."
+        },
+        {
+          "icon": "headset",
+          "t": "Support on WhatsApp",
+          "d": "Our team in Oman answers you on WhatsApp."
+        }
+      ]
+    },
+    "pricing2": {
+      "eyebrow": "Pricing",
+      "title": "Pay only for the units you manage",
+      "sub": "Your first 5 units are free for everyone, forever. After that you pay per unit, and the rate drops as you grow.",
+      "freeTitle": "Free forever",
+      "freeDesc": "One building and up to 5 units",
+      "unitsRange": "Units {from}–{to}",
+      "unitsFrom": "Unit {from} and up",
+      "perUnit": "OMR / unit / month",
+      "calcTitle": "Calculate your price",
+      "unitsLabel": "Number of units",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "save": "Save {pct}%",
+      "omr": "OMR",
+      "perMonth": "per month",
+      "perMonthYearly": "per month, billed yearly",
+      "yearTotal": "Yearly total",
+      "youSave": "You save",
+      "free": "Free",
+      "freeUnits": "free units",
+      "breakdown": "Breakdown",
+      "unitWord": "units",
+      "features": [
+        "Unlimited reservations & tenants",
+        "Invoices, payments & expenses",
+        "Daily cash box & reports",
+        "Arabic & English"
+      ],
+      "ctaWhatsapp": "WhatsApp us",
+      "ctaSignup": "Start free",
+      "stepsTitle": "Start in 3 steps",
+      "steps": [
+        {
+          "t": "Sign up",
+          "d": "Create your account and add your first building, free and with no card."
+        },
+        {
+          "t": "Add your units",
+          "d": "Add units, set prices and invite your team."
+        },
+        {
+          "t": "Start booking",
+          "d": "Take bookings, issue invoices and record payments."
+        }
+      ]
+    },
+    "endcard": {
+      "sub": "Start free with one building and up to 5 units, or talk to us and we'll set up a demo.",
+      "ctaWhatsapp": "WhatsApp us",
+      "ctaSignup": "Start your free trial",
+      "whatsappChip": "Contact us on WhatsApp",
+      "location": "Salalah, Oman",
+      "formTitle": "Send us a message",
+      "name": "Name",
+      "phone": "Mobile number",
+      "message": "Your message (optional)",
+      "send": "Send on WhatsApp",
+      "note": "WhatsApp opens with your message ready; just press send.",
+      "nameError": "Enter your name",
+      "phoneError": "Enter your mobile number",
+      "template": "Hi, I'm {name} ({phone}).",
+      "devicesAlt": "Binaya on a laptop and a phone"
+    },
     "hero": {
       "badge": "Built Arabic-first for the Gulf",
       "t1": "Run your buildings",
@@ -5906,338 +5995,39 @@
         }
       ]
     },
-    "trust": {
-      "label": "TRUSTED BY PROPERTY MANAGERS ACROSS DHOFAR",
-      "stats": [
-        {
-          "n": "120+",
-          "l": "Buildings managed"
-        },
-        {
-          "n": "3,400+",
-          "l": "Reservations booked"
-        },
-        {
-          "n": "OMR 2.1M",
-          "l": "Payments tracked"
-        },
-        {
-          "n": "4.9/5",
-          "l": "Manager rating"
-        }
-      ]
-    },
-    "problem": {
-      "eyebrow": "The daily grind",
-      "title": "Sound familiar?",
-      "sub": "Managing property in a spreadsheet means small mistakes turn into lost money — and long evenings reconciling numbers.",
-      "cards": [
-        {
-          "t": "Double bookings",
-          "d": "Two guests, one unit. You only find out when they’re both at the door."
-        },
-        {
-          "t": "Payments slip through",
-          "d": "Who paid, who’s late, who’s on a plan? It lives in your head, not a system."
-        },
-        {
-          "t": "Manual invoicing",
-          "d": "Rewriting the same invoice every month, then chasing the PDF over WhatsApp."
-        },
-        {
-          "t": "Scattered records",
-          "d": "Contracts here, receipts there. Tax season becomes a treasure hunt."
-        }
-      ]
-    },
-    "solution": {
-      "eyebrow": "One system",
-      "title": "Built for the way you actually work.",
-      "sub": "Every screen in Binaya maps to a real job a receptionist or manager does every day — nothing you have to translate.",
-      "cards": [
-        {
-          "t": "See every unit at a glance",
-          "d": "A live board of every building and unit, colour-coded by status.",
-          "ic": "grid"
-        },
-        {
-          "t": "Get paid, on time",
-          "d": "Automatic invoices, payment reminders, and plans that track themselves.",
-          "ic": "coin"
-        },
-        {
-          "t": "Numbers you can trust",
-          "d": "Reports that reconcile to the riyal — down to three decimals.",
-          "ic": "chart"
-        }
-      ]
-    },
-    "features": [
-      {
-        "eyebrow": "Reservations",
-        "title": "Never miss a booking again.",
-        "sub": "A calendar that reads like your front desk. Drag to move a booking, tap to check in, and Binaya blocks the dates so you can’t double-book.",
-        "bullets": [
-          "Colour-coded availability across every building",
-          "One-tap check-in and check-out",
-          "Automatic date blocking — no more clashes",
-          "Guest history and notes on every unit"
-        ]
-      },
-      {
-        "eyebrow": "Payments & invoicing",
-        "title": "Track every riyal — to three decimals.",
-        "sub": "Binaya speaks OMR natively. Issue invoices, record payments, and see exactly what’s outstanding — with the precision Omani accounting expects.",
-        "bullets": [
-          "OMR to three decimals, everywhere",
-          "Auto-generated invoices and receipts",
-          "Payment plans and reminders",
-          "VAT-ready records for filing"
-        ]
-      },
-      {
-        "eyebrow": "Reports",
-        "title": "Know your business at a glance.",
-        "sub": "Occupancy, revenue, and outstanding balances on one dashboard. Filter by building, month, or unit — export when you need to.",
-        "bullets": [
-          "Occupancy and revenue trends",
-          "Outstanding balances by building",
-          "Filter by building, month, or unit",
-          "Export to Excel and PDF"
-        ]
-      },
-      {
-        "eyebrow": "Expenses",
-        "title": "Approve expenses from your phone.",
-        "sub": "Maintenance, utilities, salaries — log an expense with a photo of the receipt and approve it from anywhere. Everything ties back to the right building.",
-        "bullets": [
-          "Snap a receipt, log in seconds",
-          "Approve or reject on the go",
-          "Assign every expense to a building",
-          "See true net income per property"
-        ]
-      }
-    ],
-    "impact": {
-      "eyebrow": "The payoff",
-      "title": "Less admin. More managing.",
-      "sub": "Managers who switch to Binaya spend their time on tenants and buildings — not on chasing numbers.",
-      "stats": [
-        {
-          "to": 6,
-          "suf": "h",
-          "label": "Admin hours saved every week"
-        },
-        {
-          "to": 98,
-          "suf": "%",
-          "label": "Payments collected on time"
-        },
-        {
-          "to": 3,
-          "suf": "×",
-          "label": "Faster monthly invoicing"
-        }
-      ]
-    },
-    "oman": {
-      "eyebrow": "Built for Oman",
-      "title": "Made in Oman. For Oman.",
-      "sub": "Binaya isn’t a translated foreign tool. It’s built around how property works here — the currency, the language, and the way you do business.",
-      "cards": [
-        {
-          "t": "Arabic-first, truly bilingual",
-          "d": "Full right-to-left Arabic and English — switch anytime, nothing breaks.",
-          "ic": "lang"
-        },
-        {
-          "t": "OMR to three decimals",
-          "d": "Baisa-accurate maths built in, not bolted on.",
-          "ic": "coin"
-        },
-        {
-          "t": "Local support you can reach",
-          "d": "Real people in Oman who know your market — on WhatsApp, in your timezone.",
-          "ic": "chat"
-        }
-      ]
-    },
-    "steps": {
-      "eyebrow": "Get started",
-      "title": "From signup to first reservation in three steps.",
-      "sub": "Most managers are taking bookings within an afternoon.",
-      "items": [
-        {
-          "n": "01",
-          "t": "Sign up",
-          "d": "Create your account and add your first building — free, no card."
-        },
-        {
-          "n": "02",
-          "t": "Add your units",
-          "d": "Import or add units, set rates, and invite your team."
-        },
-        {
-          "n": "03",
-          "t": "Start booking",
-          "d": "Take reservations, send invoices, and get paid."
-        }
-      ],
-      "cta": "Start free"
-    },
-    "testimonials": {
-      "eyebrow": "Social proof",
-      "title": "What property managers are saying.",
-      "items": [
-        {
-          "q": "We stopped double-booking the week we switched. The calendar alone paid for itself.",
-          "n": "Ahmed Al-Rawahi",
-          "r": "Manages 3 buildings, Salalah"
-        },
-        {
-          "q": "Invoicing used to eat my Thursdays. Now it’s done before my coffee.",
-          "n": "Fatima Al-Shanfari",
-          "r": "Property manager, Dhofar"
-        },
-        {
-          "q": "Finally something in Arabic that works right-to-left. My team stopped complaining.",
-          "n": "Salim Al-Maashani",
-          "r": "Owner, 12 units"
-        }
-      ]
-    },
-    "pricing": {
-      "eyebrow": "Pricing",
-      "title": "Start free. Grow when you’re ready.",
-      "sub": "One building is free forever. Upgrade only when you add more.",
-      "unit": "OMR ",
-      "tiers": [
-        {
-          "name": "Free",
-          "price": "0.000",
-          "per": "/month",
-          "desc": "For your first building.",
-          "cta": "Start free",
-          "features": [
-            "1 building",
-            "Unlimited reservations",
-            "Invoicing & payments",
-            "Arabic & English"
-          ],
-          "featured": false,
-          "badge": ""
-        },
-        {
-          "name": "Pro",
-          "price": "9.900",
-          "per": "/building/mo",
-          "desc": "For growing portfolios.",
-          "cta": "Start Pro",
-          "features": [
-            "Up to 10 buildings",
-            "Everything in Free",
-            "Reports & exports",
-            "Payment reminders",
-            "Priority support"
-          ],
-          "featured": true,
-          "badge": "Most popular"
-        },
-        {
-          "name": "Portfolio",
-          "price": "Custom",
-          "per": "",
-          "desc": "For large operators.",
-          "cta": "Talk to us",
-          "features": [
-            "Unlimited buildings",
-            "Team roles & permissions",
-            "API access",
-            "Dedicated support"
-          ],
-          "featured": false,
-          "badge": ""
-        }
-      ]
-    },
-    "rtl": {
-      "eyebrow": "Bilingual",
-      "title": "Works beautifully in both languages.",
-      "sub": "Every screen mirrors cleanly between English and Arabic — layout, numbers, and all.",
-      "ar": {
-        "label": "العربية · RTL",
-        "building": "مبنى الواحة",
-        "today": "الحجوزات اليوم",
-        "rows": [
-          {
-            "unit": "وحدة 204",
-            "guest": "سالم البلوشي",
-            "amt": "120.000",
-            "color": "#185FA5"
-          },
-          {
-            "unit": "وحدة 108",
-            "guest": "مريم الحبسي",
-            "amt": "95.500",
-            "color": "#1f9d64"
-          }
-        ]
-      },
-      "en": {
-        "label": "English · LTR",
-        "building": "Al Waha Building",
-        "today": "Today’s reservations",
-        "rows": [
-          {
-            "unit": "Unit 204",
-            "guest": "Salim Al-Balushi",
-            "amt": "120.000",
-            "color": "#185FA5"
-          },
-          {
-            "unit": "Unit 108",
-            "guest": "Maryam Al-Habsi",
-            "amt": "95.500",
-            "color": "#1f9d64"
-          }
-        ]
-      }
-    },
     "faq": {
       "eyebrow": "FAQ",
       "title": "Questions, answered.",
       "items": [
         {
-          "q": "Is it really free for one building?",
-          "a": "Yes — one building is free forever, with unlimited reservations and invoicing. No credit card required."
+          "q": "Is it really free?",
+          "a": "Yes. One building with up to 5 units is free forever, with unlimited reservations and invoicing and no credit card. The first 5 units are free on every plan."
+        },
+        {
+          "q": "How is pricing calculated after the free units?",
+          "a": "You pay per unit per month by band: units 6 to 20 at 1.00 OMR, 21 to 50 at 0.70 OMR, and 51 and up at 0.50 OMR, with 20% off when you pay yearly."
+        },
+        {
+          "q": "Does it really prevent double bookings?",
+          "a": "Yes. When a booking is saved, the system checks the unit's availability and rejects any booking that overlaps an existing one."
         },
         {
           "q": "Does it work fully in Arabic?",
-          "a": "Completely. Binaya is built right-to-left first. Switch between Arabic and English anytime — every screen mirrors correctly."
+          "a": "Completely. Binaya is built right-to-left first. Switch between Arabic and English any time — every screen mirrors correctly."
         },
         {
-          "q": "Can I manage multiple buildings?",
-          "a": "Yes. Add as many buildings and units as you need on Pro or Portfolio plans, each with its own reports and expenses."
+          "q": "Does it work on mobile?",
+          "a": "Yes. Binaya runs in the browser on phone and computer, with nothing to install."
         },
         {
-          "q": "How does OMR precision work?",
-          "a": "All amounts are handled to three decimals (baisa), so your totals always reconcile exactly — no rounding surprises."
-        },
-        {
-          "q": "Can my team use it too?",
-          "a": "Yes. Invite receptionists and managers with roles and permissions so everyone sees what they need."
+          "q": "Can my team use it?",
+          "a": "Yes. Invite front-desk staff and managers with roles and permissions so everyone sees what they need."
         },
         {
           "q": "What about my existing data?",
-          "a": "You can import units and past bookings, and our team will help you get set up."
+          "a": "You can import your units and past bookings, and our team will help you set up."
         }
       ]
-    },
-    "finalcta": {
-      "title": "Run your buildings like a pro.",
-      "sub": "Start free with one building today. No card, no lock-in — just a calmer front desk.",
-      "cta1": "Start free",
-      "cta2": "Book a demo"
     },
     "demoTour": {
       "cta": "Demo Tour",
@@ -6288,106 +6078,6 @@
             "Terms",
             "Security"
           ]
-        }
-      ]
-    },
-    "cal": {
-      "title": "Reservations calendar",
-      "month": "March 2026",
-      "days": [
-        "M",
-        "T",
-        "W",
-        "T",
-        "F",
-        "S",
-        "S"
-      ],
-      "rows": [
-        {
-          "unit": "Unit 204",
-          "start": 2,
-          "span": 3,
-          "color": "#185FA5",
-          "label": "Salim"
-        },
-        {
-          "unit": "Unit 108",
-          "start": 4,
-          "span": 3,
-          "color": "#1f9d64",
-          "label": "Maryam"
-        },
-        {
-          "unit": "Unit 301",
-          "start": 2,
-          "span": 2,
-          "color": "#85B7EB",
-          "label": "Khalid"
-        },
-        {
-          "unit": "Unit 402",
-          "start": 5,
-          "span": 3,
-          "color": "#d98315",
-          "label": "Noura"
-        }
-      ]
-    },
-    "inv": {
-      "title": "Invoice · Al Waha Building",
-      "no": "INV-2026-0148",
-      "paid": "PAID",
-      "total": "Total",
-      "totalAmt": "OMR 245.500",
-      "rows": [
-        {
-          "name": "Unit 204 — March rent",
-          "amt": "120.000"
-        },
-        {
-          "name": "Unit 108 — March rent",
-          "amt": "95.500"
-        },
-        {
-          "name": "Parking · 2 slots",
-          "amt": "30.000"
-        }
-      ]
-    },
-    "rep": {
-      "title": "Revenue overview",
-      "range": "Last 7 months",
-      "k1": "Occupancy",
-      "k2": "Revenue",
-      "k3": "Outstanding"
-    },
-    "phone": {
-      "placeholder": "Expenses"
-    },
-    "expenses": {
-      "app": "Binaya",
-      "title": "Approvals",
-      "pendingLabel": "Pending this week",
-      "approve": "Approve",
-      "rows": [
-        {
-          "title": "AC repair · Unit 204",
-          "meta": "Maintenance · today",
-          "amt": "45.000",
-          "tint": "#eaf3fc"
-        },
-        {
-          "title": "Cleaning supplies",
-          "meta": "Supplies · yesterday",
-          "amt": "18.500",
-          "tint": "#eafaf1"
-        },
-        {
-          "title": "Water bill · Al Waha",
-          "meta": "Utilities · 2 days ago",
-          "amt": "205.000",
-          "tint": "#fff4e6"
         }
       ]
     }

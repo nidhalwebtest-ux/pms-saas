@@ -96,3 +96,10 @@ export const FOCUS = ${JSON.stringify(focus, null, 2)} as const;
 `;
 fs.writeFileSync(path.join(ROOT, "lib/marketing/screens.ts"), ts);
 console.log("wrote lib/marketing/screens.ts");
+
+// Photos (Unsplash licence, logged in promo-video/images/LICENSE-v6.txt): resized only, no AI edits.
+fs.mkdirSync(path.join(ROOT, "public/marketing/photos"), { recursive: true });
+for (const [src, out] of [["promo-video/images/v6-bedroom.jpg", "public/marketing/photos/bedroom.webp"]]) {
+  await sharp(path.join(ROOT, src)).resize({ width: 1920 }).webp({ quality: 72, effort: 6 }).toFile(path.join(ROOT, out));
+  console.log(`${out}  ${(fs.statSync(path.join(ROOT, out)).size / 1024).toFixed(0)} KB`);
+}

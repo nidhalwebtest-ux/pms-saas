@@ -3,11 +3,14 @@ import { IBM_Plex_Sans, IBM_Plex_Sans_Arabic, IBM_Plex_Mono } from "next/font/go
 import Script from "next/script";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { headers } from "next/headers";
 import "@/styles/globals.css";
 import { Toaster } from "sonner";
 import { dirFor, type Locale } from "@/i18n/config";
 // direct import: the "@/components/ui" barrel would ship the whole dashboard UI kit to every page
 import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
+import { MetaPixel } from "@/components/analytics/MetaPixel";
+import { extractSiteSlug } from "@/lib/public-site/subdomain";
 
 const sans = IBM_Plex_Sans({
   subsets: ["latin", "latin-ext"],
@@ -52,6 +55,8 @@ export default async function RootLayout({
   const locale = (await getLocale()) as Locale;
   const messages = await getMessages();
   const dir = dirFor(locale);
+  // Tenant booking sites ({slug}.binaya.app) belong to customers — keep Binaya's pixel off them
+  const isTenantSite = Boolean(extractSiteSlug((await headers()).get("host")));
 
   return (
     <html lang={locale} dir={dir} className={`${sans.variable} ${arabic.variable} ${mono.variable}`}>
@@ -81,6 +86,7 @@ export default async function RootLayout({
           </ConfirmDialogProvider>
           <Toaster position="top-center" richColors dir={dir} />
         </NextIntlClientProvider>
+        {!isTenantSite && <MetaPixel />}
       </body>
     </html>
   );

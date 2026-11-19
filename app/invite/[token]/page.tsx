@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { type Role } from "@/lib/permissions";
-import { Badge, getUserRoleBadge } from "@/components/ui";
+// direct imports: the "@/components/ui" barrel pulls the whole UI kit into this bundle
+import { Badge } from "@/components/ui/Badge";
+import { getUserRoleBadge } from "@/components/ui/badge-helpers";
 import AcceptForm from "./AcceptForm";
 import { BuildingOffice2Icon, ClockIcon, ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 

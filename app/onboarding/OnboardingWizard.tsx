@@ -16,7 +16,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { createOrganization } from "./actions";
 import { logout } from "@/app/login/actions";
-import { PhoneInput } from "@/components/ui";
+// direct import: the "@/components/ui" barrel pulls the whole UI kit into this bundle
+import { PhoneInput } from "@/components/ui/form/PhoneInput";
 
 // ── Static data ───────────────────────────────────────────────────────────────
 

@@ -35,8 +35,29 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // IMPORTANT: always call getUser() to refresh the JWT
-  const { data: { user } } = await supabase.auth.getUser();
+  // Refreshes an expired session (rewriting the auth cookies) and verifies the
+  // JWT. The project signs tokens with asymmetric keys (ES256, JWKS), so
+  // getClaims() verifies LOCALLY against the cached public key — no network
+  // call to Supabase Auth on every request, unlike getUser().
+  // This only drives the redirect below. The authoritative check (which also
+  // catches a revoked/deleted user) stays in pages/routes via getAuthUser()
+  // → supabase.auth.getUser() (lib/current-user.ts).
+  // Safety net: no session → getClaims returns { data: null, error: null }.
+  // Any verification problem (error or throw, e.g. JWKS unreachable) falls
+  // back to the original network check, so a valid user is never bounced to
+  // /login just because local verification failed.
+  let user: { sub: string } | null = null;
+  try {
+    const { data: claimsData, error } = await supabase.auth.getClaims();
+    if (claimsData?.claims?.sub) user = { sub: claimsData.claims.sub };
+    else if (error) {
+      const { data } = await supabase.auth.getUser();
+      user = data.user ? { sub: data.user.id } : null;
+    }
+  } catch {
+    const { data } = await supabase.auth.getUser();
+    user = data.user ? { sub: data.user.id } : null;
+  }
 
   const { pathname } = request.nextUrl;
 

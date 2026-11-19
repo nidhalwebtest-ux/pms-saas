@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { publicOrgTag, publicSiteTag } from "@/lib/public-site/data";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { hasAccess } from "@/lib/access";
@@ -74,6 +75,18 @@ function toData(input: Partial<WebsiteForm>) {
 export type SaveResult = { ok: true } | { ok: false; error: string; field?: "slug" };
 
 /** Upsert the site config (keeps current status; used for Save-draft + step nav). */
+async function currentSlug(org: string): Promise<string | null> {
+  const row = await prisma.orgWebsite.findUnique({ where: { organizationId: org }, select: { slug: true } });
+  return row?.slug ?? null;
+}
+
+/** Drop the public site's cross-request cache (lib/public-site/data.ts) so
+ *  visitors see the change now, not after PUBLIC_CACHE_SECONDS. */
+function invalidatePublicSite(org: string, ...slugs: (string | null)[]) {
+  updateTag(publicOrgTag(org));
+  for (const s of new Set(slugs.filter(Boolean) as string[])) updateTag(publicSiteTag(s));
+}
+
 export async function saveWebsite(input: Partial<WebsiteForm>): Promise<SaveResult> {
   if (!(await hasAccess("settingsWebsite", "EDIT"))) return { ok: false, error: "forbidden" };
   const org = await orgId();
@@ -87,16 +100,22 @@ export async function saveWebsite(input: Partial<WebsiteForm>): Promise<SaveResu
   }
 
   const data = toData(input);
+  const previousSlug = await currentSlug(org);
+  let saved: { slug: string };
   try {
-    await prisma.orgWebsite.upsert({
+    saved = await prisma.orgWebsite.upsert({
       where: { organizationId: org },
       update: { ...data, ...(slug ? { slug } : {}) },
       create: { organizationId: org, slug: slug || `site-${org.slice(0, 8)}`, status: "DRAFT", ...data },
+      select: { slug: true },
     });
   } catch (e) {
     console.error("[saveWebsite]", e);
     return { ok: false, error: "generic" };
   }
+  // A live site reflects saved edits immediately (and a renamed slug stops
+  // serving the old cached site at the old address).
+  invalidatePublicSite(org, previousSlug, saved.slug);
   revalidatePath("/dashboard/settings/website");
   return { ok: true };
 }
@@ -125,6 +144,7 @@ export async function publishWebsite(input: WebsiteForm): Promise<PublishResult>
   if (clash && clash.organizationId !== org) return { ok: false, error: "slug_taken", field: "slug" };
 
   const data = toData(input);
+  const previousSlug = await currentSlug(org);
   try {
     await prisma.orgWebsite.upsert({
       where: { organizationId: org },
@@ -139,6 +159,7 @@ export async function publishWebsite(input: WebsiteForm): Promise<PublishResult>
   // Attach the subdomain on Vercel (no-op if creds absent, e.g. demo/local).
   const provision = await addTenantDomain(slug);
 
+  invalidatePublicSite(org, previousSlug, slug);
   revalidatePath(`/sites/${slug}`, "layout");
   revalidatePath("/dashboard/settings/website");
 
@@ -170,6 +191,7 @@ export async function setWebsiteStatus(status: "PUBLISHED" | "DISABLED"): Promis
     console.error("[setWebsiteStatus]", e);
     return { ok: false, error: "generic" };
   }
+  invalidatePublicSite(org, site.slug);
   revalidatePath(`/sites/${site.slug}`, "layout");
   revalidatePath("/dashboard/settings/website");
   return { ok: true };

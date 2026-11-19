@@ -16,9 +16,22 @@ import { getUnitPriceForRange } from "@/lib/pricing";
 import { calculateNights, collapseToSegments, sumSubtotals, type PriceSegment } from "@/lib/reservation-engine";
 import { NON_BLOCKING_STATUSES } from "@/lib/reservation-conflict";
 import { extractSiteSlug } from "@/lib/public-site/subdomain";
+import { unstable_cache } from "next/cache";
 import type { Prisma } from "@prisma/client";
 
 const num = (v: Prisma.Decimal | number | null | undefined): number => (v == null ? 0 : Number(v));
+
+// ── Cross-request cache for slow-changing public content ─────────────────────
+// Site settings, buildings and units are read on every public page view but
+// change rarely. They're cached for PUBLIC_CACHE_SECONDS and tagged so the
+// website wizard can invalidate them instantly on save/publish (updateTag in
+// app/dashboard/settings/website/actions.ts). Building/unit edits made
+// elsewhere in the PMS show up within PUBLIC_CACHE_SECONDS.
+// NOT cached: availability search + quotes — those must always be live.
+// Cached values are JSON-serialized, so DTOs must stay plain (no Date/Decimal).
+export const PUBLIC_CACHE_SECONDS = 60;
+export const publicSiteTag = (slug: string) => `public-site:${slug}`;
+export const publicOrgTag = (orgId: string) => `public-org:${orgId}`;
 
 // ── DTOs (the public contract) ───────────────────────────────────────────────
 
@@ -149,10 +162,27 @@ export async function getSiteBySlug(
   slug: string,
   opts: { allowUnpublished?: boolean } = {},
 ): Promise<PublicSite | null> {
+  // The wizard preview (allowUnpublished) always reads fresh.
+  if (opts.allowUnpublished) return loadSite(slug);
+  const site = await unstable_cache(() => loadSite(slug), ["public-site", slug], {
+    revalidate: PUBLIC_CACHE_SECONDS,
+    tags: [publicSiteTag(slug)],
+  })();
+  return site && site.status === "PUBLISHED" ? site : null;
+}
+
+async function loadSite(slug: string): Promise<PublicSite | null> {
   const row = await prisma.orgWebsite.findUnique({ where: { slug }, select: SITE_SELECT });
-  if (!row) return null;
-  if (!opts.allowUnpublished && row.status !== "PUBLISHED") return null;
-  return toPublicSite(row);
+  return row ? toPublicSite(row) : null;
+}
+
+/** Wrap an org-scoped public read in the shared cross-request cache. */
+function cachedForOrg<A extends unknown[], R>(name: string, fn: (orgId: string, ...args: A) => Promise<R>) {
+  return (orgId: string, ...args: A): Promise<R> =>
+    unstable_cache(() => fn(orgId, ...args), ["public-org", name, orgId, ...args.map(String)], {
+      revalidate: PUBLIC_CACHE_SECONDS,
+      tags: [publicOrgTag(orgId)],
+    })();
 }
 
 /** Resolve the active site directly from a request Host header (for API routes). */
@@ -170,7 +200,12 @@ const BUILDING_WHERE = (orgId: string): Prisma.PropertyWhereInput => ({
   isArchived: false,
 });
 
-export async function getBuildings(orgId: string): Promise<PublicBuilding[]> {
+export const getBuildings = cachedForOrg("buildings", loadBuildings);
+export const getBuilding = cachedForOrg("building", loadBuilding);
+export const getUnits = cachedForOrg("units", loadUnits);
+export const getUnit = cachedForOrg("unit", loadUnit);
+
+async function loadBuildings(orgId: string): Promise<PublicBuilding[]> {
   const rows = await prisma.property.findMany({
     where: BUILDING_WHERE(orgId),
     select: {
@@ -188,7 +223,7 @@ export async function getBuildings(orgId: string): Promise<PublicBuilding[]> {
   }));
 }
 
-export async function getBuilding(orgId: string, buildingId: string): Promise<PublicBuilding | null> {
+async function loadBuilding(orgId: string, buildingId: string): Promise<PublicBuilding | null> {
   const r = await prisma.property.findFirst({
     where: { ...BUILDING_WHERE(orgId), id: buildingId },
     select: {
@@ -228,7 +263,7 @@ function toPublicUnit(u: UnitRow): PublicUnit {
 }
 
 /** Units for a building (or the whole org if buildingId omitted). Public + bookable only. */
-export async function getUnits(orgId: string, buildingId?: string): Promise<PublicUnit[]> {
+async function loadUnits(orgId: string, buildingId?: string): Promise<PublicUnit[]> {
   const rows = await prisma.unit.findMany({
     where: {
       isActive: true,
@@ -241,7 +276,7 @@ export async function getUnits(orgId: string, buildingId?: string): Promise<Publ
   return rows.map(toPublicUnit);
 }
 
-export async function getUnit(orgId: string, unitId: string): Promise<PublicUnit | null> {
+async function loadUnit(orgId: string, unitId: string): Promise<PublicUnit | null> {
   const u = await prisma.unit.findFirst({
     where: {
       id: unitId, isActive: true,

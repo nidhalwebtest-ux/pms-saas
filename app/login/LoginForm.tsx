@@ -16,7 +16,8 @@ import {
   XMarkIcon,
   ShieldExclamationIcon,
 } from "@heroicons/react/24/outline";
-import { Alert } from "@/components/ui";
+// direct import: the "@/components/ui" barrel pulls the whole UI kit (~426 KB) into the login bundle
+import { Alert } from "@/components/ui/alert/Alert";
 
 // ─── Error keys ────────────────────────────────────────────────────────────────
 

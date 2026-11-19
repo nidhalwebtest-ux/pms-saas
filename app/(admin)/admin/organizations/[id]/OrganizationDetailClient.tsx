@@ -134,7 +134,7 @@ export type OrganizationDetailData = {
   pdfBrandColor: string;
   plan: string;
   subscriptionStatus: string;
-  maxProperties: number;
+  maxProperties: number | null;
   checkInPolicy: string;
   autoCheckout: boolean;
   showReservedStatus: boolean;
@@ -163,8 +163,11 @@ type TabKey = "overview" | "units" | "tenants" | "reservations" | "payments";
 
 export default function OrganizationDetailClient({
   data,
+  subscriptionPanel,
 }: {
   data: OrganizationDetailData;
+  /** Rendered between the KPI tiles and the tabs (server-built SubscriptionPanel). */
+  subscriptionPanel?: React.ReactNode;
 }) {
   const [activeTab, setActiveTab] = useState<TabKey>("overview");
   const [searchQuery, setSearchQuery] = useState("");
@@ -256,7 +259,13 @@ export default function OrganizationDetailClient({
             <div>
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-2xl font-bold text-fg">{data.name}</h1>
-                <Badge tone={data.subscriptionStatus === "ACTIVE" ? "success" : "warning"} appearance="subtle" size="sm" dot>
+                {/* calculated subscription status + plan (lib/subscription) */}
+                <Badge
+                  tone={data.subscriptionStatus === "ACTIVE" ? "success" : data.subscriptionStatus === "EXPIRED" ? "danger" : data.subscriptionStatus === "TRIALING" ? "info" : "neutral"}
+                  appearance="subtle"
+                  size="sm"
+                  dot
+                >
                   {data.subscriptionStatus}
                 </Badge>
                 <Badge tone="brand" appearance="subtle" size="sm">
@@ -294,6 +303,8 @@ export default function OrganizationDetailClient({
           </div>
         ))}
       </div>
+
+      {subscriptionPanel}
 
       {/* Tabs Bar */}
       <div className="border-b border-border-default">
@@ -407,8 +418,8 @@ export default function OrganizationDetailClient({
 
               <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                 <div className="rounded-xl bg-canvas p-3">
-                  <p className="text-xs text-fg-tertiary">Max Properties</p>
-                  <p className="font-semibold text-fg mt-0.5">{data.maxProperties} building(s)</p>
+                  <p className="text-xs text-fg-tertiary">Max Buildings (plan)</p>
+                  <p className="font-semibold text-fg mt-0.5">{data.maxProperties === null ? "Unlimited" : `${data.maxProperties} building(s)`}</p>
                 </div>
 
                 <div className="rounded-xl bg-canvas p-3">

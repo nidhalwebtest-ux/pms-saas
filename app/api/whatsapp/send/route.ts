@@ -3,6 +3,7 @@ import { requireOrgUser } from "@/lib/tenant";
 import { forbiddenIfNo } from "@/lib/access";
 import { prisma } from "@/lib/prisma";
 import * as wa from "@/lib/whatsapp/service";
+import { featureBlockedMessage } from "@/lib/subscription";
 import { renderText, namedFromPositional, type SendDocType, type TemplateLanguage, type VariableMap } from "@/lib/whatsapp/template-model";
 
 const DOC_ENTITY: Record<SendDocType, string> = { reservation: "reservations", invoice: "invoices", receipt: "payments" };
@@ -77,6 +78,9 @@ export async function POST(req: NextRequest) {
   const denied = await forbiddenIfNo(DOC_ENTITY[type], "VIEW");
   if (denied) return denied;
   if (!process.env.WHATSAPP_TOKEN_KEY) return NextResponse.json({ error: "notConnected" }, { status: 400 });
+  // Subscription feature gate (also stops sending if the plan lapsed after connecting).
+  const blocked = await featureBlockedMessage(u.organizationId, "whatsapp");
+  if (blocked) return NextResponse.json({ error: "planFeature", detail: blocked }, { status: 403 });
 
   const r = await wa.sendForDocument(u.organizationId, u.userId, { doc: type, id, templateId, to }, new URL(req.url).origin);
   if (!r.ok) return NextResponse.json({ error: r.error, detail: r.detail }, { status: 400 });

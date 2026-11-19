@@ -4,6 +4,9 @@ import { getSuperAdmin } from "@/lib/super-admin";
 import OrganizationDetailClient, {
   OrganizationDetailData,
 } from "./OrganizationDetailClient";
+import SubscriptionPanel, { type SubscriptionPanelData } from "./SubscriptionPanel";
+import { getSubscription, getUsage } from "@/lib/subscription";
+import { formatOmr, limitFor } from "@/lib/subscription-core";
 
 export default async function AdminOrganizationDetailPage({
   params,
@@ -121,6 +124,37 @@ export default async function AdminOrganizationDetailPage({
 
   if (!org) notFound();
 
+  // ── Subscription (calculated status, usage vs limits, history) ──────────────
+  const [sub, usage, plans, events] = await Promise.all([
+    getSubscription(org.id),
+    getUsage(org.id),
+    prisma.subscriptionPlan.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }] }),
+    prisma.subscriptionEvent.findMany({ where: { organizationId: org.id }, orderBy: { createdAt: "desc" }, take: 50 }),
+  ]);
+  const subscriptionData: SubscriptionPanelData = {
+    orgId: org.id,
+    status: sub.status,
+    planId: sub.plan?.id ?? null,
+    planName: sub.status === "DEMO" ? "Demo (unlimited)" : sub.plan?.nameEn ?? "Free",
+    effectivePlanName: sub.effectivePlan?.nameEn ?? "Unlimited",
+    trialEndsAt: sub.trialEndsAt?.toISOString() ?? null,
+    paidUntil: sub.paidUntil?.toISOString() ?? null,
+    billingCycle: sub.billingCycle,
+    daysLeft: sub.daysLeft,
+    usage,
+    limits: { buildings: limitFor(sub, "buildings"), units: limitFor(sub, "units"), users: limitFor(sub, "users") },
+    plans: plans.map((p) => ({
+      id: p.id, name: p.nameEn, isActive: p.isActive,
+      monthly: formatOmr(p.priceMonthlyBaisa), semiannual: formatOmr(p.priceSemiannualBaisa), yearly: formatOmr(p.priceYearlyBaisa),
+    })),
+    events: events.map((e) => ({
+      id: e.id, type: e.type, fromPlanKey: e.fromPlanKey, toPlanKey: e.toPlanKey,
+      amount: e.amountBaisa === null ? null : formatOmr(e.amountBaisa), billingCycle: e.billingCycle,
+      trialEndsAt: e.trialEndsAt?.toISOString() ?? null, paidUntil: e.paidUntil?.toISOString() ?? null,
+      note: e.note, actor: e.actor, createdAt: e.createdAt.toISOString(),
+    })),
+  };
+
   const data: OrganizationDetailData = {
     id: org.id,
     name: org.name,
@@ -131,9 +165,10 @@ export default async function AdminOrganizationDetailPage({
     currency: org.currency,
     timezone: org.timezone,
     pdfBrandColor: org.pdfBrandColor,
-    plan: org.plan,
-    subscriptionStatus: org.subscriptionStatus,
-    maxProperties: org.maxProperties,
+    // calculated subscription (the legacy org.plan / subscriptionStatus / maxProperties are no longer used)
+    plan: subscriptionData.planName,
+    subscriptionStatus: sub.status,
+    maxProperties: subscriptionData.limits.buildings,
     checkInPolicy: org.checkInPolicy,
     autoCheckout: org.autoCheckout,
     showReservedStatus: org.showReservedStatus,
@@ -223,5 +258,5 @@ export default async function AdminOrganizationDetailPage({
     })),
   };
 
-  return <OrganizationDetailClient data={data} />;
+  return <OrganizationDetailClient data={data} subscriptionPanel={<SubscriptionPanel data={subscriptionData} />} />;
 }

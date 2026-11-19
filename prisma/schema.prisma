@@ -232,9 +232,29 @@ model Organization {
   returnBalancePolicy      String @default("NET")
   returnRateBasis          String @default("CHARGED")
 
+  /// LEGACY (pre-subscriptions) — no longer read. The subscription now lives in
+  /// planId / trialEndsAt / paidUntil below (see lib/subscription.ts). Kept so
+  /// old rows stay readable; safe to drop once nothing references them.
   plan               String   @default("FREE")
   maxProperties      Int      @default(1)
   subscriptionStatus String   @default("ACTIVE")
+
+  /// SaaS subscription (Roadmap item 4). The effective status is CALCULATED,
+  /// never stored (lib/subscription.ts → getSubscription):
+  ///   trialEndsAt > now                → TRIALING on `plan`
+  ///   paid plan and paidUntil > now    → ACTIVE on `plan`
+  ///   plan with price 0                → ACTIVE (free / comped custom plan)
+  ///   otherwise                        → EXPIRED → falls back to the Free plan's limits
+  /// Nothing is deleted on expiry; only creating beyond the limits is blocked.
+  /// planId null = the Free plan (PlatformSettings.freePlanKey).
+  planId             String?
+  subscriptionPlan   SubscriptionPlan? @relation(fields: [planId], references: [id])
+  trialEndsAt        DateTime?
+  /// End of the period the customer has paid for (set by super-admin when a
+  /// payment is recorded; online payment comes with roadmap item 5).
+  paidUntil          DateTime?
+  billingCycle       String   @default("MONTHLY") // MONTHLY | SEMIANNUAL | YEARLY
+  subscriptionEvents SubscriptionEvent[]
 
   /// Demo sandbox orgs (binaya.app "Demo Tour"). Seeded, fully-featured,
   /// self-contained orgs created for a visitor from just a name + WhatsApp
@@ -1811,4 +1831,85 @@ model WhatsAppMessage {
 
   @@index([organizationId, createdAt])
   @@index([organizationId, entityType, entityId])
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  SaaS subscriptions (Roadmap item 4) — org-agnostic, super-admin managed.
+// ════════════════════════════════════════════════════════════════════════════
+
+/// A plan in the Binaya price list (Free / Starter / Pro / Ultimate / custom).
+/// Shown on the landing page and the in-app upgrade page when isPublic; custom
+/// deals for one customer use isPublic=false.
+model SubscriptionPlan {
+  id                    String   @id @default(uuid())
+  /// Stable identifier used in code and URLs (/login?mode=signup&plan=starter).
+  key                   String   @unique
+  nameEn                String
+  nameAr                String
+  descriptionEn         String?
+  descriptionAr         String?
+  /// Price PER MONTH in integer baisa for each billing cycle (1 OMR = 1000).
+  /// 0 on all three = a free plan.
+  priceMonthlyBaisa     Int      @default(0)
+  priceSemiannualBaisa  Int      @default(0)
+  priceYearlyBaisa      Int      @default(0)
+  /// Limits; null = unlimited.
+  maxBuildings          Int?
+  maxUnits              Int?
+  maxUsers              Int?
+  /// Feature switches checked by the app (lib/subscription.ts → hasFeature).
+  featureWebsite        Boolean  @default(false)
+  featureWhatsapp       Boolean  @default(false)
+  featureOnlinePayments Boolean  @default(false)
+  featureAiAssistant    Boolean  @default(false)
+  /// Marketing bullet points for pricing cards (landing + upgrade page).
+  bulletsEn             String[]
+  bulletsAr             String[]
+  isPublic              Boolean  @default(true)
+  isFeatured            Boolean  @default(false) // "Most popular" highlight
+  isActive              Boolean  @default(true)  // inactive = can't be newly assigned
+  sortOrder             Int      @default(0)
+
+  organizations         Organization[]
+  events                SubscriptionEvent[]
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+/// Append-only subscription history per organization (shown in super-admin).
+model SubscriptionEvent {
+  id             String            @id @default(uuid())
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  /// TRIAL_STARTED | TRIAL_EXTENDED | PLAN_CHANGED | PAYMENT_RECORDED |
+  /// PAID_UNTIL_SET | CANCELLED | NOTE
+  type           String
+  planId         String?
+  plan           SubscriptionPlan? @relation(fields: [planId], references: [id])
+  fromPlanKey    String?
+  toPlanKey      String?
+  amountBaisa    Int?
+  billingCycle   String?
+  trialEndsAt    DateTime?
+  paidUntil      DateTime?
+  note           String?
+  /// Super-admin email, or "system" for automatic events (signup, backfill).
+  actor          String
+  createdAt      DateTime          @default(now())
+
+  @@index([organizationId, createdAt])
+}
+
+/// Singleton platform-wide settings (super-admin → Subscriptions settings).
+model PlatformSettings {
+  id           String   @id @default(uuid())
+  /// Free trial length for new sign-ups, in days.
+  trialDays    Int      @default(30)
+  /// Plan new sign-ups trial on.
+  trialPlanKey String   @default("ultimate")
+  /// Plan an organization falls back to when its trial / paid period ends.
+  freePlanKey  String   @default("free")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { prisma } from "@/lib/prisma";
+import { startTrialForNewOrg } from "@/lib/subscription";
 
 export type OnboardingResult =
   | { ok: true }
@@ -81,7 +82,7 @@ export async function createOrganization(
 
   // ── Create organization ────────────────────────────────────────────────────
   try {
-    await prisma.organization.create({
+    const org = await prisma.organization.create({
       data: {
         name,
         phone,
@@ -95,6 +96,9 @@ export async function createOrganization(
         users:    { connect: { id: user.id } },
       },
     });
+    // Free trial (PlatformSettings: length + plan). Never blocks signup — on
+    // failure the org simply stays on the Free plan and admin can fix it.
+    await startTrialForNewOrg(org.id).catch((e) => console.error("[createOrganization] trial start failed:", e));
   } catch (err) {
     console.error("[createOrganization] DB error:", err);
     return { ok: false, error: "generic" };

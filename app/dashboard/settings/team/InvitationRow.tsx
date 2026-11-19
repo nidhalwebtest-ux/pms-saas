@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { ClockIcon, ArrowPathIcon, XMarkIcon, EnvelopeIcon } from "@heroicons/react/24/outline";
 import { type Role } from "@/lib/permissions";
@@ -52,7 +53,8 @@ export default function InvitationRow({ invite }: { invite: Invitation }) {
 
   function handleResend() {
     startTransition(async () => {
-      await resendInvitation(invite.id);
+      const res = await resendInvitation(invite.id);
+      if (res?.error) toast.error(res.error); // e.g. plan seat limit reached
     });
   }
 

@@ -10,6 +10,7 @@ import {
   ChatBubbleLeftRightIcon,
   BuildingOffice2Icon,
   Cog6ToothIcon,
+  CreditCardIcon,
 } from "@heroicons/react/24/outline";
 
 const TABS = [
@@ -18,6 +19,7 @@ const TABS = [
   { href: "/admin/followups", key: "followups", icon: BellAlertIcon, exact: false },
   { href: "/admin/questions", key: "questions", icon: ChatBubbleLeftRightIcon, exact: false },
   { href: "/admin/organizations", key: "organizations", icon: BuildingOffice2Icon, exact: false },
+  { href: "/admin/subscriptions", key: "subscriptions", icon: CreditCardIcon, exact: false },
   { href: "/admin/settings", key: "settings", icon: Cog6ToothIcon, exact: false },
 ] as const;
 

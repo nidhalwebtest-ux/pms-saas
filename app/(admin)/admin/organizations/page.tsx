@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSuperAdmin } from "@/lib/super-admin";
 import { OrganizationsListClient, type OrgListItem } from "./OrganizationsListClient";
+import { getPlatformSettings } from "@/lib/subscription";
+import { resolveSubscription } from "@/lib/subscription-core";
 
 export default async function AdminOrganizationsPage() {
   if (!(await getSuperAdmin())) redirect("/dashboard");
@@ -21,6 +23,10 @@ export default async function AdminOrganizationsPage() {
         demoCreatedAt: true,
         demoContactName: true,
         demoContactWhatsapp: true,
+        trialEndsAt: true,
+        paidUntil: true,
+        billingCycle: true,
+        subscriptionPlan: true,
         _count: {
           select: {
             users: true,
@@ -44,6 +50,10 @@ export default async function AdminOrganizationsPage() {
     }),
   ]);
 
+  // Calculated subscription per org (pure — no extra query per org).
+  const settings = await getPlatformSettings();
+  const freePlan = await prisma.subscriptionPlan.findUnique({ where: { key: settings.freePlanKey } });
+
   const unitsByOrg = new Map<string, number>();
   for (const p of propsForUnits) {
     unitsByOrg.set(p.organizationId, (unitsByOrg.get(p.organizationId) ?? 0) + p._count.units);
@@ -53,7 +63,10 @@ export default async function AdminOrganizationsPage() {
     if (g.organizationId) paymentsByOrg.set(g.organizationId, g._count._all);
   }
 
-  const items: OrgListItem[] = orgs.map((o) => ({
+  const items: OrgListItem[] = orgs.map((o) => {
+    const sub = resolveSubscription(o, freePlan);
+    return {
+    subscription: { status: sub.status, planName: sub.plan?.nameEn ?? "Free", daysLeft: sub.daysLeft },
     id: o.id,
     name: o.name,
     city: o.city,
@@ -72,7 +85,8 @@ export default async function AdminOrganizationsPage() {
       payments: paymentsByOrg.get(o.id) ?? 0,
       expenses: o._count.expenses,
     },
-  }));
+  };
+  });
 
   return (
     <div className="space-y-5">

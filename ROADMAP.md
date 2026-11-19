@@ -12,8 +12,8 @@ Update the **Status** column when an item starts or finishes.
 |----|-------------------------------------------|--------------------|------|---------|
 | 1  | Performance audit & speed-up              | 1 · Foundation     | M    | Done (2 rounds — docs/perf/; live dashboard timing pending a login) |
 | 2  | Simplify the landing page                 | 1 · Foundation     | S    | Done (14 → 8 screens; tabs instead of scroll story) |
-| 3  | Test WhatsApp with a real number          | 1 · Foundation     | S    | Todo    |
-| 4  | Subscriptions, plans & free trial         | 2 · Revenue        | L    | Todo    |
+| 3  | Test WhatsApp with a real number          | 1 · Foundation     | S    | Postponed (needs Meta Business account + spare number) |
+| 4  | Subscriptions, plans & free trial         | 2 · Revenue        | L    | Done — needs logged-in check of admin + billing screens |
 | 5  | Bank gateway: payment links               | 2 · Revenue        | L    | Todo    |
 | 6  | Pricing Management module                 | 2 · Revenue        | M    | Todo    |
 | 7  | Better transaction PDFs                   | 3 · Core polish    | M    | Todo    |

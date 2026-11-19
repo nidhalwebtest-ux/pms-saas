@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { hasAccess } from "@/lib/access";
+import { planLimitMessage, PlanLimitReached } from "@/lib/subscription";
 
 export type ActionResponse = {
   error?: string;
@@ -62,6 +63,10 @@ export async function createPropertyCore(
   input: CreatePropertyInput,
   organizationId: string,
 ): Promise<{ id: string }> {
+  // Subscription plan limit (also covers CSV import, which calls this core).
+  const limitMsg = await planLimitMessage(organizationId, "buildings");
+  if (limitMsg) throw new PlanLimitReached(limitMsg);
+
   const property = await prisma.property.create({
     data: {
       name:          input.name,
@@ -109,6 +114,7 @@ export async function createProperty(formData: FormData): Promise<ActionResponse
     revalidatePath("/dashboard/properties");
     return { success: true, id: property.id };
   } catch (err) {
+    if (err instanceof PlanLimitReached) return { error: err.message };
     console.error(err);
     return { error: tErr("createFailed") };
   }
@@ -193,11 +199,18 @@ export async function restoreProperty(propertyId: string): Promise<ActionRespons
 
   const property = await prisma.property.findUnique({
     where: { id: propertyId },
-    select: { organizationId: true, isArchived: true },
+    select: { organizationId: true, isArchived: true, _count: { select: { units: true } } },
   });
   if (!property)                                  return { error: tErr("notFound") };
   if (property.organizationId !== organizationId) return { error: tErr("unauthorized") };
   if (!property.isArchived)                       return { error: tErr("notArchived") };
+
+  // Archived buildings (and their units) don't count toward the plan, so
+  // restoring one adds the building AND its units back to the usage.
+  const limitMsg =
+    (await planLimitMessage(organizationId, "buildings", 1, "restoreBuilding")) ??
+    (await planLimitMessage(organizationId, "units", property._count.units, "restoreBuilding"));
+  if (limitMsg) return { error: limitMsg };
 
   await prisma.property.update({
     where: { id: propertyId },

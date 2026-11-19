@@ -141,6 +141,7 @@ const navigationConfig: NavItem[] = [
       { labelKey: "rolesPermissions", href: "/dashboard/settings/roles" },
       { labelKey: "myProfile",   href: "/dashboard/settings/profile" },
       { labelKey: "organization", href: "/dashboard/settings/organization" },
+      { labelKey: "billing", href: "/dashboard/settings/billing" },
       { labelKey: "reservationSettings", href: "/dashboard/settings/reservations" },
       { labelKey: "paymentSettings", href: "/dashboard/settings/payments" },
       { labelKey: "returnSettings", href: "/dashboard/settings/returns" },
@@ -180,6 +181,7 @@ const CHILD_REQUIRES: Record<string, { entity: string; level: PermissionLevel }>
   "/dashboard/settings/team":              { entity: "team",                 level: "VIEW" },
   "/dashboard/settings/roles":             { entity: "roles",                level: "VIEW" },
   "/dashboard/settings/organization":      { entity: "organization",         level: "VIEW" },
+  "/dashboard/settings/billing":           { entity: "organization",         level: "VIEW" }, // subscription: same audience as org settings
   "/dashboard/settings/reservations":      { entity: "settingsReservations", level: "VIEW" },
   "/dashboard/settings/payments":          { entity: "settingsPayments",     level: "VIEW" },
   "/dashboard/settings/returns":           { entity: "settingsReturns",      level: "VIEW" },

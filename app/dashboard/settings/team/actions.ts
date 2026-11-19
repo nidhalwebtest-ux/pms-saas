@@ -9,6 +9,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { prisma } from "@/lib/prisma";
 import { can, ROLE_LABELS } from "@/lib/permissions";
 import { sendInvitationEmail } from "@/lib/email";
+import { planLimitMessage } from "@/lib/subscription";
 import type { UserRole } from "@prisma/client";
 
 const INVITE_EXPIRY_MS = 72 * 60 * 60 * 1000; // 72 hours
@@ -80,6 +81,10 @@ export async function sendInvitation(
   });
   if (pending) return { error: tErr("pendingExists") };
 
+  // Subscription seat limit (members + pending invitations).
+  const limitMsg = await planLimitMessage(caller.organizationId, "users");
+  if (limitMsg) return { error: limitMsg };
+
   // Get org name for the email
   const org = await prisma.organization.findUnique({
     where:  { id: caller.organizationId },
@@ -118,7 +123,7 @@ export async function sendInvitation(
 
 // ── Resend invitation ─────────────────────────────────────────────────────────
 
-export async function resendInvitation(invitationId: string) {
+export async function resendInvitation(invitationId: string): Promise<{ error?: string } | void> {
   const caller = await getCallerWithOrg();
   if (!can(caller.role, "manageTeam")) return;
 
@@ -128,6 +133,12 @@ export async function resendInvitation(invitationId: string) {
   });
   if (!invite || invite.organizationId !== caller.organizationId) return;
   if (invite.usedAt || invite.cancelledAt) return;
+
+  // Reviving an EXPIRED invitation takes a seat again → subscription seat limit.
+  if (invite.expiresAt <= new Date()) {
+    const limitMsg = await planLimitMessage(caller.organizationId, "users");
+    if (limitMsg) return { error: limitMsg };
+  }
 
   // Extend expiry by 72h from now
   const updated = await prisma.invitation.update({

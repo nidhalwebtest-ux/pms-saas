@@ -2,6 +2,7 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { publicOrgTag, publicSiteTag } from "@/lib/public-site/data";
+import { featureBlockedMessage } from "@/lib/subscription";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { hasAccess } from "@/lib/access";
@@ -72,9 +73,9 @@ function toData(input: Partial<WebsiteForm>) {
   };
 }
 
-export type SaveResult = { ok: true } | { ok: false; error: string; field?: "slug" };
+/** `message` = an already-translated explanation (e.g. plan feature gate) the UI shows as is. */
+export type SaveResult = { ok: true } | { ok: false; error: string; field?: "slug"; message?: string };
 
-/** Upsert the site config (keeps current status; used for Save-draft + step nav). */
 async function currentSlug(org: string): Promise<string | null> {
   const row = await prisma.orgWebsite.findUnique({ where: { organizationId: org }, select: { slug: true } });
   return row?.slug ?? null;
@@ -87,6 +88,7 @@ function invalidatePublicSite(org: string, ...slugs: (string | null)[]) {
   for (const s of new Set(slugs.filter(Boolean) as string[])) updateTag(publicSiteTag(s));
 }
 
+/** Upsert the site config (keeps current status; used for Save-draft + step nav). */
 export async function saveWebsite(input: Partial<WebsiteForm>): Promise<SaveResult> {
   if (!(await hasAccess("settingsWebsite", "EDIT"))) return { ok: false, error: "forbidden" };
   const org = await orgId();
@@ -124,7 +126,7 @@ export async function saveWebsite(input: Partial<WebsiteForm>): Promise<SaveResu
 
 export type PublishResult =
   | { ok: true; url: string; host: string; domainWarning?: string }
-  | { ok: false; error: string; field?: "slug" | "whatsappNumber" | "siteName" };
+  | { ok: false; error: string; field?: "slug" | "whatsappNumber" | "siteName"; message?: string };
 
 /**
  * Validate required fields, persist as PUBLISHED, register the Vercel subdomain,
@@ -134,6 +136,10 @@ export async function publishWebsite(input: WebsiteForm): Promise<PublishResult>
   if (!(await hasAccess("settingsWebsite", "EDIT"))) return { ok: false, error: "forbidden" };
   const org = await orgId();
   if (!org) return { ok: false, error: "no_org" };
+
+  // Subscription feature gate (booking website: Pro/Growth and up).
+  const blocked = await featureBlockedMessage(org, "website");
+  if (blocked) return { ok: false, error: "plan_feature", message: blocked };
 
   const slug = str(input.slug).toLowerCase();
   if (isReservedSlug(slug) || !isValidSlug(slug)) return { ok: false, error: "bad_slug", field: "slug" };
@@ -180,6 +186,12 @@ export async function setWebsiteStatus(status: "PUBLISHED" | "DISABLED"): Promis
 
   const site = await prisma.orgWebsite.findUnique({ where: { organizationId: org }, select: { slug: true } });
   if (!site) return { ok: false, error: "no_site" };
+
+  // Turning the site back ON needs the plan feature; turning it off never does.
+  if (status === "PUBLISHED") {
+    const blocked = await featureBlockedMessage(org, "website");
+    if (blocked) return { ok: false, error: "plan_feature", message: blocked };
+  }
 
   try {
     await prisma.orgWebsite.update({

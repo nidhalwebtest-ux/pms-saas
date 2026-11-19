@@ -31,6 +31,8 @@ export interface OrgListItem {
   demoCreatedAt: string | null; // ISO
   demoContactName: string | null;
   demoContactWhatsapp: string | null;
+  /** Calculated (lib/subscription-core) — status, assigned plan, days left in trial/paid period. */
+  subscription: { status: "TRIALING" | "ACTIVE" | "EXPIRED" | "DEMO"; planName: string; daysLeft: number | null };
   counts: {
     users: number;
     buildings: number;
@@ -121,6 +123,16 @@ export function OrganizationsListClient({ orgs }: { orgs: OrgListItem[] }) {
                         </h3>
                         {o.isDemo && <Badge tone="brand" size="sm">{t("demoBadge")}</Badge>}
                         {expired && <Badge tone="neutral" size="sm">{t("expiredBadge")}</Badge>}
+                        {!o.isDemo && (
+                          <Badge
+                            tone={o.subscription.status === "ACTIVE" ? "success" : o.subscription.status === "EXPIRED" ? "danger" : "info"}
+                            appearance="subtle"
+                            size="sm"
+                          >
+                            {o.subscription.planName} · {o.subscription.status.toLowerCase()}
+                            {o.subscription.daysLeft !== null && ` · ${o.subscription.daysLeft}d`}
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-xs text-fg-tertiary">
                         {o.city} · {t("since", { date: fmtDate(o.createdAt) })}

@@ -16,7 +16,10 @@ import { prisma } from "@/lib/prisma";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import { getAccessiblePropertyIds } from "@/lib/property-scope";
 import { type Role } from "@/lib/permissions";
-import { resolvePermissions, navAccessFor } from "@/lib/rbac";
+import { resolvePermissions, navAccessFor, atLeast } from "@/lib/rbac";
+import { getLocale } from "next-intl/server";
+import { getSubscription } from "@/lib/subscription";
+import SubscriptionBanner, { type SubscriptionBannerProps } from "@/components/dashboard/SubscriptionBanner";
 import { OrgProvider } from "@/lib/org-context";
 import { PermissionsProvider } from "@/components/PermissionsProvider";
 
@@ -52,7 +55,8 @@ export default async function DashboardLayout({
   //    user's accessible buildings via the relation, so it doesn't have to wait
   //    for the assignment lookup (no assignments = unrestricted → all org).
   //  - pending website booking-request count for the nav badge (only when visible)
-  const [isSuperAdmin, accessible, properties, rawSelectedPropertyId, websiteRequestCount] =
+  const canSeeBilling = access.isOwner || atLeast(access.perms, "organization", "VIEW");
+  const [isSuperAdmin, accessible, properties, rawSelectedPropertyId, websiteRequestCount, subscription] =
     await Promise.all([
       getSuperAdmin().then(Boolean),
       access.isOwner ? Promise.resolve(null) : getAccessiblePropertyIds(dbUser.id, organizationId),
@@ -84,7 +88,25 @@ export default async function DashboardLayout({
             },
           })
         : Promise.resolve(0),
+      // subscription banner (owners / org admins only) — calculated status, request-cached
+      canSeeBilling ? getSubscription(organizationId) : Promise.resolve(null),
     ]);
+
+  // Banner rules: last 7 days of a trial, last 7 days of a paid period, or ended.
+  const locale = await getLocale();
+  const banner: SubscriptionBannerProps | null = (() => {
+    if (!subscription || subscription.status === "DEMO") return null;
+    const p = subscription.effectivePlan;
+    const planName = p ? (locale === "ar" ? p.nameAr : p.nameEn) : "";
+    if (subscription.status === "TRIALING" && (subscription.daysLeft ?? 99) <= 7) {
+      return { kind: "trial", days: subscription.daysLeft ?? 0, planName };
+    }
+    if (subscription.status === "EXPIRED") return { kind: "expired", days: 0, planName };
+    if (subscription.status === "ACTIVE" && subscription.daysLeft !== null && subscription.daysLeft <= 7) {
+      return { kind: "paidEnding", days: subscription.daysLeft, planName };
+    }
+    return null;
+  })();
 
   // Ignore a selected building the user can no longer access (falls back to "All").
   const selectedPropertyId =
@@ -125,6 +147,8 @@ export default async function DashboardLayout({
           />
           <Navigation role={role} navAccess={navAccess} websiteRequestCount={websiteRequestCount} />
         </div>
+
+        {banner && <SubscriptionBanner {...banner} />}
 
         <main className="pb-6 pt-4 sm:pb-10 sm:pt-6">
           <div className="px-3 sm:px-6 lg:px-8">{children}</div>

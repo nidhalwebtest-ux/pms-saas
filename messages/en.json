@@ -456,6 +456,7 @@
     "rolesPermissions": "Roles & Permissions",
     "myProfile": "My Profile",
     "organization": "Organization",
+    "billing": "Plan & billing",
     "reservationList": "Reservations list",
     "newReservation": "New reservation",
     "paymentsList": "Payments list",
@@ -4664,6 +4665,7 @@
       "errors": {
         "generic": "Something went wrong. Please try again.",
         "forbidden": "You don't have permission to change WhatsApp settings.",
+        "planFeature": "Not included in your current plan",
         "wabaIdFormat": "The Business Account ID should contain only digits.",
         "phoneIdFormat": "The Phone number ID should contain only digits.",
         "tokenFormat": "The access token looks incomplete.",
@@ -5929,7 +5931,7 @@
       ]
     },
     "endcard": {
-      "sub": "Start free with one building and up to 5 units, or talk to us and we'll set up a demo.",
+      "sub": "Start your free trial — no credit card — or talk to us and we'll set up a demo.",
       "ctaWhatsapp": "WhatsApp us",
       "ctaSignup": "Start your free trial",
       "whatsappChip": "Contact us on WhatsApp",
@@ -5962,12 +5964,12 @@
       "title": "Questions, answered.",
       "items": [
         {
-          "q": "Is it really free?",
-          "a": "Yes. One building with up to 5 units is free forever, with unlimited reservations and invoicing and no credit card. The first 5 units are free on every plan."
+          "q": "Is there a free trial?",
+          "a": "Yes. Every new account gets a free trial of the full system — every feature, no credit card. After the trial, choose a plan, or stay on the Free plan (one building, up to 5 units) for as long as you like."
         },
         {
-          "q": "How is pricing calculated after the free units?",
-          "a": "You pay per unit per month by band: units 6 to 20 at 1.00 OMR, 21 to 50 at 0.70 OMR, and 51 and up at 0.50 OMR, with 20% off when you pay yearly."
+          "q": "How much does it cost?",
+          "a": "Plans are a fixed monthly price for your whole organization — see Starter, Pro and Ultimate above. Paying every 6 months saves 10%, and paying yearly saves more. You can upgrade or change plan any time."
         },
         {
           "q": "Does it really prevent double bookings?",
@@ -6126,6 +6128,7 @@
       "followups": "Follow-ups",
       "questions": "Questions",
       "organizations": "Organizations",
+      "subscriptions": "Subscriptions",
       "settings": "Settings",
       "title": "Binaya Sales CRM",
       "founder": "Founder",
@@ -6994,6 +6997,75 @@
         "discountAmount": "Discount (OMR)",
         "notes": "Notes"
       }
+    }
+  },
+  "subscription": {
+    "limit": {
+      "buildings": "Your {plan} plan allows up to {limit} buildings. Upgrade your plan to add more.",
+      "units": "Your {plan} plan allows up to {limit} units. Upgrade your plan to add more.",
+      "users": "Your {plan} plan allows up to {limit} users (pending invitations count too). Upgrade your plan to add more.",
+      "restoreBuilding": "Restoring this building would exceed your {plan} plan's limit. Upgrade your plan or archive another building first."
+    },
+    "feature": {
+      "website": "The booking website isn't included in your {plan} plan. Upgrade to publish it.",
+      "whatsapp": "WhatsApp is included in the Ultimate plan. Upgrade to connect your number."
+    },
+    "plans": {
+      "eyebrow": "Pricing & plans",
+      "title": "Choose the plan that fits your properties",
+      "sub": "Every new account starts with a {days}-day free trial of everything — no credit card. Change or upgrade any time.",
+      "monthly": "Monthly",
+      "semiannual": "6 months",
+      "yearly": "Yearly",
+      "semiannualBadge": "10% off",
+      "yearlyBadge": "Save up to {percent}%",
+      "perMonth": "OMR / month",
+      "billedMonthly": "Billed monthly",
+      "billedSemiannual": "Billed every 6 months",
+      "billedYearly": "Billed yearly",
+      "totalSemiannual": "{amount} OMR every 6 months",
+      "totalYearly": "{amount} OMR per year",
+      "mostPopular": "Most popular",
+      "ctaStart": "Start free trial",
+      "ctaChoose": "Choose this plan",
+      "ctaCurrent": "Your current plan",
+      "freeNote": "Or stay on the {plan} plan — {limits} — free, for as long as you like.",
+      "freeLimits": "{buildings, plural, one {1 building} other {# buildings}}, up to {units} units"
+    },
+    "billing": {
+      "title": "Plan & billing",
+      "subtitle": "Your subscription, what it includes, and how much of it you use.",
+      "currentPlan": "Current plan",
+      "status": {
+        "TRIALING": "Free trial",
+        "ACTIVE": "Active",
+        "EXPIRED": "Ended",
+        "DEMO": "Demo"
+      },
+      "trialLeft": "{days, plural, =0 {Trial ends today} one {# day left in your trial} other {# days left in your trial}} (ends {date})",
+      "paidUntil": "Paid until {date}",
+      "freeActive": "Free plan — no end date",
+      "expired": "Your trial or paid period has ended, so the {plan} plan's limits apply. Everything you created stays; you just can't add beyond the limits.",
+      "usage": "Usage",
+      "buildings": "Buildings",
+      "units": "Units",
+      "users": "Users (incl. invitations)",
+      "unlimited": "Unlimited",
+      "includes": "Included features",
+      "fWebsite": "Booking website",
+      "fWhatsapp": "WhatsApp",
+      "fOnlinePayments": "Online payments",
+      "fAiAssistant": "AI assistant",
+      "choose": "Plans",
+      "howToPay": "To subscribe or change plan, message us on WhatsApp — we'll activate it right away (bank transfer or cash).",
+      "whatsappMessage": "Hello Binaya, I'd like to subscribe to the {plan} plan ({cycle}) for {org}.",
+      "demo": "This is a demo account — every feature is unlocked."
+    },
+    "banner": {
+      "trial": "{days, plural, =0 {Your free trial ends today.} one {Your free trial ends tomorrow.} other {Your free trial ends in # days.}}",
+      "expired": "Your free trial has ended — you're on the {plan} plan. Your data is safe; adding more is limited.",
+      "paidEnding": "{days, plural, =0 {Your subscription ends today.} one {Your subscription ends tomorrow.} other {Your subscription ends in # days.}}",
+      "cta": "See plans"
     }
   }
 }

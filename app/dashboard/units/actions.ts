@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { hasAccess } from "@/lib/access";
+import { planLimitMessage } from "@/lib/subscription";
 
 export type ActionResponse = {
   error?: string;
@@ -76,6 +77,10 @@ export async function createUnit(formData: FormData): Promise<ActionResponse> {
   if (property?.organizationId !== dbUser?.organizationId) {
     return { error: "Unauthorized to add units to this property." };
   }
+
+  // Subscription plan limit (also covers CSV import, which calls createUnit).
+  const limitMsg = await planLimitMessage(property!.organizationId, "units");
+  if (limitMsg) return { error: limitMsg };
 
   try {
     const newUnit = await prisma.unit.create({
@@ -249,6 +254,10 @@ export async function bulkCreateUnits(
     .map((u) => ({ ...u, basePrice: Number.isFinite(u.basePrice) && u.basePrice >= 0 ? u.basePrice : 0 }));
   if (validUnits.length === 0) return { created: 0, error: "No valid units provided." };
   if (validUnits.length > 200) return { created: 0, error: "Maximum 200 units per batch." };
+
+  // Subscription plan limit: the whole batch must fit (all-or-nothing, like the tx below).
+  const limitMsg = await planLimitMessage(property.organizationId, "units", validUnits.length);
+  if (limitMsg) return { created: 0, error: limitMsg };
 
   const result = await prisma.$transaction(async (tx) => {
     const created = await Promise.all(

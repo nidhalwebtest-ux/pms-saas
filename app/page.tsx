@@ -5,13 +5,14 @@ import HeroSection from "@/components/marketing/sections/HeroSection";
 import PainSection from "@/components/marketing/v2/sections/PainSection";
 import SolutionSection from "@/components/marketing/v2/sections/SolutionSection";
 import StripSection from "@/components/marketing/v2/sections/StripSection";
-import { PricingStory } from "@/components/marketing/v2/sections/PricingStory";
+import PlansSection from "@/components/marketing/v2/sections/PlansSection";
 import FaqSection from "@/components/marketing/sections/FaqSection";
 import { EndCard } from "@/components/marketing/v2/sections/EndCard";
 import FloatingWhatsApp from "@/components/marketing/FloatingWhatsApp";
 import { landingFontClass } from "@/components/marketing/v2/fonts";
 import { getTranslations } from "next-intl/server";
-import { FREE_UNITS, PRICING_BANDS, formatBaisa } from "@/lib/saas-pricing";
+import { getPublicPlans } from "@/lib/subscription";
+import { formatOmr } from "@/lib/subscription-core";
 
 export const metadata: Metadata = {
   title: "نظام بناية لإدارة الفنادق والشقق المفروشة | Binaya PMS — Hotel & Furnished Apartment Management Software",
@@ -79,32 +80,28 @@ export const metadata: Metadata = {
 export default async function MarketingHomePage() {
   const tFaq = await getTranslations("marketing.faq");
   const faqItems = tFaq.raw("items") as { q: string; a: string }[];
-  const firstPaid = PRICING_BANDS.find((b) => b.rateBaisa > 0)!;
+  const { plans } = await getPublicPlans();
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: "Binaya PMS",
     operatingSystem: "Web-based Platform",
     applicationCategory: "BusinessApplication",
-    // matches lib/saas-pricing.ts: free up to FREE_UNITS units, then banded per-unit monthly rates
-    offers: [
-      {
-        "@type": "Offer",
-        name: `Free — one building, up to ${FREE_UNITS} units`,
-        price: "0",
-        priceCurrency: "OMR",
-      },
-      {
-        "@type": "Offer",
-        name: "Per unit, per month",
-        priceSpecification: {
-          "@type": "UnitPriceSpecification",
-          price: formatBaisa(firstPaid.rateBaisa),
-          priceCurrency: "OMR",
-          referenceQuantity: { "@type": "QuantitativeValue", value: 1, unitText: "unit per month" },
-        },
-      },
-    ],
+    // matches the public plans shown in the pricing section (SubscriptionPlan table)
+    offers: plans.map((p) => ({
+      "@type": "Offer",
+      name: p.nameEn,
+      ...(p.free
+        ? { price: "0", priceCurrency: "OMR" }
+        : {
+            priceSpecification: {
+              "@type": "UnitPriceSpecification",
+              price: formatOmr(p.monthly),
+              priceCurrency: "OMR",
+              unitText: "MONTH",
+            },
+          }),
+    })),
     description:
       "Binaya PMS is the premier hotel and furnished-apartment management platform in Oman designed for hospitality operators to handle reservations, guests, invoicing, and expenses.",
     publisher: {
@@ -145,7 +142,7 @@ export default async function MarketingHomePage() {
         <PainSection />
         <SolutionSection />
         <StripSection />
-        <PricingStory />
+        <PlansSection />
         <FaqSection />
         <EndCard />
       </main>

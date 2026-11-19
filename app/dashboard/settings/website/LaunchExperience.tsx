@@ -166,7 +166,8 @@ export default function LaunchExperience({
               <ExclamationTriangleIcon className="h-8 w-8 text-red-500" />
             </div>
             <h2 className="text-lg font-bold text-gray-900">{t("launch.errorTitle")}</h2>
-            <p className="mt-1 text-sm text-gray-500">{t("launch.errorSub")}</p>
+            {/* a translated reason from the server (e.g. not included in your plan) beats the generic line */}
+            <p className="mt-1 text-sm text-gray-500">{(!result.ok && result.message) || t("launch.errorSub")}</p>
             <Button variant="secondary" fullWidth className="mt-5" onClick={onClose}>{t("launch.errorBack")}</Button>
           </div>
         )}

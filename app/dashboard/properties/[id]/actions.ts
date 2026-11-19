@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import { hasAccess } from "@/lib/access";
+import { planLimitMessage } from "@/lib/subscription";
 
 export async function createUnit(formData: FormData) {
   const supabase = await createClient();
@@ -39,6 +40,11 @@ export async function createUnit(formData: FormData) {
   if (property?.organizationId !== dbUser?.organizationId) {
     throw new Error("Unauthorized access to this property");
   }
+
+  // Subscription plan limit (this legacy action is unused by the UI — units
+  // are created via app/dashboard/units/actions.ts — but stays guarded).
+  const limitMsg = await planLimitMessage(property!.organizationId, "units");
+  if (limitMsg) throw new Error(limitMsg);
 
   // 3. Create the Unit
   await prisma.unit.create({

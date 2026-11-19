@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireOrgUser } from "@/lib/tenant";
 import { hasAccess } from "@/lib/access";
 import * as wa from "@/lib/whatsapp/service";
+import { featureBlockedMessage } from "@/lib/subscription";
 import { STARTERS, type TemplateDraft, type TemplateLanguage, type TemplatePurpose } from "@/lib/whatsapp/template-model";
 
 export type ActionResult<T = undefined> = { ok: true; data?: T } | { ok: false; error: string; detail?: string };
@@ -28,6 +29,9 @@ function done<T>(r: wa.ServiceResult<T>): ActionResult<T> {
 export async function connectWhatsApp(input: { wabaId: string; phoneNumberId: string; accessToken: string }): Promise<ActionResult> {
   const u = await editor();
   if (!u) return { ok: false, error: "forbidden" };
+  // Subscription feature gate (WhatsApp is an Ultimate-plan feature).
+  const blocked = await featureBlockedMessage(u.organizationId, "whatsapp");
+  if (blocked) return { ok: false, error: "planFeature", detail: blocked };
   const r = await wa.connectManual(u.organizationId, u.userId, input);
   return r.ok ? done({ ok: true, data: undefined }) : { ok: false, error: r.error, detail: r.detail };
 }

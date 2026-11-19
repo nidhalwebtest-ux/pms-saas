@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Sans, IBM_Plex_Sans_Arabic, IBM_Plex_Mono } from "next/font/google";
 import Script from "next/script";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { headers } from "next/headers";
+// Self-hosted fonts (public/fonts) + the --font-* variables. Replaces next/font/google,
+// whose build-time downloads intermittently failed Turbopack builds (prod deploy 2026-11-19).
+// Regenerate with: node scripts/fonts/sync-google-fonts.mjs
+import "@/styles/fonts.css";
 import "@/styles/globals.css";
 import { Toaster } from "sonner";
 import { dirFor, type Locale } from "@/i18n/config";
@@ -11,27 +14,6 @@ import { dirFor, type Locale } from "@/i18n/config";
 import { ConfirmDialogProvider } from "@/components/ui/confirm-dialog";
 import { MetaPixel } from "@/components/analytics/MetaPixel";
 import { extractSiteSlug } from "@/lib/public-site/subdomain";
-
-const sans = IBM_Plex_Sans({
-  subsets: ["latin", "latin-ext"],
-  weight: ["300", "400", "500", "600", "700"],
-  variable: "--font-sans",
-  display: "swap",
-});
-
-const arabic = IBM_Plex_Sans_Arabic({
-  subsets: ["arabic"],
-  weight: ["400", "500", "600"],
-  variable: "--font-arabic",
-  display: "swap",
-});
-
-const mono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-mono",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "Binaya — Hotel & Furnished Apartment Management",
@@ -52,7 +34,7 @@ export const metadata: Metadata = {
  * here cost ~260 KB (EN) / ~330 KB (AR) of HTML on every public page load.
  * Server components are unaffected — getTranslations() reads the full set.
  */
-const PUBLIC_MESSAGE_NAMESPACES = ["common", "marketing", "auth", "phoneInput"] as const;
+const PUBLIC_MESSAGE_NAMESPACES = ["common", "marketing", "auth", "phoneInput", "subscription"] as const;
 
 function pickMessages(all: Record<string, unknown>, keys: readonly string[]) {
   return Object.fromEntries(keys.filter((k) => k in all).map((k) => [k, all[k]]));
@@ -78,7 +60,7 @@ export default async function RootLayout({
     : pickMessages(await getMessages(), PUBLIC_MESSAGE_NAMESPACES);
 
   return (
-    <html lang={locale} dir={dir} className={`${sans.variable} ${arabic.variable} ${mono.variable}`}>
+    <html lang={locale} dir={dir}>
       <head>
         {/* Google Analytics (gtag.js) — Binaya's own pages only */}
         {!isTenantSite && <>

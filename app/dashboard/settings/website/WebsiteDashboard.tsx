@@ -34,7 +34,7 @@ export default function WebsiteDashboard({
     start(async () => {
       const res = await setWebsiteStatus(published ? "DISABLED" : "PUBLISHED");
       if (res.ok) { toast.success(t(published ? "dash.disabledToast" : "dash.enabledToast")); router.refresh(); }
-      else toast.error(t("errors.generic"));
+      else toast.error(res.message ?? t("errors.generic"));
     });
 
   return (

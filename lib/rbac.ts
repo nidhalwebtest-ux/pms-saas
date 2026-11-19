@@ -243,6 +243,7 @@ export function resolvePermissions(
 /** Map a permission map → nav-tab visibility. `settings` is governed elsewhere. */
 export const NAV_ENTITY: Record<string, string[]> = {
   properties:   ["buildings", "units"],
+  pricing:      ["units"], // Pricing Management — prices belong to units (edit = units EDIT)
   tenants:      ["tenants"],
   reservations: ["reservations"],
   websiteRequests: ["reservations"],

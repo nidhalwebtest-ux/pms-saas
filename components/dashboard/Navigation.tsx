@@ -46,6 +46,17 @@ const navigationConfig: NavItem[] = [
     ],
   },
   {
+    key:      "pricing",
+    labelKey: "pricing",
+    href:     "/dashboard/pricing/seasons",
+    activePatterns: ["/dashboard/pricing"],
+    children: [
+      { labelKey: "pricingSeasons",  href: "/dashboard/pricing/seasons" },
+      { labelKey: "pricingRates",    href: "/dashboard/pricing/rates" },
+      { labelKey: "pricingCalendar", href: "/dashboard/pricing/calendar" },
+    ],
+  },
+  {
     key:            "tenants",
     labelKey:       "tenants",
     href:           "/dashboard/tenants",

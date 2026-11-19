@@ -256,6 +256,19 @@ model Organization {
   billingCycle       String   @default("MONTHLY") // MONTHLY | SEMIANNUAL | YEARLY
   subscriptionEvents SubscriptionEvent[]
 
+  /// Pricing Management (Roadmap item 6) — org-wide seasons + stay rules.
+  seasons            Season[]
+  /// Weekend pricing: nights starting on these weekdays (0=Sun … 6=Sat; Oman
+  /// weekend nights = Thu 4, Fri 5) get weekendAdjustPct on the nightly rate.
+  /// A season can override the % (Season.weekendAdjustPct). Daily stays only.
+  weekendDays        Int[]    @default([])
+  weekendAdjustPct   Int      @default(0)
+  /// Minimum nights for daily stays when no season sets its own (1 = no rule).
+  defaultMinNights   Int      @default(1)
+  /// Long-stay discounts for daily stays: [{ "minNights": 7, "percent": 5 }, …]
+  /// — the highest tier the stay reaches applies.
+  longStayDiscounts  Json     @default("[]")
+
   /// Demo sandbox orgs (binaya.app "Demo Tour"). Seeded, fully-featured,
   /// self-contained orgs created for a visitor from just a name + WhatsApp
   /// number — never real customer data. Used to filter/badge them in the
@@ -433,6 +446,7 @@ model Unit {
   reservations     Reservation[]
   reservationUnits ReservationUnit[]  @relation("ReservationUnitToUnit")
   prices           UnitPrice[]
+  seasonRates      SeasonRate[]
   notes            UnitNote[]
   lineItems        InvoiceLineItem[]
   websiteBookingRequests WebsiteBookingRequest[]
@@ -1912,4 +1926,61 @@ model PlatformSettings {
   freePlanKey  String   @default("free")
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  Pricing Management (Roadmap item 6) — central seasons.
+// ════════════════════════════════════════════════════════════════════════════
+
+/// An org-wide season (e.g. Khareef 1 Jul–31 Aug). Applies to the active units
+/// in its buildings (propertyIds; empty = all buildings) whose unit type has a
+/// rate or that have a per-unit override — minus excludedUnitIds. The pricing
+/// loader (lib/unit-prices.ts) turns it into a SEASONAL price entry per unit, so
+/// lib/pricing.ts resolves it exactly like a per-unit UnitPrice season.
+model Season {
+  id               String       @id @default(uuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name             String
+  nameAr           String?
+  /// Inclusive dates (same semantics as UnitPrice.startDate/endDate).
+  startDate        DateTime
+  endDate          DateTime
+  priority         Int          @default(10)
+  isActive         Boolean      @default(true)
+  /// Block monthly-rate reservations overlapping this season (as UnitPrice).
+  disallowMonthly  Boolean      @default(false)
+  /// Stay rules (null = use the organization default).
+  minNights        Int?
+  weekendAdjustPct Int?
+  color            String       @default("#F59E0B")
+  /// Buildings it applies to; empty = every building.
+  propertyIds      String[]     @default([])
+  /// Units in scope that the season must NOT apply to.
+  excludedUnitIds  String[]     @default([])
+  rates            SeasonRate[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([organizationId, startDate])
+}
+
+/// A season's rate for a unit type (unitType set) or one unit (unitId set —
+/// overrides the type rate). Money: Decimal(10,3), same as UnitPrice.
+model SeasonRate {
+  id          String   @id @default(uuid())
+  seasonId    String
+  season      Season   @relation(fields: [seasonId], references: [id], onDelete: Cascade)
+  unitType    String?
+  unitId      String?
+  unit        Unit?    @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  dailyRate   Decimal  @db.Decimal(10, 3)
+  weeklyRate  Decimal? @db.Decimal(10, 3)
+  monthlyRate Decimal? @db.Decimal(10, 3)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([seasonId, unitType])
+  @@unique([seasonId, unitId])
+  @@index([unitId])
 }

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { loadUnitPrices } from "@/lib/unit-prices";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import { getSessionAccess, assertView } from "@/lib/access";
 import { Prisma } from "@prisma/client";
@@ -75,10 +76,10 @@ export default async function UnitDetailPage({
       },
     }),
 
-    prisma.unitPrice.findMany({
-      where:   { unitId },
-      orderBy: [{ priceType: "asc" }, { startDate: "asc" }],
-    }),
+    // Own rows + central Seasons that apply to this unit (Pricing Management).
+    loadUnitPrices(unitId).then((rows) =>
+      rows.sort((a, b) => a.priceType.localeCompare(b.priceType) || (a.startDate?.getTime() ?? 0) - (b.startDate?.getTime() ?? 0)),
+    ),
 
     prisma.unitNote.findMany({
       where:   { unitId },
@@ -205,6 +206,7 @@ export default async function UnitDetailPage({
     priority:    p.priority,
     isActive:    p.isActive,
     disallowMonthly: p.disallowMonthly,
+    seasonId:    p.seasonId ?? null,
   }));
 
   const serializedNotes = notes.map((n) => ({

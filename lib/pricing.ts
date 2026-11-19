@@ -14,6 +14,11 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { loadUnitPrices } from "@/lib/unit-prices";
+
+// Price rows come from loadUnitPrices (lib/unit-prices.ts): the unit's own
+// UnitPrice rows + virtual SEASONAL rows for the central Seasons that apply
+// to it (Pricing Management). resolvePrice treats both identically.
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -55,7 +60,8 @@ function toLocalDateString(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function resolvePrice(
+/** Exported for the season migration's before/after equality check. */
+export function resolvePrice(
   prices: {
     id: string; priceType: string; name: string | null;
     dailyRate: any; weeklyRate: any; monthlyRate: any;
@@ -122,7 +128,7 @@ export async function getUnitPriceForDate(
   date:   Date,
 ): Promise<ApplicablePrice | null> {
   const [prices, unit] = await Promise.all([
-    prisma.unitPrice.findMany({ where: { unitId } }),
+    loadUnitPrices(unitId),
     prisma.unit.findUnique({ where: { id: unitId }, select: { basePrice: true } }),
   ]);
   return resolvePrice(prices, date, unit ? Number(unit.basePrice) : null);
@@ -138,7 +144,7 @@ export async function getUnitPriceForRange(
   endDate:   Date,
 ): Promise<RangePriceResult> {
   const [prices, unit] = await Promise.all([
-    prisma.unitPrice.findMany({ where: { unitId } }),
+    loadUnitPrices(unitId),
     prisma.unit.findUnique({ where: { id: unitId }, select: { basePrice: true } }),
   ]);
   const basePrice = unit ? Number(unit.basePrice) : null;

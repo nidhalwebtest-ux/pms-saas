@@ -12,7 +12,8 @@
     "test:whatsapp": "tsx --test lib/whatsapp/whatsapp.test.ts",
     "test:pricing": "tsx --test lib/saas-pricing.test.ts",
     "verify:integrity": "tsx --env-file=.env scripts/verify-data-integrity.ts",
-    "test:subscription": "tsx --test lib/subscription.test.ts"
+    "test:subscription": "tsx --test lib/subscription.test.ts",
+    "test:unit-prices": "TZ=UTC tsx --test lib/unit-prices.test.ts"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

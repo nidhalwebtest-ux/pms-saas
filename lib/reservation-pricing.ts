@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { loadUnitPriceRows } from "@/lib/unit-prices";
 import {
   calculateNights,
   countCalendarMonths,
@@ -46,18 +47,21 @@ export async function findMonthlyBlock(
   startDate: Date,
   endDate:   Date,
 ): Promise<{ unitId: string; name: string | null } | null> {
-  const blocked = await prisma.unitPrice.findFirst({
-    where: {
-      unitId:          { in: unitIds },
-      priceType:       "SEASONAL",
-      isActive:        true,
-      disallowMonthly: true,
-      startDate:       { lt: endDate },
-      endDate:         { gt: startDate },
-    },
-    select: { unitId: true, name: true },
-  });
-  return blocked;
+  // Includes central Seasons (Pricing Management) via the shared loader.
+  const rowsByUnit = await loadUnitPriceRows(unitIds);
+  for (const unitId of unitIds) {
+    const hit = (rowsByUnit.get(unitId) ?? []).find(
+      (p) =>
+        p.priceType === "SEASONAL" &&
+        p.isActive &&
+        p.disallowMonthly &&
+        p.startDate !== null && p.endDate !== null &&
+        p.startDate < endDate &&
+        p.endDate > startDate,
+    );
+    if (hit) return { unitId, name: hit.name };
+  }
+  return null;
 }
 
 /**

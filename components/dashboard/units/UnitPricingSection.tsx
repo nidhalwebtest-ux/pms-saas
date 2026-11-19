@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   PlusIcon,
@@ -38,6 +39,9 @@ interface UnitPrice {
   priority:    number;
   isActive:    boolean;
   disallowMonthly?: boolean;
+  /** Set when the row comes from a central Season (Pricing Management) —
+   *  read-only here, edited at /dashboard/pricing/seasons/{seasonId}. */
+  seasonId?:   string | null;
 }
 
 interface Props {
@@ -211,6 +215,15 @@ function SeasonalRow({
           </div>
         </div>
 
+        {price.seasonId ? (
+          // Central season (Pricing → Seasons): edit it there, for all its units at once.
+          <Link
+            href={`/dashboard/pricing/seasons/${price.seasonId}`}
+            className="shrink-0 rounded-lg border border-violet-200 px-2.5 py-1 text-xs font-semibold text-violet-700 hover:bg-violet-50"
+          >
+            {t("editInPricing")}
+          </Link>
+        ) : (
         <div className="flex shrink-0 items-center gap-1">
           <button
             onClick={() => startToggle(async () => {
@@ -245,6 +258,7 @@ function SeasonalRow({
             <TrashIcon className="h-4 w-4" />
           </button>
         </div>
+        )}
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
@@ -489,7 +503,6 @@ export default function UnitPricingSection({ unitId, prices }: Props) {
   }>({ open: false, mode: "default" });
 
   function openDefault()              { setModal({ open: true, mode: "default",        editPrice: defaultPrice }); }
-  function openAddSeasonal()          { setModal({ open: true, mode: "seasonal",       editPrice: undefined }); }
   function openEditSeasonal(p: UnitPrice) { setModal({ open: true, mode: "edit-seasonal", editPrice: p }); }
   function closeModal()               { setModal((m) => ({ ...m, open: false })); }
 
@@ -502,13 +515,14 @@ export default function UnitPricingSection({ unitId, prices }: Props) {
       <div>
         <div className="mb-3 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-800">{t("seasonalPrices")}</h3>
-          <button
-            onClick={openAddSeasonal}
+          {/* Seasons are created centrally (Pricing → Seasons) so one season can cover many units. */}
+          <Link
+            href="/dashboard/pricing/seasons/new"
             className="flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-500 transition-colors"
           >
             <PlusIcon className="h-3.5 w-3.5" />
             {t("addSeason")}
-          </button>
+          </Link>
         </div>
 
         {seasonalPrices.length === 0 ? (

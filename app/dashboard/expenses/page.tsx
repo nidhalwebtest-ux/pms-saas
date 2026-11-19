@@ -3,7 +3,6 @@ import { assertView } from "@/lib/access";
 import { getEffectivePropertyIds } from "@/lib/property-scope";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import { getTranslations } from "next-intl/server";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import {
   ArrowTrendingDownIcon,
@@ -13,6 +12,7 @@ import {
 import Link from "next/link";
 import ExpensesListClient from "./ExpensesListClient";
 import type { ExpenseRow } from "./columns";
+import { getAuthUser } from "@/lib/current-user";
 
 function iso(d: Date | null): string | null {
   return d ? d.toISOString() : null;
@@ -20,8 +20,7 @@ function iso(d: Date | null): string | null {
 
 export default async function ExpensesPage() {
   const access = await assertView("expenses");
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

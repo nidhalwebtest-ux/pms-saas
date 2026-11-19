@@ -1,16 +1,15 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { EMPTY_FORM, type WebsiteForm, type WebsiteStatus, type TemplateKey } from "./types";
 import WebsiteWizard from "./WebsiteWizard";
+import { getAuthUser } from "@/lib/current-user";
 
 export const dynamic = "force-dynamic";
 
 const ROOT_DOMAIN = "binaya.app";
 
 export default async function WebsiteSettingsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

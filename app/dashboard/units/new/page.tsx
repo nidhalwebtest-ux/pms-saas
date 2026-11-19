@@ -1,12 +1,12 @@
 import { PageHeader } from "@/components/ui/FormComponents";
 import UnitForm from "@/components/dashboard/UnitForm";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { assertCan } from "@/lib/access";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
+import { getAuthUser } from "@/lib/current-user";
 
 export default async function NewUnitPage({
   searchParams,
@@ -15,11 +15,7 @@ export default async function NewUnitPage({
 }) {
   await assertCan("units", "CREATE");
   const { propertyId } = await searchParams;
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

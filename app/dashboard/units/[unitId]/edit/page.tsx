@@ -1,10 +1,10 @@
 import { PageHeader } from "@/components/ui/FormComponents";
 import UnitForm from "@/components/dashboard/UnitForm";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { assertCan } from "@/lib/access";
+import { getAuthUser } from "@/lib/current-user";
 
 export default async function EditUnitPage({
   params,
@@ -14,11 +14,7 @@ export default async function EditUnitPage({
   await assertCan("units", "EDIT");
   const { unitId } = await params;
   const t = await getTranslations("units.editPage");
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

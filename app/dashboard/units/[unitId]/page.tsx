@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import { getSessionAccess, assertView } from "@/lib/access";
@@ -24,6 +23,7 @@ import UnitPricingSection from "@/components/dashboard/units/UnitPricingSection"
 import UnitNotesSection   from "@/components/dashboard/units/UnitNotesSection";
 import TransactionsPanel from "@/components/dashboard/transactions/TransactionsPanel";
 import type { TransactionData } from "@/components/dashboard/transactions/TransactionSections";
+import { getAuthUser } from "@/lib/current-user";
 
 function fmt(v: any) {
   return `${Number(v).toFixed(3)} OMR`;
@@ -39,8 +39,7 @@ export default async function UnitDetailPage({
   const { unitId } = await params;
 
   await assertView("units");
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

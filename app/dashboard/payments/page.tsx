@@ -4,7 +4,6 @@ import { getEffectivePropertyIds } from "@/lib/property-scope";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { getCurrentCurrency } from "@/lib/get-org";
@@ -12,6 +11,7 @@ import { formatAmount } from "@/lib/format-currency";
 import { BanknotesIcon } from "@heroicons/react/24/outline";
 import PaymentsView from "./PaymentsView";
 import type { PaymentRow } from "./columns";
+import { getAuthUser } from "@/lib/current-user";
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
@@ -22,9 +22,7 @@ export default async function PaymentsListPage({
 }) {
   const access = await assertView("payments");
   const params = await searchParams;
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

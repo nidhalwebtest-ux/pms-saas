@@ -3,7 +3,6 @@ import Link from "next/link";
 import { getTranslations, getLocale } from "next-intl/server";
 import { format } from "date-fns";
 import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import {
   ArrowLeftIcon,
@@ -21,6 +20,7 @@ import {
   type PaymentMethodKey,
 } from "@/components/ui";
 import ShareButton from "@/components/dashboard/ShareButton";
+import { getAuthUser } from "@/lib/current-user";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -42,9 +42,7 @@ export default async function PaymentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

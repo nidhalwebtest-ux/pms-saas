@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import { assertView } from "@/lib/access";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
-import { createClient } from "@/utils/supabase/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import PropertiesView from "./PropertiesView";
+import { getAuthUser } from "@/lib/current-user";
 
 export type PropertyRow = {
   id: string;
@@ -30,9 +30,8 @@ export default async function PropertiesPage() {
   await assertView("buildings");
 
   // Auth
-  const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) redirect("/login");
+  const user = await getAuthUser();
+  if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({
     where:  { id: user.id },

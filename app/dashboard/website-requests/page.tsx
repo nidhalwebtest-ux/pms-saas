@@ -1,15 +1,14 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { InboxArrowDownIcon } from "@heroicons/react/24/outline";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import RequestCard, { type RequestVM } from "./RequestCard";
+import { getAuthUser } from "@/lib/current-user";
 
 export const dynamic = "force-dynamic";
 
 export default async function WebsiteRequestsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
   const dbUser = await prisma.user.findUnique({ where: { id: user.id }, select: { organizationId: true } });
   if (!dbUser?.organizationId) redirect("/onboarding");

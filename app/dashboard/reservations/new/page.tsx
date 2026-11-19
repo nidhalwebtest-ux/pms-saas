@@ -1,4 +1,3 @@
-import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
@@ -7,6 +6,7 @@ import BookingEngine from "@/components/dashboard/BookingEngine";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import { assertCan } from "@/lib/access";
 import Link from "next/link";
+import { getAuthUser } from "@/lib/current-user";
 
 export default async function NewReservationPage({
   searchParams,
@@ -14,8 +14,7 @@ export default async function NewReservationPage({
   searchParams: Promise<{ unitId?: string; tenantId?: string; startDate?: string; endDate?: string }>;
 }) {
   await assertCan("reservations", "CREATE");
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

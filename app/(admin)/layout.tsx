@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { NextIntlClientProvider } from "next-intl";
 import { ArrowLeftIcon, ShieldCheckIcon } from "@heroicons/react/24/outline";
 import { getSuperAdmin } from "@/lib/super-admin";
 import AdminNav from "@/components/admin/AdminNav";
@@ -25,6 +26,9 @@ export default async function AdminLayout({
   const t = await getTranslations("admin.nav");
 
   return (
+    // Full message dictionary for the admin area (root layout ships only the
+    // public subset) — inherits all messages from i18n/request.ts.
+    <NextIntlClientProvider>
     <div className="min-h-screen bg-canvas">
       <header className="sticky top-0 z-20 border-b border-border-default bg-surface/95 backdrop-blur">
         <div className="mx-auto max-w-6xl px-3 sm:px-6">
@@ -65,5 +69,6 @@ export default async function AdminLayout({
 
       <main className="mx-auto max-w-6xl px-3 py-5 sm:px-6 sm:py-8">{children}</main>
     </div>
+    </NextIntlClientProvider>
   );
 }

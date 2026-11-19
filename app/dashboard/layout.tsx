@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { NextIntlClientProvider } from "next-intl";
 import { getAuthUser, getSessionUser } from "@/lib/current-user";
 import Header from "@/components/dashboard/Header";
 import Navigation from "@/components/dashboard/Navigation";
@@ -42,37 +43,48 @@ export default async function DashboardLayout({
   const access = resolvePermissions(role, dbUser.assignedRole);
   const navAccess = navAccessFor(access);
 
-  // Founder quick-access FAB — only for super-admins (env allowlist).
-  const isSuperAdmin = !!(await getSuperAdmin());
+  const organizationId = dbUser.organizationId;
 
-  // Per-user building scope: null = unrestricted (all org). Owner is always unrestricted.
-  const accessible = access.isOwner ? null : await getAccessiblePropertyIds(dbUser.id, dbUser.organizationId);
-
-  // Fetch non-archived properties for the header scope selector, limited to the
-  // user's accessible buildings.
-  const [properties, rawSelectedPropertyId] = await Promise.all([
-    prisma.property.findMany({
-      where:   {
-        organizationId: dbUser.organizationId,
-        isArchived: false,
-        ...(accessible ? { id: { in: accessible } } : {}),
-      },
-      select:  { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-    getSelectedPropertyId(),
-  ]);
-
-  // Pending website booking-request count for the nav badge (only when visible).
-  const websiteRequestCount = navAccess.websiteRequests
-    ? await prisma.websiteBookingRequest.count({
+  // Everything below is independent — run it in ONE parallel batch instead of
+  // 3–4 sequential DB round trips on every dashboard navigation.
+  //  - building scope: null = unrestricted (all org); owner is always unrestricted
+  //  - properties: non-archived, for the header scope selector. Filtered by the
+  //    user's accessible buildings via the relation, so it doesn't have to wait
+  //    for the assignment lookup (no assignments = unrestricted → all org).
+  //  - pending website booking-request count for the nav badge (only when visible)
+  const [isSuperAdmin, accessible, properties, rawSelectedPropertyId, websiteRequestCount] =
+    await Promise.all([
+      getSuperAdmin().then(Boolean),
+      access.isOwner ? Promise.resolve(null) : getAccessiblePropertyIds(dbUser.id, organizationId),
+      prisma.property.findMany({
         where: {
-          organizationId: dbUser.organizationId,
-          status: "PENDING",
-          OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+          organizationId,
+          isArchived: false,
+          ...(access.isOwner
+            ? {}
+            : {
+                // restricted user → only assigned buildings; unrestricted (no
+                // assignments at all) → every building in the org
+                OR: [
+                  { assignments: { some: { userId: dbUser.id } } },
+                  { organization: { users: { some: { id: dbUser.id, assignedProperties: { none: {} } } } } },
+                ],
+              }),
         },
-      })
-    : 0;
+        select:  { id: true, name: true },
+        orderBy: { name: "asc" },
+      }),
+      getSelectedPropertyId(),
+      navAccess.websiteRequests
+        ? prisma.websiteBookingRequest.count({
+            where: {
+              organizationId,
+              status: "PENDING",
+              OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+            },
+          })
+        : Promise.resolve(0),
+    ]);
 
   // Ignore a selected building the user can no longer access (falls back to "All").
   const selectedPropertyId =
@@ -81,6 +93,11 @@ export default async function DashboardLayout({
       : rawSelectedPropertyId;
 
   return (
+    // The root layout only ships the small public message subset; the dashboard
+    // needs the full dictionary. A server-rendered NextIntlClientProvider with no
+    // `messages` prop inherits ALL messages from i18n/request.ts (next-intl v4).
+    // Lives here (not root) so a soft navigation login → dashboard still gets it.
+    <NextIntlClientProvider>
     <OrgProvider value={{ currency, isDemo, demoContactWhatsapp }}>
      <PermissionsProvider perms={access.perms} isOwner={access.isOwner}>
       {/*
@@ -129,5 +146,6 @@ export default async function DashboardLayout({
       </div>
      </PermissionsProvider>
     </OrgProvider>
+    </NextIntlClientProvider>
   );
 }

@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import { getTranslations, getLocale } from "next-intl/server";
 import { format } from "date-fns";
 import { ar as arLocale, enGB as enLocale } from "date-fns/locale";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import { getSessionAccess, assertView } from "@/lib/access";
@@ -25,6 +24,7 @@ import {
 } from "@heroicons/react/24/outline";
 import ExpenseActionPanel from "./ExpenseActionPanel";
 import { Badge, getExpenseStatusBadge, type ExpenseStatusKey } from "@/components/ui";
+import { getAuthUser } from "@/lib/current-user";
 
 function fullName(u: { firstName: string | null; lastName: string | null } | null) {
   if (!u) return "—";
@@ -39,8 +39,7 @@ export default async function ExpenseDetailsPage({
   const { id } = await params;
 
   await assertView("expenses");
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

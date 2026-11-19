@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import { assertView } from "@/lib/access";
@@ -19,6 +18,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import PropertyDangerZone from "@/components/dashboard/PropertyDangerZone";
 import { getUnitDisplayStatus } from "@/lib/unit-status";
+import { getAuthUser } from "@/lib/current-user";
 import {
   Badge,
   getPropertyTypeBadge,
@@ -33,8 +33,7 @@ export default async function PropertyDetailsPage({
 }) {
   await assertView("buildings");
   const { id } = await params;
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

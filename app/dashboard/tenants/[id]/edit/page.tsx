@@ -1,10 +1,10 @@
 import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getTranslations } from "next-intl/server";
 import { PageHeader } from "@/components/ui/FormComponents";
 import TenantForm from "@/components/dashboard/TenantForm";
 import { assertCan } from "@/lib/access";
+import { getAuthUser } from "@/lib/current-user";
 
 export default async function EditTenantPage({
   params,
@@ -13,9 +13,7 @@ export default async function EditTenantPage({
 }) {
   await assertCan("tenants", "EDIT");
   const { id } = await params;
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

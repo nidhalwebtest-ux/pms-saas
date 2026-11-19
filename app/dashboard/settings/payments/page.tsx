@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { BanknotesIcon } from "@heroicons/react/24/outline";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import PaymentSettingsForm from "./PaymentSettingsForm";
+import { getAuthUser } from "@/lib/current-user";
 
 export default async function PaymentSettingsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

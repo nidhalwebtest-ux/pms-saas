@@ -43,6 +43,21 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Message namespaces the root layout sends to the browser. Everything public
+ * (landing, login, contact, privacy, terms, verify-email) only needs these.
+ * App areas (dashboard, admin, onboarding, invite) re-provide the FULL
+ * dictionary via a nested provider (components/FullMessagesProvider.tsx), so a
+ * soft navigation into them still has every string. Shipping all 31 namespaces
+ * here cost ~260 KB (EN) / ~330 KB (AR) of HTML on every public page load.
+ * Server components are unaffected — getTranslations() reads the full set.
+ */
+const PUBLIC_MESSAGE_NAMESPACES = ["common", "marketing", "auth", "phoneInput"] as const;
+
+function pickMessages(all: Record<string, unknown>, keys: readonly string[]) {
+  return Object.fromEntries(keys.filter((k) => k in all).map((k) => [k, all[k]]));
+}
+
 export const viewport: Viewport = {
   themeColor: "#185FA5",
 };
@@ -53,15 +68,20 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const locale = (await getLocale()) as Locale;
-  const messages = await getMessages();
   const dir = dirFor(locale);
-  // Tenant booking sites ({slug}.binaya.app) belong to customers — keep Binaya's pixel off them
+  // Tenant booking sites ({slug}.binaya.app) belong to customers — keep Binaya's
+  // analytics (GA + Meta pixel) off them, and send no app messages: the public
+  // site has its own self-contained dictionary (lib/public-site/i18n.ts).
   const isTenantSite = Boolean(extractSiteSlug((await headers()).get("host")));
+  const messages = isTenantSite
+    ? {}
+    : pickMessages(await getMessages(), PUBLIC_MESSAGE_NAMESPACES);
 
   return (
     <html lang={locale} dir={dir} className={`${sans.variable} ${arabic.variable} ${mono.variable}`}>
       <head>
-        {/* Google Analytics (gtag.js) */}
+        {/* Google Analytics (gtag.js) — Binaya's own pages only */}
+        {!isTenantSite && <>
         <Script
           strategy="afterInteractive"
           src="https://www.googletagmanager.com/gtag/js?id=G-MK5E9PV4X7"
@@ -78,6 +98,7 @@ export default async function RootLayout({
             `,
           }}
         />
+        </>}
       </head>
       <body className={`antialiased ${locale === "ar" ? "font-arabic" : ""}`}>
         <NextIntlClientProvider locale={locale} messages={messages}>

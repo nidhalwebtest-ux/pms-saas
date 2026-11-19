@@ -1,17 +1,16 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { assertView } from "@/lib/access";
 import Link from "next/link";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import BankManager from "./BankManager";
 import CashDrawerManager from "./CashDrawerManager";
+import { getAuthUser } from "@/lib/current-user";
 
 export default async function BanksSettingsPage() {
   const access = await assertView("banks");
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

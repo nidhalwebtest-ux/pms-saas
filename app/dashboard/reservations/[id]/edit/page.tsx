@@ -1,10 +1,10 @@
-import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/FormComponents";
 import BookingEngine from "@/components/dashboard/BookingEngine";
 import { calculateNights, countCalendarMonths } from "@/lib/reservation-engine";
+import { getAuthUser } from "@/lib/current-user";
 
 // Editing is only allowed before check-in and before invoices exist (QA #30).
 const EDITABLE_STATUSES = ["PENDING", "CONFIRMED"];
@@ -14,8 +14,7 @@ export default async function EditReservationPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

@@ -1,13 +1,12 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { ArrowUturnLeftIcon } from "@heroicons/react/24/outline";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import ReturnSettingsForm from "./ReturnSettingsForm";
+import { getAuthUser } from "@/lib/current-user";
 
 export default async function ReturnSettingsPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

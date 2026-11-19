@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
-import { createClient } from "@/utils/supabase/server";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import SmartPaymentForm from "./SmartPaymentForm";
 import { assertCan } from "@/lib/access";
+import { getAuthUser } from "@/lib/current-user";
 
 export default async function NewPaymentPage({
   searchParams,
@@ -13,11 +13,7 @@ export default async function NewPaymentPage({
 }) {
   await assertCan("payments", "CREATE");
   const params = await searchParams;
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const t = await getTranslations("payments.newPage");

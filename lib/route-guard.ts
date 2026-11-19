@@ -1,20 +1,16 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
-import { prisma } from "@/lib/prisma";
+import { getAuthUser, getSessionUser } from "@/lib/current-user";
 import type { Role } from "@/lib/permissions";
 
 /**
  * Resolve the current authenticated user's role. Redirects to /login if there
  * is no session. Returns "STAFF" as a safe default if the role row is missing.
+ * Uses the request-cached session (shared with the dashboard layout), so a
+ * route-guard layout adds no extra Auth/DB round trips.
  */
 export async function getCurrentRole(): Promise<Role> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-  const dbUser = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: { role: true },
-  });
+  if (!(await getAuthUser())) redirect("/login");
+  const dbUser = await getSessionUser();
   return (dbUser?.role ?? "STAFF") as Role;
 }
 

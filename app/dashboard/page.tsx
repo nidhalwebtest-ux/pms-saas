@@ -1,17 +1,13 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import type { Role } from "@/lib/permissions";
+import { getAuthUser } from "@/lib/current-user";
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) redirect("/login");
+  const user = await getAuthUser();
+  if (!user) redirect("/login");
 
   const [dbUser, selectedPropertyId] = await Promise.all([
     prisma.user.findUnique({

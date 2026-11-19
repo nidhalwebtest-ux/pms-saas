@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { can, type Role } from "@/lib/permissions";
 import { ensureSystemRoles } from "@/lib/rbac-server";
@@ -14,6 +13,7 @@ import {
   ClockIcon,
 } from "@heroicons/react/24/outline";
 import { Badge, type BadgeTone } from "@/components/ui";
+import { getAuthUser } from "@/lib/current-user";
 
 function StatCard({ label, count, color }: { label: string; count: number; color: string }) {
   return (
@@ -25,8 +25,7 @@ function StatCard({ label, count, color }: { label: string; count: number; color
 }
 
 export default async function TeamPage() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

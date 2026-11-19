@@ -1,9 +1,9 @@
 import { PageHeader } from "@/components/ui/FormComponents";
 import PropertyForm from "@/components/dashboard/PropertyForm";
 import { prisma } from "@/lib/prisma";
-import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { getAuthUser } from "@/lib/current-user";
 
 export default async function EditPropertyPage({
   params,
@@ -11,11 +11,7 @@ export default async function EditPropertyPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

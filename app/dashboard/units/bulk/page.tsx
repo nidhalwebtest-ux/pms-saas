@@ -1,10 +1,10 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import BulkCreateForm from "./BulkCreateForm";
 import { getTranslations } from "next-intl/server";
 import { assertCan } from "@/lib/access";
 import { getSelectedPropertyId } from "@/lib/selected-property";
+import { getAuthUser } from "@/lib/current-user";
 
 export default async function BulkCreatePage({
   searchParams,
@@ -14,9 +14,7 @@ export default async function BulkCreatePage({
   await assertCan("units", "CREATE");
   const { propertyId } = await searchParams;
   const t = await getTranslations("units.bulk");
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) redirect("/login");
 
   const dbUser = await prisma.user.findUnique({

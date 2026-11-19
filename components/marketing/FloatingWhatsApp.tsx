@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useLocale } from "next-intl";
-import { MessageSquare } from "lucide-react";
 
 export default function FloatingWhatsApp() {
   const locale = useLocale();
@@ -28,12 +27,8 @@ export default function FloatingWhatsApp() {
         hidden ? "pointer-events-none translate-y-4 opacity-0" : "opacity-100"
       }`}
     >
-      {/* Tooltip Label */}
-      <span className="hidden sm:inline-flex rounded-xl bg-gray-900 px-3.5 py-2 text-xs font-bold text-white shadow-lg backdrop-blur-md border border-white/10 animate-bounce">
-        {isAr ? "تواصل معنا عبر واتساب 👋" : "Chat with us on WhatsApp 👋"}
-      </span>
-
-      {/* Floating Button */}
+      {/* Floating Button — the page's one always-visible WhatsApp entry point
+          (the navbar no longer has a WhatsApp button). */}
       <a
         href={whatsappUrl}
         target="_blank"

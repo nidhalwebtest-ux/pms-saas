@@ -8,9 +8,6 @@ import { ChevronDown, Menu, X } from "lucide-react";
 import Container from "./ui/Container";
 import { MarketingButton } from "./ui/MarketingButton";
 import { type Locale } from "@/i18n/config";
-import { DuoIcon } from "./v2/icons";
-import { whatsappUrl } from "@/lib/marketing/whatsapp";
-import v2 from "./v2/landing.module.css";
 
 // Landing v2: the four anchors follow the promo video's story (pain → solution → pricing → contact).
 const NAV_LINKS = [
@@ -76,7 +73,6 @@ export default function MarketingNavbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [ids] = useState(() => NAV_LINKS.map((l) => l.id));
   const active = useActiveSection(ids);
-  const wa = whatsappUrl(t("whatsappText"));
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -160,22 +156,12 @@ export default function MarketingNavbar() {
                 {t("login")}
               </MarketingButton>
             </div>
-            <div className="hidden md:inline-flex">
-              <MarketingButton href="/login?mode=signup" variant="secondary" size="md">
+            {/* primary CTA: start free. WhatsApp lives in the floating bubble + contact card. */}
+            <div className="hidden sm:inline-flex">
+              <MarketingButton href="/login?mode=signup" variant="primary" size="md" data-cta="nav-signup">
                 {t("signup")}
               </MarketingButton>
             </div>
-            {/* primary CTA (D5): WhatsApp, gold like the video's CTA */}
-            <a
-              href={wa}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-cta="nav-whatsapp"
-              className={`${v2.ctaGold} hidden sm:inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl px-4 text-[14.5px] font-bold transition-[filter]`}
-            >
-              <DuoIcon name="whatsappLogo" size={20} duo="#0B1F3A" duoOpacity={0.18} />
-              {t("whatsapp")}
-            </a>
             <button
               type="button"
               aria-label={menuOpen ? t("closeMenu") : t("openMenu")}
@@ -193,7 +179,7 @@ export default function MarketingNavbar() {
         <ReadingProgress />
       </header>
 
-      <MobileDrawer open={menuOpen} onClose={() => setMenuOpen(false)} whatsapp={wa} />
+      <MobileDrawer open={menuOpen} onClose={() => setMenuOpen(false)} />
     </>
   );
 }
@@ -203,7 +189,7 @@ export default function MarketingNavbar() {
  *  anchor and close on click; the backdrop and ESC close it too.
  * ========================================================================= */
 
-function MobileDrawer({ open, onClose, whatsapp }: { open: boolean; onClose: () => void; whatsapp: string }) {
+function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useTranslations("marketing.nav");
   return (
     <>
@@ -243,17 +229,7 @@ function MobileDrawer({ open, onClose, whatsapp }: { open: boolean; onClose: () 
             ))}
           </nav>
           <div className="mt-5 flex flex-col gap-2 border-t border-gray-200 pt-5">
-            <a
-              href={whatsapp}
-              target="_blank"
-              rel="noopener noreferrer"
-              data-cta="drawer-whatsapp"
-              className={`${v2.ctaGold} inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl text-[16px] font-bold`}
-            >
-              <DuoIcon name="whatsappLogo" size={22} duo="#0B1F3A" duoOpacity={0.18} />
-              {t("whatsapp")}
-            </a>
-            <MarketingButton href="/login?mode=signup" variant="secondary" size="lg" fullWidth>
+            <MarketingButton href="/login?mode=signup" variant="primary" size="lg" fullWidth>
               {t("signup")}
             </MarketingButton>
             <MarketingButton href="/login" variant="ghost" size="lg" fullWidth>

@@ -6,9 +6,9 @@ import Container from "./ui/Container";
 type Col = { h: string; links: string[] };
 
 // Real destinations, parallel to the translated label order per column.
-// "How it works" → the solution story (the old #how section was merged into it); no "#" placeholders.
+// "Features" → the solution tabs (#solution); "How it works" → the hero with the demo video (#top).
 const HREFS: string[][] = [
-  ["/#features", "/#pricing", "/#solution", "/#faq"],
+  ["/#solution", "/#pricing", "/#top", "/#faq"],
   ["/about", "/contact"],
   ["/privacy", "/terms"],
 ];

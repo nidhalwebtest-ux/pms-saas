@@ -3,7 +3,6 @@ import MarketingNavbar from "@/components/marketing/MarketingNavbar";
 import MarketingFooter from "@/components/marketing/MarketingFooter";
 import HeroSection from "@/components/marketing/sections/HeroSection";
 import PainSection from "@/components/marketing/v2/sections/PainSection";
-import BridgeSection from "@/components/marketing/v2/sections/BridgeSection";
 import SolutionSection from "@/components/marketing/v2/sections/SolutionSection";
 import StripSection from "@/components/marketing/v2/sections/StripSection";
 import { PricingStory } from "@/components/marketing/v2/sections/PricingStory";
@@ -144,7 +143,6 @@ export default async function MarketingHomePage() {
       <main id="top">
         <HeroSection />
         <PainSection />
-        <BridgeSection />
         <SolutionSection />
         <StripSection />
         <PricingStory />

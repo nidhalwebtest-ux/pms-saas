@@ -90,9 +90,13 @@ export default function HeroVideoPlayer({
 
         {/* Video Element */}
         <div className="relative aspect-video w-full bg-black cursor-pointer" onClick={togglePlay}>
+          {/* preload="none": the video is 32 MB — download nothing until the visitor presses play.
+              The poster (a real dashboard frame, ~40 KB) shows meanwhile instead of a blurry black box. */}
           <video
             ref={videoRef}
             src="/Binaya_Demo.mp4"
+            poster="/Binaya_Demo-poster.webp"
+            preload="none"
             className="h-full w-full object-cover"
             loop
             muted={isMuted}
@@ -103,7 +107,7 @@ export default function HeroVideoPlayer({
 
           {/* Center Play Button Overlay (Smaller, compact design) */}
           {!isPlaying && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] transition-all duration-300">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 transition-all duration-300">
               <button
                 onClick={(e) => {
                   e.stopPropagation();

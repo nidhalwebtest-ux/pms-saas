@@ -6,42 +6,14 @@ import { DuoIcon, type IconName } from "../icons";
 import { gsap, useGSAP, EASE, prefersReducedMotion } from "../motion";
 import s from "../landing.module.css";
 
-/* Section 2 — the video's pain beat (scenes 2–4):
- *   «أكيد تعرف هذه المشاكل…» → the 5 pain cards stack in → «ومع زحمة الموسم… الفوضى تتضاعف».
+/* Section 2 — the pain points, as one compact block that leads straight into the features.
  *
- * Desktop (≥1024 px): the section pins for a short scroll and each card arrives as you scroll
- * (scrubbed), with a faint "chaos" layer of chat bubbles / notebooks / spreadsheets drifting
- * behind; then the stack compresses and the escalation line lands.
- * Tablet / mobile: no pinning — cards blur-in one by one as they enter the viewport.
- * Reduced motion: everything is static and visible. Server-rendered visible (no JS = readable). */
+ * «أكيد تعرف هذه المشاكل…» → the 5 pain cards → «ومع زحمة الموسم… الفوضى تتضاعف».
+ * No scroll pinning: the cards fade/blur in once, staggered, when the block enters the view
+ * (previously the section pinned the screen for ~2.7 screens of scrolling).
+ * Reduced motion / no JS: everything is static and visible (server-rendered visible). */
 
 export type Pain = { icon: IconName; t: string };
-
-// faint background "chaos": [kind, x%, y%, size px, opacity]
-const CHAOS: Array<[string, number, number, number, number]> = [
-  ["bubble", 4, 14, 190, 0.12], ["notebook", 88, 10, 72, 0.14], ["bubble", 78, 74, 210, 0.1],
-  ["fileXls", 6, 70, 78, 0.14], ["chatsCircle", 90, 46, 74, 0.12], ["bubble", 2, 42, 150, 0.08],
-  ["notebook", 14, 88, 60, 0.1], ["fileXls", 72, 30, 58, 0.08], ["bubble", 40, 90, 200, 0.07],
-];
-
-function Chaos() {
-  return (
-    <div data-chaos className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-      {CHAOS.map(([kind, x, y, size, o], i) => (
-        <div key={i} data-chaos-item className="absolute" style={{ insetInlineStart: `${x}%`, top: `${y}%`, opacity: o }}>
-          {kind === "bubble" ? (
-            <div className="flex flex-col gap-2.5 rounded-[22px] rounded-es-md bg-white/90 px-5 py-4" style={{ width: size }}>
-              <i className="block h-2.5 w-[80%] rounded-full bg-[#0B1F3A]/30" />
-              <i className="block h-2.5 w-[55%] rounded-full bg-[#0B1F3A]/30" />
-            </div>
-          ) : (
-            <DuoIcon name={kind as IconName} size={size} className="text-[#85B7EB]" />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export function PainStory({
   intro,
@@ -55,62 +27,21 @@ export function PainStory({
   escalationB: string;
 }) {
   const root = useRef<HTMLElement>(null);
-  const pin = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
       if (prefersReducedMotion()) return;
-      const mm = gsap.matchMedia();
-      const cardsSel = "[data-pain]";
-
-      // desktop: pinned, scrubbed stack
-      mm.add("(min-width: 1024px)", () => {
-        gsap.set(cardsSel, { opacity: 0, y: 34, filter: "blur(12px)" });
-        gsap.set("[data-esc]", { opacity: 0, y: 18, filter: "blur(10px)" });
-        const tl = gsap.timeline({
-          defaults: { ease: EASE.enter },
-          scrollTrigger: {
-            trigger: pin.current,
-            start: "top top",
-            end: "+=1500",
-            scrub: 0.6,
-            pin: true,
-            anticipatePin: 1,
-          },
-        });
-        tl.from("[data-intro]", { opacity: 0.35, y: 16, duration: 0.6 }, 0);
-        // the horizontal cards arrive one by one in reading order (right → left in Arabic)
-        gsap.utils.toArray<HTMLElement>(cardsSel).forEach((card, i) => {
-          tl.to(card, { opacity: 1, y: 0, filter: "blur(0px)", duration: 1 }, 0.4 + i * 0.85);
-        });
-        // chaos drifts up and thickens while the cards pile in
-        gsap.utils.toArray<HTMLElement>("[data-chaos-item]").forEach((el, i) => {
-          tl.fromTo(el, { y: 0 }, { y: -60 - (i % 3) * 40, ease: "none", duration: 6 }, 0);
-        });
-        tl.fromTo("[data-chaos]", { opacity: 0.45 }, { opacity: 1, ease: "none", duration: 5 }, 0);
-        // escalation: the stack compresses, the line lands
-        tl.to(cardsSel, { scale: 0.97, opacity: 0.82, filter: "blur(1.5px)", duration: 0.8, ease: EASE.move }, 5);
-        tl.to("[data-esc]", { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.7, stagger: 0.35 }, 5.1);
-        tl.to({}, { duration: 0.8 }); // short hold before the pin releases
-      });
-
-      // tablet & mobile: no pin; the vertical cards blur in one by one as each enters, then the line
-      mm.add("(max-width: 1023px)", () => {
-        gsap.utils.toArray<HTMLElement>(cardsSel).forEach((card) => {
-          gsap.fromTo(
-            card,
-            { opacity: 0, y: 26, filter: "blur(10px)" },
-            { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.55, ease: EASE.enter, scrollTrigger: { trigger: card, start: "top 88%", once: true } },
-          );
-        });
-        gsap.fromTo(
-          "[data-esc]",
-          { opacity: 0, y: 18, filter: "blur(8px)" },
-          { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.55, stagger: 0.25, ease: EASE.enter, scrollTrigger: { trigger: "[data-esc]", start: "top 90%", once: true } },
-        );
-      });
-
-      return () => mm.revert();
+      const hidden = { opacity: 0, y: 24, filter: "blur(10px)" };
+      const shown = { opacity: 1, y: 0, filter: "blur(0px)" };
+      gsap.set(["[data-intro]", "[data-pain]", "[data-esc]"], hidden);
+      gsap
+        .timeline({
+          defaults: { ease: EASE.enter, duration: 0.55 },
+          scrollTrigger: { trigger: root.current, start: "top 70%", once: true },
+        })
+        .to("[data-intro]", shown, 0)
+        .to("[data-pain]", { ...shown, stagger: 0.12 }, 0.2)
+        .to("[data-esc]", { ...shown, stagger: 0.2 }, 0.2 + pains.length * 0.12 + 0.15);
     },
     { scope: root },
   );
@@ -125,14 +56,13 @@ export function PainStory({
       className={`${s.root} ${s.story} ${s.sheet} relative z-[1] -mt-4 scroll-mt-16 rounded-t-[32px] md:-mt-14 md:rounded-t-[56px]`}
     >
       <div className={s.hex} aria-hidden="true" />
-      <div ref={pin} className="relative flex items-center pb-16 pt-20 lg:h-screen lg:py-0">
-        <Chaos />
+      <div className="relative pb-14 pt-20 md:pb-16 md:pt-28">
         <Container wide className="relative">
-          <h2 data-intro className="mx-auto max-w-[780px] text-center text-[34px] font-bold leading-[1.25] md:text-[52px]">
+          <h2 data-intro className="mx-auto max-w-[780px] text-center text-[32px] font-bold leading-[1.25] md:text-[46px]">
             {intro}
           </h2>
-          {/* 5 horizontal cards across on desktop; a vertical stack on smaller screens */}
-          <ol data-pain-row className="mx-auto mt-10 grid max-w-[640px] list-none gap-3 p-0 md:mt-12 lg:max-w-none lg:grid-cols-5 lg:gap-5">
+          {/* 5 cards across on desktop; a vertical stack on smaller screens */}
+          <ol className="mx-auto mt-10 grid max-w-[640px] list-none gap-3 p-0 md:mt-12 lg:max-w-none lg:grid-cols-5 lg:gap-5">
             {pains.map((p, i) => (
               <li
                 key={i}
@@ -142,11 +72,11 @@ export function PainStory({
                 <span className="grid h-12 w-12 flex-none place-items-center rounded-2xl bg-[#85B7EB]/15 text-[#85B7EB] lg:h-14 lg:w-14">
                   <DuoIcon name={p.icon} size={32} />
                 </span>
-                <span className="text-[18px] font-semibold leading-[1.5] lg:text-[16px] xl:text-[19px]">{p.t}</span>
+                <span className="text-[17px] font-semibold leading-[1.5] lg:text-[16px] xl:text-[18px]">{p.t}</span>
               </li>
             ))}
           </ol>
-          <p className="mt-8 text-center text-[24px] leading-[1.4] md:mt-12 md:text-[34px]">
+          <p className="mt-8 text-center text-[22px] leading-[1.4] md:mt-10 md:text-[30px]">
             <span data-esc className="inline-block text-white/75">{escalationA}</span>{" "}
             <span data-esc className="inline-block font-bold">{escalationB}</span>
           </p>

@@ -12,7 +12,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
-import { resolveClientPrice } from "@/lib/pricing";
+import { resolveClientPrice, type WeekendRule } from "@/lib/pricing";
 import {
   upsertDefaultPrice,
   createSeasonalPrice,
@@ -42,11 +42,14 @@ interface UnitPrice {
   /** Set when the row comes from a central Season (Pricing Management) —
    *  read-only here, edited at /dashboard/pricing/seasons/{seasonId}. */
   seasonId?:   string | null;
+  weekendAdjustPct?: number | null;
 }
 
 interface Props {
   unitId:  string;
   prices:  UnitPrice[];
+  /** Organization weekend pricing (Pricing → Stay rules); null = off. */
+  weekend?: WeekendRule | null;
 }
 
 type ModalMode = "default" | "seasonal" | "edit-seasonal";
@@ -69,7 +72,7 @@ function useFmtDate() {
 
 // ── 30-Day Price Calendar ─────────────────────────────────────────────────────
 
-function PriceCalendar({ prices }: { prices: UnitPrice[] }) {
+function PriceCalendar({ prices, weekend }: { prices: UnitPrice[]; weekend?: WeekendRule | null }) {
   const t = useTranslations("units.pricing");
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -87,14 +90,15 @@ function PriceCalendar({ prices }: { prices: UnitPrice[] }) {
       </h4>
       <div className="grid grid-cols-6 gap-1 sm:grid-cols-10">
         {days.map((day) => {
-          const ds = day.toISOString().slice(0, 10);
-          const resolved = resolveClientPrice(prices, ds);
+          // local calendar day (toISOString would give the previous day east of UTC)
+          const ds = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+          const resolved = resolveClientPrice(prices, ds, weekend);
           const isSeasonal = resolved?.priceType === "SEASONAL";
 
           return (
             <div
               key={ds}
-              title={`${ds}${resolved ? ` · ${resolved.rate.toFixed(3)} OMR${isSeasonal ? ` (${resolved.name})` : ""}` : ` · ${t("noPriceTip")}`}`}
+              title={`${ds}${resolved ? ` · ${resolved.rate.toFixed(3)} OMR${(isSeasonal || resolved.weekend) && resolved.name ? ` (${resolved.name})` : ""}` : ` · ${t("noPriceTip")}`}`}
               className={`rounded-md p-1 text-center text-[10px] leading-tight cursor-default ${
                 isSeasonal
                   ? "bg-violet-100 text-violet-800"
@@ -107,7 +111,7 @@ function PriceCalendar({ prices }: { prices: UnitPrice[] }) {
                 {day.getDate()}
               </div>
               <div className="truncate ltr-numbers">
-                {resolved ? `${resolved.rate.toFixed(1)}` : "—"}
+                {resolved ? `${resolved.rate.toFixed(1)}${resolved.weekend ? "*" : ""}` : "—"}
               </div>
             </div>
           );
@@ -487,7 +491,7 @@ function PriceModal({
 
 // ── Main Component ─────────────────────────────────────────────────────────────
 
-export default function UnitPricingSection({ unitId, prices }: Props) {
+export default function UnitPricingSection({ unitId, prices, weekend }: Props) {
   const t = useTranslations("units.pricing");
   const defaultPrice   = prices.find((p) => p.priceType === "DEFAULT");
   const seasonalPrices = prices.filter((p) => p.priceType === "SEASONAL")
@@ -547,7 +551,7 @@ export default function UnitPricingSection({ unitId, prices }: Props) {
       </div>
 
       {/* 30-Day Calendar */}
-      <PriceCalendar prices={prices} />
+      <PriceCalendar prices={prices} weekend={weekend} />
 
       {/* Modal */}
       {modal.open && (

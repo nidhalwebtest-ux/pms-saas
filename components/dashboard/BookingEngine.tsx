@@ -40,7 +40,9 @@ import {
   collapseToSegments,
   calculateGrandTotal,
   roundOMR,
+  sumSubtotals,
 } from "@/lib/reservation-engine";
+import { longStayDiscount, type LongStayTier } from "@/lib/stay-rules";
 import TenantForm from "@/components/dashboard/TenantForm";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -98,6 +100,8 @@ interface UnitOption {
   priceName:  string | null;
   subtotal:   number;
   breakdown:  PriceSegment[];
+  /** Minimum stay for these dates (Pricing → Stay rules) — a warning here. */
+  minNights?: number;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -282,6 +286,10 @@ export default function BookingEngine({
 
   // ── Step 4: Details ───────────────────────────────────────────────────────
   const [discount,  setDiscount]  = useState(defaultDiscount ?? "");
+  // Long-stay discount (Pricing → Stay rules) pre-fills the discount until the
+  // user edits it; editing an existing reservation never auto-changes it.
+  const [discountTouched, setDiscountTouched] = useState(editMode);
+  const [longStayTiers, setLongStayTiers] = useState<LongStayTier[]>([]);
   const [source,    setSource]    = useState(defaultSource ?? "walk_in");
   const [notes,     setNotes]     = useState(defaultNotes ?? "");
 
@@ -343,6 +351,22 @@ export default function BookingEngine({
       return { unit, subtotal: unit.subtotal ?? 0, customRate: null, isCustom: false };
     }).filter((x): x is NonNullable<typeof x> => x !== null);
   }, [selectedUnits, units, customRates, customTotals, rateType, nights, calMonths]);
+
+  const longStay = useMemo(
+    () => longStayDiscount(sumSubtotals(selectedUnitObjects.map((u) => u.subtotal)), nights, longStayTiers, rateType),
+    [selectedUnitObjects, nights, longStayTiers, rateType],
+  );
+  useEffect(() => {
+    if (discountTouched) return;
+    setDiscount(longStay.amount > 0 ? String(longStay.amount) : "");
+  }, [longStay.amount, discountTouched]);
+
+  // Minimum stay: strictest rule among the selected units (warn, don't block).
+  const minStay = useMemo(() => {
+    if (rateType !== "daily") return 0;
+    return selectedUnitObjects.reduce((m, u) => Math.max(m, u.unit.minNights ?? 1), 0);
+  }, [selectedUnitObjects, rateType]);
+  const belowMinStay = minStay > 0 && nights > 0 && nights < minStay;
 
   const grandTotal = useMemo(() => {
     const disc = parseFloat(discount) || 0;
@@ -449,6 +473,7 @@ export default function BookingEngine({
       const data = await res.json();
       const fetched: UnitOption[] = data.units ?? [];
       setUnits(fetched);
+      setLongStayTiers(Array.isArray(data.longStayTiers) ? data.longStayTiers : []);
       setUnitTypeFilter("ALL");
       if (preservePrefill) {
         editPrefillConsumed.current = true;
@@ -819,6 +844,14 @@ export default function BookingEngine({
       {step === 3 && (
         <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm space-y-4">
 
+          {/* Minimum stay (Pricing → Stay rules): staff are warned, not blocked */}
+          {belowMinStay && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm text-amber-800 flex items-start gap-2">
+              <ExclamationTriangleIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <span>{tStep3("minStayWarning", { min: minStay, nights })}</span>
+            </div>
+          )}
+
           {/* Double-booking conflict error panel */}
           {conflictError && (
             <div className="rounded-xl border-2 border-red-300 bg-red-50 p-4">
@@ -1081,6 +1114,13 @@ export default function BookingEngine({
       {/* ── STEP 4: Pricing Summary ─────────────────────────────────────────── */}
       {step === 4 && (
         <div className="space-y-4">
+          {belowMinStay && (
+            <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm text-amber-800 flex items-start gap-2">
+              <ExclamationTriangleIcon className="h-4 w-4 mt-0.5 flex-shrink-0" />
+              <span>{tStep3("minStayWarning", { min: minStay, nights })}</span>
+            </div>
+          )}
+
           {selectedUnitObjects.map(({ unit, subtotal, customRate }) => {
             type BreakdownRow = { label: string; nights: number; rate: number; subtotal: number; priceName: string | null; isCustom: boolean };
             const breakdownRows: BreakdownRow[] = rateType === "daily"
@@ -1167,8 +1207,9 @@ export default function BookingEngine({
                 currency="OMR"
                 min={0}
                 value={discount === "" ? "" : parseFloat(discount)}
-                onValueChange={(v) => setDiscount(v === null ? "" : String(v))}
+                onValueChange={(v) => { setDiscountTouched(true); setDiscount(v === null ? "" : String(v)); }}
                 reserveMessageSpace={false}
+                helperText={longStay.tier ? tStep4("longStayHint", { percent: longStay.tier.percent, nights: longStay.tier.minNights, amount: fmtOMR(longStay.amount) }) : undefined}
               />
               <Select
                 label={tStep4("source")}

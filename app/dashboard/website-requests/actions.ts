@@ -10,6 +10,8 @@ import { computeUnitPricings } from "@/lib/reservation-pricing";
 import { getUnitConflict, type ConflictDetail } from "@/lib/reservation-conflict";
 import { generateReservationNumber } from "@/lib/reservation-number";
 import { searchAvailability } from "@/lib/public-site/data";
+import { longStayDiscount } from "@/lib/stay-rules";
+import { getOrgStayRules } from "@/lib/stay-rules-server";
 
 async function getActor() {
   const supabase = await createClient();
@@ -74,8 +76,11 @@ export async function confirmWebsiteRequest(requestId: string): Promise<ConfirmR
 
   // Pricing (identical engine + persisted segments).
   const pricings = await computeUnitPricings([unit.id], "daily", checkIn, checkOut);
-  const grand = calculateGrandTotal(pricings.map((p) => p.subtotal), 0);
   const totalNights = calculateNights(checkIn, checkOut);
+  // Long-stay discount (Pricing → Stay rules) — the guest was quoted with it.
+  const { longStayTiers } = await getOrgStayRules(orgId);
+  const accommodation = pricings.reduce((sum, p) => sum + Math.round(p.subtotal * 1000), 0) / 1000;
+  const grand = calculateGrandTotal(pricings.map((p) => p.subtotal), longStayDiscount(accommodation, totalNights, longStayTiers).amount);
 
   try {
     const reservation = await prisma.$transaction(async (tx) => {

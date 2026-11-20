@@ -461,6 +461,7 @@
     "pricingSeasons": "Seasons",
     "pricingRates": "Default rates",
     "pricingCalendar": "Rate calendar",
+    "pricingRules": "Stay rules",
     "reservationList": "Reservations list",
     "newReservation": "New reservation",
     "paymentsList": "Payments list",
@@ -2472,6 +2473,7 @@
         "pastStartWarning": "Heads up: this reservation starts before today. Make sure this is intended."
       },
       "step3": {
+        "minStayWarning": "Minimum stay for these dates is {min} nights (this booking is {nights}). You can still book — online guests can't.",
         "title": "Select Units",
         "selectedCount": "{count} selected",
         "allTypes": "All Types",
@@ -2510,6 +2512,7 @@
         }
       },
       "step4": {
+        "longStayHint": "Includes the long-stay discount: {percent}% for {nights}+ nights = {amount} OMR",
         "periodCol": "Period",
         "nightsCol": "Nights",
         "monthsCol": "Months",
@@ -7144,9 +7147,9 @@
       "cancel": "Cancel",
       "rules": "Stay rules for this season",
       "minNights": "Minimum nights",
-      "minNightsHint": "Empty = organization default",
+      "minNightsHint": "Empty = the organization's minimum stay.",
       "weekendPct": "Weekend adjustment (%)",
-      "weekendPctHint": "Empty = organization default"
+      "weekendPctHint": "Empty = the organization's weekend %. 0 = no weekend change in this season."
     },
     "rates": {
       "filterBuilding": "Building",
@@ -7180,7 +7183,42 @@
       "next": "Later",
       "today": "Today",
       "empty": "No units to show.",
-      "omr": "OMR per night"
+      "omr": "OMR per night",
+      "legendWeekend": "Weekend night (weekend % included)"
+    },
+    "rules": {
+      "weekendTitle": "Weekend pricing",
+      "weekendHint": "Charge more (or less) for nights that start on your weekend days. Applies to nightly stays only — monthly stays aren't affected.",
+      "days": "Weekend nights",
+      "daysHint": "A night belongs to the day it starts. In Oman, Thursday and Friday nights are usual.",
+      "suggest": "Use Thu + Fri",
+      "pct": "Adjustment (%)",
+      "pctHint": "20 = 20% more · -10 = 10% less · 0 = off",
+      "example": "Example: a {rate} OMR night becomes {adjusted} OMR on {days}.",
+      "off": "Weekend pricing is off — pick at least one night and a non-zero percentage.",
+      "seasonsNote": "Seasons use this percentage too, unless a season sets its own (Season → Stay rules for this season).",
+      "save": "Save",
+      "saved": "Weekend pricing saved",
+      "minTitle": "Minimum stay",
+      "minHint": "The shortest nightly stay you accept. Online guests can't book shorter stays; staff see a warning but can still book.",
+      "minLabel": "Minimum nights",
+      "minOff": "No minimum — any stay of 1 night or more is accepted.",
+      "minOn": "Stays shorter than {n} nights are blocked online. Seasons can set their own minimum (e.g. 3 nights in Khareef).",
+      "minSaved": "Minimum stay saved",
+      "lsTitle": "Long-stay discount",
+      "lsHint": "Reward longer nightly stays with a percentage off. It's added as a separate discount on the booking — nightly rates stay unchanged. Monthly stays don't get it.",
+      "lsEmpty": "No long-stay discount yet.",
+      "lsFrom": "Stays of",
+      "lsNights": "Nights",
+      "lsNightsOrMore": "nights or more get",
+      "lsPercent": "Percent off",
+      "lsOff": "% off",
+      "lsRemove": "Remove tier",
+      "lsAdd": "Add a tier",
+      "lsExample": "Example: {nights} nights at 20.000 OMR = {total} OMR → discount {discount} OMR. The highest tier a stay reaches applies.",
+      "lsOffNote": "Long-stay discount is off.",
+      "lsWhere": "Applied automatically on the website and pre-filled in the booking form (staff can change it).",
+      "tiersSaved": "Long-stay discount saved"
     },
     "errors": {
       "forbidden": "You don't have permission to change prices.",
@@ -7195,7 +7233,8 @@
       "notFound": "Season not found.",
       "tooMany": "Too many units in one save — filter and save in parts.",
       "dailyMonthlyRequired": "Each changed unit needs a nightly and a monthly rate.",
-      "generic": "Something went wrong. Please try again."
+      "generic": "Something went wrong. Please try again.",
+      "tiers": "Each tier needs 2–365 nights and 0.1–90% off, with different night counts (up to 5 tiers)."
     }
   }
 }

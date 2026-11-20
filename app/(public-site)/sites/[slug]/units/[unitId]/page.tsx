@@ -42,7 +42,7 @@ export default async function UnitDetail({
   // Optional live quote when the visitor arrived with dates.
   const startDate = sp.startDate, endDate = sp.endDate;
   const guests = sp.guests ? parseInt(sp.guests, 10) : undefined;
-  let quote: { available: boolean; subtotal: number; nights: number; priceName: string | null; segments: { startDate: string; endDate: string; nights: number; ratePerNight: number; subtotal: number; priceName: string | null }[] } | null = null;
+  let quote: { available: boolean; tooShort: boolean; minNights: number; subtotal: number; discount: number; discountPercent: number | null; total: number; nights: number; priceName: string | null; segments: { startDate: string; endDate: string; nights: number; ratePerNight: number; subtotal: number; priceName: string | null }[] } | null = null;
 
   if (startDate && endDate && new Date(endDate) > new Date(startDate)) {
     const results = await searchAvailability(site.organizationId, {
@@ -50,8 +50,8 @@ export default async function UnitDetail({
     });
     const m = results.find((r) => r.id === unit.id);
     quote = m
-      ? { available: m.available, subtotal: m.subtotal, nights: m.nights, priceName: m.priceName, segments: m.segments }
-      : { available: false, subtotal: 0, nights: 0, priceName: null, segments: [] };
+      ? { available: m.available, tooShort: m.tooShort, minNights: m.minNights, subtotal: m.subtotal, discount: m.discount, discountPercent: m.discountPercent, total: m.total, nights: m.nights, priceName: m.priceName, segments: m.segments }
+      : { available: false, tooShort: false, minNights: 1, subtotal: 0, discount: 0, discountPercent: null, total: 0, nights: 0, priceName: null, segments: [] };
   }
 
   const bookHref = `/book?unitId=${unit.id}&startDate=${startDate}&endDate=${endDate}&guests=${guests ?? 2}`;
@@ -125,12 +125,18 @@ export default async function UnitDetail({
                       <span>{formatMoney(s.subtotal, site.currency, lang)}</span>
                     </li>
                   ))}
+                  {quote.discount > 0 && (
+                    <li className="flex justify-between font-medium text-emerald-700">
+                      <span>{fill(dict.search.longStay, { percent: quote.discountPercent ?? 0 })}</span>
+                      <span>−{formatMoney(quote.discount, site.currency, lang)}</span>
+                    </li>
+                  )}
                 </ul>
               )}
               {site.showPrices && (
                 <div className="mt-3 flex items-center justify-between">
                   <span className="text-sm text-slate-500">{fill(dict.search.forNights, { n: quote.nights })}</span>
-                  <span className="text-xl font-extrabold text-slate-900">{formatMoney(quote.subtotal, site.currency, lang)}</span>
+                  <span className="text-xl font-extrabold text-slate-900">{formatMoney(quote.total, site.currency, lang)}</span>
                 </div>
               )}
               <Link href={bookHref} className="mt-4 block rounded-xl py-3 text-center text-sm font-bold text-white shadow-sm transition hover:opacity-90" style={{ background: "var(--site-primary)" }}>
@@ -140,7 +146,7 @@ export default async function UnitDetail({
           )}
 
           {quote && !quote.available && (
-            <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">{dict.search.none}</p>
+            <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-700">{quote.tooShort ? fill(dict.search.minStay, { n: quote.minNights }) : dict.search.none}</p>
           )}
         </aside>
       </div>

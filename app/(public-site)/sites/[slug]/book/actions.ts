@@ -6,6 +6,8 @@ import { prisma } from "@/lib/prisma";
 import { getUnitPriceForRange } from "@/lib/pricing";
 import { collapseToSegments, sumSubtotals } from "@/lib/reservation-engine";
 import { rateLimit, clientIp } from "@/lib/rate-limit";
+import { longStayDiscount } from "@/lib/stay-rules";
+import { getOrgStayRules } from "@/lib/stay-rules-server";
 
 export type BookingInput = {
   slug: string;
@@ -53,9 +55,13 @@ export async function submitBookingRequest(input: BookingInput): Promise<Booking
   if (!unit) return { ok: false, error: "unit_not_found" };
 
   // Authoritative seasonal quote (identical engine to the PMS).
-  const priceResult = await getUnitPriceForRange(unit.id, start, end);
+  const [priceResult, rules] = await Promise.all([getUnitPriceForRange(unit.id, start, end), getOrgStayRules(site.organizationId)]);
+  // Minimum stay (Pricing → Stay rules) is enforced for online requests.
+  if (priceResult.nights < priceResult.minNights) return { ok: false, error: "min_nights" };
   const segments = collapseToSegments(priceResult.dailyBreakdown);
-  const total = sumSubtotals(segments.map((s) => s.subtotal));
+  const subtotal = sumSubtotals(segments.map((s) => s.subtotal));
+  // Quoted total = after the long-stay discount (re-applied on confirmation).
+  const total = Math.round((subtotal - longStayDiscount(subtotal, priceResult.nights, rules.longStayTiers).amount) * 1000) / 1000;
 
   const guests = Math.max(1, Math.min(Number(input.guests) || 1, 50));
 

@@ -31,6 +31,10 @@ export type PriceRow = {
   disallowMonthly: boolean;
   /** Set on virtual rows built from a central Season. */
   seasonId?: string;
+  /** Season's own weekend % (null/undefined = use the organization's). */
+  weekendAdjustPct?: number | null;
+  /** Season's own minimum nights (null/undefined = the organization's default). */
+  minNights?: number | null;
 };
 
 type Db = Pick<PrismaClient, "unit" | "unitPrice" | "season">;
@@ -74,6 +78,8 @@ export type SeasonForMatch = {
   disallowMonthly: boolean;
   propertyIds: string[];
   excludedUnitIds: string[];
+  weekendAdjustPct?: number | null;
+  minNights?: number | null;
   rates: { unitId: string | null; unitType: string | null; dailyRate: Prisma.Decimal | number | string; weeklyRate: Prisma.Decimal | number | string | null; monthlyRate: Prisma.Decimal | number | string | null }[];
 };
 
@@ -110,6 +116,8 @@ export function seasonRowsForUnit(
       priority: s.priority,
       isActive: s.isActive,
       disallowMonthly: s.disallowMonthly,
+      weekendAdjustPct: s.weekendAdjustPct ?? null,
+      minNights: s.minNights ?? null,
     });
   }
   return out;

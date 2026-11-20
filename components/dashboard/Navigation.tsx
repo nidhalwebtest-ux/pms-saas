@@ -39,21 +39,20 @@ const navigationConfig: NavItem[] = [
     key:             "properties",
     labelKey:        "properties",
     href:            "/dashboard/properties",
-    activePatterns:  ["/dashboard/units"],
+    activePatterns:  ["/dashboard/units", "/dashboard/pricing"],
     children: [
       { labelKey: "buildings",  href: "/dashboard/properties" },
       { labelKey: "unitsRooms", href: "/dashboard/units"      },
-    ],
-  },
-  {
-    key:      "pricing",
-    labelKey: "pricing",
-    href:     "/dashboard/pricing/seasons",
-    activePatterns: ["/dashboard/pricing"],
-    children: [
-      { labelKey: "pricingSeasons",  href: "/dashboard/pricing/seasons" },
-      { labelKey: "pricingRates",    href: "/dashboard/pricing/rates" },
-      { labelKey: "pricingCalendar", href: "/dashboard/pricing/calendar" },
+      {
+        labelKey: "pricing",
+        href:     "/dashboard/pricing/seasons",
+        children: [
+          { labelKey: "pricingSeasons",  href: "/dashboard/pricing/seasons" },
+          { labelKey: "pricingRates",    href: "/dashboard/pricing/rates" },
+          { labelKey: "pricingCalendar", href: "/dashboard/pricing/calendar" },
+          { labelKey: "pricingRules",    href: "/dashboard/pricing/rules" },
+        ],
+      },
     ],
   },
   {
@@ -177,6 +176,7 @@ const CHILD_REQUIRES: Record<string, { entity: string; level: PermissionLevel }>
   // Lists group — Properties dropdown splits into Buildings vs Units.
   "/dashboard/properties":                 { entity: "buildings", level: "VIEW" },
   "/dashboard/units":                      { entity: "units",     level: "VIEW" },
+  "/dashboard/pricing/seasons":            { entity: "units",     level: "VIEW" }, // Pricing (prices belong to units)
   // Cashier & Bank group.
   "/dashboard/cashier":                    { entity: "reconciliation", level: "VIEW" },
   "/dashboard/deposits":                   { entity: "reconciliation", level: "VIEW" },
@@ -402,7 +402,8 @@ export default function Navigation({ role, navAccess, websiteRequestCount = 0 }:
           {activeItem.children.map((child) => {
             const childActive =
               pathname === child.href ||
-              pathname.startsWith(child.href + "/");
+              pathname.startsWith(child.href + "/") ||
+              !!child.children?.some((sub) => pathname === sub.href || pathname.startsWith(sub.href + "/"));
 
             return (
               <div

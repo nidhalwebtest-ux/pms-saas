@@ -15,6 +15,7 @@ import {
   sumSubtotals,
 } from "@/lib/reservation-engine";
 import { getUnitPriceForRange } from "@/lib/pricing";
+import { getOrgStayRules } from "@/lib/stay-rules-server";
 
 export async function GET(req: NextRequest) {
   const orgId = await getOrgId();
@@ -143,6 +144,7 @@ export async function GET(req: NextRequest) {
       let rateSource  = "no_price";
       let priceName: string | null = null;
       let breakdown:  object[] = [];
+      let minNights   = 1; // Stay rules: staff are warned, never blocked
 
       if (available) {
         if (rateType === "daily") {
@@ -153,6 +155,7 @@ export async function GET(req: NextRequest) {
           rateSource = segments[0]?.priceType === "SEASONAL" ? "seasonal_price" : "default_price";
           priceName  = segments[0]?.priceName ?? null;
           breakdown  = segments;
+          minNights  = priceResult.minNights;
         } else {
           const defaultPrice = unit.prices.find((p) => p.priceType === "DEFAULT");
           const monthlyRate  = defaultPrice ? Number(defaultPrice.monthlyRate) : 0;
@@ -187,9 +190,11 @@ export async function GET(req: NextRequest) {
         priceName,
         subtotal,
         breakdown,
+        minNights,
       };
     }),
   );
 
-  return NextResponse.json({ units: results, nights, startDate: startStr, endDate: endStr });
+  const { longStayTiers } = await getOrgStayRules(orgId);
+  return NextResponse.json({ units: results, nights, startDate: startStr, endDate: endStr, longStayTiers });
 }

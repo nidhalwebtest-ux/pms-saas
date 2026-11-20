@@ -15,7 +15,7 @@ Update the **Status** column when an item starts or finishes.
 | 3  | Test WhatsApp with a real number          | 1 · Foundation     | S    | Postponed (needs Meta Business account + spare number) |
 | 4  | Subscriptions, plans & free trial         | 2 · Revenue        | L    | Done — needs logged-in check of admin + billing screens |
 | 5  | Bank gateway: payment links               | 2 · Revenue        | L    | Postponed (needs provider choice + sandbox) |
-| 6  | Pricing Management module                 | 2 · Revenue        | M    | In progress |
+| 6  | Pricing Management module                 | 2 · Revenue        | M    | Done — seasons, bulk rates, rate calendar, stay rules; season migration runs after prod promote |
 | 7  | Better transaction PDFs                   | 3 · Core polish    | M    | Todo    |
 | 8  | Better data migration (CSV import)        | 3 · Core polish    | M    | Todo    |
 | 9  | Merge duplicate tenants                   | 3 · Core polish    | M    | Todo    |

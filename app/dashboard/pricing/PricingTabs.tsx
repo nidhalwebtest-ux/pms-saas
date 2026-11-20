@@ -8,6 +8,7 @@ const TABS = [
   { key: "seasons", href: "/dashboard/pricing/seasons" },
   { key: "rates", href: "/dashboard/pricing/rates" },
   { key: "calendar", href: "/dashboard/pricing/calendar" },
+  { key: "rules", href: "/dashboard/pricing/rules" },
 ] as const;
 
 export default function PricingTabs() {

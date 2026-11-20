@@ -4,7 +4,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 // (importing these constructs the Prisma client but never connects — tests are pure)
 import { seasonRowsForUnit, type SeasonForMatch, type PriceRow } from "./unit-prices";
-import { resolvePrice } from "./pricing";
+import { resolvePrice, applyWeekend, weekendRuleOf } from "./pricing";
+import { parseLongStayTiers, longStayTierFor, longStayDiscount } from "./stay-rules";
 
 const ORG = "org1";
 const unit = (id: string, unitType = "ONE_BR", propertyId = "b1") => ({ id, unitType, propertyId, organizationId: ORG });
@@ -68,4 +69,58 @@ test("overlapping seasons: higher priority wins; inactive seasons are ignored", 
   assert.equal(priceOn(rows, "2026-07-13")?.dailyRate, 48);
   const rowsOff = [DEF, ...seasonRowsForUnit(unit("u1"), [DEF], [season({ isActive: false })])];
   assert.equal(priceOn(rowsOff, "2026-07-15")?.dailyRate, 20);
+});
+
+// ── Weekend pricing (Stay rules) ─────────────────────────────────────────────
+// 2026-07-02 is a Thursday, 2026-07-03 a Friday, 2026-06-29 a Monday.
+const THU_FRI = { days: [4, 5], pct: 20 };
+const nightRate = (rows: PriceRow[], ymd: string, rule = THU_FRI) => {
+  const d = new Date(`${ymd}T00:00:00.000Z`);
+  return applyWeekend(resolvePrice(rows, d, null), d, rule);
+};
+
+test("weekend %: only on the chosen nights, labelled, rounded to baisa", () => {
+  assert.deepEqual(nightRate([DEF], "2026-06-29"), { rate: 20, weekend: false, name: null });
+  assert.deepEqual(nightRate([DEF], "2026-07-02"), { rate: 24, weekend: true, name: "Weekend" });
+  const odd: PriceRow = { ...DEF, dailyRate: "17.333" };
+  assert.equal(nightRate([odd], "2026-07-03", { days: [5], pct: 15 }).rate, 19.933); // 17333 × 1.15 = 19932.95 → 19933
+});
+
+test("weekend %: a season's own % (even 0) beats the organization's", () => {
+  const withSeason = (pct: number | null) => [DEF, ...seasonRowsForUnit(unit("u1"), [DEF], [season({ weekendAdjustPct: pct })])];
+  assert.deepEqual(nightRate(withSeason(null), "2026-07-02"), { rate: 57.6, weekend: true, name: "Khareef · Weekend" });
+  assert.equal(nightRate(withSeason(50), "2026-07-02").rate, 72);
+  assert.deepEqual(nightRate(withSeason(0), "2026-07-02"), { rate: 48, weekend: false, name: "Khareef" });
+});
+
+test("weekend %: discounts work and no rule means no change", () => {
+  assert.equal(nightRate([DEF], "2026-07-02", { days: [4], pct: -10 }).rate, 18);
+  assert.equal(applyWeekend(resolvePrice([DEF], new Date("2026-07-02T00:00:00.000Z"), null), new Date("2026-07-02T00:00:00.000Z"), null).rate, 20);
+  assert.equal(weekendRuleOf({ weekendDays: [], weekendAdjustPct: 20 }), null);
+  assert.deepEqual(weekendRuleOf({ weekendDays: [4, 5], weekendAdjustPct: 20 }), THU_FRI);
+});
+
+// ── Minimum nights + long-stay discount (Stay rules) ─────────────────────────
+
+test("season minimum nights travels on its price rows", () => {
+  const rows = [DEF, ...seasonRowsForUnit(unit("u1"), [DEF], [season({ minNights: 3 })])];
+  assert.equal(priceOn(rows, "2026-07-05")?.minNights, 3);
+  assert.equal(priceOn(rows, "2026-06-30")?.minNights, null, "default nights → organization default");
+});
+
+test("long-stay tiers: sanitised, highest reached tier wins", () => {
+  const tiers = parseLongStayTiers([{ minNights: 28, percent: 15 }, { minNights: 7, percent: 5 }, { minNights: 1, percent: 50 }, { minNights: 14, percent: 0 }, "junk"]);
+  assert.deepEqual(tiers, [{ minNights: 7, percent: 5 }, { minNights: 28, percent: 15 }]);
+  assert.equal(longStayTierFor(6, tiers), null);
+  assert.deepEqual(longStayTierFor(7, tiers), { minNights: 7, percent: 5 });
+  assert.deepEqual(longStayTierFor(30, tiers), { minNights: 28, percent: 15 });
+  assert.deepEqual(parseLongStayTiers(null), []);
+});
+
+test("long-stay discount: % of subtotal in whole baisa, nightly stays only", () => {
+  const tiers = [{ minNights: 7, percent: 5 }];
+  assert.deepEqual(longStayDiscount(350, 7, tiers), { amount: 17.5, tier: tiers[0] });
+  assert.equal(longStayDiscount(123.457, 7, tiers).amount, 6.173); // 123457 × 5% = 6172.85 → 6173
+  assert.equal(longStayDiscount(350, 6, tiers).amount, 0);
+  assert.equal(longStayDiscount(800, 30, tiers, "monthly").amount, 0);
 });

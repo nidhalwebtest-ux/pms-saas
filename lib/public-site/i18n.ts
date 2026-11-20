@@ -36,6 +36,8 @@ const en = {
     none: "No stays available for these dates.", tryOther: "Try different dates.",
     request: "Request booking", forNights: "for {n} nights", editSearch: "Edit search",
     pickDates: "Pick your dates to see availability and prices.",
+    minStay: "The minimum stay for these dates is {n} nights.",
+    longStay: "Long-stay discount ({percent}%)", subtotal: "Subtotal",
   },
   unit: {
     overview: "Overview", pricing: "Pricing", selectDates: "Select dates to see the total for your stay.",
@@ -85,6 +87,8 @@ const ar: typeof en = {
     none: "لا توجد إقامات متاحة لهذه التواريخ.", tryOther: "جرّب تواريخ أخرى.",
     request: "طلب الحجز", forNights: "لمدة {n} ليالٍ", editSearch: "تعديل البحث",
     pickDates: "اختر تواريخك لعرض التوفر والأسعار.",
+    minStay: "الحد الأدنى للإقامة في هذه التواريخ {n} ليالٍ.",
+    longStay: "خصم الإقامة الطويلة ({percent}%)", subtotal: "المجموع الفرعي",
   },
   unit: {
     overview: "نظرة عامة", pricing: "الأسعار", selectDates: "اختر التواريخ لعرض إجمالي إقامتك.",

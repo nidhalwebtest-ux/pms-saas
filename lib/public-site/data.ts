@@ -13,6 +13,8 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { getUnitPriceForRange } from "@/lib/pricing";
+import { longStayDiscount } from "@/lib/stay-rules";
+import { getOrgStayRules } from "@/lib/stay-rules-server";
 import { calculateNights, collapseToSegments, sumSubtotals, type PriceSegment } from "@/lib/reservation-engine";
 import { NON_BLOCKING_STATUSES } from "@/lib/reservation-conflict";
 import { extractSiteSlug } from "@/lib/public-site/subdomain";
@@ -107,9 +109,18 @@ export type PublicUnit = {
 };
 
 export type AvailabilityUnit = PublicUnit & {
+  /** Free for the dates AND long enough for the minimum stay (bookable). */
   available: boolean;
+  /** Free, but shorter than the minimum stay (Pricing → Stay rules). */
+  tooShort: boolean;
+  minNights: number;
   nights: number;
+  /** Accommodation total before the long-stay discount. */
   subtotal: number;
+  /** Long-stay discount (0 when none) and the guest's total after it. */
+  discount: number;
+  discountPercent: number | null;
+  total: number;
   rateAmount: number;
   priceName: string | null;
   segments: PriceSegment[];
@@ -342,21 +353,30 @@ export async function searchAvailability(orgId: string, q: AvailabilityQuery): P
   for (const ru of conflictNew) occupied.add(ru.unitId);
 
   const nights = calculateNights(startDate, endDate);
+  const rules = await getOrgStayRules(orgId);
 
   return Promise.all(
     units.map(async (u): Promise<AvailabilityUnit> => {
       const base = toPublicUnit(u);
       const available = !occupied.has(u.id);
       if (!available) {
-        return { ...base, available: false, nights, subtotal: 0, rateAmount: 0, priceName: null, segments: [] };
+        return { ...base, available: false, tooShort: false, minNights: rules.defaultMinNights, nights, subtotal: 0, discount: 0, discountPercent: null, total: 0, rateAmount: 0, priceName: null, segments: [] };
       }
       const priceResult = await getUnitPriceForRange(u.id, startDate, endDate);
       const segments = collapseToSegments(priceResult.dailyBreakdown);
+      const subtotal = sumSubtotals(segments.map((s) => s.subtotal));
+      const tooShort = nights < priceResult.minNights; // minimum stay: BLOCK online
+      const ls = longStayDiscount(subtotal, nights, rules.longStayTiers);
       return {
         ...base,
-        available: true,
+        available: !tooShort,
+        tooShort,
+        minNights: priceResult.minNights,
         nights,
-        subtotal: sumSubtotals(segments.map((s) => s.subtotal)),
+        subtotal,
+        discount: ls.amount,
+        discountPercent: ls.tier?.percent ?? null,
+        total: Math.round((subtotal - ls.amount) * 1000) / 1000,
         rateAmount: segments[0]?.ratePerNight ?? 0,
         priceName: segments[0]?.priceName ?? null,
         segments,

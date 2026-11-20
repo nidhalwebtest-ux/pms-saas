@@ -220,6 +220,29 @@ export default function SeasonForm({ title, initial, buildings, units }: { title
         )}
       </Card>
 
+      <Card title={t("rules")}>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <NumberField
+            label={t("minNights")}
+            value={v.minNights}
+            min={1}
+            max={365}
+            step={1}
+            onValueChange={(n) => set("minNights", n === null ? null : Math.round(n))}
+            helperText={t("minNightsHint")}
+          />
+          <NumberField
+            label={t("weekendPct")}
+            value={v.weekendAdjustPct}
+            min={-90}
+            max={500}
+            step={1}
+            onValueChange={(n) => set("weekendAdjustPct", n === null ? null : Math.round(n))}
+            helperText={t("weekendPctHint")}
+          />
+        </div>
+      </Card>
+
       <div className="flex justify-end gap-2">
         <Button variant="secondary" onClick={() => router.push("/dashboard/pricing/seasons")}>{t("cancel")}</Button>
         <Button variant="primary" onClick={save} loading={pending}>{t("save")}</Button>

@@ -6,7 +6,7 @@ import { requireOrgUser } from "@/lib/tenant";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import { getSelectedPropertyId } from "@/lib/selected-property";
 import { loadUnitPriceRows, SEASON_ROW_PREFIX } from "@/lib/unit-prices";
-import { resolvePrice } from "@/lib/pricing";
+import { resolvePrice, applyWeekend, weekendRuleOf } from "@/lib/pricing";
 
 /**
  * Pricing → Rate calendar: units × days, each cell = the nightly rate the
@@ -34,14 +34,19 @@ export default async function RateCalendarPage({ searchParams }: { searchParams:
   const building = sp.building !== undefined ? sp.building : selected || "";
   const buildingIds = building && buildings.some((b) => b.id === building) ? [building] : buildings.map((b) => b.id);
 
-  const [units, seasons] = await Promise.all([
+  const [units, seasons, org] = await Promise.all([
     prisma.unit.findMany({
       where: { propertyId: { in: buildingIds }, isActive: true },
       select: { id: true, name: true, basePrice: true, property: { select: { name: true } } },
       orderBy: [{ property: { name: "asc" } }, { floor: "asc" }, { name: "asc" }],
     }),
     prisma.season.findMany({ where: { organizationId }, select: { id: true, name: true, nameAr: true, color: true } }),
+    prisma.organization.findUnique({ where: { id: organizationId }, select: { weekendDays: true, weekendAdjustPct: true } }),
   ]);
+  const weekend = weekendRuleOf(org);
+  // shaded columns = the organization's weekend nights (Thu/Fri until configured)
+  const weekendDays = org && org.weekendDays.length > 0 ? org.weekendDays : [4, 5];
+  let anyWeekendRate = false;
   const rows = await loadUnitPriceRows(units.map((u) => u.id));
   const seasonById = new Map(seasons.map((s) => [s.id, s]));
 
@@ -60,6 +65,8 @@ export default async function RateCalendarPage({ searchParams }: { searchParams:
       unit: u,
       cells: dates.map((d) => {
         const p = resolvePrice(prices, d, Number(u.basePrice));
+        const night = applyWeekend(p, d, weekend);
+        if (night.weekend) anyWeekendRate = true;
         let color: string | null = null;
         if (p?.priceType === "SEASONAL") {
           const s = p.priceId.startsWith(SEASON_ROW_PREFIX) ? seasonById.get(p.priceId.slice(SEASON_ROW_PREFIX.length)) : null;
@@ -67,7 +74,7 @@ export default async function RateCalendarPage({ searchParams }: { searchParams:
           const name = (locale === "ar" && s?.nameAr) || s?.name || p.name || "";
           usedSeasons.set(color + name, { name, color });
         }
-        return { rate: p?.dailyRate ?? null, name: p?.name ?? null, color };
+        return { rate: p ? night.rate : null, name: p ? night.name : null, color, weekend: night.weekend };
       }),
     };
   });
@@ -98,6 +105,7 @@ export default async function RateCalendarPage({ searchParams }: { searchParams:
         {[...usedSeasons.values()].map((s) => (
           <span key={s.color + s.name} className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ backgroundColor: s.color }} /> {s.name}</span>
         ))}
+        {anyWeekendRate && <span className="inline-flex items-center gap-1.5"><span className="font-semibold text-brand-700">*</span> {t("legendWeekend")}</span>}
         <span className="ms-auto text-gray-400">{t("omr")}</span>
       </div>
 
@@ -112,7 +120,7 @@ export default async function RateCalendarPage({ searchParams }: { searchParams:
                 {dates.map((d) => {
                   const wk = d.getUTCDay();
                   return (
-                    <th key={ymd(d)} className={`min-w-[64px] px-1 py-2 text-center font-medium ${ymd(d) === todayYmd ? "text-brand-700" : ""} ${wk === 4 || wk === 5 ? "bg-gray-100" : ""}`}>
+                    <th key={ymd(d)} className={`min-w-[64px] px-1 py-2 text-center font-medium ${ymd(d) === todayYmd ? "text-brand-700" : ""} ${weekendDays.includes(wk) ? "bg-gray-100" : ""}`}>
                       {dayFmt.format(d)}
                     </th>
                   );
@@ -135,6 +143,7 @@ export default async function RateCalendarPage({ searchParams }: { searchParams:
                       dir="ltr"
                     >
                       {c.rate === null ? "—" : Number.isInteger(c.rate) ? c.rate : c.rate.toFixed(3).replace(/0+$/, "")}
+                      {c.weekend && <span className="font-semibold text-brand-700">*</span>}
                     </td>
                   ))}
                 </tr>

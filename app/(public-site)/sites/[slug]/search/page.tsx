@@ -32,6 +32,8 @@ export default async function SearchResults({
       })
     : [];
   const available = results.filter((r) => r.available);
+  // free units that are only blocked by the minimum stay → tell the guest why
+  const shortest = results.filter((r) => r.tooShort).reduce<number | null>((m, r) => (m === null ? r.minNights : Math.min(m, r.minNights)), null);
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -52,7 +54,7 @@ export default async function SearchResults({
       ) : available.length === 0 ? (
         <div className="mt-12 text-center">
           <p className="text-lg font-semibold text-slate-700">{dict.search.none}</p>
-          <p className="mt-1 text-slate-500">{dict.search.tryOther}</p>
+          <p className="mt-1 text-slate-500">{shortest !== null ? fill(dict.search.minStay, { n: shortest }) : dict.search.tryOther}</p>
         </div>
       ) : (
         <>
@@ -65,8 +67,8 @@ export default async function SearchResults({
                 href={`/book?unitId=${u.id}&startDate=${startDate}&endDate=${endDate}&guests=${guests ?? 2}`}
                 cta={dict.search.request}
                 badge={u.priceName}
-                priceMain={site.showPrices ? formatMoney(u.subtotal, site.currency, lang) : null}
-                priceSub={site.showPrices ? fill(dict.search.forNights, { n: u.nights }) : null}
+                priceMain={site.showPrices ? formatMoney(u.total, site.currency, lang) : null}
+                priceSub={site.showPrices ? `${fill(dict.search.forNights, { n: u.nights })}${u.discountPercent ? ` · −${u.discountPercent}%` : ""}` : null}
               />
             ))}
           </div>

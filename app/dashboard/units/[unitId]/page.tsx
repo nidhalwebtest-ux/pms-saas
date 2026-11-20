@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { loadUnitPrices } from "@/lib/unit-prices";
+import { weekendRuleOf } from "@/lib/pricing";
 import { getSessionAccessibleProperties } from "@/lib/property-scope";
 import { getSessionAccess, assertView } from "@/lib/access";
 import { Prisma } from "@prisma/client";
@@ -45,7 +46,7 @@ export default async function UnitDetailPage({
 
   const dbUser = await prisma.user.findUnique({
     where:  { id: user.id },
-    select: { id: true, organizationId: true, organization: { select: { showReservedStatus: true } } },
+    select: { id: true, organizationId: true, organization: { select: { showReservedStatus: true, weekendDays: true, weekendAdjustPct: true } } },
   });
   if (!dbUser?.organizationId) redirect("/onboarding");
   const showReserved = dbUser.organization?.showReservedStatus ?? false;
@@ -207,7 +208,9 @@ export default async function UnitDetailPage({
     isActive:    p.isActive,
     disallowMonthly: p.disallowMonthly,
     seasonId:    p.seasonId ?? null,
+    weekendAdjustPct: p.weekendAdjustPct ?? null,
   }));
+  const weekendRule = weekendRuleOf(dbUser.organization);
 
   const serializedNotes = notes.map((n) => ({
     id:        n.id,
@@ -401,7 +404,7 @@ export default async function UnitDetailPage({
               <CurrencyDollarIcon className="h-4 w-4 text-gray-400" />
               {t("pricing")}
             </h2>
-            <UnitPricingSection unitId={unitId} prices={serializedPrices} />
+            <UnitPricingSection unitId={unitId} prices={serializedPrices} weekend={weekendRule} />
           </section>
         </div>
       </div>

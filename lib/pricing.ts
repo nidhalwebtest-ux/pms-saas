@@ -30,10 +30,26 @@ export interface ApplicablePrice {
   weeklyRate:  number | null;
   monthlyRate: number;
   priority:    number;
+  /** Season's own weekend % override (null = use the organization's rule). */
+  weekendAdjustPct: number | null;
+  /** Season's own minimum nights (null = the organization's default). */
+  minNights: number | null;
 }
+
+/**
+ * Organization weekend pricing (Pricing → Stay rules). `days` are JS weekdays
+ * (0 = Sunday … 6 = Saturday) of the NIGHT's start day — e.g. [4, 5] makes
+ * Thursday and Friday nights weekend nights. `pct` adjusts the nightly rate
+ * (+20 = 20% more, -10 = 10% less). Applies to nightly stays only; monthly
+ * stays are priced from the monthly rate and never adjusted.
+ */
+export type WeekendRule = { days: number[]; pct: number };
 
 export interface RangePriceResult {
   nights:          number;
+  /** Minimum stay for these dates: the strictest rule among the seasons that
+   *  price its nights, else the organization default (Pricing → Stay rules). */
+  minNights:       number;
   totalAmount:     number;         // sum of daily rates
   currency:        "OMR";
   dailyBreakdown:  DayBreakdown[];
@@ -41,7 +57,8 @@ export interface RangePriceResult {
 
 export interface DayBreakdown {
   date:       string;              // "YYYY-MM-DD"
-  rate:       number;
+  rate:       number;              // after the weekend adjustment
+  weekend?:   boolean;             // true when a weekend % changed this night
   priceName:  string | null;       // null = default price
   priceType:  "DEFAULT" | "SEASONAL";
 }
@@ -67,6 +84,8 @@ export function resolvePrice(
     dailyRate: any; weeklyRate: any; monthlyRate: any;
     startDate: Date | null; endDate: Date | null;
     priority: number; isActive: boolean;
+    weekendAdjustPct?: number | null;
+    minNights?: number | null;
   }[],
   date: Date,
   basePrice?: number | null,
@@ -101,6 +120,8 @@ export function resolvePrice(
         weeklyRate:  null,
         monthlyRate: basePrice,
         priority:    0,
+        weekendAdjustPct: null,
+        minNights:   null,
       };
     }
     return null;
@@ -114,7 +135,43 @@ export function resolvePrice(
     weeklyRate:  applicable.weeklyRate != null ? Number(applicable.weeklyRate) : null,
     monthlyRate: Number(applicable.monthlyRate),
     priority:    applicable.priority,
+    weekendAdjustPct: applicable.weekendAdjustPct ?? null,
+    minNights:   applicable.minNights ?? null,
   };
+}
+
+/** Label added to weekend nights' price name (stored on segments/invoices). */
+export const WEEKEND_LABEL = "Weekend";
+
+/**
+ * PURE: the nightly rate after the weekend rule. The night's weekday is read
+ * in server-local time, like resolvePrice's day comparison (prod = UTC).
+ * A season's own % (even 0) beats the organization's. Rounded to whole baisa
+ * using integer arithmetic.
+ */
+export function applyWeekend(
+  price: ApplicablePrice | null,
+  night: Date,
+  rule: WeekendRule | null | undefined,
+): { rate: number; weekend: boolean; name: string | null } {
+  if (!price) return { rate: 0, weekend: false, name: null };
+  const plain = { rate: price.dailyRate, weekend: false, name: price.name };
+  if (!rule || !rule.days.includes(night.getDay())) return plain;
+  const pct = price.weekendAdjustPct ?? rule.pct;
+  if (!pct) return plain;
+  const baisa = Math.round(price.dailyRate * 1000);
+  const adjusted = Math.max(0, Math.round((baisa * (100 + pct)) / 100));
+  return {
+    rate: adjusted / 1000,
+    weekend: true,
+    name: price.name ? `${price.name} · ${WEEKEND_LABEL}` : WEEKEND_LABEL,
+  };
+}
+
+/** The organization's weekend rule (null when not configured). */
+export function weekendRuleOf(org: { weekendDays: number[]; weekendAdjustPct: number } | null | undefined): WeekendRule | null {
+  if (!org || org.weekendDays.length === 0) return null;
+  return { days: org.weekendDays, pct: org.weekendAdjustPct };
 }
 
 // ── Public API ────────────────────────────────────────────────────────────────
@@ -145,9 +202,15 @@ export async function getUnitPriceForRange(
 ): Promise<RangePriceResult> {
   const [prices, unit] = await Promise.all([
     loadUnitPrices(unitId),
-    prisma.unit.findUnique({ where: { id: unitId }, select: { basePrice: true } }),
+    prisma.unit.findUnique({
+      where: { id: unitId },
+      select: { basePrice: true, property: { select: { organization: { select: { weekendDays: true, weekendAdjustPct: true, defaultMinNights: true } } } } },
+    }),
   ]);
   const basePrice = unit ? Number(unit.basePrice) : null;
+  const weekend = weekendRuleOf(unit?.property.organization);
+  const orgMinNights = Math.max(1, unit?.property.organization.defaultMinNights ?? 1);
+  let minNights = 0;
 
   const breakdown: DayBreakdown[] = [];
   const cursor = new Date(startDate);
@@ -158,18 +221,23 @@ export async function getUnitPriceForRange(
 
   while (cursor < end) {
     const p = resolvePrice(prices, cursor, basePrice);
+    const night = applyWeekend(p, cursor, weekend);
+    minNights = Math.max(minNights, p?.minNights ?? orgMinNights);
     breakdown.push({
       date:      toLocalDateString(cursor),
-      rate:      p?.dailyRate ?? 0,
-      priceName: p?.name ?? null,
+      rate:      night.rate,
+      priceName: night.name,
       priceType: p?.priceType ?? "DEFAULT",
+      ...(night.weekend ? { weekend: true } : {}),
     });
     cursor.setDate(cursor.getDate() + 1);
   }
 
   return {
     nights:         breakdown.length,
-    totalAmount:    breakdown.reduce((s, d) => s + d.rate, 0),
+    minNights:      minNights || orgMinNights,
+    // sum in whole baisa — weekend rates can carry 3 decimals
+    totalAmount:    breakdown.reduce((s, d) => s + Math.round(d.rate * 1000), 0) / 1000,
     currency:       "OMR",
     dailyBreakdown: breakdown,
   };
@@ -185,9 +253,11 @@ export function resolveClientPrice(
     dailyRate: string; weeklyRate: string | null; monthlyRate: string;
     startDate: string | null; endDate: string | null;
     priority: number; isActive: boolean;
+    weekendAdjustPct?: number | null;
   }[],
   dateStr: string,
-): { rate: number; name: string | null; priceType: "DEFAULT" | "SEASONAL" } | null {
+  weekend?: WeekendRule | null,
+): { rate: number; name: string | null; priceType: "DEFAULT" | "SEASONAL"; weekend: boolean } | null {
   const date = new Date(dateStr);
   const result = resolvePrice(
     prices.map((p) => ({
@@ -201,5 +271,6 @@ export function resolveClientPrice(
     date,
   );
   if (!result) return null;
-  return { rate: result.dailyRate, name: result.name, priceType: result.priceType };
+  const night = applyWeekend(result, date, weekend);
+  return { rate: night.rate, name: night.name, priceType: result.priceType, weekend: night.weekend };
 }

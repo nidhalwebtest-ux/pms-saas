@@ -1,12 +1,14 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { getTranslations } from "next-intl/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireOrgUser } from "@/lib/tenant";
 import { hasAccess } from "@/lib/access";
 import { UNIT_TYPES } from "@/lib/pricing-management";
+import { publicOrgTag } from "@/lib/public-site/data";
+import { parseLongStayTiers, MAX_TIERS, type LongStayTier } from "@/lib/stay-rules";
 
 /**
  * Pricing Management server actions (Roadmap item 6).
@@ -35,9 +37,11 @@ async function editor() {
   }
 }
 
-function refresh() {
+function refresh(orgId: string) {
   revalidatePath("/dashboard/pricing", "layout");
   revalidatePath("/dashboard/units", "layout");
+  // public booking site caches "from" prices per org
+  updateTag(publicOrgTag(orgId));
 }
 
 // ── Seasons ──────────────────────────────────────────────────────────────────
@@ -145,7 +149,7 @@ export async function saveSeason(input: SeasonInput): Promise<PricingResult> {
     }
     await tx.seasonRate.createMany({ data: rates.map((r) => ({ ...r, seasonId: id! })) });
   });
-  refresh();
+  refresh(orgId);
   return { ok: true, id };
 }
 
@@ -155,7 +159,7 @@ export async function deleteSeason(id: string): Promise<PricingResult> {
   if (!u) return { ok: false, error: t("forbidden") };
   const res = await prisma.season.deleteMany({ where: { id, organizationId: u.organizationId } });
   if (res.count === 0) return { ok: false, error: t("notFound") };
-  refresh();
+  refresh(u.organizationId);
   return { ok: true };
 }
 
@@ -183,7 +187,7 @@ export async function duplicateSeasonNextYear(id: string): Promise<PricingResult
     });
     return c;
   });
-  refresh();
+  refresh(u.organizationId);
   return { ok: true, id: copy.id };
 }
 
@@ -220,6 +224,50 @@ export async function saveDefaultRates(rows: DefaultRateInput[]): Promise<Pricin
       else await tx.unitPrice.create({ data: { ...data, unitId: p.unitId, priceType: "DEFAULT" } });
     }
   }, { timeout: 60_000 });
-  refresh();
+  refresh(u.organizationId);
   return { ok: true, saved: parsed.length };
+}
+
+// ── Stay rules: weekend pricing ──────────────────────────────────────────────
+
+/** Organization weekend rule: which nights (0 = Sun … 6 = Sat) and by how much (%). */
+export async function saveWeekendRule(input: { days: number[]; pct: number }): Promise<PricingResult> {
+  const t = await getTranslations("pricing.errors");
+  const u = await editor();
+  if (!u) return { ok: false, error: t("forbidden") };
+  const days = [...new Set(input.days)].sort();
+  if (days.some((d) => !Number.isInteger(d) || d < 0 || d > 6)) return { ok: false, error: t("forbidden") };
+  const pct = Math.round(input.pct);
+  if (!Number.isFinite(pct) || pct < -90 || pct > 500) return { ok: false, error: t("weekendPct") };
+  await prisma.organization.update({ where: { id: u.organizationId }, data: { weekendDays: days, weekendAdjustPct: pct } });
+  refresh(u.organizationId);
+  return { ok: true };
+}
+
+// ── Stay rules: minimum nights + long-stay discount ──────────────────────────
+
+/** Organization default minimum stay for nightly bookings (1 = no minimum). */
+export async function saveDefaultMinNights(nights: number): Promise<PricingResult> {
+  const t = await getTranslations("pricing.errors");
+  const u = await editor();
+  if (!u) return { ok: false, error: t("forbidden") };
+  const n = Math.round(nights);
+  if (!Number.isFinite(n) || n < 1 || n > 365) return { ok: false, error: t("minNights") };
+  await prisma.organization.update({ where: { id: u.organizationId }, data: { defaultMinNights: n } });
+  refresh(u.organizationId);
+  return { ok: true };
+}
+
+/** Long-stay discount tiers for nightly stays (highest tier reached applies). */
+export async function saveLongStayTiers(tiers: LongStayTier[]): Promise<PricingResult> {
+  const t = await getTranslations("pricing.errors");
+  const u = await editor();
+  if (!u) return { ok: false, error: t("forbidden") };
+  if (!Array.isArray(tiers) || tiers.length > MAX_TIERS) return { ok: false, error: t("tiers") };
+  const clean = parseLongStayTiers(tiers);
+  // every submitted row must survive validation, and nights must be unique
+  if (clean.length !== tiers.length) return { ok: false, error: t("tiers") };
+  await prisma.organization.update({ where: { id: u.organizationId }, data: { longStayDiscounts: clean } });
+  refresh(u.organizationId);
+  return { ok: true };
 }

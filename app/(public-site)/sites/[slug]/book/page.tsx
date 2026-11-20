@@ -49,7 +49,7 @@ export default async function BookPage({
 
       {!available ? (
         <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
-          <p className="font-semibold text-amber-800">{dict.search.none}</p>
+          <p className="font-semibold text-amber-800">{quote?.tooShort ? fill(dict.search.minStay, { n: quote.minNights }) : dict.search.none}</p>
           <Link href={`/units/${unit.id}`} className="mt-2 inline-block text-sm font-medium text-amber-700 underline">{dict.search.editSearch}</Link>
         </div>
       ) : (
@@ -74,10 +74,16 @@ export default async function BookPage({
                       <span>{formatMoney(s.subtotal, site.currency, lang)}</span>
                     </li>
                   ))}
+                  {quote.discount > 0 && (
+                    <li className="flex justify-between font-medium text-emerald-700">
+                      <span>{fill(dict.search.longStay, { percent: quote.discountPercent ?? 0 })}</span>
+                      <span>−{formatMoney(quote.discount, site.currency, lang)}</span>
+                    </li>
+                  )}
                 </ul>
                 <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
                   <span className="text-sm font-medium text-slate-500">{dict.common.total} · {fill(dict.search.forNights, { n: quote.nights })}</span>
-                  <span className="text-xl font-extrabold text-slate-900">{formatMoney(quote.subtotal, site.currency, lang)}</span>
+                  <span className="text-xl font-extrabold text-slate-900">{formatMoney(quote.total, site.currency, lang)}</span>
                 </div>
               </div>
             )}

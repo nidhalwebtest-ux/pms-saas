@@ -5561,6 +5561,13 @@
         "errorBack": "Back"
       },
       "dash": {
+        "domainConnected": "Domain connected — secure (HTTPS) and live",
+        "domainPending": "Domain added — Vercel is issuing the security certificate (usually under a minute)",
+        "domainMissing": "Domain not connected — visitors can't open the site yet",
+        "domainUnknown": "Couldn't check the domain connection",
+        "domainConnect": "Connect domain",
+        "domainRecheck": "Check again",
+        "domainConnectedToast": "Domain connected",
         "statusLive": "Live",
         "statusOffline": "Offline",
         "liveDesc": "Your site is public and accepting bookings.",

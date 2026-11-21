@@ -6,25 +6,28 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   ArrowTopRightOnSquareIcon, LinkIcon, PencilSquareIcon, EyeIcon, EyeSlashIcon,
-  BuildingOffice2Icon, InboxArrowDownIcon,
+  BuildingOffice2Icon, InboxArrowDownIcon, CheckCircleIcon, ExclamationTriangleIcon, ArrowPathIcon, ClockIcon,
 } from "@heroicons/react/24/outline";
 import { Button, Badge } from "@/components/ui";
 import LivePreview from "./LivePreview";
-import { setWebsiteStatus } from "./actions";
+import { setWebsiteStatus, connectWebsiteDomain } from "./actions";
 import type { WebsiteForm, WebsiteStatus } from "./types";
+import type { DomainStatus } from "@/lib/public-site/provision";
 
 export default function WebsiteDashboard({
-  form, status, rootDomain, stats, onEdit,
+  form, status, rootDomain, stats, domainStatus, onEdit,
 }: {
   form: WebsiteForm;
   status: WebsiteStatus;
   rootDomain: string;
   stats: { buildings: number; units: number };
+  domainStatus: DomainStatus | null;
   onEdit: () => void;
 }) {
   const t = useTranslations("settings.website");
   const router = useRouter();
   const [pending, start] = useTransition();
+  const [connecting, startConnect] = useTransition();
 
   const host = `${form.slug}.${rootDomain}`;
   const url = `https://${host}`;
@@ -36,6 +39,41 @@ export default function WebsiteDashboard({
       if (res.ok) { toast.success(t(published ? "dash.disabledToast" : "dash.enabledToast")); router.refresh(); }
       else toast.error(res.message ?? t("errors.generic"));
     });
+
+  const connect = () =>
+    startConnect(async () => {
+      const res = await connectWebsiteDomain();
+      if (!res.ok) return void toast.error(t("errors.generic"));
+      const st = res.status.state;
+      if (st === "connected" || st === "pending") toast.success(t("dash.domainConnectedToast"));
+      else toast.error(res.status.error ?? t("dash.domainMissing"));
+      router.refresh();
+    });
+
+  // Domain connection line (only meaningful for a live site with Vercel creds configured).
+  const ds = published && domainStatus && domainStatus.state !== "skipped" ? domainStatus : null;
+  const domainLine = ds && (
+    <div
+      className={`mt-3 flex flex-wrap items-start gap-2 rounded-lg px-3 py-2 text-sm ${
+        ds.state === "connected" ? "bg-green-50 text-green-800" : ds.state === "pending" ? "bg-amber-50 text-amber-800" : "bg-red-50 text-red-800"
+      }`}
+    >
+      {ds.state === "connected" ? <CheckCircleIcon className="mt-0.5 h-4 w-4 shrink-0" />
+        : ds.state === "pending" ? <ClockIcon className="mt-0.5 h-4 w-4 shrink-0" />
+        : <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 shrink-0" />}
+      <div className="min-w-0 flex-1">
+        <p className="font-medium">
+          {t(ds.state === "connected" ? "dash.domainConnected" : ds.state === "pending" ? "dash.domainPending" : ds.state === "missing" ? "dash.domainMissing" : "dash.domainUnknown")}
+        </p>
+        {ds.error && <p className="mt-0.5 break-words text-xs opacity-80" dir="ltr">{ds.error}</p>}
+      </div>
+      {ds.state !== "connected" && (
+        <Button variant="secondary" size="sm" loading={connecting} onClick={connect} leftIcon={<ArrowPathIcon className="h-4 w-4" />}>
+          {t(ds.state === "pending" ? "dash.domainRecheck" : "dash.domainConnect")}
+        </Button>
+      )}
+    </div>
+  );
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
@@ -64,6 +102,7 @@ export default function WebsiteDashboard({
           <p className="mb-2 text-xs font-medium text-gray-500">{t("dash.yourUrl")}</p>
           <a href={url} target="_blank" rel="noreferrer" dir="ltr"
              className="block truncate text-lg font-bold text-blue-700 hover:underline">{host}</a>
+          {domainLine}
           <div className="mt-3 flex flex-wrap gap-2">
             <Button variant="secondary" size="sm" onClick={() => window.open(url, "_blank", "noreferrer")}
               leftIcon={<ArrowTopRightOnSquareIcon className="h-4 w-4" />}>{t("launch.open")}</Button>

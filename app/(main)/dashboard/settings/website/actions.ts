@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { hasAccess } from "@/lib/access";
 import { isValidSlug, isReservedSlug } from "@/lib/public-site/subdomain";
-import { addTenantDomain, tenantHost } from "@/lib/public-site/provision";
+import { addTenantDomain, ensureTenantDomain, tenantHost, type DomainStatus } from "@/lib/public-site/provision";
 import { HEX_RE, type WebsiteForm, type TemplateKey } from "./types";
 
 async function orgId(): Promise<string | null> {
@@ -207,4 +207,22 @@ export async function setWebsiteStatus(status: "PUBLISHED" | "DISABLED"): Promis
   revalidatePath(`/sites/${site.slug}`, "layout");
   revalidatePath("/dashboard/settings/website");
   return { ok: true };
+}
+
+// ── Domain connection (Settings → Website "Connect domain") ──────────────────
+
+/**
+ * Re-attach {slug}.binaya.app to the Vercel project if it's missing and report
+ * the result. Same as `vercel domains add`, without a human. Also runs on page
+ * load and in the daily cron (app/api/cron/website-domains).
+ */
+export async function connectWebsiteDomain(): Promise<{ ok: true; status: DomainStatus } | { ok: false; error: string }> {
+  if (!(await hasAccess("settingsWebsite", "EDIT"))) return { ok: false, error: "forbidden" };
+  const org = await orgId();
+  if (!org) return { ok: false, error: "no_org" };
+  const site = await prisma.orgWebsite.findUnique({ where: { organizationId: org }, select: { slug: true, status: true } });
+  if (!site || site.status !== "PUBLISHED") return { ok: false, error: "no_site" };
+  const status = await ensureTenantDomain(site.slug);
+  revalidatePath("/dashboard/settings/website");
+  return { ok: true, status };
 }

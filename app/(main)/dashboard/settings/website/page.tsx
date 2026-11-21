@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { EMPTY_FORM, type WebsiteForm, type WebsiteStatus, type TemplateKey } from "./types";
 import WebsiteWizard from "./WebsiteWizard";
 import { getAuthUser } from "@/lib/current-user";
+import { ensureTenantDomain, type DomainStatus } from "@/lib/public-site/provision";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,11 @@ export default async function WebsiteSettingsPage() {
     prisma.property.count({ where: { organizationId: orgId, isActive: true, isArchived: false } }),
     prisma.unit.count({ where: { isActive: true, property: { organizationId: orgId, isArchived: false } } }),
   ]);
+
+  // Live site: make sure {slug}.binaya.app is attached on Vercel (self-heals a
+  // failed publish-time attach) and show the result on the dashboard.
+  const domainStatus: DomainStatus | null =
+    site?.status === "PUBLISHED" ? await ensureTenantDomain(site.slug) : null;
 
   // Seed the form: existing config, or sensible defaults from the org.
   const form: WebsiteForm = site
@@ -58,6 +64,7 @@ export default async function WebsiteSettingsPage() {
       publishedAt={site?.publishedAt ? site.publishedAt.toISOString() : null}
       rootDomain={ROOT_DOMAIN}
       stats={{ buildings: buildingCount, units: unitCount }}
+      domainStatus={domainStatus}
     />
   );
 }

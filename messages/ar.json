@@ -5561,6 +5561,13 @@
         "errorBack": "رجوع"
       },
       "dash": {
+        "domainConnected": "النطاق متصل — آمن (HTTPS) ومباشر",
+        "domainPending": "تمت إضافة النطاق — جارٍ إصدار شهادة الأمان (عادةً أقل من دقيقة)",
+        "domainMissing": "النطاق غير متصل — لا يمكن للزوار فتح الموقع بعد",
+        "domainUnknown": "تعذر التحقق من اتصال النطاق",
+        "domainConnect": "ربط النطاق",
+        "domainRecheck": "تحقق مرة أخرى",
+        "domainConnectedToast": "تم ربط النطاق",
         "statusLive": "مباشر",
         "statusOffline": "غير متصل",
         "liveDesc": "موقعك عام ويستقبل الحجوزات.",

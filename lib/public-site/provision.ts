@@ -2,65 +2,141 @@ import "server-only";
 
 /**
  * Attach/detach a tenant's `{slug}.binaya.app` subdomain to the Vercel project
- * at publish time (the "Vercel Platforms" per-tenant domain pattern). Works with
- * the existing wildcard CNAME — no nameserver delegation required.
+ * (the "Vercel Platforms" per-tenant domain pattern) — the API equivalent of
+ * `vercel domains add {slug}.binaya.app`. Works with the existing wildcard CNAME;
+ * no nameserver delegation needed. Vercel then issues the TLS certificate.
  *
- * Degrades gracefully: if VERCEL_API_TOKEN / VERCEL_PROJECT_ID are not set (e.g.
- * local dev, or the `demo` domain that was added by hand), it no-ops and reports
- * `skipped` so publishing still succeeds.
+ * Self-healing — a site never depends on one API call succeeding:
+ *   1. publish / go-live calls addTenantDomain (retried on transient errors),
+ *   2. opening Settings → Website runs ensureTenantDomain for a live site,
+ *   3. a daily cron (app/api/cron/website-domains) re-attaches every live site.
+ * Every failure is logged with Vercel's error code (never the token).
+ *
+ * Degrades gracefully: without VERCEL_API_TOKEN / VERCEL_PROJECT_ID (local dev)
+ * everything no-ops and reports `skipped`.
  */
 
 const ROOT = "binaya.app";
+const API = "https://api.vercel.com";
 
 function config() {
-  const token = process.env.VERCEL_API_TOKEN;
-  const projectId = process.env.VERCEL_PROJECT_ID;
-  const teamId = process.env.VERCEL_TEAM_ID;
-  return { token, projectId, teamId };
+  return {
+    token: process.env.VERCEL_API_TOKEN,
+    projectId: process.env.VERCEL_PROJECT_ID,
+    teamId: process.env.VERCEL_TEAM_ID,
+  };
 }
 
 export type ProvisionResult = { ok: boolean; skipped?: boolean; error?: string };
+
+/** connected = attached + certificate-ready; pending = attached, DNS/cert not verified yet. */
+export type DomainState = "connected" | "pending" | "missing" | "unknown" | "skipped";
+export type DomainStatus = { state: DomainState; error?: string };
 
 export function tenantHost(slug: string): string {
   return `${slug}.${ROOT}`;
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Vercel API call with retries on network errors, 429 and 5xx. */
+async function vercelFetch(path: string, init: RequestInit, attempts = 3): Promise<Response> {
+  const { token, teamId } = config();
+  const sep = path.includes("?") ? "&" : "?";
+  const url = `${API}${path}${teamId ? `${sep}teamId=${teamId}` : ""}`;
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, {
+        ...init,
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json", ...(init.headers ?? {}) },
+        cache: "no-store",
+      });
+      if (res.status !== 429 && res.status < 500) return res;
+      lastErr = new Error(`vercel_http_${res.status}`);
+      if (i === attempts - 1) return res;
+    } catch (e) {
+      lastErr = e;
+    }
+    await sleep(400 * 2 ** i);
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("vercel_unreachable");
+}
+
+async function errorOf(res: Response): Promise<string> {
+  const body = await res.json().catch(() => ({}));
+  const code = body?.error?.code as string | undefined;
+  const msg = body?.error?.message as string | undefined;
+  if (res.status === 401 || res.status === 403 || code === "forbidden" || code === "invalid_token") {
+    return `Vercel rejected the API token (${res.status}${code ? ` ${code}` : ""}) — check VERCEL_API_TOKEN in the project's Production env vars.`;
+  }
+  return msg ? `${msg}${code ? ` (${code})` : ""}` : `vercel_http_${res.status}`;
+}
+
 /** Register `{slug}.binaya.app` with the Vercel project so it routes + gets TLS. */
 export async function addTenantDomain(slug: string): Promise<ProvisionResult> {
-  const { token, projectId, teamId } = config();
+  const { token, projectId } = config();
   if (!token || !projectId) return { ok: true, skipped: true };
-
-  const qs = teamId ? `?teamId=${teamId}` : "";
+  const host = tenantHost(slug);
   try {
-    const res = await fetch(`https://api.vercel.com/v10/projects/${projectId}/domains${qs}`, {
+    const res = await vercelFetch(`/v10/projects/${projectId}/domains`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ name: tenantHost(slug) }),
+      body: JSON.stringify({ name: host }),
     });
     if (res.ok) return { ok: true };
-    const body = await res.json().catch(() => ({}));
+    const body = await res.clone().json().catch(() => ({}));
     const code = body?.error?.code;
     // Already attached to this project → idempotent success.
-    if (res.status === 409 || code === "domain_already_in_use") return { ok: true };
-    return { ok: false, error: body?.error?.message || `vercel_http_${res.status}` };
+    if (res.status === 409 || code === "domain_already_in_use" || code === "domain_already_exists") return { ok: true };
+    const error = await errorOf(res);
+    console.error("[provision] add domain failed", { host, status: res.status, code, error });
+    return { ok: false, error };
   } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "vercel_unreachable" };
+    const error = e instanceof Error ? e.message : "vercel_unreachable";
+    console.error("[provision] add domain error", { host, error });
+    return { ok: false, error };
   }
+}
+
+/** Is `{slug}.binaya.app` attached to the project, and is it verified? */
+export async function getTenantDomainStatus(slug: string): Promise<DomainStatus> {
+  const { token, projectId } = config();
+  if (!token || !projectId) return { state: "skipped" };
+  const host = tenantHost(slug);
+  try {
+    const res = await vercelFetch(`/v9/projects/${projectId}/domains/${host}`, { method: "GET" }, 2);
+    if (res.status === 404) return { state: "missing" };
+    if (!res.ok) {
+      const error = await errorOf(res);
+      console.error("[provision] domain status failed", { host, status: res.status, error });
+      return { state: "unknown", error };
+    }
+    const body = (await res.json().catch(() => ({}))) as { verified?: boolean };
+    return { state: body.verified === false ? "pending" : "connected" };
+  } catch (e) {
+    const error = e instanceof Error ? e.message : "vercel_unreachable";
+    console.error("[provision] domain status error", { host, error });
+    return { state: "unknown", error };
+  }
+}
+
+/** Attach the domain if it's missing; returns the resulting status. */
+export async function ensureTenantDomain(slug: string): Promise<DomainStatus> {
+  const status = await getTenantDomainStatus(slug);
+  if (status.state !== "missing") return status;
+  const added = await addTenantDomain(slug);
+  if (!added.ok) return { state: "missing", error: added.error };
+  return getTenantDomainStatus(slug);
 }
 
 /** Remove `{slug}.binaya.app` from the project (used if a slug changes). */
 export async function removeTenantDomain(slug: string): Promise<ProvisionResult> {
-  const { token, projectId, teamId } = config();
+  const { token, projectId } = config();
   if (!token || !projectId) return { ok: true, skipped: true };
-
-  const qs = teamId ? `?teamId=${teamId}` : "";
   try {
-    const res = await fetch(
-      `https://api.vercel.com/v9/projects/${projectId}/domains/${tenantHost(slug)}${qs}`,
-      { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
-    );
+    const res = await vercelFetch(`/v9/projects/${projectId}/domains/${tenantHost(slug)}`, { method: "DELETE" });
     if (res.ok || res.status === 404) return { ok: true };
-    return { ok: false, error: `vercel_http_${res.status}` };
+    return { ok: false, error: await errorOf(res) };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : "vercel_unreachable" };
   }

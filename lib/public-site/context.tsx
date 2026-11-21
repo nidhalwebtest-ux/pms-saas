@@ -2,17 +2,22 @@
 
 import { createContext, useContext } from "react";
 import type { PublicDict, SiteLang } from "./i18n";
+import type { Theme } from "./theme";
 
-/** Everything a public client component needs — fed once by the server layout. */
+/**
+ * What the public site's CLIENT islands need (search bar, language switch,
+ * booking form, live quote) — fed once by the server layout. Everything else on
+ * the public site is a server component and gets a SiteView prop instead.
+ */
 export interface SiteContext {
   slug: string;
   lang: SiteLang;
   dir: "rtl" | "ltr";
   dict: PublicDict;
-  rootDomain: string;
-  templateKey: string;
-  primaryColor: string;
-  accentColor: string;
+  /** "" | "/ar" | "/en" — prefix for internal links (see lib/public-site/lang.ts) */
+  base: string;
+  defaultLanguage: string;
+  theme: Theme;
   currency: string;
   showPrices: boolean;
   siteName: string;

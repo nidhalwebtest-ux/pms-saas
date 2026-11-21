@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { BuildingOffice2Icon, ChevronDownIcon } from "@heroicons/react/24/outline";
-import { selectProperty } from "@/app/dashboard/actions/select-property";
+import { selectProperty } from "@/app/(main)/dashboard/actions/select-property";
 
 interface Props {
   properties:        { id: string; name: string }[];

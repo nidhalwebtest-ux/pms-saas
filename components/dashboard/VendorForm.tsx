@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { PhoneInput, TextField, Select } from "@/components/ui";
-import { createVendor, updateVendor } from "@/app/dashboard/vendors/actions";
+import { createVendor, updateVendor } from "@/app/(main)/dashboard/vendors/actions";
 
 export interface VendorInitialData {
   id: string;

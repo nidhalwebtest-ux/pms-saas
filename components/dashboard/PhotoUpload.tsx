@@ -15,7 +15,7 @@ import { useTranslations } from "next-intl";
 import { ArrowUpTrayIcon, XMarkIcon, PhotoIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import { compressImage } from "@/utils/compress-image";
-import { uploadMedia, deleteMedia } from "@/app/dashboard/actions/upload-media";
+import { uploadMedia, deleteMedia } from "@/app/(main)/dashboard/actions/upload-media";
 
 interface Props {
   /** Pre-existing photo URLs loaded from the DB (edit mode). */

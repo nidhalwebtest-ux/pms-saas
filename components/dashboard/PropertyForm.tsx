@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { createProperty, updateProperty } from "@/app/dashboard/properties/actions";
+import { createProperty, updateProperty } from "@/app/(main)/dashboard/properties/actions";
 import { useSlideOver } from "@/components/ui/SlideOver";
 import {
   BuildingOffice2Icon,

@@ -13,7 +13,7 @@ import {
   archiveProperty,
   restoreProperty,
   deleteProperty,
-} from "@/app/dashboard/properties/actions";
+} from "@/app/(main)/dashboard/properties/actions";
 import { useConfirmDialog } from "@/components/ui";
 
 interface Props {

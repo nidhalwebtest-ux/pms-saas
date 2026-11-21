@@ -19,7 +19,7 @@ Update the **Status** column when an item starts or finishes.
 | 7  | Better transaction PDFs                   | 3 · Core polish    | M    | Todo    |
 | 8  | Better data migration (CSV import)        | 3 · Core polish    | M    | Todo    |
 | 9  | Merge duplicate tenants                   | 3 · Core polish    | M    | Todo    |
-| 10 | Professional website themes               | 4 · Growth         | L    | Todo    |
+| 10 | Professional website themes               | 4 · Growth         | L    | In progress — A speed ✓ (uncommitted); B themes next |
 | 11 | Blog articles for SEO                     | 4 · Growth         | M    | Todo    |
 | 12 | Better demo tour                          | 4 · Growth         | S    | Todo    |
 | 13 | Task Management module                    | 5 · New modules    | L    | Todo    |

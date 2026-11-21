@@ -63,6 +63,7 @@ export async function GET(req: NextRequest) {
       nights: u.nights,
       subtotal: site.showPrices ? u.subtotal : null,
       discount: site.showPrices ? u.discount : null,
+      discountPercent: site.showPrices ? u.discountPercent : null,
       total: site.showPrices ? u.total : null,
       rateAmount: site.showPrices ? u.rateAmount : null,
       priceName: u.priceName,

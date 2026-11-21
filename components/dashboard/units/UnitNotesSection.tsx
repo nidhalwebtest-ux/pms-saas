@@ -7,7 +7,7 @@ import {
   TrashIcon,
   PaperAirplaneIcon,
 } from "@heroicons/react/24/outline";
-import { addUnitNote, deleteUnitNote } from "@/app/dashboard/units/[unitId]/actions";
+import { addUnitNote, deleteUnitNote } from "@/app/(main)/dashboard/units/[unitId]/actions";
 import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
 import { ar, enGB } from "date-fns/locale";

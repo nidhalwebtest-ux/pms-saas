@@ -1,6 +1,6 @@
 import { BellIcon, ArrowRightStartOnRectangleIcon } from "@heroicons/react/24/outline";
 import { getTranslations } from "next-intl/server";
-import { logout } from "@/app/login/actions";
+import { logout } from "@/app/(main)/login/actions";
 import { type Role } from "@/lib/permissions";
 import PropertySelector from "./PropertySelector";
 import GlobalSearch from "./GlobalSearch";

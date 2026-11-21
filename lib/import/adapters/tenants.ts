@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { createTenant } from "@/app/dashboard/tenants/actions";
+import { createTenant } from "@/app/(main)/dashboard/tenants/actions";
 import type { ImportAdapter, FieldSpec, ImportContext, ParsedRowResult, RowError } from "../types";
 
 /* ============================================================================

@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
-import { confirmReservation } from "@/app/dashboard/reservations/actions"; // Import action
+import { confirmReservation } from "@/app/(main)/dashboard/reservations/actions"; // Import action
 
 export default function ConfirmReservationCard({
   reservationId,

@@ -19,7 +19,7 @@ import {
   updateUnitPrice,
   deleteUnitPrice,
   toggleUnitPrice,
-} from "@/app/dashboard/units/[unitId]/actions";
+} from "@/app/(main)/dashboard/units/[unitId]/actions";
 import { useTranslations, useLocale } from "next-intl";
 import { format } from "date-fns";
 import { ar, enGB } from "date-fns/locale";

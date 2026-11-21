@@ -4,7 +4,7 @@ import { useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
-import { updateReservationStatus } from "@/app/dashboard/reservations/actions";
+import { updateReservationStatus } from "@/app/(main)/dashboard/reservations/actions";
 
 interface StatusActionsProps {
   id: string;

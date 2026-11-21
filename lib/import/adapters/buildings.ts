@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { createPropertyCore } from "@/app/dashboard/properties/actions";
+import { createPropertyCore } from "@/app/(main)/dashboard/properties/actions";
 import type { ImportAdapter, FieldSpec, ImportContext, ParsedRowResult, RowError } from "../types";
 
 /* ============================================================================

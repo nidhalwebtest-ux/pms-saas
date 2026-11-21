@@ -8,7 +8,7 @@ import { ChevronDownIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
 import { NAV_ACCESS, type Role } from "@/lib/permissions";
 import { atLeast, reportKey, type PermissionLevel } from "@/lib/rbac";
 import { usePerms } from "@/components/PermissionsProvider";
-import { REPORT_GROUPS } from "@/app/dashboard/reports/reports-config";
+import { REPORT_GROUPS } from "@/app/(main)/dashboard/reports/reports-config";
 
 // ── Nav config ────────────────────────────────────────────────────────────────
 

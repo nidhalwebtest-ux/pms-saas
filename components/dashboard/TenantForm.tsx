@@ -25,7 +25,7 @@ import {
   StarIcon,
   ShieldExclamationIcon,
 } from "@heroicons/react/24/outline";
-import { createTenant, updateTenant } from "@/app/dashboard/tenants/actions";
+import { createTenant, updateTenant } from "@/app/(main)/dashboard/tenants/actions";
 import { PhoneInput, SearchableSelect, type SearchableSelectOption } from "@/components/ui";
 
 // ── Constants ─────────────────────────────────────────────────────────────────

@@ -1,0 +1,45 @@
+/* ============================================================================
+   Public booking sites ({slug}.binaya.app) — the only stylesheet they load.
+   Imported by app/(public-site)/sites/[slug]/[lang]/layout.tsx (their own
+   root layout). Built with tailwind.public.config.ts — stock Tailwind theme,
+   scanning only the public-site files — so it stays a fraction of the
+   dashboard's CSS and is NOT affected by the dashboard's design tokens.
+   ============================================================================ */
+
+@import "./fonts.css";
+
+@config "../tailwind.public.config.ts";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  [dir="rtl"] {
+    font-family: var(--font-arabic);
+    letter-spacing: 0;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    font-family: inherit;
+    font-size: inherit;
+  }
+  :focus-visible {
+    outline: 2px solid var(--site-primary, #185fa5);
+    outline-offset: 2px;
+  }
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+}

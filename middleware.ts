@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/utils/supabase/middleware";
 import { extractSiteSlug } from "@/lib/public-site/subdomain";
+import { stripLangPrefix } from "@/lib/public-site/lang";
 
 /**
  * Paths that must NOT be rewritten into the public-site tree even on a tenant
@@ -25,13 +26,33 @@ export async function middleware(request: NextRequest) {
 
   // ── Tenant subdomain → rewrite into the (public-site) tree, skip app auth ──
   if (slug) {
-    const { pathname } = request.nextUrl;
+    const { pathname, searchParams } = request.nextUrl;
     if (isPassthrough(pathname)) return NextResponse.next();
+
+    // Legacy ?lang=xx links → the language-prefixed URL (language lives in the path now).
+    const legacyLang = searchParams.get("lang");
+    if (legacyLang === "ar" || legacyLang === "en") {
+      const url = request.nextUrl.clone();
+      url.searchParams.delete("lang");
+      url.pathname = `/${legacyLang}${pathname === "/" ? "" : stripLangPrefix(pathname)}`;
+      return NextResponse.redirect(url, 308);
+    }
 
     const url = request.nextUrl.clone();
     // Clean public URLs are preserved in the browser; only the internal path
-    // changes. "/" → /sites/{slug}, "/buildings/x" → /sites/{slug}/buildings/x
-    url.pathname = `/sites/${slug}${pathname === "/" ? "" : pathname}`;
+    // changes. The language is part of the URL so every page can be served
+    // from the CDN (see lib/public-site/lang.ts):
+    //   "/buildings/x"    → /sites/{slug}/default/buildings/x   (site default language)
+    //   "/en/buildings/x" → /sites/{slug}/en/buildings/x
+    //   "/sitemap.xml"    → /sites/{slug}/sitemap.xml            (language-independent)
+    if (pathname === "/sitemap.xml") {
+      url.pathname = `/sites/${slug}/sitemap.xml`;
+      return NextResponse.rewrite(url);
+    }
+    const m = pathname.match(/^\/(ar|en)(?=\/|$)(.*)$/);
+    const lang = m ? m[1] : "default";
+    const rest = m ? m[2] : pathname === "/" ? "" : pathname;
+    url.pathname = `/sites/${slug}/${lang}${rest}`;
     return NextResponse.rewrite(url);
   }
 

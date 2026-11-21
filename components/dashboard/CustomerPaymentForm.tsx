@@ -19,7 +19,7 @@ import {
   createCustomerPayment,
   updateCustomerPayment,
   getTenantFinancials,
-} from "@/app/dashboard/payments/actions";
+} from "@/app/(main)/dashboard/payments/actions";
 import {
   BanknotesIcon,
   DocumentTextIcon,

@@ -18,6 +18,7 @@ import { getOrgStayRules } from "@/lib/stay-rules-server";
 import { calculateNights, collapseToSegments, sumSubtotals, type PriceSegment } from "@/lib/reservation-engine";
 import { NON_BLOCKING_STATUSES } from "@/lib/reservation-conflict";
 import { extractSiteSlug } from "@/lib/public-site/subdomain";
+import { parseSections, parseReviews, parseGallery, parseTime, type SectionConfig, type Review } from "@/lib/public-site/sections";
 import { unstable_cache } from "next/cache";
 import type { Prisma } from "@prisma/client";
 
@@ -70,6 +71,14 @@ export type PublicSite = {
   defaultLanguage: string;
   showPrices: boolean;
   khareefBannerEnabled: boolean;
+  // sections (ordered, with visibility) + their content
+  sections: SectionConfig[];
+  galleryUrls: string[];
+  reviews: Review[];
+  checkInTime: string | null;
+  checkOutTime: string | null;
+  policiesEn: string | null;
+  policiesAr: string | null;
   // org (public bits only)
   orgName: string;
   orgLogo: string | null;
@@ -138,6 +147,7 @@ const SITE_SELECT = {
   addressEn: true, addressAr: true, googleMapsUrl: true, instagramUrl: true,
   metaDescriptionEn: true, metaDescriptionAr: true, ogImageUrl: true,
   defaultLanguage: true, showPrices: true, khareefBannerEnabled: true,
+  sections: true, galleryUrls: true, reviews: true, checkInTime: true, checkOutTime: true, policiesEn: true, policiesAr: true,
   organization: { select: { name: true, logo: true, currency: true } },
 } satisfies Prisma.OrgWebsiteSelect;
 
@@ -161,6 +171,13 @@ function toPublicSite(row: Prisma.OrgWebsiteGetPayload<{ select: typeof SITE_SEL
     ogImageUrl: row.ogImageUrl,
     defaultLanguage: row.defaultLanguage, showPrices: row.showPrices,
     khareefBannerEnabled: row.khareefBannerEnabled,
+    sections: parseSections(row.sections, row.khareefBannerEnabled),
+    galleryUrls: parseGallery(row.galleryUrls),
+    reviews: parseReviews(row.reviews),
+    checkInTime: parseTime(row.checkInTime),
+    checkOutTime: parseTime(row.checkOutTime),
+    policiesEn: row.policiesEn?.trim() || null,
+    policiesAr: row.policiesAr?.trim() || null,
     orgName: row.organization.name,
     orgLogo: row.organization.logo,
     currency: row.organization.currency,

@@ -16,6 +16,8 @@ export interface SiteContext {
   dict: PublicDict;
   /** "" | "/ar" | "/en" — prefix for internal links (see lib/public-site/lang.ts) */
   base: string;
+  /** prefix of the other language's URLs */
+  otherBase: string;
   defaultLanguage: string;
   theme: Theme;
   currency: string;

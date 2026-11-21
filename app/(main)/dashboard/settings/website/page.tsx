@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { EMPTY_FORM, type WebsiteForm, type WebsiteStatus, type TemplateKey } from "./types";
 import WebsiteWizard from "./WebsiteWizard";
 import { isFontPreset } from "@/lib/public-site/fonts";
+import { parseSections, parseReviews, parseGallery } from "@/lib/public-site/sections";
 import { getAuthUser } from "@/lib/current-user";
 import { ensureTenantDomain, type DomainStatus } from "@/lib/public-site/provision";
 
@@ -51,6 +52,11 @@ export default async function WebsiteSettingsPage() {
         ogImageUrl: site.ogImageUrl ?? null,
         defaultLanguage: site.defaultLanguage === "en" ? "en" : "ar",
         showPrices: site.showPrices, khareefBannerEnabled: site.khareefBannerEnabled,
+        sections: parseSections(site.sections, site.khareefBannerEnabled),
+        galleryUrls: parseGallery(site.galleryUrls),
+        reviews: parseReviews(site.reviews),
+        checkInTime: site.checkInTime ?? "", checkOutTime: site.checkOutTime ?? "",
+        policiesEn: site.policiesEn ?? "", policiesAr: site.policiesAr ?? "",
       }
     : {
         ...EMPTY_FORM,

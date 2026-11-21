@@ -54,6 +54,14 @@ const en = {
     backToSite: "Back to the site",
   },
   footer: { poweredBy: "Powered by Binaya", rights: "All rights reserved" },
+  more: {
+    galleryEyebrow: "Gallery", galleryTitle: "A closer look",
+    reviewsEyebrow: "Guest reviews", reviewsTitle: "What our guests say",
+    policiesEyebrow: "Good to know", policiesTitle: "Stay policies",
+    locationEyebrow: "Find us", locationTitle: "Location",
+    checkIn: "Check-in", checkOut: "Check-out", openMap: "Open in Google Maps", directions: "Get directions",
+    previewBanner: "Preview — only you can see this. It expires in 30 minutes.",
+  },
   lang: { toggle: "العربية" },
 };
 
@@ -105,6 +113,14 @@ const ar: typeof en = {
     backToSite: "العودة إلى الموقع",
   },
   footer: { poweredBy: "مدعوم من بناية", rights: "جميع الحقوق محفوظة" },
+  more: {
+    galleryEyebrow: "المعرض", galleryTitle: "نظرة عن قرب",
+    reviewsEyebrow: "آراء الضيوف", reviewsTitle: "ماذا يقول ضيوفنا",
+    policiesEyebrow: "معلومات مفيدة", policiesTitle: "سياسات الإقامة",
+    locationEyebrow: "موقعنا", locationTitle: "الموقع",
+    checkIn: "تسجيل الدخول", checkOut: "تسجيل الخروج", openMap: "افتح في خرائط جوجل", directions: "احصل على الاتجاهات",
+    previewBanner: "معاينة — أنت فقط من يراها. تنتهي خلال 30 دقيقة.",
+  },
   lang: { toggle: "English" },
 };
 

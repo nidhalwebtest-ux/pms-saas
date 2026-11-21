@@ -5445,12 +5445,14 @@
         "basics": "Basics",
         "contact": "Contact & content",
         "templates": "Template",
+        "content": "Sections",
         "review": "Review & launch"
       },
       "nav": {
         "back": "Back",
         "next": "Continue",
         "cancel": "Cancel",
+        "preview": "Preview",
         "saveDraft": "Save draft",
         "launch": "Launch my website"
       },
@@ -5531,6 +5533,69 @@
         "template_3": {
           "name": "Modern",
           "desc": "Bold and dark: split hero, numbered highlights, bento photo tiles"
+        }
+      },
+      "content": {
+        "intro": "Choose which sections your home page shows and in what order. The photo header is always first. A section with no content doesn't appear on the site.",
+        "sectionsTitle": "Home page sections",
+        "sectionsHint": "Switch sections on or off and move them up or down.",
+        "heroFixed": "Header with photo and search — always first",
+        "moveUp": "Move up",
+        "moveDown": "Move down",
+        "needsContent": "On, but empty — add content below to show it",
+        "galleryTitle": "Gallery photos",
+        "galleryHint": "Upload up to 12 photos. The first one is shown large.",
+        "galleryAdd": "Add photos",
+        "galleryMax": "You can add up to {n} photos.",
+        "galleryFallback": "none added — your buildings' photos are used",
+        "reviewsTitle": "Guest reviews",
+        "reviewsHint": "Add up to 8 reviews, in Arabic and/or English. Visitors see their own language.",
+        "reviewName": "Guest name",
+        "reviewRating": "Rating",
+        "reviewTextEn": "Review (English)",
+        "reviewTextAr": "Review (Arabic)",
+        "reviewAdd": "Add a review",
+        "reviewsNote": "Only add real reviews from your guests.",
+        "policiesTitle": "Stay policies",
+        "policiesHint": "Times and rules shown to guests before they book.",
+        "checkIn": "Check-in time",
+        "checkOut": "Check-out time",
+        "policiesEn": "Rules & cancellation (English)",
+        "policiesAr": "Rules & cancellation (Arabic)",
+        "locationNote": "The Location section uses the address and Google Maps link from Contact & content. Paste a Google Maps \"embed\" link to show the map right on the page.",
+        "sections": {
+          "highlights": {
+            "name": "Highlights",
+            "desc": "Four short reasons to book with you"
+          },
+          "khareef": {
+            "name": "Khareef banner",
+            "desc": "Seasonal banner promoting the Khareef season"
+          },
+          "featured": {
+            "name": "Featured stays",
+            "desc": "Your buildings, as photo cards"
+          },
+          "gallery": {
+            "name": "Gallery",
+            "desc": "A photo mosaic of your property"
+          },
+          "about": {
+            "name": "About us",
+            "desc": "Your story (from Contact & content)"
+          },
+          "reviews": {
+            "name": "Guest reviews",
+            "desc": "Testimonials from happy guests"
+          },
+          "policies": {
+            "name": "Policies",
+            "desc": "Check-in/out times and house rules"
+          },
+          "location": {
+            "name": "Location & map",
+            "desc": "Your address with a link to Google Maps"
+          }
         }
       },
       "fonts": {

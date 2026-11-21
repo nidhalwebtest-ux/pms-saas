@@ -1693,6 +1693,19 @@ model OrgWebsite {
   /// Heading font preset (lib/public-site/fonts.ts): "auto" = the template's own typography.
   fontPreset     String     @default("auto")
 
+  // ── Sections (Settings → Website → Sections & content) ──
+  /// Ordered home-page sections: [{ key, enabled }] (lib/public-site/sections.ts). null = defaults.
+  sections       Json?
+  /// Gallery photos (max 12). Empty = the gallery falls back to building photos.
+  galleryUrls    String[]   @default([])
+  /// Guest reviews entered by the operator: [{ name, textEn, textAr, rating }] (max 8).
+  reviews        Json?
+  /// Policies section: check-in/out times ("HH:MM") + free-text rules per language.
+  checkInTime    String?
+  checkOutTime   String?
+  policiesEn     String?    @db.Text
+  policiesAr     String?    @db.Text
+
   // ── Branding ──
   logoUrl        String?
   primaryColor   String   @default("#185FA5")

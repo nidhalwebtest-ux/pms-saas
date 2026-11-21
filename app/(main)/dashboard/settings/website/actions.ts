@@ -2,6 +2,8 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { isFontPreset } from "@/lib/public-site/fonts";
+import { parseSections, parseReviews, parseGallery, parseTime } from "@/lib/public-site/sections";
+import { signPreviewToken } from "@/lib/public-site/preview-token";
 import { publicOrgTag, publicSiteTag } from "@/lib/public-site/data";
 import { featureBlockedMessage } from "@/lib/subscription";
 import { createClient } from "@/utils/supabase/server";
@@ -72,6 +74,13 @@ function toData(input: Partial<WebsiteForm>) {
     defaultLanguage: input.defaultLanguage === "en" ? "en" : "ar",
     showPrices: input.showPrices !== false,
     khareefBannerEnabled: !!input.khareefBannerEnabled,
+    sections: parseSections(input.sections, !!input.khareefBannerEnabled),
+    galleryUrls: parseGallery(input.galleryUrls),
+    reviews: parseReviews(input.reviews),
+    checkInTime: parseTime(input.checkInTime),
+    checkOutTime: parseTime(input.checkOutTime),
+    policiesEn: nullable(input.policiesEn)?.slice(0, 4000) ?? null,
+    policiesAr: nullable(input.policiesAr)?.slice(0, 4000) ?? null,
   };
 }
 
@@ -227,4 +236,19 @@ export async function connectWebsiteDomain(): Promise<{ ok: true; status: Domain
   const status = await ensureTenantDomain(site.slug);
   revalidatePath("/dashboard/settings/website");
   return { ok: true, status };
+}
+
+// ── Preview before publishing ────────────────────────────────────────────────
+
+/**
+ * A signed, 30-minute link that renders the saved website (draft included) on the main site:
+ * /site-preview/{slug}/{token}/{lang}. Save first — the preview shows what's saved.
+ */
+export async function getWebsitePreviewPath(lang: "ar" | "en"): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+  if (!(await hasAccess("settingsWebsite", "VIEW"))) return { ok: false, error: "forbidden" };
+  const org = await orgId();
+  if (!org) return { ok: false, error: "no_org" };
+  const site = await prisma.orgWebsite.findUnique({ where: { organizationId: org }, select: { slug: true } });
+  if (!site) return { ok: false, error: "no_site" };
+  return { ok: true, path: `/site-preview/${site.slug}/${signPreviewToken(site.slug)}/${lang === "en" ? "en" : "ar"}` };
 }

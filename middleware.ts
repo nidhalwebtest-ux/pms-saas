@@ -56,6 +56,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(url);
   }
 
+  // ── Owner preview (before publishing): /site-preview/{slug}/{token}/{ar|en}/… on the main host.
+  // Public, but only renders with a valid signed token (lib/public-site/preview-token.ts) — no app auth.
+  const pv = request.nextUrl.pathname.match(/^\/site-preview\/([a-z0-9-]{3,40})\/([A-Za-z0-9._-]{10,400})\/(ar|en)(\/.*)?$/);
+  if (pv) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/sites/${pv[1]}/p~${pv[3]}~${pv[2]}${pv[4] ?? ""}`;
+    return NextResponse.rewrite(url);
+  }
+
   // ── Main app: keep the internal /sites/* tree unreachable from the apex ──
   if (request.nextUrl.pathname.startsWith("/sites/")) {
     return new NextResponse("Not found", { status: 404 });

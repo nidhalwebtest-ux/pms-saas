@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const { slug, lang: langParam } = await params;
   const v = isLangParam(langParam) ? await getSiteView(slug, langParam) : null;
   if (!v) return { title: "Site not found", robots: { index: false } };
-  const { site, lang, siteName } = v;
+  const { site, lang, siteName, preview } = v;
   const ar = lang === "ar";
   const desc = (ar ? site.metaDescriptionAr : site.metaDescriptionEn) || (ar ? site.taglineAr : site.taglineEn) || undefined;
   return {
@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
     description: desc,
     metadataBase: new URL(`https://${slug}.${ROOT_DOMAIN}`),
     openGraph: { title: siteName, description: desc, images: site.ogImageUrl ? [site.ogImageUrl] : undefined, type: "website", locale: ar ? "ar_OM" : "en_OM" },
-    robots: { index: true, follow: true },
+    robots: preview ? { index: false, follow: false } : { index: true, follow: true },
   };
 }
 
@@ -62,12 +62,12 @@ export default async function PublicSiteLayout({ children, params }: { children:
     );
   }
 
-  const { site, lang, dir, dict, theme, base, siteName } = v;
+  const { site, lang, dir, dict, theme, base, otherBase, siteName, preview } = v;
   const address = lang === "ar" ? site.addressAr : site.addressEn;
 
   // Only what the client islands (search bar, language switch, booking form, quote) need.
   const ctx: SiteContext = {
-    slug, lang, dir, dict, base, theme,
+    slug, lang, dir, dict, base, otherBase, theme,
     defaultLanguage: site.defaultLanguage,
     currency: site.currency, showPrices: site.showPrices,
     siteName, whatsapp: site.whatsappNumber,
@@ -85,6 +85,9 @@ export default async function PublicSiteLayout({ children, params }: { children:
         className={`flex min-h-screen flex-col ${theme.page} text-slate-900 antialiased`}
       >
         <SiteProvider value={ctx}>
+          {preview && (
+            <div className="bg-amber-400 px-4 py-2 text-center text-sm font-semibold text-amber-950">{dict.more.previewBanner}</div>
+          )}
           <SiteHeader v={v} logoUrl={site.logoUrl ?? site.orgLogo} />
           <div className="flex-1">{children}</div>
           <SiteFooter

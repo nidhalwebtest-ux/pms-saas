@@ -7,14 +7,15 @@ import { toast } from "sonner";
 import { GlobeAltIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui";
 import { StepBasics, StepContact, StepTemplates, StepReview } from "./steps";
+import { StepContent } from "./StepContent";
 import type { SlugStatus } from "./SlugField";
 import WebsiteDashboard from "./WebsiteDashboard";
 import LaunchExperience from "./LaunchExperience";
-import { saveWebsite, publishWebsite, type PublishResult } from "./actions";
+import { saveWebsite, publishWebsite, getWebsitePreviewPath, type PublishResult } from "./actions";
 import type { WebsiteForm, WebsiteStatus } from "./types";
 import type { DomainStatus } from "@/lib/public-site/provision";
 
-const STEPS = ["basics", "contact", "templates", "review"] as const;
+const STEPS = ["basics", "contact", "templates", "content", "review"] as const;
 
 export default function WebsiteWizard({
   initialForm, status, rootDomain, stats, domainStatus,
@@ -66,6 +67,18 @@ export default function WebsiteWizard({
         resolve(true);
       });
     });
+
+  // Save, then open a signed preview of the real site (draft included) in a new tab.
+  const [previewing, startPreview] = useTransition();
+  const preview = () => {
+    const win = window.open("", "_blank"); // opened synchronously so popup blockers allow it
+    startPreview(async () => {
+      const saved = await persist();
+      const res = saved ? await getWebsitePreviewPath(form.defaultLanguage) : null;
+      if (!res || !res.ok) { win?.close(); if (saved) toast.error(t("errors.generic")); return; }
+      if (win) win.location.href = `${window.location.origin}${res.path}`;
+    });
+  };
 
   const next = async () => {
     if (!stepValid) return;
@@ -131,6 +144,7 @@ export default function WebsiteWizard({
         {STEPS[step] === "templates" && (
           <StepTemplates form={form} update={update} previewLang={previewLang} setPreviewLang={setPreviewLang} />
         )}
+        {STEPS[step] === "content" && <StepContent form={form} update={update} />}
         {STEPS[step] === "review" && <StepReview form={form} rootDomain={rootDomain} />}
       </div>
 
@@ -141,6 +155,9 @@ export default function WebsiteWizard({
           {editing && <Button variant="ghost" onClick={() => setEditing(false)}>{t("nav.cancel")}</Button>}
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="ghost" loading={previewing} onClick={preview} disabled={!stepValid && STEPS[step] !== "review"}>
+            {t("nav.preview")}
+          </Button>
           <Button variant="secondary" loading={saving} onClick={() => persist().then((ok) => ok && toast.success(t("draftSaved")))}>
             {t("nav.saveDraft")}
           </Button>

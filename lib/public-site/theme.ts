@@ -42,6 +42,8 @@ export interface Theme {
   card: string;
   /** small pill (badge / amenity) */
   chip: string;
+  /** corner radius for photos and panels */
+  radius: string;
   /** primary button / CTA shape */
   btn: string;
   /** search form container + its field cells */
@@ -70,6 +72,7 @@ const THEMES: Record<TemplateKey, Theme> = {
     pageTitle: "text-3xl font-semibold text-slate-900 sm:text-4xl",
     card: "rounded-2xl ring-1 ring-slate-200/70 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/[0.06]",
     chip: "rounded-full",
+    radius: "rounded-2xl",
     btn: "rounded-full",
     searchBox: "rounded-2xl bg-white p-3 shadow-2xl shadow-black/10 ring-1 ring-black/5",
     searchCell: "rounded-xl bg-slate-50/80",
@@ -97,6 +100,7 @@ const THEMES: Record<TemplateKey, Theme> = {
     pageTitle: "text-center text-3xl font-normal text-stone-900 sm:text-4xl",
     card: "rounded-none ring-1 ring-stone-300 hover:shadow-lg hover:shadow-black/[0.05]",
     chip: "rounded-none",
+    radius: "rounded-none",
     btn: "rounded-none",
     searchBox: "rounded-none bg-white p-3 shadow-xl shadow-black/10 ring-1 ring-stone-300",
     searchCell: "rounded-none bg-[#faf7ef]",
@@ -124,6 +128,7 @@ const THEMES: Record<TemplateKey, Theme> = {
     pageTitle: "text-4xl font-bold tracking-tight text-slate-900 sm:text-5xl",
     card: "rounded-xl ring-1 ring-slate-900/10 hover:-translate-y-1.5 hover:shadow-2xl hover:shadow-black/10",
     chip: "rounded-md",
+    radius: "rounded-xl",
     btn: "rounded-lg",
     searchBox: "rounded-2xl bg-white p-2.5 shadow-2xl shadow-black/30 ring-1 ring-white/10",
     searchCell: "rounded-lg bg-slate-100",

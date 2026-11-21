@@ -1,6 +1,7 @@
 /** Shared types + presets for the website setup wizard (client + server safe). */
 
 import type { FontPresetKey } from "@/lib/public-site/fonts";
+import { DEFAULT_SECTIONS, type SectionConfig, type Review } from "@/lib/public-site/sections";
 
 export type WebsiteStatus = "DRAFT" | "PUBLISHED" | "DISABLED";
 export type TemplateKey = "template_1" | "template_2" | "template_3";
@@ -31,6 +32,14 @@ export interface WebsiteForm {
   defaultLanguage: "ar" | "en";
   showPrices: boolean;
   khareefBannerEnabled: boolean;
+  // Sections & content
+  sections: SectionConfig[];
+  galleryUrls: string[];
+  reviews: Review[];
+  checkInTime: string;
+  checkOutTime: string;
+  policiesEn: string;
+  policiesAr: string;
 }
 
 export const EMPTY_FORM: WebsiteForm = {
@@ -59,6 +68,13 @@ export const EMPTY_FORM: WebsiteForm = {
   defaultLanguage: "ar",
   showPrices: true,
   khareefBannerEnabled: false,
+  sections: DEFAULT_SECTIONS.map((x) => ({ ...x })),
+  galleryUrls: [],
+  reviews: [],
+  checkInTime: "",
+  checkOutTime: "",
+  policiesEn: "",
+  policiesAr: "",
 };
 
 /** Curated brand palettes (primary + accent). First is the default. */

@@ -15,6 +15,12 @@
  *                        have the row (so they keep their current prices)
  * Then the migrated UnitPrice rows are deleted.
  *
+ * Existing central Seasons: a per-unit row beats an EQUAL-priority central season
+ * today (the unit's own rows are tried first). Migrated seasons become central, so
+ * where an existing season in the same organization has the same priority as a
+ * migrated one, ALL of that organization's migrated priorities are raised by 1 to
+ * keep the old winner. The verification below proves nothing changed.
+ *
  * Safety: everything runs in ONE transaction, and before committing it
  * re-prices every unit of every affected organization for every night from 7
  * days before the earliest season to 7 days after the latest — old rows vs new
@@ -104,10 +110,20 @@ async function main() {
   if (!CONFIRM) return;
 
   const orgIds = [...new Set(plans.map((p) => p.orgId))];
+
+  // Priority shift per org (see header): only when an existing central season ties a migrated priority.
+  const existingSeasons = await prisma.season.findMany({ where: { organizationId: { in: orgIds } }, select: { organizationId: true, priority: true } });
+  const shift = new Map<string, number>();
+  for (const orgId of orgIds) {
+    const existing = new Set(existingSeasons.filter((x) => x.organizationId === orgId).map((x) => x.priority));
+    const tie = plans.some((p) => p.orgId === orgId && existing.has(p.first.priority));
+    shift.set(orgId, tie ? 1 : 0);
+    if (tie) console.log(`\nNote: org ${orgId.slice(0, 8)} already has central seasons with tying priorities → migrated priorities +1`);
+  }
   const allUnits = await prisma.unit.findMany({ where: { property: { organizationId: { in: orgIds } } }, select: { id: true, basePrice: true } });
   const unitIds = allUnits.map((u) => u.id);
   const base = new Map(allUnits.map((u) => [u.id, Number(u.basePrice)]));
-  const before = await loadUnitPriceRows(unitIds); // no Seasons yet → exactly the legacy rows
+  const before = await loadUnitPriceRows(unitIds); // legacy rows + any central seasons that already exist
   const minStart = Math.min(...rows.map((r) => r.startDate!.getTime())) - 7 * DAY;
   const maxEnd = Math.max(...rows.map((r) => r.endDate!.getTime())) + 7 * DAY;
 
@@ -120,7 +136,7 @@ async function main() {
             name: (p.first.name ?? "Season").trim() || "Season",
             startDate: p.first.startDate!,
             endDate: p.first.endDate!,
-            priority: p.first.priority,
+            priority: p.first.priority + (shift.get(p.orgId) ?? 0),
             isActive: p.first.isActive,
             disallowMonthly: p.first.disallowMonthly,
             propertyIds: p.propertyIds,
@@ -140,7 +156,7 @@ async function main() {
       const after = await loadUnitPriceRows(unitIds, tx);
       let checks = 0;
       const sig = (r: ReturnType<typeof resolvePrice>) =>
-        r ? `${r.priceType}|${r.name ?? ""}|${r.dailyRate.toFixed(3)}|${r.weeklyRate?.toFixed(3) ?? ""}|${r.monthlyRate.toFixed(3)}|${r.priority}` : "none";
+        r ? `${r.priceType}|${r.name ?? ""}|${r.dailyRate.toFixed(3)}|${r.weeklyRate?.toFixed(3) ?? ""}|${r.monthlyRate.toFixed(3)}` : "none"; // priority excluded: only the winning price/name must be identical
       for (const id of unitIds) {
         const b = before.get(id) ?? [], a = after.get(id) ?? [];
         for (let t = minStart; t <= maxEnd; t += DAY) {

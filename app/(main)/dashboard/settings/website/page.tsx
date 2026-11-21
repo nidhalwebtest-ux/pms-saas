@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { EMPTY_FORM, type WebsiteForm, type WebsiteStatus, type TemplateKey } from "./types";
 import WebsiteWizard from "./WebsiteWizard";
+import { isFontPreset } from "@/lib/public-site/fonts";
 import { getAuthUser } from "@/lib/current-user";
 import { ensureTenantDomain, type DomainStatus } from "@/lib/public-site/provision";
 
@@ -36,6 +37,7 @@ export default async function WebsiteSettingsPage() {
     ? {
         slug: site.slug.startsWith("site-") ? "" : site.slug,
         templateKey: site.templateKey as TemplateKey,
+        fontPreset: isFontPreset(site.fontPreset) ? site.fontPreset : "auto",
         logoUrl: site.logoUrl ?? org?.logo ?? null,
         primaryColor: site.primaryColor,
         accentColor: site.accentColor,

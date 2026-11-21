@@ -16,14 +16,14 @@ export default function SearchBar({
   buildingId,
   initial,
   targetPath = "/search",
-  stacked = false,
+  layout = "row",
 }: {
   buildingId?: string;
   initial?: { startDate?: string; endDate?: string; guests?: number };
   /** Site path to navigate to on submit (no language prefix). Defaults to the results page. */
   targetPath?: string;
-  /** One field per row — for narrow containers (e.g. the unit page's pricing card). */
-  stacked?: boolean;
+  /** row = one line (wide hero) · grid = 2×2 (half-width hero) · stacked = one field per row (narrow cards). */
+  layout?: "row" | "grid" | "stacked";
 }) {
   const { dict, dir, theme, base } = useSite();
   const router = useRouter();
@@ -53,7 +53,7 @@ export default function SearchBar({
     router.push(`${withBase(base, targetPath)}?${params.toString()}`);
   };
 
-  const cell = "flex items-center gap-3 rounded-xl bg-slate-50/80 px-4 py-3 ring-1 ring-transparent transition focus-within:bg-white focus-within:ring-[color:var(--site-primary)]/30";
+  const cell = `flex items-center gap-3 px-4 py-3 ring-1 ring-transparent transition focus-within:bg-white focus-within:ring-[color:var(--site-primary)]/30 ${theme.searchCell}`;
   const input = "w-full bg-transparent text-sm font-medium text-slate-800 outline-none [color-scheme:light]";
   const lbl = "block text-[11px] font-semibold uppercase tracking-wide text-slate-400";
 
@@ -61,9 +61,9 @@ export default function SearchBar({
     <form
       onSubmit={submit}
       dir={dir}
-      className={stacked ? "" : "rounded-2xl bg-white p-3 shadow-2xl shadow-black/10 ring-1 ring-black/5"}
+      className={layout === "row" || layout === "grid" ? theme.searchBox : ""}
     >
-      <div className={stacked ? "grid gap-2" : "grid gap-2 sm:grid-cols-[1fr_1fr_0.9fr_auto] sm:items-stretch"}>
+      <div className={layout === "stacked" ? "grid gap-2" : layout === "grid" ? "grid gap-2 sm:grid-cols-2" : "grid gap-2 sm:grid-cols-[1fr_1fr_0.9fr_auto] sm:items-stretch"}>
         <label className={cell}>
           <CalendarDaysIcon className="h-5 w-5 shrink-0 text-slate-400" />
           <span className="min-w-0 flex-1">

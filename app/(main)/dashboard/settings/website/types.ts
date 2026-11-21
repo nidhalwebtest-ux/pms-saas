@@ -1,11 +1,14 @@
 /** Shared types + presets for the website setup wizard (client + server safe). */
 
+import type { FontPresetKey } from "@/lib/public-site/fonts";
+
 export type WebsiteStatus = "DRAFT" | "PUBLISHED" | "DISABLED";
 export type TemplateKey = "template_1" | "template_2" | "template_3";
 
 export interface WebsiteForm {
   slug: string;
   templateKey: TemplateKey;
+  fontPreset: FontPresetKey;
   logoUrl: string | null;
   primaryColor: string;
   accentColor: string;
@@ -33,6 +36,7 @@ export interface WebsiteForm {
 export const EMPTY_FORM: WebsiteForm = {
   slug: "",
   templateKey: "template_1",
+  fontPreset: "auto",
   logoUrl: null,
   primaryColor: "#0E7490",
   accentColor: "#F59E0B",
@@ -65,6 +69,10 @@ export const COLOR_PRESETS: { name: string; primary: string; accent: string }[] 
   { name: "desert",   primary: "#B45309", accent: "#0E7490" },
   { name: "midnight", primary: "#0F172A", accent: "#38BDF8" },
   { name: "rose",     primary: "#9F1239", accent: "#FB7185" },
+  { name: "forest",   primary: "#14532D", accent: "#D4A24C" },
+  { name: "sand",     primary: "#78572C", accent: "#C8A165" },
+  { name: "ocean",    primary: "#1E3A8A", accent: "#22D3EE" },
+  { name: "plum",     primary: "#581C87", accent: "#F0ABFC" },
 ];
 
 export const TEMPLATES: { key: TemplateKey; accentFont: "sans" | "serif" }[] = [

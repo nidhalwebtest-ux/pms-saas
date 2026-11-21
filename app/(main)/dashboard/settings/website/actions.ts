@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath, updateTag } from "next/cache";
+import { isFontPreset } from "@/lib/public-site/fonts";
 import { publicOrgTag, publicSiteTag } from "@/lib/public-site/data";
 import { featureBlockedMessage } from "@/lib/subscription";
 import { createClient } from "@/utils/supabase/server";
@@ -56,6 +57,7 @@ function toData(input: Partial<WebsiteForm>) {
     ? (input.templateKey as TemplateKey) : "template_1";
   return {
     templateKey: tpl,
+    fontPreset: isFontPreset(input.fontPreset) ? input.fontPreset : "auto",
     logoUrl: input.logoUrl ?? null,
     primaryColor: clampHex(input.primaryColor ?? "", "#0E7490"),
     accentColor: clampHex(input.accentColor ?? "", "#F59E0B"),

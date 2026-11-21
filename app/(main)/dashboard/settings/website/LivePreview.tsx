@@ -1,12 +1,14 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { fontStackFor } from "@/lib/public-site/fonts";
+import { themeFor } from "@/lib/public-site/theme";
 import type { TemplateKey, WebsiteForm } from "./types";
 
 /**
- * A miniature, brand-applied mock of the public site. Re-renders live as the
- * user edits colours/logo/name/template — the "preview with your branding" the
- * brief asks for. Purely presentational (not the real template — that's Phase 4).
+ * A miniature, brand-applied mock of the public site. Re-renders live as the user edits
+ * colours / logo / name / template / font. Each template mirrors the real layout of its
+ * public home page (Coastal: photo hero · Classic: centred, framed · Modern: dark split hero).
  */
 export default function LivePreview({
   form,
@@ -24,38 +26,25 @@ export default function LivePreview({
   const name = (ar ? form.siteNameAr : form.siteNameEn) || form.siteNameEn || form.siteNameAr || t("preview.yourHotel");
   const tagline = (ar ? form.taglineAr : form.taglineEn) || t("preview.tagline");
   const dir = ar ? "rtl" : "ltr";
+  const display = fontStackFor(form.fontPreset) ?? themeFor(template).fontStack;
 
   const vars = { "--p": form.primaryColor, "--a": form.accentColor } as React.CSSProperties;
+  const photo = "linear-gradient(135deg, color-mix(in srgb, var(--p) 55%, #fff), color-mix(in srgb, var(--a) 60%, var(--p)))";
 
-  const Logo = ({ size }: { size: number }) =>
+  const Logo = ({ size, white = false }: { size: number; white?: boolean }) =>
     form.logoUrl ? (
       // eslint-disable-next-line @next/next/no-img-element
-      <img src={form.logoUrl} alt="" style={{ height: size, width: size }} className="rounded-lg object-contain bg-white/80 p-0.5" />
+      <img src={form.logoUrl} alt="" style={{ height: size, width: size }} className={`rounded-md object-contain ${white ? "bg-white p-0.5" : ""}`} />
     ) : (
-      <div
-        style={{ height: size, width: size, background: "var(--a)" }}
-        className="flex items-center justify-center rounded-lg font-bold text-white"
-      >
+      <div style={{ height: size, width: size, background: "var(--p)", fontSize: size * 0.5 }} className="flex items-center justify-center rounded-md font-bold text-white">
         {name.charAt(0)}
       </div>
     );
 
-  // Fake "available units" chips shared by all templates.
-  const Chips = () => (
-    <div className="flex gap-1.5">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="flex-1 rounded-md bg-white/90 p-1.5 shadow-sm ring-1 ring-black/5">
-          <div className="h-6 rounded" style={{ background: `color-mix(in srgb, var(--p) ${18 + i * 6}%, #fff)` }} />
-          <div className="mt-1 h-1.5 w-2/3 rounded" style={{ background: "var(--p)" }} />
-        </div>
-      ))}
-    </div>
-  );
-
-  const frameH = compact ? "h-40" : "h-64";
+  const frameH = compact ? "h-44" : "h-72";
 
   return (
-    <div dir={dir} style={vars} className={`overflow-hidden rounded-xl ring-1 ring-black/10 shadow-sm ${frameH} flex flex-col bg-white`}>
+    <div dir={dir} style={vars} className={`flex flex-col overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-black/10 ${frameH}`}>
       {/* browser chrome */}
       <div className="flex items-center gap-1 bg-gray-100 px-2 py-1">
         <span className="h-2 w-2 rounded-full bg-red-300" />
@@ -66,56 +55,89 @@ export default function LivePreview({
         </span>
       </div>
 
-      {/* ── Template 1 — Coastal: light, airy, centered ── */}
+      {/* ── Coastal: light bar, full-photo hero, overlapping search, card row ── */}
       {template === "template_1" && (
-        <div className="flex flex-1 flex-col">
-          <div className="flex items-center justify-between px-3 py-2">
-            <div className="flex items-center gap-1.5"><Logo size={18} /><span className="text-[11px] font-semibold" style={{ color: "var(--p)" }}>{name}</span></div>
-            <div className="h-1.5 w-10 rounded-full" style={{ background: "color-mix(in srgb, var(--p) 25%, #fff)" }} />
+        <div className="flex flex-1 flex-col overflow-hidden">
+          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-1.5">
+            <div className="flex items-center gap-1.5"><Logo size={16} /><span className="text-[10px] font-semibold" style={{ color: "var(--p)", fontFamily: display }}>{name}</span></div>
+            <div className="h-3 w-10 rounded-full" style={{ background: "var(--a)" }} />
           </div>
-          <div className="flex flex-1 flex-col items-center justify-center gap-1.5 px-4 text-center"
-               style={{ background: "linear-gradient(160deg, color-mix(in srgb, var(--p) 10%, #fff), color-mix(in srgb, var(--a) 12%, #fff))" }}>
-            <div className="text-sm font-bold" style={{ color: "var(--p)" }}>{name}</div>
-            <div className="text-[10px] text-gray-500 line-clamp-2">{tagline}</div>
-            <div className="mt-1 rounded-full px-3 py-1 text-[10px] font-semibold text-white shadow" style={{ background: "var(--a)" }}>
-              {t("preview.searchCta")}
+          <div className="relative flex-1" style={{ background: photo }}>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-black/25" />
+            <div className="absolute inset-x-3 bottom-5 text-start">
+              <div className="text-[15px] font-semibold leading-tight text-white" style={{ fontFamily: display }}>{name}</div>
+              <div className="mt-0.5 line-clamp-1 text-[9px] text-white/85">{tagline}</div>
+            </div>
+            <div className="absolute inset-x-5 -bottom-2.5 flex gap-1 rounded-full bg-white p-1 shadow-lg ring-1 ring-black/5">
+              <div className="h-3.5 flex-1 rounded-full bg-slate-100" /><div className="h-3.5 flex-1 rounded-full bg-slate-100" />
+              <div className="h-3.5 w-9 rounded-full" style={{ background: "var(--p)" }} />
             </div>
           </div>
-          <div className="px-3 py-2"><Chips /></div>
+          <div className="mt-3 flex gap-1.5 px-3 pb-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex-1 overflow-hidden rounded-lg ring-1 ring-slate-200">
+                <div className="h-5" style={{ background: `color-mix(in srgb, var(--p) ${20 + i * 8}%, #fff)` }} />
+                <div className="m-1 h-1 w-2/3 rounded bg-slate-300" />
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* ── Template 2 — Classic: elegant, serif, cream ── */}
+      {/* ── Classic: centred header, framed hero, editorial row ── */}
       {template === "template_2" && (
-        <div className="flex flex-1 flex-col" style={{ background: "#fbf9f4", fontFamily: "Georgia, serif" }}>
-          <div className="flex flex-col items-center gap-1 border-b px-3 py-2" style={{ borderColor: "color-mix(in srgb, var(--p) 20%, #fff)" }}>
-            <Logo size={20} />
-            <span className="text-[11px] tracking-wide" style={{ color: "var(--p)" }}>{name}</span>
+        <div className="flex flex-1 flex-col overflow-hidden" style={{ background: "#fbf9f3" }}>
+          <div className="flex flex-col items-center gap-0.5 border-b border-stone-300 py-1.5">
+            <Logo size={14} />
+            <span className="text-[10px] leading-none" style={{ color: "var(--p)", fontFamily: display }}>{name}</span>
           </div>
-          <div className="flex flex-1 flex-col items-center justify-center gap-1.5 px-4 text-center">
-            <div className="text-[15px] font-semibold" style={{ color: "var(--p)" }}>{name}</div>
-            <div className="mx-auto h-px w-10" style={{ background: "var(--a)" }} />
-            <div className="text-[10px] italic text-gray-500 line-clamp-2">{tagline}</div>
-            <div className="mt-1 border px-3 py-1 text-[10px] font-medium" style={{ borderColor: "var(--p)", color: "var(--p)" }}>
-              {t("preview.searchCta")}
+          <div className="m-2 bg-white p-1 ring-1 ring-stone-300">
+            <div className="relative flex h-[68px] flex-col items-center justify-center gap-1 overflow-hidden px-3 text-center" style={{ background: photo }}>
+              <div className="absolute inset-0 bg-black/40" />
+              <div className="relative text-[13px] leading-none text-white" style={{ fontFamily: display }}>{name}</div>
+              <div className="relative h-px w-8 bg-white/60" />
+              <div className="relative line-clamp-1 text-[8px] italic text-white/85">{tagline}</div>
             </div>
           </div>
-          <div className="px-3 py-2"><Chips /></div>
+          <div className="-mt-4 flex justify-center">
+            <div className="flex items-center gap-1 bg-white p-1 shadow-md ring-1 ring-stone-300">
+              <div className="h-3 w-10 bg-stone-100" /><div className="h-3 w-10 bg-stone-100" /><div className="h-3 w-8" style={{ background: "var(--p)" }} />
+            </div>
+          </div>
+          <div className="mt-2 flex items-center gap-2 px-3">
+            <div className="h-9 w-14 bg-white p-0.5 ring-1 ring-stone-300"><div className="h-full w-full" style={{ background: `color-mix(in srgb, var(--p) 30%, #fff)` }} /></div>
+            <div className="flex-1 space-y-1">
+              <div className="h-1 w-8" style={{ background: "var(--a)" }} />
+              <div className="h-1.5 w-2/3 rounded bg-stone-400" />
+              <div className="h-1 w-1/2 rounded bg-stone-200" />
+            </div>
+          </div>
         </div>
       )}
 
-      {/* ── Template 3 — Modern: bold, dark hero ── */}
+      {/* ── Modern: dark bar, split hero, bento tiles ── */}
       {template === "template_3" && (
-        <div className="flex flex-1 flex-col">
-          <div className="flex flex-1 flex-col justify-center gap-1.5 px-4" style={{ background: "var(--p)" }}>
-            <div className="flex items-center gap-1.5"><Logo size={18} /><span className="text-[11px] font-semibold text-white/90">{name}</span></div>
-            <div className="text-base font-extrabold leading-tight text-white">{name}</div>
-            <div className="text-[10px] text-white/70 line-clamp-2">{tagline}</div>
-            <div className="mt-1 w-fit rounded px-3 py-1 text-[10px] font-bold" style={{ background: "var(--a)", color: "#111" }}>
-              {t("preview.searchCta")}
-            </div>
+        <div className="flex flex-1 flex-col overflow-hidden bg-slate-950">
+          <div className="flex items-center justify-between border-b border-white/10 px-3 py-1.5">
+            <div className="flex items-center gap-1.5"><Logo size={16} white /><span className="text-[10px] font-bold text-white" style={{ fontFamily: display }}>{name}</span></div>
+            <div className="h-3 w-9 rounded" style={{ background: "var(--a)" }} />
           </div>
-          <div className="bg-white px-3 py-2"><Chips /></div>
+          <div className="grid flex-1 grid-cols-[1.1fr_1fr] items-center gap-2 px-3">
+            <div>
+              <div className="mb-1 h-2 w-9 rounded-sm" style={{ background: "var(--a)" }} />
+              <div className="text-[14px] font-bold leading-[1.05] text-white" style={{ fontFamily: display }}>{name}</div>
+              <div className="mt-1 line-clamp-1 text-[8px] text-white/60">{tagline}</div>
+              <div className="mt-1.5 grid grid-cols-2 gap-0.5 rounded-md bg-white p-0.5">
+                <div className="h-2.5 rounded-sm bg-slate-100" /><div className="h-2.5 rounded-sm bg-slate-100" />
+                <div className="h-2.5 rounded-sm bg-slate-100" /><div className="h-2.5 rounded-sm" style={{ background: "var(--p)" }} />
+              </div>
+            </div>
+            <div className="h-[84%] rounded-lg ring-1 ring-white/15" style={{ background: photo }} />
+          </div>
+          <div className="grid h-9 grid-cols-3 gap-1 bg-white p-1.5">
+            <div className="col-span-2 rounded" style={{ background: `color-mix(in srgb, var(--p) 40%, #fff)` }} />
+            <div className="rounded" style={{ background: `color-mix(in srgb, var(--a) 50%, #fff)` }} />
+          </div>
         </div>
       )}
     </div>

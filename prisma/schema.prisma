@@ -1690,6 +1690,8 @@ model OrgWebsite {
   status         SiteStatus @default(DRAFT)
   /// Visual theme: template_1 (Coastal) | template_2 (Classic) | template_3 (Modern).
   templateKey    String     @default("template_1")
+  /// Heading font preset (lib/public-site/fonts.ts): "auto" = the template's own typography.
+  fontPreset     String     @default("auto")
 
   // ── Branding ──
   logoUrl        String?

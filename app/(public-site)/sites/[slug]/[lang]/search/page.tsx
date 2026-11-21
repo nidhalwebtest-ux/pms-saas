@@ -37,7 +37,7 @@ export default async function SearchResults({
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-semibold text-slate-900 font-[family-name:var(--font-display)] sm:text-3xl">{dict.search.title}</h1>
+      <h1 className={`font-[family-name:var(--font-display)] ${v.theme.pageTitle.replace("text-center", "")}`}>{dict.search.title}</h1>
       {valid && (
         <p className="mt-1 inline-flex items-center gap-1.5 text-sm text-slate-500">
           <CalendarDaysIcon className="h-4 w-4" />
@@ -45,7 +45,7 @@ export default async function SearchResults({
         </p>
       )}
 
-      <div className="mt-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+      <div className={`mt-4 border border-slate-100 bg-slate-50/70 p-4 ${v.theme.card.split(" ")[0]}`}>
         <SearchBar buildingId={sp.buildingId} initial={{ startDate, endDate, guests }} />
       </div>
 

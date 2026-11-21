@@ -42,6 +42,7 @@ export type PublicSite = {
   slug: string;
   status: "DRAFT" | "PUBLISHED" | "DISABLED";
   templateKey: string;
+  fontPreset: string;
   // branding
   logoUrl: string | null;
   primaryColor: string;
@@ -129,7 +130,7 @@ export type AvailabilityUnit = PublicUnit & {
 // ── Site resolution ──────────────────────────────────────────────────────────
 
 const SITE_SELECT = {
-  organizationId: true, slug: true, status: true, templateKey: true,
+  organizationId: true, slug: true, status: true, templateKey: true, fontPreset: true,
   logoUrl: true, primaryColor: true, accentColor: true,
   siteNameEn: true, siteNameAr: true, taglineEn: true, taglineAr: true,
   aboutEn: true, aboutAr: true,
@@ -146,6 +147,7 @@ function toPublicSite(row: Prisma.OrgWebsiteGetPayload<{ select: typeof SITE_SEL
     slug: row.slug,
     status: row.status,
     templateKey: row.templateKey,
+    fontPreset: row.fontPreset,
     logoUrl: row.logoUrl,
     primaryColor: row.primaryColor,
     accentColor: row.accentColor,

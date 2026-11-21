@@ -37,7 +37,7 @@ export const getSiteView = cache(async (slug: string, langParam: string): Promis
     lang,
     dir: dirFor(lang),
     dict: getDict(lang),
-    theme: themeFor(site.templateKey),
+    theme: themeFor(site.templateKey, site.fontPreset),
     base: basePathFor(langParam),
     siteName: (lang === "ar" ? site.siteNameAr : site.siteNameEn) || site.siteNameEn || site.siteNameAr || site.orgName,
   };

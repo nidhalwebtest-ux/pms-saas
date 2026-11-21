@@ -4,6 +4,8 @@ import { useTranslations } from "next-intl";
 import { TextField, TextArea, Toggle } from "@/components/ui";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { COLOR_PRESETS, TEMPLATES, HEX_RE, type WebsiteForm, type TemplateKey } from "./types";
+import { FONT_PRESETS } from "@/lib/public-site/fonts";
+import { themeFor } from "@/lib/public-site/theme";
 import SlugField, { type SlugStatus } from "./SlugField";
 import ImageField from "./ImageField";
 import LivePreview from "./LivePreview";
@@ -218,6 +220,33 @@ export function StepTemplates({
           );
         })}
       </div>
+
+      {/* Heading font presets */}
+      <div className="pt-2">
+        <label className="mb-1 block text-sm font-medium text-gray-700">{t("fonts.title")}</label>
+        <p className="mb-3 text-xs text-gray-500">{t("fonts.hint")}</p>
+        <div className="grid gap-2 sm:grid-cols-3">
+          {FONT_PRESETS.map((p) => {
+            const active = form.fontPreset === p.key;
+            const latin = p.key === "auto" ? themeFor(form.templateKey).fontStack : p.latin;
+            const arabic = p.key === "auto" ? themeFor(form.templateKey).fontStack : p.arabic;
+            return (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => update({ fontPreset: p.key })}
+                className={`rounded-xl border px-3 py-2.5 text-start transition ${active ? "border-blue-500 bg-blue-50/50 ring-1 ring-blue-500" : "border-gray-200 hover:border-gray-300"}`}
+              >
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="truncate text-lg leading-tight text-gray-900" style={{ fontFamily: latin }} dir="ltr">{t("fonts.sample")}</span>
+                  <span className="shrink-0 text-lg leading-tight text-gray-900" style={{ fontFamily: arabic }} dir="rtl">{t("fonts.sampleAr")}</span>
+                </div>
+                <div className="mt-1 text-xs text-gray-500">{t(`fonts.${p.key}`)}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -243,6 +272,7 @@ export function StepReview({ form, rootDomain }: { form: WebsiteForm; rootDomain
         {row(t("fields.subdomain"), <span dir="ltr">{form.slug}.{rootDomain}</span>)}
         {row(t("review.name"), (lang === "ar" ? form.siteNameAr : form.siteNameEn) || form.siteNameEn || form.siteNameAr)}
         {row(t("templates.label"), t(`templates.${form.templateKey}.name`))}
+        {row(t("fonts.title"), t(`fonts.${form.fontPreset}`))}
         {row(t("fields.whatsapp"), <span dir="ltr">{form.whatsappNumber}</span>)}
         {row(t("fields.defaultLanguage"), t(`lang.${form.defaultLanguage}`))}
         {row(t("fields.showPrices"), t(form.showPrices ? "yes" : "no"))}

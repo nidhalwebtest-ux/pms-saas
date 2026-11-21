@@ -55,7 +55,7 @@ function QuoteInner({ unitId, buildingId, basePrice }: { unitId: string; buildin
   return (
     <>
       <div className="mt-3">
-        <SearchBar stacked targetPath={`/units/${unitId}`} initial={{ startDate, endDate, guests }} />
+        <SearchBar layout="stacked" targetPath={`/units/${unitId}`} initial={{ startDate, endDate, guests }} />
       </div>
 
       {!hasDates && showPrices && (

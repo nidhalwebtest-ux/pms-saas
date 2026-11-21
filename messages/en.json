@@ -5511,6 +5511,10 @@
         "emerald": "Emerald",
         "desert": "Desert",
         "midnight": "Midnight",
+        "forest": "Forest",
+        "sand": "Sand",
+        "ocean": "Ocean",
+        "plum": "Plum",
         "rose": "Rose"
       },
       "templates": {
@@ -5518,16 +5522,28 @@
         "label": "Template",
         "template_1": {
           "name": "Coastal",
-          "desc": "Light, airy, image-forward"
+          "desc": "Light and airy: a full-photo hero, card grid, soft rounded shapes"
         },
         "template_2": {
           "name": "Classic",
-          "desc": "Elegant, serif, hotel-like"
+          "desc": "Heritage-hotel feel: framed hero, centred layout, editorial rows, squared details"
         },
         "template_3": {
           "name": "Modern",
-          "desc": "Bold, dark hero, minimal"
+          "desc": "Bold and dark: split hero, numbered highlights, bento photo tiles"
         }
+      },
+      "fonts": {
+        "title": "Heading font",
+        "hint": "The typeface for titles on your website. Arabic and English are both covered.",
+        "sample": "Stay in Salalah",
+        "sampleAr": "إقامة في صلالة",
+        "auto": "Match template",
+        "classic": "Classic serif",
+        "editorial": "Editorial serif",
+        "modern": "Modern sans",
+        "friendly": "Friendly rounded",
+        "clean": "Clean sans"
       },
       "preview": {
         "yourHotel": "Your Hotel",

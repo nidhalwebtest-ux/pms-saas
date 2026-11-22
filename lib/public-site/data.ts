@@ -79,6 +79,9 @@ export type PublicSite = {
   checkOutTime: string | null;
   policiesEn: string | null;
   policiesAr: string | null;
+  // custom domain (canonical host once active)
+  customDomain: string | null;
+  customDomainActive: boolean;
   // org (public bits only)
   orgName: string;
   orgLogo: string | null;
@@ -148,6 +151,7 @@ const SITE_SELECT = {
   metaDescriptionEn: true, metaDescriptionAr: true, ogImageUrl: true,
   defaultLanguage: true, showPrices: true, khareefBannerEnabled: true,
   sections: true, galleryUrls: true, reviews: true, checkInTime: true, checkOutTime: true, policiesEn: true, policiesAr: true,
+  customDomain: true, customDomainActive: true,
   organization: { select: { name: true, logo: true, currency: true } },
 } satisfies Prisma.OrgWebsiteSelect;
 
@@ -178,6 +182,8 @@ function toPublicSite(row: Prisma.OrgWebsiteGetPayload<{ select: typeof SITE_SEL
     checkOutTime: parseTime(row.checkOutTime),
     policiesEn: row.policiesEn?.trim() || null,
     policiesAr: row.policiesAr?.trim() || null,
+    customDomain: row.customDomain,
+    customDomainActive: row.customDomainActive,
     orgName: row.organization.name,
     orgLogo: row.organization.logo,
     currency: row.organization.currency,
@@ -218,9 +224,53 @@ function cachedForOrg<A extends unknown[], R>(name: string, fn: (orgId: string, 
 /** Resolve the active site directly from a request Host header (for API routes). */
 export async function getSiteFromHost(host: string | null | undefined): Promise<PublicSite | null> {
   const slug = extractSiteSlug(host);
-  if (!slug) return null;
-  return getSiteBySlug(slug);
+  if (slug) return getSiteBySlug(slug);
+  // A connected custom domain (e.g. www.noory.com) resolves to its site too.
+  const hostname = (host ?? "").split(":")[0].trim().toLowerCase();
+  if (!hostname || !hostname.includes(".")) return null;
+  const row = await unstable_cache(
+    () => prisma.orgWebsite.findUnique({ where: { customDomain: hostname }, select: { slug: true } }),
+    ["public-site-host", hostname],
+    { revalidate: PUBLIC_CACHE_SECONDS },
+  )();
+  return row ? getSiteBySlug(row.slug) : null;
 }
+
+// ── Seasons (opt-in landing pages) ───────────────────────────────────────────
+
+export type PublicSeason = {
+  id: string;
+  name: string;
+  nameAr: string | null;
+  descriptionEn: string | null;
+  descriptionAr: string | null;
+  /** inclusive, "YYYY-MM-DD" */
+  startDate: string;
+  endDate: string;
+  color: string;
+  minNights: number | null;
+};
+
+const toISODay = (d: Date) => d.toISOString().slice(0, 10);
+
+async function loadSeasons(orgId: string): Promise<PublicSeason[]> {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const rows = await prisma.season.findMany({
+    where: { organizationId: orgId, isActive: true, publicPage: true, endDate: { gte: today } },
+    orderBy: { startDate: "asc" },
+    take: 12,
+  });
+  return rows.map((r) => ({
+    id: r.id, name: r.name, nameAr: r.nameAr,
+    descriptionEn: r.descriptionEn, descriptionAr: r.descriptionAr,
+    startDate: toISODay(r.startDate), endDate: toISODay(r.endDate),
+    color: r.color, minNights: r.minNights,
+  }));
+}
+
+/** Seasons the operator chose to publish (current + upcoming). */
+export const getPublicSeasons = cachedForOrg("seasons", loadSeasons);
 
 // ── Buildings ────────────────────────────────────────────────────────────────
 

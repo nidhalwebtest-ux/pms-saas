@@ -14,7 +14,7 @@ import { DISPLAY, type HomeProps } from "./types";
  * Template 3 — Modern: a dark split hero (type + search left, tall photo right), numbered
  * highlight cards, a bento grid of building tiles, a solid accent banner and a dark about band.
  */
-export default function HomeModern({ v, buildings, name, tagline, about, location, heroPhoto, aboutPhoto, highlights }: HomeProps) {
+export default function HomeModern({ v, buildings, seasons, name, tagline, about, location, heroPhoto, aboutPhoto, highlights }: HomeProps) {
   const { site, dict, theme, base } = v;
   const stays = withBase(base, "/buildings");
   const places = buildings.reduce((n, b) => n + b.unitCount, 0);
@@ -81,7 +81,7 @@ export default function HomeModern({ v, buildings, name, tagline, about, locatio
           </div>
         </section>
       ),
-    ...sharedSections(v, buildings),
+    ...sharedSections(v, buildings, seasons),
   };
 
   return (

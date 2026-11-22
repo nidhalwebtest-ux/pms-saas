@@ -5,7 +5,7 @@
  * renders nothing, so enabling it early is harmless.
  */
 
-export const SECTION_KEYS = ["highlights", "khareef", "featured", "gallery", "about", "reviews", "policies", "location"] as const;
+export const SECTION_KEYS = ["highlights", "khareef", "seasons", "featured", "gallery", "about", "reviews", "policies", "location"] as const;
 export type SectionKey = (typeof SECTION_KEYS)[number];
 export type SectionConfig = { key: SectionKey; enabled: boolean };
 
@@ -13,6 +13,7 @@ export type SectionConfig = { key: SectionKey; enabled: boolean };
 export const DEFAULT_SECTIONS: SectionConfig[] = [
   { key: "highlights", enabled: true },
   { key: "khareef", enabled: false },
+  { key: "seasons", enabled: true },
   { key: "featured", enabled: true },
   { key: "gallery", enabled: false },
   { key: "about", enabled: true },

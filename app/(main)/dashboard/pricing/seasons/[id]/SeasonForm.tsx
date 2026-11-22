@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { ArrowLeftIcon } from "@heroicons/react/24/outline";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/form/TextField";
+import { TextArea } from "@/components/ui/form/TextArea";
 import { NumberField } from "@/components/ui/form/NumberField";
 import { Toggle } from "@/components/ui/form/Toggle";
 import { UNIT_TYPES, SEASON_COLORS } from "@/lib/pricing-management";
@@ -32,6 +33,10 @@ export type SeasonFormInitial = {
   unitRates: Record<string, Rate>;
   minNights: number | null;
   weekendAdjustPct: number | null;
+  /** website landing page (opt-in) */
+  publicPage: boolean;
+  descriptionEn: string;
+  descriptionAr: string;
 };
 
 type UnitRow = { id: string; name: string; unitType: string; propertyId: string; defaultDaily: string };
@@ -240,6 +245,14 @@ export default function SeasonForm({ title, initial, buildings, units }: { title
             onValueChange={(n) => set("weekendAdjustPct", n === null ? null : Math.round(n))}
             helperText={t("weekendPctHint")}
           />
+        </div>
+      </Card>
+
+      <Card title={t("website")} hint={t("websiteHint")}>
+        <Toggle label={t("publicPage")} description={t("publicPageHint")} checked={v.publicPage} onCheckedChange={(c) => set("publicPage", c)} />
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <TextArea label={t("descEn")} value={v.descriptionEn} onChange={(e) => set("descriptionEn", e.target.value)} minRows={3} dir="ltr" maxLength={1500} showOptional />
+          <TextArea label={t("descAr")} value={v.descriptionAr} onChange={(e) => set("descriptionAr", e.target.value)} minRows={3} dir="rtl" maxLength={1500} showOptional />
         </div>
       </Card>
 

@@ -4,6 +4,9 @@ import Image from "../../_components/Img";
 import { MapPinIcon, CheckIcon } from "@heroicons/react/24/outline";
 import { getSiteView } from "@/lib/public-site/render";
 import { withBase } from "@/lib/public-site/lang";
+import { pageMetadata } from "@/lib/public-site/seo";
+import { buildingLd, breadcrumbLd } from "@/lib/public-site/schema-org";
+import JsonLd from "../../_components/JsonLd";
 import { getBuilding, getUnits } from "@/lib/public-site/data";
 import { formatMoney } from "@/lib/public-site/format";
 import UnitCard from "../../_components/UnitCard";
@@ -20,7 +23,9 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const v = await getSiteView(slug, lang);
   if (!v) return {};
   const b = await getBuilding(v.site.organizationId, buildingId);
-  return { title: b?.name ?? "" };
+  if (!b) return {};
+  const desc = v.lang === "ar" ? b.descriptionAr || b.descriptionEn : b.descriptionEn || b.descriptionAr;
+  return pageMetadata(v, { title: b.name, description: desc, path: `/buildings/${b.id}`, image: b.photos[0] });
 }
 
 export default async function BuildingDetail({ params }: { params: Promise<Params> }) {
@@ -39,6 +44,7 @@ export default async function BuildingDetail({ params }: { params: Promise<Param
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <JsonLd data={[buildingLd(v, building), breadcrumbLd(v, [{ name: dict.nav.home, path: "/" }, { name: dict.nav.buildings, path: "/buildings" }, { name: building.name, path: `/buildings/${building.id}` }])]} />
       {/* Gallery */}
       {photos.length > 0 ? (
         <div className="grid gap-2 overflow-hidden rounded-2xl sm:grid-cols-4 sm:grid-rows-2" style={{ minHeight: 280 }}>

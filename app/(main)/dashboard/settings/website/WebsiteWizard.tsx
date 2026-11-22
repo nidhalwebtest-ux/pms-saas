@@ -14,11 +14,12 @@ import LaunchExperience from "./LaunchExperience";
 import { saveWebsite, publishWebsite, getWebsitePreviewPath, type PublishResult } from "./actions";
 import type { WebsiteForm, WebsiteStatus } from "./types";
 import type { DomainStatus } from "@/lib/public-site/provision";
+import type { CustomDomainStatus } from "@/lib/public-site/custom-domain";
 
 const STEPS = ["basics", "contact", "templates", "content", "review"] as const;
 
 export default function WebsiteWizard({
-  initialForm, status, rootDomain, stats, domainStatus,
+  initialForm, status, rootDomain, stats, domainStatus, customDomain, customDomainStatus,
 }: {
   initialForm: WebsiteForm;
   status: WebsiteStatus | null;
@@ -26,6 +27,8 @@ export default function WebsiteWizard({
   rootDomain: string;
   stats: { buildings: number; units: number };
   domainStatus: DomainStatus | null;
+  customDomain: string | null;
+  customDomainStatus: CustomDomainStatus | null;
 }) {
   const t = useTranslations("settings.website");
   const router = useRouter();
@@ -100,6 +103,8 @@ export default function WebsiteWizard({
           rootDomain={rootDomain}
           stats={stats}
           domainStatus={domainStatus}
+          customDomain={customDomain}
+          customDomainStatus={customDomainStatus}
           onEdit={() => { setEditing(true); setStep(0); }}
         />
       </Shell>

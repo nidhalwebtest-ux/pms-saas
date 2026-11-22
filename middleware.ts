@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { updateSession } from "@/utils/supabase/middleware";
 import { extractSiteSlug } from "@/lib/public-site/subdomain";
 import { stripLangPrefix } from "@/lib/public-site/lang";
+import { isMainAppHost, resolveCustomHost } from "@/lib/public-site/resolve-host";
 
 /**
  * Paths that must NOT be rewritten into the public-site tree even on a tenant
@@ -14,19 +15,32 @@ function isPassthrough(path: string): boolean {
     path.startsWith("/_next") ||
     path.startsWith("/fonts") ||
     path.startsWith("/brand") ||
-    path === "/favicon.ico" ||
-    path === "/robots.txt"
+    path === "/favicon.ico"
     // NOTE: /sitemap.xml is intentionally NOT passthrough — it rewrites to the
     // per-tenant sitemap route (app/(public-site)/sites/[slug]/sitemap.xml).
   );
 }
 
 export async function middleware(request: NextRequest) {
-  const slug = extractSiteSlug(request.headers.get("host"));
+  const host = request.headers.get("host");
+  let slug = extractSiteSlug(host);
+  // A customer's own domain (www.noory.com): look up which site it belongs to. Skipped for our own
+  // hosts, so the main app never pays for it; an unknown host simply falls through to the main app.
+  if (!slug && host) {
+    const hostname = host.split(":")[0].trim().toLowerCase();
+    if (!isMainAppHost(hostname) && !request.nextUrl.pathname.startsWith("/_next")) slug = await resolveCustomHost(hostname);
+  }
 
   // ── Tenant subdomain → rewrite into the (public-site) tree, skip app auth ──
   if (slug) {
     const { pathname, searchParams } = request.nextUrl;
+
+    // robots.txt is per site (it points at the site's own sitemap).
+    if (pathname === "/robots.txt") {
+      const url = request.nextUrl.clone();
+      url.pathname = `/sites/${slug}/robots.txt`;
+      return NextResponse.rewrite(url);
+    }
     if (isPassthrough(pathname)) return NextResponse.next();
 
     // Legacy ?lang=xx links → the language-prefixed URL (language lives in the path now).

@@ -38,3 +38,12 @@ export function formatDate(iso: string, lang: SiteLang): string {
 export function waNumber(raw: string | null | undefined): string {
   return (raw || "").replace(/[^\d]/g, "");
 }
+
+/** Localised date with the year (e.g. "1 Jul 2026"). */
+export function formatDateYear(iso: string, lang: SiteLang): string {
+  const d = new Date(iso + "T00:00:00Z");
+  if (isNaN(d.getTime())) return iso;
+  return new Intl.DateTimeFormat(lang === "ar" ? "ar-OM" : "en-GB", {
+    day: "numeric", month: "short", year: "numeric", timeZone: "UTC",
+  }).format(d);
+}

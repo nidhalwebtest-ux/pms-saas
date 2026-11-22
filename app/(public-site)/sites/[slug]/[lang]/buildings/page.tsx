@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getSiteView } from "@/lib/public-site/render";
 import { fill } from "@/lib/public-site/i18n";
+import { pageMetadata } from "@/lib/public-site/seo";
 import { getBuildings } from "@/lib/public-site/data";
 import BuildingList from "../_components/BuildingList";
 
@@ -10,7 +11,7 @@ type Params = { slug: string; lang: string };
 export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
   const { slug, lang } = await params;
   const v = await getSiteView(slug, lang);
-  return v ? { title: v.dict.nav.buildings } : {};
+  return v ? pageMetadata(v, { title: v.dict.nav.buildings, path: "/buildings" }) : {};
 }
 
 export default async function BuildingsList({ params }: { params: Promise<Params> }) {

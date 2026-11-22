@@ -44,10 +44,12 @@ export default async function SeasonEditPage({ params }: { params: Promise<{ id:
           season.rates.filter((r) => r.unitId).map((r) => [r.unitId!, { daily: fmtRate(r.dailyRate), weekly: fmtRate(r.weeklyRate), monthly: fmtRate(r.monthlyRate) }]),
         ),
         minNights: season.minNights, weekendAdjustPct: season.weekendAdjustPct,
+        publicPage: season.publicPage, descriptionEn: season.descriptionEn ?? "", descriptionAr: season.descriptionAr ?? "",
       }
     : {
         name: "", nameAr: "", startDate: "", endDate: "", priority: 10, isActive: true, disallowMonthly: false,
         color: SEASON_COLORS[0], propertyIds: [], excludedUnitIds: [], typeRates: {}, unitRates: {}, minNights: null, weekendAdjustPct: null,
+        publicPage: false, descriptionEn: "", descriptionAr: "",
       };
 
   return (

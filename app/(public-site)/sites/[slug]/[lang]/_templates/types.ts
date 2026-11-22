@@ -1,11 +1,13 @@
 import type { ComponentType } from "react";
 import type { SiteView } from "@/lib/public-site/render";
-import type { PublicBuilding } from "@/lib/public-site/data";
+import type { PublicBuilding, PublicSeason } from "@/lib/public-site/data";
 
 /** Everything a home-page template needs — computed once in page.tsx. */
 export type HomeProps = {
   v: SiteView;
   buildings: PublicBuilding[];
+  /** opt-in season landing pages */
+  seasons: PublicSeason[];
   name: string;
   tagline: string | null;
   about: string | null;

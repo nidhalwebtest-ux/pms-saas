@@ -73,11 +73,10 @@ async function errorOf(res: Response): Promise<string> {
   return msg ? `${msg}${code ? ` (${code})` : ""}` : `vercel_http_${res.status}`;
 }
 
-/** Register `{slug}.binaya.app` with the Vercel project so it routes + gets TLS. */
-export async function addTenantDomain(slug: string): Promise<ProvisionResult> {
+/** Register a hostname with the Vercel project so it routes + gets TLS (idempotent). */
+export async function addProjectDomain(host: string): Promise<ProvisionResult> {
   const { token, projectId } = config();
   if (!token || !projectId) return { ok: true, skipped: true };
-  const host = tenantHost(slug);
   try {
     const res = await vercelFetch(`/v10/projects/${projectId}/domains`, {
       method: "POST",
@@ -98,11 +97,15 @@ export async function addTenantDomain(slug: string): Promise<ProvisionResult> {
   }
 }
 
-/** Is `{slug}.binaya.app` attached to the project, and is it verified? */
-export async function getTenantDomainStatus(slug: string): Promise<DomainStatus> {
+/** Register `{slug}.binaya.app` with the Vercel project so it routes + gets TLS. */
+export const addTenantDomain = (slug: string) => addProjectDomain(tenantHost(slug));
+
+type ProjectDomain = { verified?: boolean; verification?: { type: string; domain: string; value: string }[] };
+
+/** Is the hostname attached to the project, and is it verified? */
+export async function getProjectDomainStatus(host: string): Promise<DomainStatus & { verification?: ProjectDomain["verification"] }> {
   const { token, projectId } = config();
   if (!token || !projectId) return { state: "skipped" };
-  const host = tenantHost(slug);
   try {
     const res = await vercelFetch(`/v9/projects/${projectId}/domains/${host}`, { method: "GET" }, 2);
     if (res.status === 404) return { state: "missing" };
@@ -111,14 +114,44 @@ export async function getTenantDomainStatus(slug: string): Promise<DomainStatus>
       console.error("[provision] domain status failed", { host, status: res.status, error });
       return { state: "unknown", error };
     }
-    const body = (await res.json().catch(() => ({}))) as { verified?: boolean };
-    return { state: body.verified === false ? "pending" : "connected" };
+    const body = (await res.json().catch(() => ({}))) as ProjectDomain;
+    return body.verified === false ? { state: "pending", verification: body.verification } : { state: "connected" };
   } catch (e) {
     const error = e instanceof Error ? e.message : "vercel_unreachable";
     console.error("[provision] domain status error", { host, error });
     return { state: "unknown", error };
   }
 }
+
+/** Does the hostname's DNS point at Vercel? (null = couldn't tell) */
+export async function isDomainMisconfigured(host: string): Promise<boolean | null> {
+  const { token, projectId } = config();
+  if (!token || !projectId) return null;
+  try {
+    const res = await vercelFetch(`/v6/domains/${host}/config?projectIdOrName=${projectId}`, { method: "GET" }, 2);
+    if (!res.ok) return null;
+    const body = (await res.json().catch(() => ({}))) as { misconfigured?: boolean };
+    return typeof body.misconfigured === "boolean" ? body.misconfigured : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Remove a hostname from the project. */
+export async function removeProjectDomain(host: string): Promise<ProvisionResult> {
+  const { token, projectId } = config();
+  if (!token || !projectId) return { ok: true, skipped: true };
+  try {
+    const res = await vercelFetch(`/v9/projects/${projectId}/domains/${host}`, { method: "DELETE" });
+    if (res.ok || res.status === 404) return { ok: true };
+    return { ok: false, error: await errorOf(res) };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "vercel_unreachable" };
+  }
+}
+
+/** Is `{slug}.binaya.app` attached to the project, and is it verified? */
+export const getTenantDomainStatus = (slug: string): Promise<DomainStatus> => getProjectDomainStatus(tenantHost(slug));
 
 /** Attach the domain if it's missing; returns the resulting status. */
 export async function ensureTenantDomain(slug: string): Promise<DomainStatus> {
@@ -130,14 +163,4 @@ export async function ensureTenantDomain(slug: string): Promise<DomainStatus> {
 }
 
 /** Remove `{slug}.binaya.app` from the project (used if a slug changes). */
-export async function removeTenantDomain(slug: string): Promise<ProvisionResult> {
-  const { token, projectId } = config();
-  if (!token || !projectId) return { ok: true, skipped: true };
-  try {
-    const res = await vercelFetch(`/v9/projects/${projectId}/domains/${tenantHost(slug)}`, { method: "DELETE" });
-    if (res.ok || res.status === 404) return { ok: true };
-    return { ok: false, error: await errorOf(res) };
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "vercel_unreachable" };
-  }
-}
+export const removeTenantDomain = (slug: string) => removeProjectDomain(tenantHost(slug));

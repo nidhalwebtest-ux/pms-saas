@@ -10,18 +10,22 @@ import {
 } from "@heroicons/react/24/outline";
 import { Button, Badge } from "@/components/ui";
 import LivePreview from "./LivePreview";
+import CustomDomainCard from "./CustomDomainCard";
+import type { CustomDomainStatus } from "@/lib/public-site/custom-domain";
 import { setWebsiteStatus, connectWebsiteDomain } from "./actions";
 import type { WebsiteForm, WebsiteStatus } from "./types";
 import type { DomainStatus } from "@/lib/public-site/provision";
 
 export default function WebsiteDashboard({
-  form, status, rootDomain, stats, domainStatus, onEdit,
+  form, status, rootDomain, stats, domainStatus, customDomain, customDomainStatus, onEdit,
 }: {
   form: WebsiteForm;
   status: WebsiteStatus;
   rootDomain: string;
   stats: { buildings: number; units: number };
   domainStatus: DomainStatus | null;
+  customDomain: string | null;
+  customDomainStatus: CustomDomainStatus | null;
   onEdit: () => void;
 }) {
   const t = useTranslations("settings.website");
@@ -115,6 +119,8 @@ export default function WebsiteDashboard({
             </Button>
           </div>
         </div>
+
+        <CustomDomainCard host={customDomain} status={customDomainStatus} />
 
         {/* Stat placeholders */}
         <div className="grid grid-cols-2 gap-4">

@@ -6,6 +6,9 @@ import { CheckIcon, UserGroupIcon, HomeIcon } from "@heroicons/react/24/outline"
 import { getSiteView } from "@/lib/public-site/render";
 import { fill } from "@/lib/public-site/i18n";
 import { withBase } from "@/lib/public-site/lang";
+import { pageMetadata } from "@/lib/public-site/seo";
+import { unitLd, breadcrumbLd } from "@/lib/public-site/schema-org";
+import JsonLd from "../../_components/JsonLd";
 import { getUnit } from "@/lib/public-site/data";
 import UnitQuote from "./UnitQuote";
 
@@ -20,7 +23,9 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   const v = await getSiteView(slug, lang);
   if (!v) return {};
   const u = await getUnit(v.site.organizationId, unitId);
-  return { title: u?.name ?? "" };
+  if (!u) return {};
+  const desc = v.lang === "ar" ? u.descriptionAr || u.descriptionEn : u.descriptionEn || u.descriptionAr;
+  return pageMetadata(v, { title: u.name, description: desc, path: `/units/${u.id}`, image: u.photos[0] });
 }
 
 /** Pre-rendered + cached. The live quote for the visitor's dates loads in <UnitQuote>. */
@@ -39,6 +44,7 @@ export default async function UnitDetail({ params }: { params: Promise<Params> }
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+      <JsonLd data={[unitLd(v, unit), breadcrumbLd(v, [{ name: dict.nav.home, path: "/" }, { name: dict.nav.buildings, path: "/buildings" }, { name: unit.buildingName, path: `/buildings/${unit.buildingId}` }, { name: unit.name, path: `/units/${unit.id}` }])]} />
       {/* Gallery */}
       {photos.length > 0 ? (
         <div className="grid gap-2 overflow-hidden rounded-2xl sm:grid-cols-4 sm:grid-rows-2" style={{ minHeight: 260 }}>

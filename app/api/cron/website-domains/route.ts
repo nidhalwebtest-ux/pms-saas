@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { ensureTenantDomain } from "@/lib/public-site/provision";
+import { checkCustomDomain } from "@/lib/public-site/custom-domain";
 
 /**
  * Daily safety net (vercel.json → crons): make sure every PUBLISHED booking
- * site's {slug}.binaya.app is attached to the Vercel project — the automatic
+ * site's {slug}.binaya.app (and custom domain) is attached to the Vercel project — the automatic
  * equivalent of running `vercel domains add {slug}.binaya.app` by hand.
  * Publishing already attaches it; this repairs any attach that failed.
  *
@@ -22,17 +23,22 @@ export async function GET(req: NextRequest) {
 
   const sites = await prisma.orgWebsite.findMany({
     where: { status: "PUBLISHED" },
-    select: { slug: true },
+    select: { slug: true, organizationId: true, customDomain: true },
     orderBy: { publishedAt: "desc" },
   });
 
   const results: { slug: string; state: string; error?: string }[] = [];
-  for (const { slug } of sites) {
+  for (const { slug, organizationId, customDomain } of sites) {
     const s = await ensureTenantDomain(slug);
     results.push({ slug, state: s.state, ...(s.error ? { error: s.error } : {}) });
+    // Customers who connected their own domain: re-check DNS/verification and keep it attached.
+    if (customDomain) {
+      const c = await checkCustomDomain(organizationId, customDomain);
+      results.push({ slug: customDomain, state: `custom:${c.state}`, ...(c.error ? { error: c.error } : {}) });
+    }
   }
 
-  const failed = results.filter((r) => r.state === "missing" || r.state === "unknown");
+  const failed = results.filter((r) => r.state === "missing" || r.state === "unknown" || r.state === "custom:error");
   if (failed.length) console.error("[cron website-domains] not connected", failed);
 
   return NextResponse.json({

@@ -10,7 +10,7 @@ import BuildingList from "../_components/BuildingList";
 import { DISPLAY, type HomeProps } from "./types";
 
 /** Template 1 — Coastal: full-bleed photo hero with an overlapping search bar, airy sections. */
-export default function HomeCoastal({ v, buildings, name, tagline, about, location, heroPhoto, aboutPhoto, highlights }: HomeProps) {
+export default function HomeCoastal({ v, buildings, seasons, name, tagline, about, location, heroPhoto, aboutPhoto, highlights }: HomeProps) {
   const { site, dict, theme, base } = v;
   const stays = withBase(base, "/buildings");
 
@@ -77,7 +77,7 @@ export default function HomeCoastal({ v, buildings, name, tagline, about, locati
           </div>
         </section>
       ),
-    ...sharedSections(v, buildings),
+    ...sharedSections(v, buildings, seasons),
   };
 
   return (

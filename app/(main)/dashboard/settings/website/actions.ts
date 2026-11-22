@@ -4,13 +4,15 @@ import { revalidatePath, updateTag } from "next/cache";
 import { isFontPreset } from "@/lib/public-site/fonts";
 import { parseSections, parseReviews, parseGallery, parseTime } from "@/lib/public-site/sections";
 import { signPreviewToken } from "@/lib/public-site/preview-token";
+import { normalizeDomain } from "@/lib/public-site/custom-domain-shared";
+import { checkCustomDomain, type CustomDomainStatus } from "@/lib/public-site/custom-domain";
 import { publicOrgTag, publicSiteTag } from "@/lib/public-site/data";
 import { featureBlockedMessage } from "@/lib/subscription";
 import { createClient } from "@/utils/supabase/server";
 import { prisma } from "@/lib/prisma";
 import { hasAccess } from "@/lib/access";
 import { isValidSlug, isReservedSlug } from "@/lib/public-site/subdomain";
-import { addTenantDomain, ensureTenantDomain, tenantHost, type DomainStatus } from "@/lib/public-site/provision";
+import { addTenantDomain, ensureTenantDomain, removeProjectDomain, tenantHost, type DomainStatus } from "@/lib/public-site/provision";
 import { HEX_RE, type WebsiteForm, type TemplateKey } from "./types";
 
 async function orgId(): Promise<string | null> {
@@ -251,4 +253,74 @@ export async function getWebsitePreviewPath(lang: "ar" | "en"): Promise<{ ok: tr
   const site = await prisma.orgWebsite.findUnique({ where: { organizationId: org }, select: { slug: true } });
   if (!site) return { ok: false, error: "no_site" };
   return { ok: true, path: `/site-preview/${site.slug}/${signPreviewToken(site.slug)}/${lang === "en" ? "en" : "ar"}` };
+}
+
+// ── Custom domain (e.g. www.noory.com) ───────────────────────────────────────
+
+export type CustomDomainResult =
+  | { ok: true; status: CustomDomainStatus | null }
+  | { ok: false; error: "forbidden" | "no_org" | "no_site" | "empty" | "invalid" | "blocked" | "taken" | "plan_feature" | "generic"; message?: string };
+
+async function domainContext(): Promise<
+  | { ok: false; error: "forbidden" | "no_org" | "no_site" }
+  | { ok: true; org: string; site: { slug: string; customDomain: string | null } }
+> {
+  if (!(await hasAccess("settingsWebsite", "EDIT"))) return { ok: false, error: "forbidden" };
+  const org = await orgId();
+  if (!org) return { ok: false, error: "no_org" };
+  const site = await prisma.orgWebsite.findUnique({ where: { organizationId: org }, select: { slug: true, customDomain: true } });
+  if (!site) return { ok: false, error: "no_site" };
+  return { ok: true, org, site };
+}
+
+/** Connect (or change) the site's custom domain: validate, save, attach to Vercel, report what DNS to set. */
+export async function saveCustomDomain(input: string): Promise<CustomDomainResult> {
+  const ctx = await domainContext();
+  if (!ctx.ok) return { ok: false, error: ctx.error };
+  const { org, site } = ctx;
+
+  const blocked = await featureBlockedMessage(org, "website");
+  if (blocked) return { ok: false, error: "plan_feature", message: blocked };
+
+  const d = normalizeDomain(input);
+  if (!d.ok) return { ok: false, error: d.error };
+
+  const clash = await prisma.orgWebsite.findUnique({ where: { customDomain: d.host }, select: { organizationId: true } });
+  if (clash && clash.organizationId !== org) return { ok: false, error: "taken" };
+
+  try {
+    // changing domains: release the old one
+    if (site.customDomain && site.customDomain !== d.host) await removeProjectDomain(site.customDomain);
+    await prisma.orgWebsite.update({ where: { organizationId: org }, data: { customDomain: d.host, customDomainActive: false } });
+  } catch (e) {
+    console.error("[saveCustomDomain]", e);
+    return { ok: false, error: "generic" };
+  }
+  const status = await checkCustomDomain(org, d.host);
+  invalidatePublicSite(org, site.slug);
+  revalidatePath("/dashboard/settings/website");
+  return { ok: true, status };
+}
+
+/** Re-check the custom domain's DNS/verification ("Check again"). */
+export async function checkWebsiteCustomDomain(): Promise<CustomDomainResult> {
+  const ctx = await domainContext();
+  if (!ctx.ok) return { ok: false, error: ctx.error };
+  if (!ctx.site.customDomain) return { ok: true, status: null };
+  const status = await checkCustomDomain(ctx.org, ctx.site.customDomain);
+  invalidatePublicSite(ctx.org, ctx.site.slug);
+  revalidatePath("/dashboard/settings/website");
+  return { ok: true, status };
+}
+
+/** Disconnect the custom domain (the site stays at {slug}.binaya.app). */
+export async function removeCustomDomain(): Promise<CustomDomainResult> {
+  const ctx = await domainContext();
+  if (!ctx.ok) return { ok: false, error: ctx.error };
+  const { org, site } = ctx;
+  if (site.customDomain) await removeProjectDomain(site.customDomain);
+  await prisma.orgWebsite.update({ where: { organizationId: org }, data: { customDomain: null, customDomainActive: false } });
+  invalidatePublicSite(org, site.slug);
+  revalidatePath("/dashboard/settings/website");
+  return { ok: true, status: null };
 }

@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { CalendarDaysIcon, UserGroupIcon } from "@heroicons/react/24/outline";
 import { getSiteView } from "@/lib/public-site/render";
+import type { Metadata } from "next";
 import { fill } from "@/lib/public-site/i18n";
+import { pageMetadata } from "@/lib/public-site/seo";
 import { withBase } from "@/lib/public-site/lang";
 import { getUnit, searchAvailability } from "@/lib/public-site/data";
 import { formatMoney, formatDate } from "@/lib/public-site/format";
@@ -11,6 +13,13 @@ import BookingForm from "./BookingForm";
 export const dynamic = "force-dynamic";
 
 type Params = { slug: string; lang: string };
+
+/** Result/booking pages depend on the visitor's dates — keep them out of search results. */
+export async function generateMetadata({ params }: { params: Promise<Params> }): Promise<Metadata> {
+  const { slug, lang } = await params;
+  const v = await getSiteView(slug, lang);
+  return v ? pageMetadata(v, { title: v.dict.booking.title, path: "/book", noindex: true }) : {};
+}
 type Search = { unitId?: string; startDate?: string; endDate?: string; guests?: string };
 
 export default async function BookPage({

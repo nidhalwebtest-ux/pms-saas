@@ -1706,6 +1706,12 @@ model OrgWebsite {
   policiesEn     String?    @db.Text
   policiesAr     String?    @db.Text
 
+  // ── Custom domain (e.g. www.noory.com) ──
+  /// Hostname the operator connected; resolves to this site (any status of the DNS check).
+  customDomain       String?    @unique
+  /// True once Vercel reports the domain verified + correctly configured (canonical URL, sitemap).
+  customDomainActive Boolean    @default(false)
+
   // ── Branding ──
   logoUrl        String?
   primaryColor   String   @default("#185FA5")
@@ -1969,6 +1975,10 @@ model Season {
   minNights        Int?
   weekendAdjustPct Int?
   color            String       @default("#F59E0B")
+  /// Show a landing page for this season on the public website (/seasons/{id}) — opt-in.
+  publicPage       Boolean      @default(false)
+  descriptionEn    String?      @db.Text
+  descriptionAr    String?      @db.Text
   /// Buildings it applies to; empty = every building.
   propertyIds      String[]     @default([])
   /// Units in scope that the season must NOT apply to.

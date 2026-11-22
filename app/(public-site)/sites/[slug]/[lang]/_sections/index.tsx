@@ -1,11 +1,12 @@
 import { Fragment, type ReactNode } from "react";
 import type { SiteView } from "@/lib/public-site/render";
 import type { SectionKey } from "@/lib/public-site/sections";
-import type { PublicBuilding } from "@/lib/public-site/data";
+import type { PublicBuilding, PublicSeason } from "@/lib/public-site/data";
 import Gallery from "./Gallery";
 import Reviews from "./Reviews";
 import Policies from "./Policies";
 import Location from "./Location";
+import Seasons from "./Seasons";
 
 /** Gallery photos: the operator's own, or (when none were added) the buildings' photos. */
 export function galleryPhotos(v: SiteView, buildings: PublicBuilding[]): string[] {
@@ -14,8 +15,9 @@ export function galleryPhotos(v: SiteView, buildings: PublicBuilding[]): string[
 }
 
 /** The sections every template renders the same way (each adapts its look to the template's tokens). */
-export function sharedSections(v: SiteView, buildings: PublicBuilding[]): Pick<Record<SectionKey, ReactNode>, "gallery" | "reviews" | "policies" | "location"> {
+export function sharedSections(v: SiteView, buildings: PublicBuilding[], seasons: PublicSeason[]): Pick<Record<SectionKey, ReactNode>, "seasons" | "gallery" | "reviews" | "policies" | "location"> {
   return {
+    seasons: <Seasons v={v} seasons={seasons} />,
     gallery: <Gallery v={v} photos={galleryPhotos(v, buildings)} />,
     reviews: <Reviews v={v} reviews={v.site.reviews} />,
     policies: <Policies v={v} />,

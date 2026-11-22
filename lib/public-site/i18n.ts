@@ -61,6 +61,8 @@ const en = {
     locationEyebrow: "Find us", locationTitle: "Location",
     checkIn: "Check-in", checkOut: "Check-out", openMap: "Open in Google Maps", directions: "Get directions",
     previewBanner: "Preview — only you can see this. It expires in 30 minutes.",
+    seasonsEyebrow: "Seasons", seasonsTitle: "Plan your stay around the season", seasonCta: "View season",
+    seasonStays: "Stays and rates this season", seasonCheck: "Check your dates", seasonNoRates: "Pick your dates to see rates for this season.",
   },
   lang: { toggle: "العربية" },
 };
@@ -120,6 +122,8 @@ const ar: typeof en = {
     locationEyebrow: "موقعنا", locationTitle: "الموقع",
     checkIn: "تسجيل الدخول", checkOut: "تسجيل الخروج", openMap: "افتح في خرائط جوجل", directions: "احصل على الاتجاهات",
     previewBanner: "معاينة — أنت فقط من يراها. تنتهي خلال 30 دقيقة.",
+    seasonsEyebrow: "المواسم", seasonsTitle: "خطّط إقامتك حسب الموسم", seasonCta: "عرض الموسم",
+    seasonStays: "الإقامات والأسعار في هذا الموسم", seasonCheck: "تحقق من تواريخك", seasonNoRates: "اختر تواريخك لعرض أسعار هذا الموسم.",
   },
   lang: { toggle: "English" },
 };

@@ -23,7 +23,7 @@ function Ornament({ className = "" }: { className?: string }) {
  * Template 2 — Classic (heritage hotel): ivory page, a framed photo hero with centred type and a
  * squared search card, thin-ruled highlights, editorial building rows, centred about.
  */
-export default function HomeClassic({ v, buildings, name, tagline, about, location, heroPhoto, aboutPhoto, highlights }: HomeProps) {
+export default function HomeClassic({ v, buildings, seasons, name, tagline, about, location, heroPhoto, aboutPhoto, highlights }: HomeProps) {
   const { site, dict, theme, base } = v;
   const stays = withBase(base, "/buildings");
 
@@ -91,7 +91,7 @@ export default function HomeClassic({ v, buildings, name, tagline, about, locati
           )}
         </section>
       ),
-    ...sharedSections(v, buildings),
+    ...sharedSections(v, buildings, seasons),
   };
 
   return (

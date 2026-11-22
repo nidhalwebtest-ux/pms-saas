@@ -6,6 +6,7 @@ import { isFontPreset } from "@/lib/public-site/fonts";
 import { parseSections, parseReviews, parseGallery } from "@/lib/public-site/sections";
 import { getAuthUser } from "@/lib/current-user";
 import { ensureTenantDomain, type DomainStatus } from "@/lib/public-site/provision";
+import { checkCustomDomain, type CustomDomainStatus } from "@/lib/public-site/custom-domain";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,9 @@ export default async function WebsiteSettingsPage() {
   // failed publish-time attach) and show the result on the dashboard.
   const domainStatus: DomainStatus | null =
     site?.status === "PUBLISHED" ? await ensureTenantDomain(site.slug) : null;
+
+  // Custom domain: re-check its DNS/verification so the dashboard shows the current state.
+  const customDomainStatus: CustomDomainStatus | null = site?.customDomain ? await checkCustomDomain(orgId, site.customDomain) : null;
 
   // Seed the form: existing config, or sensible defaults from the org.
   const form: WebsiteForm = site
@@ -73,6 +77,8 @@ export default async function WebsiteSettingsPage() {
       rootDomain={ROOT_DOMAIN}
       stats={{ buildings: buildingCount, units: unitCount }}
       domainStatus={domainStatus}
+      customDomain={site?.customDomain ?? null}
+      customDomainStatus={customDomainStatus}
     />
   );
 }

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import "@/styles/public-site.css";
 import { getSiteView } from "@/lib/public-site/render";
 import { isLangParam } from "@/lib/public-site/lang";
+import { siteOrigin } from "@/lib/public-site/seo";
 import { SiteProvider, type SiteContext } from "@/lib/public-site/context";
 import SiteHeader from "./_components/SiteHeader";
 import SiteFooter from "./_components/SiteFooter";
@@ -20,7 +21,6 @@ import WhatsAppFab from "./_components/WhatsAppFab";
  * are self-hosted (styles/fonts.css); browsers only fetch the faces they render.
  */
 
-const ROOT_DOMAIN = "binaya.app";
 type Params = { slug: string; lang: string };
 
 // Pages are built on first visit, then cached (ISR) — no build-time list.
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
   return {
     title: { default: siteName, template: `%s · ${siteName}` },
     description: desc,
-    metadataBase: new URL(`https://${slug}.${ROOT_DOMAIN}`),
+    metadataBase: new URL(siteOrigin(site)),
     openGraph: { title: siteName, description: desc, images: site.ogImageUrl ? [site.ogImageUrl] : undefined, type: "website", locale: ar ? "ar_OM" : "en_OM" },
     robots: preview ? { index: false, follow: false } : { index: true, follow: true },
   };

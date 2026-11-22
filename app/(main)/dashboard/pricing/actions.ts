@@ -64,6 +64,9 @@ export type SeasonInput = {
   unitRates: { unitId: string; daily: string; weekly: string; monthly: string }[];
   minNights: number | null;
   weekendAdjustPct: number | null;
+  publicPage: boolean;
+  descriptionEn: string;
+  descriptionAr: string;
 };
 
 /** Dates are stored exactly like existing UnitPrice seasons: UTC midnight of the
@@ -135,6 +138,9 @@ export async function saveSeason(input: SeasonInput): Promise<PricingResult> {
     excludedUnitIds: [...new Set(input.excludedUnitIds)],
     minNights,
     weekendAdjustPct,
+    publicPage: !!input.publicPage,
+    descriptionEn: input.descriptionEn?.trim().slice(0, 1500) || null,
+    descriptionAr: input.descriptionAr?.trim().slice(0, 1500) || null,
   };
 
   let id = input.id;
@@ -180,6 +186,7 @@ export async function duplicateSeasonNextYear(id: string): Promise<PricingResult
         startDate: plusYear(s.startDate), endDate: plusYear(s.endDate), priority: s.priority, isActive: s.isActive,
         disallowMonthly: s.disallowMonthly, minNights: s.minNights, weekendAdjustPct: s.weekendAdjustPct, color: s.color,
         propertyIds: s.propertyIds, excludedUnitIds: s.excludedUnitIds,
+        publicPage: false, descriptionEn: s.descriptionEn, descriptionAr: s.descriptionAr, // new year's page is opt-in again
       },
     });
     await tx.seasonRate.createMany({

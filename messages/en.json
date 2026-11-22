@@ -5535,6 +5535,43 @@
           "desc": "Bold and dark: split hero, numbered highlights, bento photo tiles"
         }
       },
+      "domain": {
+        "title": "Custom domain",
+        "hint": "Use your own address, like www.yourhotel.com. Your site also stays available at your Binaya address.",
+        "connect": "Connect domain",
+        "saved": "Domain saved. Now add the DNS record below.",
+        "removed": "Custom domain removed.",
+        "removeConfirm": "Remove this custom domain? Your site stays available at its Binaya address.",
+        "stateActive": "Connected",
+        "stateDns": "Waiting for DNS",
+        "stateVerify": "Verification needed",
+        "stateError": "Problem",
+        "activeNote": "Your site is live at {host} with a secure (HTTPS) certificate.",
+        "dnsNote": "Add this record at your domain provider (where you bought the domain). Nothing else is needed.",
+        "dnsWait": "DNS changes can take from a few minutes up to a few hours. Press “Check again” once you've added it.",
+        "verifyNote": "To prove you own this domain, first add the verification record, then the address record below.",
+        "recordsTitle": "Address record",
+        "verifyTitle": "Verification record",
+        "recordType": "Type",
+        "recordName": "Name / Host",
+        "recordValue": "Value / Points to",
+        "copy": "Copy",
+        "copied": "Copied",
+        "checkAgain": "Check again",
+        "remove": "Remove",
+        "nowActive": "Your domain is connected!",
+        "errors": {
+          "empty": "Enter your domain.",
+          "invalid": "That doesn't look like a valid domain, e.g. www.yourhotel.com.",
+          "blocked": "This domain can't be used.",
+          "taken": "This domain is already connected to another website.",
+          "forbidden": "You don't have permission to change this.",
+          "no_org": "Something went wrong. Please try again.",
+          "no_site": "Create your website first.",
+          "plan_feature": "Your plan doesn't include this.",
+          "generic": "Something went wrong. Please try again."
+        }
+      },
       "content": {
         "intro": "Choose which sections your home page shows and in what order. The photo header is always first. A section with no content doesn't appear on the site.",
         "sectionsTitle": "Home page sections",
@@ -5564,6 +5601,10 @@
         "policiesAr": "Rules & cancellation (Arabic)",
         "locationNote": "The Location section uses the address and Google Maps link from Contact & content. Paste a Google Maps \"embed\" link to show the map right on the page.",
         "sections": {
+          "seasons": {
+            "name": "Seasons",
+            "desc": "Links to your season pages (e.g. Khareef)"
+          },
           "highlights": {
             "name": "Highlights",
             "desc": "Four short reasons to book with you"
@@ -7237,7 +7278,13 @@
       "minNights": "Minimum nights",
       "minNightsHint": "Empty = the organization's minimum stay.",
       "weekendPct": "Weekend adjustment (%)",
-      "weekendPctHint": "Empty = the organization's weekend %. 0 = no weekend change in this season."
+      "weekendPctHint": "Empty = the organization's weekend %. 0 = no weekend change in this season.",
+      "website": "Website page",
+      "websiteHint": "Show this season as its own page on your booking website — good for search engines (e.g. “Khareef 2026”).",
+      "publicPage": "Show a page for this season",
+      "publicPageHint": "Visitors see the dates, your description and the nightly rates. Only upcoming/current seasons are shown.",
+      "descEn": "Description (English)",
+      "descAr": "Description (Arabic)"
     },
     "rates": {
       "filterBuilding": "Building",

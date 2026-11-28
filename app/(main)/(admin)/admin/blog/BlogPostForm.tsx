@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import type { JSONContent } from "@tiptap/react";
 import { ArrowLeft, CalendarClock, ExternalLink, Eye, ImagePlus, Loader2, RefreshCw, Star, Trash2, X } from "lucide-react";
 import RichTextEditor from "@/components/blog/editor/RichTextEditor";
 import { uploadBlogMedia } from "@/components/blog/editor/upload";
@@ -18,38 +17,7 @@ import { slugify } from "@/lib/blog/text";
 import { deleteBlogPost, saveBlogPost, type BlogPostInput } from "./actions";
 import SeoPanel, { ScorePill } from "./SeoPanel";
 
-export interface TranslationState {
-  enabled: boolean;
-  title: string;
-  slug: string;
-  slugTouched: boolean;
-  excerpt: string;
-  contentJson: JSONContent | null;
-  contentHtml: string;
-  coverImageAlt: string;
-  seoTitle: string;
-  seoDescription: string;
-  focusKeyword: string;
-  tagsText: string;
-}
-
-export interface BlogFormValues {
-  id?: string;
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
-  /** ISO or null */
-  publishedAt: string | null;
-  category: string;
-  coverImageUrl: string | null;
-  isFeatured: boolean;
-  authorName: string;
-  authorNameAr: string;
-  t: Record<BlogLang, TranslationState>;
-}
-
-export const emptyTranslation = (enabled: boolean): TranslationState => ({
-  enabled, title: "", slug: "", slugTouched: false, excerpt: "", contentJson: null, contentHtml: "",
-  coverImageAlt: "", seoTitle: "", seoDescription: "", focusKeyword: "", tagsText: "",
-});
+import type { BlogFormValues, TranslationState } from "./form-values";
 
 const LANG_LABEL: Record<BlogLang, string> = { en: "English", ar: "العربية" };
 const STATUS_LABEL = { DRAFT: "Draft", PUBLISHED: "Published", ARCHIVED: "Archived" } as const;

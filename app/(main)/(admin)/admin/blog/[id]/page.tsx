@@ -3,7 +3,8 @@ import type { JSONContent } from "@tiptap/react";
 import { getSuperAdmin } from "@/lib/super-admin";
 import { prisma } from "@/lib/prisma";
 import { BLOG_LANGS } from "@/lib/blog/config";
-import BlogPostForm, { emptyTranslation, type BlogFormValues } from "../BlogPostForm";
+import BlogPostForm from "../BlogPostForm";
+import { emptyTranslation, type BlogFormValues } from "../form-values";
 
 export const metadata = { title: "Edit article · Blog · Admin" };
 

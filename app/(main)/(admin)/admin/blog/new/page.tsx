@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSuperAdmin } from "@/lib/super-admin";
-import BlogPostForm, { emptyTranslation } from "../BlogPostForm";
+import BlogPostForm from "../BlogPostForm";
+import { emptyTranslation } from "../form-values";
 
 export const metadata = { title: "New article · Blog · Admin" };
 

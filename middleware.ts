@@ -84,7 +84,10 @@ export async function middleware(request: NextRequest) {
     return new NextResponse("Not found", { status: 404 });
   }
 
-  return await updateSession(request);
+  // Blog pages carry their language in the URL (/blog/en/…, /blog/ar/…, /blog/preview/{id}/ar) so
+  // crawlers without the NEXT_LOCALE cookie still get the right <html lang/dir> and translations.
+  const blogLang = request.nextUrl.pathname.match(/^\/blog\/(?:preview\/[^/]+\/)?(en|ar)(?=\/|$)/)?.[1] as "en" | "ar" | undefined;
+  return await updateSession(request, { locale: blogLang });
 }
 
 export const config = {

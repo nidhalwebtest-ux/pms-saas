@@ -5895,7 +5895,8 @@
       "solution": "Solution",
       "whatsapp": "WhatsApp us",
       "signup": "Start free",
-      "whatsappText": "Hi, I'd like to know more about Binaya"
+      "whatsappText": "Hi, I'd like to know more about Binaya",
+      "blog": "Blog"
     },
     "story": {
       "painsIntro": "You know these problems…",
@@ -6167,7 +6168,8 @@
           "h": "Company",
           "links": [
             "About",
-            "Contact"
+            "Contact",
+            "Blog"
           ]
         },
         {
@@ -6266,6 +6268,7 @@
       "questions": "Questions",
       "organizations": "Organizations",
       "subscriptions": "Subscriptions",
+      "blog": "Blog",
       "settings": "Settings",
       "title": "Binaya Sales CRM",
       "founder": "Founder",
@@ -7371,5 +7374,41 @@
       "generic": "Something went wrong. Please try again.",
       "tiers": "Each tier needs 2–365 nights and 0.1–90% off, with different night counts (up to 5 tiers)."
     }
+  },
+  "blog": {
+    "eyebrow": "Binaya Blog",
+    "title": "Insights for hotel & furnished-apartment managers",
+    "subtitle": "Practical guides on reservations, pricing, the Khareef season and running a profitable property in Oman and the Gulf.",
+    "metaTitle": "Blog — Hotel & Furnished Apartment Management Tips | Binaya",
+    "metaDescription": "Guides and tips for hotel and furnished-apartment managers in Oman: reservations, Khareef pricing, invoicing, guest experience and growing occupancy.",
+    "all": "All",
+    "featured": "Featured",
+    "readMore": "Read article",
+    "minRead": "{n} min read",
+    "empty": "No articles yet",
+    "emptyHint": "We're writing our first guides — check back soon.",
+    "emptyCategory": "No articles in this category yet.",
+    "prev": "Previous",
+    "next": "Next",
+    "page": "Page {page} of {pages}",
+    "home": "Home",
+    "blog": "Blog",
+    "toc": "In this article",
+    "share": "Share",
+    "copyLink": "Copy link",
+    "copied": "Link copied",
+    "tags": "Tags",
+    "related": "Keep reading",
+    "backToBlog": "All articles",
+    "alsoIn": "Also available in العربية",
+    "writtenBy": "Written by",
+    "published": "Published",
+    "updated": "Updated",
+    "ctaTitle": "Run your property on Binaya",
+    "ctaText": "Reservations, invoices, payments and expenses in one place — in Arabic and English, in Omani Rial. Free for your first building.",
+    "ctaButton": "Start free",
+    "ctaSecondary": "See how it works",
+    "rss": "RSS feed",
+    "preview": "Preview — this article is not public yet"
   }
 }

@@ -9,7 +9,7 @@ type Col = { h: string; links: string[] };
 // "Features" → the solution tabs (#solution); "How it works" → the hero with the demo video (#top).
 const HREFS: string[][] = [
   ["/#solution", "/#pricing", "/#top", "/#faq"],
-  ["/about", "/contact"],
+  ["/about", "/contact", "/blog"],
   ["/privacy", "/terms"],
 ];
 

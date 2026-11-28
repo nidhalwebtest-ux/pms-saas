@@ -11,8 +11,18 @@ const AUTH_ONLY = ["/login"];
 const INACTIVITY_MS     = 60 * 60 * 1000; // 60 minutes
 const ACTIVITY_COOKIE   = "omrent_last_activity";
 
-export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({ request });
+/** Request header carrying a URL-chosen UI language (blog pages: /blog/{en|ar}/…) to
+ *  i18n/request.ts, where it wins over the NEXT_LOCALE cookie. */
+export const LOCALE_HEADER = "x-binaya-locale";
+
+export async function updateSession(request: NextRequest, opts: { locale?: "en" | "ar" } = {}) {
+  // Forwarded request headers: never trust a client-sent locale header.
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete(LOCALE_HEADER);
+  if (opts.locale) requestHeaders.set(LOCALE_HEADER, opts.locale);
+  const next = () => NextResponse.next({ request: { headers: requestHeaders } });
+
+  let supabaseResponse = next();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,7 +36,9 @@ export async function updateSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
-          supabaseResponse = NextResponse.next({ request });
+          // keep the forwarded copy's Cookie header in sync with the refreshed session
+          requestHeaders.set("cookie", request.cookies.toString());
+          supabaseResponse = next();
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options),
           );

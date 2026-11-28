@@ -13,7 +13,8 @@
     "test:pricing": "tsx --test lib/saas-pricing.test.ts",
     "verify:integrity": "tsx --env-file=.env scripts/verify-data-integrity.ts",
     "test:subscription": "tsx --test lib/subscription.test.ts",
-    "test:unit-prices": "TZ=UTC tsx --test lib/unit-prices.test.ts"
+    "test:unit-prices": "TZ=UTC tsx --test lib/unit-prices.test.ts",
+    "test:blog": "tsx --test lib/blog/seo.test.ts"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
@@ -26,6 +27,16 @@
     "@supabase/supabase-js": "^2.93.1",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.24",
+    "@tiptap/extension-highlight": "^3.35.1",
+    "@tiptap/extension-image": "^3.35.1",
+    "@tiptap/extension-table": "^3.35.1",
+    "@tiptap/extension-text-align": "^3.35.1",
+    "@tiptap/extension-text-style": "^3.35.1",
+    "@tiptap/extension-youtube": "^3.35.1",
+    "@tiptap/extensions": "^3.35.1",
+    "@tiptap/pm": "^3.35.1",
+    "@tiptap/react": "^3.35.1",
+    "@tiptap/starter-kit": "^3.35.1",
     "@types/leaflet": "^1.9.21",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.38.0",
@@ -46,6 +57,7 @@
     "react-dropzone": "^15.0.0",
     "react-leaflet": "^5.0.0",
     "react-textarea-autosize": "^8.5.9",
+    "sanitize-html": "^2.18.2",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
     "xlsx": "^0.18.5"
@@ -57,6 +69,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/sanitize-html": "^2.16.2",
     "postcss": "^8",
     "prisma": "^6.3.0",
     "tailwindcss": "^3.4.1",

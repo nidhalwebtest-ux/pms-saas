@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { ChevronDown, Menu, X } from "lucide-react";
 import Container from "./ui/Container";
@@ -67,8 +67,14 @@ function ReadingProgress() {
   );
 }
 
-export default function MarketingNavbar() {
+/**
+ * `languageHrefs`: pages whose language lives in the URL (the blog, /blog/en|ar/…)
+ * pass the URL of each language version — the switch then navigates there
+ * instead of only re-rendering the current URL in the other language.
+ */
+export default function MarketingNavbar({ languageHrefs }: { languageHrefs?: Partial<Record<Locale, string>> } = {}) {
   const t = useTranslations("marketing.nav");
+  const onBlog = usePathname()?.startsWith("/blog") ?? false;
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [ids] = useState(() => NAV_LINKS.map((l) => l.id));
@@ -145,12 +151,29 @@ export default function MarketingNavbar() {
                 />
               </a>
             ))}
+            <Link
+              href="/blog"
+              aria-current={onBlog ? "page" : undefined}
+              className={[
+                "relative inline-flex items-center whitespace-nowrap rounded-md px-3 py-2 text-[15px] transition-colors hover:bg-gray-100 hover:text-gray-900",
+                onBlog ? "font-semibold text-brand-600" : "text-gray-700",
+              ].join(" ")}
+            >
+              {t("blog")}
+              <span
+                aria-hidden="true"
+                className={[
+                  "absolute inset-x-3 -bottom-px h-[2px] rounded-full bg-brand-500 transition-opacity duration-200",
+                  onBlog ? "opacity-100" : "opacity-0",
+                ].join(" ")}
+              />
+            </Link>
           </nav>
 
           <span className="flex-1" />
 
           <div className="flex items-center gap-1.5">
-            <LanguageSwitch />
+            <LanguageSwitch hrefs={languageHrefs} />
             <div className="hidden sm:inline-flex">
               <MarketingButton href="/login" variant="ghost" size="sm">
                 {t("login")}
@@ -227,6 +250,14 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
                 <ChevronDown className="h-4 w-4 rotate-[-90deg] rtl:rotate-90 text-gray-400" strokeWidth={1.5} />
               </a>
             ))}
+            <Link
+              href="/blog"
+              onClick={onClose}
+              className="flex items-center justify-between rounded-md px-3 py-3 text-base font-medium text-gray-900 hover:bg-gray-50"
+            >
+              {t("blog")}
+              <ChevronDown className="h-4 w-4 rotate-[-90deg] rtl:rotate-90 text-gray-400" strokeWidth={1.5} />
+            </Link>
           </nav>
           <div className="mt-5 flex flex-col gap-2 border-t border-gray-200 pt-5">
             <MarketingButton href="/login?mode=signup" variant="primary" size="lg" fullWidth>
@@ -248,7 +279,7 @@ function MobileDrawer({ open, onClose }: { open: boolean; onClose: () => void })
  *  router.refresh() re-renders the entire tree in the new locale.
  * ========================================================================= */
 
-function LanguageSwitch() {
+function LanguageSwitch({ hrefs }: { hrefs?: Partial<Record<Locale, string>> }) {
   const locale = useLocale() as Locale;
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -264,7 +295,9 @@ function LanguageSwitch() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale: next }),
       });
-      router.refresh();
+      const href = hrefs?.[next];
+      if (href) router.push(href);
+      else router.refresh();
     });
   }
 

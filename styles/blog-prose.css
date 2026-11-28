@@ -1,0 +1,191 @@
+/* ==========================================================================
+ *  Blog article typography — shared by the public article page and the admin
+ *  editor (so the editor is WYSIWYG). Logical properties throughout: the same
+ *  rules serve English (LTR) and Arabic (RTL).
+ * ======================================================================== */
+
+.blog-prose {
+  --prose-fg: #1f2937;
+  --prose-muted: #4b5563;
+  --prose-heading: #0b1b2e;
+  --prose-border: #e5e7eb;
+  --prose-link: var(--brand-600, #185fa5);
+  color: var(--prose-fg);
+  font-size: 1.125rem; /* 18px — comfortable long-form reading */
+  line-height: 1.8;
+  overflow-wrap: break-word;
+}
+.blog-prose:lang(ar),
+.blog-prose[dir="rtl"] {
+  font-size: 1.1875rem; /* Arabic glyphs read better slightly larger */
+  line-height: 1.95;
+}
+
+.blog-prose > * + * { margin-block-start: 1.25em; }
+
+.blog-prose p { margin: 0; }
+.blog-prose > p + p { margin-block-start: 1.1em; }
+
+.blog-prose h2,
+.blog-prose h3,
+.blog-prose h4 {
+  color: var(--prose-heading);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  scroll-margin-top: 96px; /* clear the sticky navbar when jumping from the TOC */
+  text-wrap: balance;
+}
+.blog-prose h2 { font-size: 1.65em; line-height: 1.3; margin-block-start: 2em; margin-block-end: 0; }
+.blog-prose h3 { font-size: 1.3em; line-height: 1.4; margin-block-start: 1.7em; }
+.blog-prose h4 { font-size: 1.1em; line-height: 1.5; margin-block-start: 1.5em; }
+.blog-prose > :first-child { margin-block-start: 0; }
+.blog-prose h2 + *, .blog-prose h3 + *, .blog-prose h4 + * { margin-block-start: 0.6em; }
+
+.blog-prose a {
+  color: var(--prose-link);
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-color: color-mix(in srgb, var(--prose-link) 40%, transparent);
+  transition: text-decoration-color 0.15s;
+}
+.blog-prose a:hover { text-decoration-color: currentColor; }
+
+.blog-prose strong, .blog-prose b { color: var(--prose-heading); font-weight: 700; }
+
+.blog-prose mark { border-radius: 0.2em; padding: 0.05em 0.2em; color: inherit; }
+
+.blog-prose code:not(pre code) {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.35em;
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.blog-prose pre {
+  background: #0b1b2e;
+  border-radius: 0.9rem;
+  color: #e2e8f0;
+  direction: ltr;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+  line-height: 1.65;
+  overflow-x: auto;
+  padding: 1.1em 1.3em;
+  text-align: left;
+}
+
+.blog-prose ul, .blog-prose ol { padding-inline-start: 1.4em; }
+.blog-prose ul { list-style: disc; }
+.blog-prose ol { list-style: decimal; }
+.blog-prose li { padding-inline-start: 0.3em; }
+.blog-prose li + li { margin-block-start: 0.45em; }
+.blog-prose li > p { margin: 0; }
+.blog-prose li::marker { color: var(--brand-500, #185fa5); font-weight: 600; }
+.blog-prose ul ul, .blog-prose ol ol, .blog-prose ul ol, .blog-prose ol ul { margin-block-start: 0.45em; }
+
+.blog-prose blockquote {
+  border-inline-start: 4px solid #c9a45c;
+  color: var(--prose-heading);
+  font-size: 1.12em;
+  font-style: italic;
+  line-height: 1.7;
+  margin-inline: 0;
+  padding: 0.2em 0 0.2em 1.2em;
+  padding-inline-start: 1.2em;
+}
+.blog-prose[dir="rtl"] blockquote, .blog-prose:lang(ar) blockquote { font-style: normal; }
+
+.blog-prose hr {
+  border: 0;
+  height: 1px;
+  background: var(--prose-border);
+  margin-block: 2.5em;
+}
+
+.blog-prose img {
+  border-radius: 1rem;
+  display: block;
+  height: auto;
+  margin-inline: auto;
+  max-width: 100%;
+}
+
+.blog-prose [data-youtube-video],
+.blog-prose [data-video] {
+  aspect-ratio: 16 / 9;
+  background: #0b1b2e;
+  border-radius: 1rem;
+  overflow: hidden;
+}
+.blog-prose [data-youtube-video] iframe,
+.blog-prose [data-video] video {
+  border: 0;
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+.blog-prose [data-video] video { object-fit: contain; }
+
+/* Callout boxes */
+.blog-prose [data-callout] {
+  --c: #185fa5;
+  --bg: #eff6ff;
+  background: var(--bg);
+  border: 1px solid color-mix(in srgb, var(--c) 18%, transparent);
+  border-inline-start: 4px solid var(--c);
+  border-radius: 0.9rem;
+  padding: 1em 1.2em;
+}
+.blog-prose [data-callout] > * + * { margin-block-start: 0.6em; }
+.blog-prose [data-callout="tip"] { --c: #0e7c66; --bg: #ecfdf5; }
+.blog-prose [data-callout="warning"] { --c: #b45309; --bg: #fffbeb; }
+.blog-prose [data-callout="success"] { --c: #15803d; --bg: #f0fdf4; }
+
+/* Tables — wrapped server-side in .table-wrap for horizontal scroll on mobile */
+.blog-prose .table-wrap,
+.blog-prose .tableWrapper {
+  border: 1px solid var(--prose-border);
+  border-radius: 0.9rem;
+  overflow-x: auto;
+}
+.blog-prose table {
+  border-collapse: collapse;
+  font-size: 0.92em;
+  line-height: 1.55;
+  min-width: 100%;
+  table-layout: auto;
+}
+.blog-prose th, .blog-prose td {
+  border-bottom: 1px solid var(--prose-border);
+  padding: 0.7em 0.95em;
+  text-align: start;
+  vertical-align: top;
+}
+.blog-prose th, .blog-prose th p { background: #f8fafc; color: var(--prose-heading); font-weight: 700; }
+.blog-prose tr:last-child td { border-bottom: 0; }
+.blog-prose td + td, .blog-prose th + th { border-inline-start: 1px solid var(--prose-border); }
+
+/* ── Editor-only affordances ─────────────────────────────────────────────── */
+.blog-prose--editor { min-height: 360px; }
+.blog-prose--editor p.is-empty::before,
+.blog-prose--editor h2.is-empty::before,
+.blog-prose--editor h3.is-empty::before,
+.blog-prose--editor h4.is-empty::before {
+  color: #9ca3af;
+  content: attr(data-placeholder);
+  float: inline-start;
+  height: 0;
+  pointer-events: none;
+}
+.blog-prose--editor img.ProseMirror-selectednode,
+.blog-prose--editor [data-youtube-video].ProseMirror-selectednode,
+.blog-prose--editor [data-video].ProseMirror-selectednode {
+  outline: 3px solid var(--brand-400, #3b82f6);
+  outline-offset: 3px;
+}
+.blog-prose--editor .selectedCell { background: color-mix(in srgb, var(--brand-500, #185fa5) 10%, transparent); }
+.blog-prose--editor [data-youtube-video] iframe,
+.blog-prose--editor [data-video] video { pointer-events: none; }

@@ -2009,3 +2009,71 @@ model SeasonRate {
   @@unique([seasonId, unitId])
   @@index([unitId])
 }
+
+// ── Blog (Binaya marketing site, binaya.app/blog) ────────────────────────────
+// Platform-level content managed by the super-admin (/admin/blog), like
+// SubscriptionPlan — deliberately NOT tenant-scoped (no organizationId).
+
+enum BlogPostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+/// Language-independent part of a blog article. The article exists in a
+/// language when it has a BlogPostTranslation row for it (EN, AR or both).
+/// Visible publicly when status = PUBLISHED AND publishedAt <= now()
+/// (a future publishedAt = scheduled).
+model BlogPost {
+  id            String                @id @default(uuid())
+  status        BlogPostStatus        @default(DRAFT)
+  publishedAt   DateTime?
+  /// Category key from lib/blog/categories.ts (fixed list, translated in code).
+  category      String                @default("guides")
+  coverImageUrl String?
+  isFeatured    Boolean               @default(false)
+  authorName    String                @default("Binaya Team")
+  authorNameAr  String                @default("فريق بناية")
+  /// Super-admin email that created / last edited the article.
+  createdBy     String?
+  updatedBy     String?
+  translations  BlogPostTranslation[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@index([status, publishedAt])
+}
+
+/// One language version of a BlogPost. The slug is unique per language and is
+/// the public URL: /blog/{lang}/{slug}.
+model BlogPostTranslation {
+  id              String   @id @default(uuid())
+  postId          String
+  post            BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  /// "en" | "ar"
+  lang            String
+  slug            String
+  title           String
+  excerpt         String   @default("")
+  /// Tiptap document (what the editor loads).
+  contentJson     Json
+  /// Sanitized HTML rendered on the public page (built server-side on save,
+  /// heading ids added for the table of contents).
+  contentHtml     String   @db.Text
+  /// [{ id, text, level }] — h2/h3 outline for the table of contents.
+  toc             Json     @default("[]")
+  coverImageAlt   String   @default("")
+  seoTitle        String   @default("")
+  seoDescription  String   @default("")
+  focusKeyword    String   @default("")
+  tags            String[] @default([])
+  wordCount       Int      @default(0)
+  readingMinutes  Int      @default(1)
+  /// 0–100 from lib/blog/seo.ts, stored for the admin list.
+  seoScore        Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([postId, lang])
+  @@unique([lang, slug])
+}
